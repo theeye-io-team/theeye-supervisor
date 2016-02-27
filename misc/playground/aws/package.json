@@ -1,0 +1,16 @@
+{
+  "name": "aws",
+  "version": "1.0.0",
+  "description": "test aws s3",
+  "main": "main.js",
+  "dependencies": {
+    "aws-sdk": "^2.1.28"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "node main.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}

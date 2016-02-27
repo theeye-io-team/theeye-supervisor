@@ -1,0 +1,11 @@
+node_modules/
+*.swp
+newrelic*.log
+old
+config/*/setup/configs/
+dump
+uploads/
+npm-debug.log
+*~
+misc/playground/aws/config.json
+misc/playground/aws/misc/*

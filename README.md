@@ -1,0 +1,493 @@
+# ThE EyE Supervisor REST API Documentation
+
+> _NOTE1  "**:hostname**" part of all routes should be replaced with the registered hostname_   
+> _NOTE2 dates are always YYYY-MM-DDTHH:mm:ss.sssZ ISO 8601. except otherwise specified.
+
+______
+
+## Scripts (authentication not required so far)
+
+> _NOTE3 "**user**" parameter is temporal until authentication is implemented. then it will be available throw the provided authentication parameters_
+
+
+### Get a Script
+
+**method** : GET   
+**service url** : /script/:id   
+**response**   
+
+```json
+{  
+  "script":{  
+    "id":"555642d919908c232ea1f2f6",
+    "filename":"startapache2.sh",
+    "description":"start apache 2",
+    "mimetype":"application/x-shellscript",
+    "extension":"sh",
+    "size":40
+  }
+}
+```
+
+### Fetch Scripts
+
+**method** : GET   
+**service url** : /script?user=username   
+**query parameters**    
+
+* user : string  
+ 
+**response**   
+
+```json
+{
+  "scripts": [
+  {
+    "id": "5553a7454e8c93f919000001",
+    "filename": "go.sh",
+    "description": "This script uploads everything to a supernova, and waits until de black hole is achieved even when the AMI are not downloaded yet",
+    "mimetype": "application/x-sh",
+    "extension": "sh",
+    "size": 25
+  },
+  {
+    "id": "5554930b697b3a5a12000004",
+    "filename": "go.sh",
+    "description": "This script rocks",
+    "mimetype": "application/x-sh",
+    "extension": "sh",
+    "size": 25
+  }
+  ]
+}
+```
+
+
+### Create a Script
+
+**method** : POST   
+**service url** : /script/   
+**required _Content-Type_** : multipart/form-data   
+**body parameters**   
+
+* user : string   
+* script : file    
+* description : string   
+   
+**response**
+```json
+{  
+  "script":{  
+    "id":"555642d919908c232ea1f2f6",
+    "filename":"startapache2.sh",
+    "description":"start apache 2",
+    "mimetype":"application/x-shellscript",
+    "extension":"sh",
+    "size":40
+  }
+}
+```
+
+### Update a Script
+
+**method** : PUT   
+**service url** : /script/   
+**required _Content-Type_** : multipart/form-data   
+**form-data parameters**   
+
+* description : string
+* script : file
+
+**sample request**
+
+> _curl -F script=@/tmp/script_data.sh -F description="data fetch" -H "Content-Type: multipart/form-data" -X PUT http://localhost:60080/facugon/script/5567dcabe3dea6612e816e18_
+
+**response**
+
+```json
+{  
+  "script":{
+    "id":"5567dcabe3dea6612e816e18",
+    "filename":"script_data.sh",
+    "description":"data fetch",
+    "mimetype":"application/octet-stream",
+    "extension":"sh",
+    "size":48,
+    "download":"http://localhost:60080/facugon/script/download/5567dcabe3dea6612e816e18"
+  }
+}
+```
+
+
+
+### Delete a Script
+
+**service url** /script/{id}    
+**method :** DELETE    
+
+**request**
+
+> _curl -X DELETE http://localhost:60080/facugon/script/_
+
+
+_____
+
+## Scripts Download
+
+
+### Download a Script
+
+**method** : GET   
+**service url** : /script/download/:id   
+
+**request**    
+
+> _curl http://localhost:60080/facugon/script/download/5567dcabe3dea6612e816e18_
+
+**response**   
+
+```sh
+#!/bin/bash
+
+echo "demo"
+
+pwd
+ls -l
+
+echo "end"
+```
+
+_____
+
+## Tasks controller
+
+### Get a single Task
+
+**service url** : /task/:id    
+
+**request**    
+
+> _curl "http://localhost:60080/facugon/task/555642f519908c232ea1f2f7"_    
+
+**response**    
+
+
+```json
+{  
+   "task":{  
+      "id":"555642f519908c232ea1f2f7",
+      "name":"start apache2",
+      "description":"iniciar el servicio apache2",
+      "host_id":"553e8deaeef6251b47000002",
+      "script_id":"555642d919908c232ea1f2f6",
+      "resource_id":"5525fb22539444d52a000006"
+   }
+}
+```
+
+### Fetch Tasks
+
+**service url** : /task/    
+**method :** GET    
+**query parameters**     
+
+* user : string    
+* hostname : string    
+
+**request**
+
+> _curl "http://localhost:60080/facugon/task?user=facugon&hostname=facundo-MOV"_    
+
+**response**    
+
+```json
+{  
+   "tasks":[  
+      {  
+         "id":"555642f519908c232ea1f2f7",
+         "name":"start apache2",
+         "description":"iniciar el servicio apache2",
+         "host_id":"553e8deaeef6251b47000002",
+         "script_id":"555642d919908c232ea1f2f6",
+         "resource_id":"5525fb22539444d52a000006"
+      },
+      {  
+         "id":"5556432019908c232ea1f2f9",
+         "name":"stop apache2",
+         "description":"detener el servicio apache2",
+         "host_id":"553e8deaeef6251b47000002",
+         "script_id":"5556430719908c232ea1f2f8",
+         "resource_id":"5525fb22539444d52a000006"
+      },
+      {  
+         "id":"5556438c19908c232ea1f2fb",
+         "name":"stop mysql",
+         "description":"detener el servicio mysql",
+         "host_id":"553e8deaeef6251b47000002",
+         "script_id":"5556435819908c232ea1f2fa",
+         "resource_id":"5545278bfd26ecdc9f3a6dde"
+      },
+     ...
+   ]
+}
+```
+
+### Create a Task
+
+**service url** /task/    
+**method :** POST    
+**body parameters**    
+
+* hostname : string    
+* user : string    
+* resource_id : string    
+* script_id : string    
+* description : string    
+* name : string    
+
+**response**
+
+```json
+{  
+   "task":{  
+      "id":"55569d5eb12f6e445af33bac",
+      "name":"start mysql",
+      "description":"init mysql server",
+      "host_id":"553e8deaeef6251b47000002",
+      "script_id":"5556439219908c232ea1f2fc",
+      "resource_id":"5545278bfd26ecdc9f3a6dde"
+   }
+}
+```
+
+### Update a Task
+
+**service url** /task/{id}    
+**method :** PUT    
+**body parameters**    
+
+* hostname : string    
+* resource_id : string    
+* script_id : string    
+* description : string    
+* name : string    
+
+**sample request**
+
+> _curl -d '{"description":"una tarea de prueba que no hace nada","name":"demo task","script_id":"5567dcabe3dea6612e816e18"}' -H "Content-Type: application/json" -X PUT http://localhost:60080/facugon/task/55689017704fd47c534b6b40_
+
+**sample response**
+
+```json
+{  
+   "task":{  
+      "id":"55689017704fd47c534b6b40",
+      "name":"demo task",
+      "description":"una tarea de prueba que no hace nada",
+      "host_id":"553e8deaeef6251b47000002",
+      "script_id":"5567dcabe3dea6612e816e18",
+      "customer_id":"5525fb22539444d52a000001",
+      "resource_id":"5525fb22539444d52a000006"
+   }
+}
+```
+
+### Delete a Task
+
+**service url** /task/{id}    
+**method :** DELETE    
+
+**request**
+
+> _curl -X DELETE http://localhost:60080/facugon/task/55689017704fd47c534b6b40_
+
+
+____
+
+## Job controller
+
+**service url** : /job/:hostname/   
+
+
+
+
+____
+
+## Trigger Controller
+
+### Create a Trigger
+
+**service url** /trigger    
+**method** POST    
+**body parameters**    
+
+* event_name    
+* resource_id    
+* task_id    
+* description    
+
+**request**    
+> curl -H "Content-Type: application/json" -X POST -d '{"event_name":"failure","resource_id":"5525fb22539444d52a000006","task_id":"555642f519908c232ea1f2f7","description":""}' "http://localhost:60080/facugon/trigger"
+
+**response**
+```json
+{  
+   "trigger":{  
+      "id":"5556a290b12f6e445af33bad",
+      "event_name":"failure",
+      "resource_id":"5525fb22539444d52a000006",
+      "description":"",
+      "task_id":"555642f519908c232ea1f2f7"
+   }
+}
+```
+
+____
+
+## Macro Controller
+
+### Run a new macro
+
+**service url** /macro/:script_id/run    
+**method** POST    
+**required _Content-Type_** : multipart/form-data   
+**body parameters**    
+
+* String host id
+* Array script_arguments
+
+**sample request**
+> curl -X POST http://url-del-ojo/macro/561d496044ea547f698a5a8e/run -H "Content-Type: multipart/form-data" -F "host=55fb014d64b918e82b165d41" -F "script_arguments=1" -F 'script_arguments="--exec=ble"' -F "username=facugon"
+
+**sample response**
+```json
+{  
+  "job":{
+    "id":"56299b2ea0c5656a37860378",
+    "task_id":null,
+    "host_id":"55fb014d64b918e82b165d41",
+    "user_id":"552616555f1e060dfe1a0403",
+    "customer_id":"5525fb22539444d52a000001",
+    "customer_name":"facugon",
+    "name":"macro job",
+    "notify":true,
+    "state":"new",
+    "result":{},
+    "script_id":"561d496044ea547f698a5a8e",
+    "script_md5":"de417292940ec3e17d9835dd8cdf2a65",
+    "script_arguments":[
+      "1",
+      "\"--exec=ble\""
+    ],
+    "creation_date":"2015-10-23T02:35:15.289Z"
+  }
+}
+
+```
+
+
+## User Controller
+
+**User entity definition**    
+
+* token : {String}
+* client_id : {String}
+* client_secret : {String}
+* email : {String}
+* customers : {Array} a list of customer id's
+* credential : {String}
+* enabled : {Boolean}
+* last_update : {Date} 
+* creation_date : {Date}
+
+### Create
+
+**service url** /user     
+**method** POST    
+**required _Content-Type_** : application/x-www-form-urlencoded   
+**parameters interface**    
+
+* client_id _(required)_
+* client_secret _(required)_
+* email _(required)_
+* customers _(at least one required)_
+* credential _(required)_
+* enabled _(false by default)_
+
+**sample request**
+
+> curl -X POST 'http://localhost:60080/user?access_token=40d83302aece6184bfc026c74c3d5387232ea8ed&client_id=id&client_secret=bianca&email=elianam4@gmail.com&customers=5525fb22539444d52a000001&credential=admin' 
+
+
+**sample response**
+
+```
+{
+    "user": {
+        "client_id": "id",
+        "client_secret": null,
+        "creation_date": "2015-11-10T17:29:55.921Z",
+        "credential": "admin",
+        "customers": [
+            {
+                "config": {},
+                "creation_date": "2015-04-09T04:08:02.608Z",
+                "emails": [
+                    "facundo.siquot@gmail.com"
+                ],
+                "id": "5525fb22539444d52a000001",
+                "name": "facugon"
+            }
+        ],
+        "email": "elianam4@gmail.com",
+        "enabled": false,
+        "id": "5642299e31544dd949df3990",
+        "last_update": "2015-11-10T17:29:55.921Z"
+    }
+}
+
+```
+
+### Get
+
+**service url** /user/:user_id     
+**method** GET    
+**required _Content-Type_** : not required
+
+**sample request**
+
+> curl 'http://localhost:60080/user/564221798853261441a4c6be?access_token=40d83302aece6184bfc026c74c3d5387232ea8ed'
+
+
+**sample response**
+
+```
+
+{
+    "user": {
+        "client_id": "id",
+        "client_secret": "",
+        "creation_date": "2015-11-10T16:38:49.920Z",
+        "credential": "admin",
+        "customers": [
+            {
+                "config": {},
+                "creation_date": "2015-04-09T04:08:02.608Z",
+                "emails": [
+                    "facundo.siquot@gmail.com"
+                ],
+                "id": "5525fb22539444d52a000001",
+                "name": "facugon"
+            }
+        ],
+        "email": "elianam4@gmail.com",
+        "enabled": false,
+        "id": "564221798853261441a4c6be",
+        "last_update": "2015-11-10T16:38:49.000Z"
+    }
+}
+
+```
+
+
+## Customer Controller

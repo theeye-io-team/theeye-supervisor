@@ -1,0 +1,17 @@
+{
+  "name": "streams",
+  "version": "1.0.0",
+  "description": "streams test",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Facundo Gonzalez <facundo.siquot@gmail.com>",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^0.8.3",
+    "http-proxy": "^1.10.1",
+    "readable-stream": "^1.0.33",
+    "request": "^2.48.0"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "password-hash",
+  "version": "1.0.0",
+  "description": "test bcrypt",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodejs index.js"
+  },
+  "author": "facugon",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^0.8.3"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "name": "TheEye-Supervisor",
+  "description": "The Eye Dependencies",
+  "author": "Facundo S. Gonzalez <facugon@interactar.com>",
+  "dependencies": {
+    "md5": "^2.0.0",
+    "async": "^1.2.1",
+    "aws-sdk": "^2.1.26",
+    "bcrypt": "^0.8.5",
+    "config": "^1.14.0",
+    "debug": "^1.0.4",
+    "handlebars": "^3.0.3",
+    "lodash": "^3.10.1",
+    "mime": "^1.3.4",
+    "moment": "^2.10.2",
+    "mongodb": "^1.4.35",
+    "mongoose": "^4.x.x",
+    "mongoose-schema-extend": "^0.2.0",
+    "multer": "^0.1.8",
+    "newrelic": "^1.18.4",
+    "nodemailer": "^1.3.4",
+    "nodemailer-sendmail-transport": "^1.0.0",
+    "passport": "0.x.x",
+    "passport-http": "0.x.x",
+    "passport-http-bearer": "1.x.x",
+    "readable-stream": "1.0.33",
+    "request": "^2.55.0",
+    "restify": "^2.8.5",
+    "socket.io": "^1.3.5",
+    "stream-buffers": "^2.1.0",
+    "underscore": "^1.8.3",
+    "validator": "^4.2.1"
+  },
+  "scripts": {
+    "start": "/bin/bash ./run.sh",
+    "devel": "/bin/bash ./run.debug.sh"
+  },
+  "engine": "node >= 0.10.*",
+  "devDependencies": {
+    "nodemon": "^1.7.1"
+  }
+}

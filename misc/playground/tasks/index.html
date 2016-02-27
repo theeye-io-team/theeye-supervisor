@@ -1,0 +1,50 @@
+<style>
+    body { font-family:arial; }
+    div { padding-left:10px; border-top: solid 1px #AAA; border-bottom: solid 1px #AAA; }
+    input[type=text] { width : 300px; margin:10px;}
+</style>
+
+<div style="background-color:#EEE;">
+    <h1>create script</h1>
+    <form action="http://localhost:60080/facugon/script" method="post" enctype="multipart/form-data">
+        AUTH/SESSION<br/>
+        username <input type="text" name="user" id="user" value="facugon"><br/>
+        <hr>
+        Select script to upload <input type="file" name="script" id="script"><br/>
+        descripcion <input type="text" name="description" id="description" value="un script de prueba"><br/>
+        <br/>
+        <input type="submit" value="Create" name="submit">
+    </form>
+</div>
+
+<br/>
+
+<div style="background-color:#DDD;">
+    <h1>create task</h1>
+    <form action="http://localhost:60080/facugon/task" method="post" enctype="multipart/form-data">
+        AUTH/SESSION<br/>
+        username <input type="text" name="user" id="user" value="facugon"><br/>
+        <hr>
+        name <input type="text" name="name" id="name" value="deploy"><br/>
+        descripcion <input type="text" name="description" id="description" value="una tarea"><br/>
+        hostname <input type="text" name="hostname" id="hostname" value="facundo-MOV"><br/>
+        script id <input type="text" name="script_id" id="script_id"><br/>
+        resource id <input type="text" name="resource_id" id="resource_id"><br/>
+        <br/>
+        <input type="submit" value="Create" name="submit">
+    </form>
+</div>
+
+<br/>
+
+<div style="background-color:#EEE;">
+    <h1>create job</h1>
+    <form action="http://localhost:60080/facugon/job" method="post" enctype="multipart/form-data">
+        AUTH/SESSION<br/>
+        username <input type="text" name="user" id="user" value="facugon"><br/>
+        <hr>
+        task id <input type="text" name="task_id" id="task_id"><br/>
+        <br/>
+        <input type="submit" value="Create" name="submit">
+    </form>
+</div>

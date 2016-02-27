@@ -1,0 +1,32 @@
+{
+    'template' : '*',
+    'settings' : {
+        'number_of_shards' : 1
+    },
+  'mappings': {
+    '_default_': {
+        'dynamic_templates': [
+
+            { 'notanalyzedfields': {
+                  'match':              '*',
+                  'match_mapping_type': 'string',
+                  'mapping': {
+                      'type':        'string',
+                      'index':       'not_analyzed'
+                  }
+               }
+            },
+
+            { 'locationfields': {
+                  'match':              '*location*',
+                  'mapping': {
+                      'type':        'geo_point'
+                  }
+               }
+            }
+
+          ]
+       }
+   }
+
+}
