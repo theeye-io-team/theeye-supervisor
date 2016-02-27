@@ -4,7 +4,7 @@ ENV destDir /home/webon/theeye/supervisor
 RUN mkdir -p ${destDir}
 WORKDIR ${destDir}
 # Install app dependencies
-COPY supervisor/package.json ${destDir}
+COPY package.json ${destDir}
 RUN npm install
 # Bundle app source
 COPY . ${destDir}

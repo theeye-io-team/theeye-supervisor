@@ -1,4 +1,78 @@
-# ThE EyE Supervisor REST API Documentation
+# TheEye
+**TheEye** is a **Servers Automation Platform made easier**
+
+It's a tool that let you resolve infrastructure problems in a very simple way and from your phone. 
+
+## Table of contents
+
+* [Architecture](#markdown-header-architecture)
+      * [Theeye system components](#markdown-header-components)
+      * [Theeye overall structure](#markdown-header-structure)
+* [Prerequisites](#markdown-header-prerequisites)
+* [Setup](#markdown-header-setup)
+* [Supervisor](#Supervisor-API-Documentation)
+
+##Architecture
+### Components
+
+**TheEye** system is composed by: 
+
+* **TheEye Supervisor** - The **Supervisor** is an API that receives events from **TheEye Agents** which are running within customers hosts/servers. The Supervisor also trigger events with different mechanisms, to those the clients can subscribe to receive the events information via email, via a web interface or with another custom integration.
+
+* **TheEye Agent**. The **Agent** is the client running on the customers host. It gather data and information from the environment, send reports to the **TheEye Supervisor** and enables the Supervisor to send tasks to the servers in the form of scripts and commands.
+
+* **TheEye Web Interface**. - The **Web Interface** is a web client. It allows users
+to get access to resources status and graphical information about all the resources monitored by the Agents that are running on the customer's servers. It also allows the user to react to events by triggering tasks which are processed by the supervisor and executed via the Agents.
+
+### Structure
+
+      worker1 
+    (checks dstat
+    on a customer's
+      server)
+         â”‚
+         â”œâ”€â”€â”€â”€ TheEye Agent â”€â”€â”€â”€â”€â”€â”€â”€ TheEye Supervisor â”€â”€â”€â”€ TheEye Web
+         â”‚   (customer's host or external host)
+         â”‚
+      worker2 
+    (scraps a 
+     customer's
+     service)
+
+## Prerequisites
+
+Install [Docker](https://www.docker.com/) on your system.
+
+* [Install instructions](https://docs.docker.com/installation/mac/) for Mac OS X
+* [Install instructions](https://docs.docker.com/installation/ubuntulinux/) for Ubuntu Linux
+* [Install instructions](https://docs.docker.com/installation/) for other platforms
+
+Install [Docker Compose](http://docs.docker.com/compose/) on your system.
+
+* Python/pip: `sudo pip install -U docker-compose`
+* Other: ``curl -L https://github.com/docker/compose/releases/download/1.1.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose; chmod +x /usr/local/bin/docker-compose``
+
+[Login or register at dockerhub](https://docs.docker.com/engine/reference/commandline/login/)
+
+## Setup
+* 1- do a docker login
+* 2- create theeye root directory where you'll work and then fech each piece:
+    2.a-supervisor   :    git clone git@bitbucket.org:interactar/supervisor.git 
+    2.b-web interface: git clone git@bitbucket.org:interactar/web.git
+    2.c-agent        :git@github.com:interactar/theeye-agent.git
+
+
+## Start
+
+1- Run `docker-compose up` d start the `theeye-web`, `theeye-supervisor` and `db` containers. The app should then be running on your docker daemon on port 6080 (On OS X you can use `boot2docker ip` to find out the IP address).
+2- Optional, use dump for fullfill initial data, web user/pass are demo:12345678.
+                We aim you to run:
+                2.a cd misc/mongodb
+                2.b tar -xvzf dump.tar.gz
+                2.c mongorestore --db theeye ./dump/theeye
+3- Congrats, you are ready brave man.
+
+# Supervisor-API-Documentation
 
 > _NOTE1  "**:hostname**" part of all routes should be replaced with the registered hostname_   
 > _NOTE2 dates are always YYYY-MM-DDTHH:mm:ss.sssZ ISO 8601. except otherwise specified.
