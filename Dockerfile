@@ -6,7 +6,7 @@ WORKDIR ${destDir}
 # Bundle app source
 COPY . ${destDir}
 # Install app dependencies
-RUN npm install
+RUN cd ${destDir}; npm install
 #Export and run.
 EXPOSE 60080
 CMD [ "npm", "run","start" ]
