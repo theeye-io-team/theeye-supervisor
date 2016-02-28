@@ -1,7 +1,10 @@
 FROM node:4.2.2
-ENV destDir /home/webon/theeye/supervisor
+ENV destDir /src/theeye/supervisor
 # Create app directory
 RUN mkdir -p ${destDir}
+# Install Supervisor
+RUN npm install nodemon -g
+#Set working Directory
 WORKDIR ${destDir}
 # Bundle app source
 COPY . ${destDir}

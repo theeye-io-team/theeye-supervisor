@@ -1,3 +1,4 @@
+#DockerFile for local building. Not very useful
 FROM node:4.2.2
 ENV destDir /home/webon/theeye/supervisor
 # Create app directory
