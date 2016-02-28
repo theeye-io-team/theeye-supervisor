@@ -6,13 +6,19 @@ It's a tool that let you resolve infrastructure problems in a very simple way an
 ## Table of contents
 
 * [Architecture](#markdown-header-architecture)
-      * [Theeye system components](#markdown-header-components)
-      * [Theeye overall structure](#markdown-header-structure)
+      1. [Theeye system components](#markdown-header-components)
+      2. [Theeye overall structure](#markdown-header-structure)
 * [Prerequisites](#markdown-header-prerequisites)
 * [Setup](#markdown-header-setup)
-* [Supervisor](#Supervisor-API-Documentation)
+* [Supervisori API Documentation](#markdown-header-supervisor_API_Documentation)
+	1.[Scripts](#markdown-header-scripts)
+	2.[Tasks Controller](#markdown-header-tasks)
+	3.[Trigger Controller](#markdown-header-trigger)
+	4.[Macro Controller](#markdown-header-macro)
+	5.[User Controller](#markdown-header-user)
+	6.[Customer Controller](#markdown-header-customer)
 
-##Architecture
+## Architecture
 ### Components
 
 **TheEye** system is composed by: 
@@ -57,29 +63,31 @@ Install [Docker Compose](http://docs.docker.com/compose/) on your system.
 ## Setup
 * 1- do a docker login
 * 2- create theeye root directory where you'll work and then fech each piece:
-    2.a-supervisor   :    git clone git@bitbucket.org:interactar/supervisor.git 
-    2.b-web interface: git clone git@bitbucket.org:interactar/web.git
-    2.c-agent        :git@github.com:interactar/theeye-agent.git
-
+    * 2.a-supervisor   :    git clone git@bitbucket.org:interactar/supervisor.git 
+    * 2.b-web interface:    git clone git@bitbucket.org:interactar/web.git
+    * 2.c-agent        :    git@github.com:interactar/theeye-agent.git
+* 3- Clone/Download docker-compose.yaml Gist from: https://gist.github.com/jailbirt/0523a8d4aab2e90bbf66
 
 ## Start
 
-1- Run `docker-compose up` d start the `theeye-web`, `theeye-supervisor` and `db` containers. The app should then be running on your docker daemon on port 6080 (On OS X you can use `boot2docker ip` to find out the IP address).
-2- Optional, use dump for fullfill initial data, web user/pass are demo:12345678.
+* 1- Run `docker-compose up` command for starting the `theeye-web`, `theeye-supervisor` and `db` containers. 
+	The app should be running on port 6080 (On OS X you can use `boot2docker ip` to find out the IP address).
+* 2- Optional, use dump for fullfill initial data, web user/pass are demo:12345678.
                 We aim you to run:
-                2.a cd misc/mongodb
-                2.b tar -xvzf dump.tar.gz
-                2.c mongorestore --db theeye ./dump/theeye
-3- Congrats, you are ready brave man.
+                * 2.a cd supervisor/misc/mongodb
+                * 2.b tar -xvzf dump.tar.gz
+                * 2.c mongorestore --db theeye ./dump/theeye
+* 3- Congrats, you are ready brave man.
 
-# Supervisor-API-Documentation
+# Supervisor_API_Documentation
 
 > _NOTE1  "**:hostname**" part of all routes should be replaced with the registered hostname_   
 > _NOTE2 dates are always YYYY-MM-DDTHH:mm:ss.sssZ ISO 8601. except otherwise specified.
 
 ______
 
-## Scripts (authentication not required so far)
+## Scripts 
+*(authentication not required so far)*
 
 > _NOTE3 "**user**" parameter is temporal until authentication is implemented. then it will be available throw the provided authentication parameters_
 
@@ -233,7 +241,7 @@ echo "end"
 
 _____
 
-## Tasks controller
+## Tasks
 
 ### Get a single Task
 
@@ -387,7 +395,7 @@ ____
 
 ____
 
-## Trigger Controller
+## Trigger
 
 ### Create a Trigger
 
@@ -418,7 +426,7 @@ ____
 
 ____
 
-## Macro Controller
+## Macro
 
 ### Run a new macro
 
@@ -460,7 +468,7 @@ ____
 ```
 
 
-## User Controller
+## User
 
 **User entity definition**    
 
