@@ -1,11 +1,6 @@
 node_modules/
 *.swp
-newrelic*.log
-old
-config/*/setup/configs/
-dump
-uploads/
-npm-debug.log
-*~
+newrelic_*.log
+scripts/
+config/*
 misc/playground/aws/config.json
-misc/playground/aws/misc/*

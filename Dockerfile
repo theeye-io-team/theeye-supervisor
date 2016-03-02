@@ -4,7 +4,7 @@ ENV destDir /src/theeye/supervisor
 # Create app directory
 RUN mkdir -p ${destDir}
 # Install Supervisor
-RUN npm install supervisor -g
+RUN npm install -g supervisor
 #Set working Directory
 WORKDIR ${destDir}
 # Bundle app source
