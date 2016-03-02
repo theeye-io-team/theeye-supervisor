@@ -50,7 +50,7 @@ Install [Docker](https://www.docker.com/) on your system.
 Install [Docker Compose](http://docs.docker.com/compose/) on your system.
 
 * Python/pip: `sudo pip install -U docker-compose`
-* Other: ``curl -L https://github.com/docker/compose/releases/download/1.1.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose; chmod +x /usr/local/bin/docker-compose``
+* Other: ``curl -L https://github.com/docker/compose/releases/download/1.6.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose; chmod +x /usr/local/bin/docker-compose``
 
 [Login or register at dockerhub](https://docs.docker.com/engine/reference/commandline/login/)
 
@@ -58,13 +58,14 @@ Install [Docker Compose](http://docs.docker.com/compose/) on your system.
 * 1- do a docker login
 * 2- create theeye root directory where you'll work and then fech each piece:
     2.a-supervisor   :    git clone git@bitbucket.org:interactar/supervisor.git 
-    2.b-web interface: git clone git@bitbucket.org:interactar/web.git
-    2.c-agent        :git@github.com:interactar/theeye-agent.git
+    2.b-web interface:    git clone git@bitbucket.org:interactar/web.git
+    2.c-agent        :    git@github.com:interactar/theeye-agent.git
+*3- download/ or clone https://gist.github.com/jailbirt/0523a8d4aab2e90bbf66
 
 
 ## Start
 
-1- Run `docker-compose up` d start the `theeye-web`, `theeye-supervisor` and `db` containers. The app should then be running on your docker daemon on port 6080 (On OS X you can use `boot2docker ip` to find out the IP address).
+1- Run `docker-compose up` that should start the `theeye-web`, `theeye-supervisor` and `db` containers. The app should then be running on your docker daemon on port 6080 (On OS X you can use `boot2docker ip` to find out the IP address).
 2- Optional, use dump for fullfill initial data, web user/pass are demo:12345678.
                 We aim you to run:
                 2.a cd misc/mongodb
