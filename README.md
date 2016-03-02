@@ -65,12 +65,15 @@ Install [Docker Compose](http://docs.docker.com/compose/) on your system.
 
 ## Start
 
-1- Run `docker-compose up` that should start the `theeye-web`, `theeye-supervisor` and `db` containers. The app should then be running on your docker daemon on port 6080 (On OS X you can use `boot2docker ip` to find out the IP address).
+1- Run `docker-compose up` that should start all the components whose are  agent,web,supervisor containers. 
+The app should then be running on your docker daemon on port 6080 (On OS X you can use `boot2docker ip` to find out the IP address).
+
 2- Optional, use dump for fullfill initial data, web user/pass are demo:12345678.
                 We aim you to run:
                 2.a cd misc/mongodb
                 2.b tar -xvzf dump.tar.gz
                 2.c mongorestore --db theeye ./dump/theeye
+
 3- Congrats, you are ready brave man.
 
 # Supervisor-API-Documentation
