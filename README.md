@@ -60,7 +60,7 @@ Install [Docker Compose](http://docs.docker.com/compose/) on your system.
     * 2.a-supervisor   :    git clone git@bitbucket.org:interactar/supervisor.git     
     * 2.b-web interface:    git clone git@bitbucket.org:interactar/web.git      
     * 2.c-agent        :    git@github.com:interactar/theeye-agent.git      
-*3- download/ or clone https://gist.github.com/jailbirt/0523a8d4aab2e90bbf66     
+* 3- download/ or clone https://gist.github.com/jailbirt/0523a8d4aab2e90bbf66     
 
 
 ## Start
@@ -76,17 +76,23 @@ The app should then be running on your docker daemon on port 6080 (On OS X you c
 
 3- Congrats, you are ready brave man.
 
-# Supervisor-API-Documentation
+## Workarounds
+
+For easier logs read you can run:
+docker-compose up > /tmp/someArchive and then tail -f /tmp/someArchive | grep --line-buffered
+
+
+## Supervisor-API-Documentation
 
 > _NOTE1  "**:hostname**" part of all routes should be replaced with the registered hostname_   
 > _NOTE2 dates are always YYYY-MM-DDTHH:mm:ss.sssZ ISO 8601. except otherwise specified.
 
 ______
 
-## Scripts (authentication not required so far)
+### Scripts (authentication not required so far)
 
 
-### Get a Script
+#### Get a Script
 
 **method** : GET   
 **service url** : /script/:id   
@@ -105,7 +111,7 @@ ______
 }
 ```
 
-### Fetch Scripts
+#### Fetch Scripts
 
 **method** : GET   
 **service url** : /script   
@@ -139,7 +145,7 @@ ______
 ```
 
 
-### Create a Script
+#### Create a Script
 
 **method** : POST   
 **service url** : /script/   
@@ -164,7 +170,7 @@ ______
 }
 ```
 
-### Update a Script
+#### Update a Script
 
 **method** : PUT   
 **service url** : /script/   
@@ -196,7 +202,7 @@ ______
 
 
 
-### Delete a Script
+#### Delete a Script
 
 **service url** /script/{id}    
 **method :** DELETE    
@@ -208,10 +214,10 @@ ______
 
 _____
 
-## Scripts Download
+### Scripts Download
 
 
-### Download a Script
+#### Download a Script
 
 **method** : GET   
 **service url** : /script/download/:id   
@@ -235,9 +241,9 @@ echo "end"
 
 _____
 
-## Tasks controller
+### Tasks controller
 
-### Get a single Task
+#### Get a single Task
 
 **service url** : /task/:id    
 
@@ -261,7 +267,7 @@ _____
 }
 ```
 
-### Fetch Tasks
+#### Fetch Tasks
 
 **service url** : /task/    
 **method :** GET    
@@ -308,7 +314,7 @@ _____
 }
 ```
 
-### Create a Task
+#### Create a Task
 
 **service url** /task/    
 **method :** POST    
@@ -336,7 +342,7 @@ _____
 }
 ```
 
-### Update a Task
+#### Update a Task
 
 **service url** /task/{id}    
 **method :** PUT    
@@ -368,7 +374,7 @@ _____
 }
 ```
 
-### Delete a Task
+#### Delete a Task
 
 **service url** /task/{id}    
 **method :** DELETE    
@@ -380,7 +386,7 @@ _____
 
 ____
 
-## Job controller
+### Job controller
 
 **service url** : /job/:hostname/   
 
@@ -389,9 +395,9 @@ ____
 
 ____
 
-## Trigger Controller
+### Trigger Controller
 
-### Create a Trigger
+#### Create a Trigger
 
 **service url** /trigger    
 **method** POST    
@@ -420,9 +426,9 @@ ____
 
 ____
 
-## Macro Controller
+### Macro Controller
 
-### Run a new macro
+#### Run a new macro
 
 **service url** /macro/:script_id/run    
 **method** POST    
@@ -462,7 +468,7 @@ ____
 ```
 
 
-## User Controller
+### User Controller
 
 **User entity definition**    
 
@@ -476,7 +482,7 @@ ____
 * last_update : {Date} 
 * creation_date : {Date}
 
-### Create
+#### Create
 
 **service url** /user     
 **method** POST    
@@ -524,7 +530,7 @@ ____
 
 ```
 
-### Get
+#### Get
 
 **service url** /user/:user_id     
 **method** GET    
@@ -566,4 +572,4 @@ ____
 ```
 
 
-## Customer Controller
+### Customer Controller
