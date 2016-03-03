@@ -85,8 +85,6 @@ ______
 
 ## Scripts (authentication not required so far)
 
-> _NOTE3 "**user**" parameter is temporal until authentication is implemented. then it will be available throw the provided authentication parameters_
-
 
 ### Get a Script
 
@@ -110,7 +108,7 @@ ______
 ### Fetch Scripts
 
 **method** : GET   
-**service url** : /script?user=username   
+**service url** : /script   
 **query parameters**    
 
 * user : string  
