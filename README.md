@@ -78,9 +78,12 @@ The app should then be running on your docker daemon on port 6080 (On OS X you c
 
 ## Workarounds
 
+###Logs
 For easier logs read you can run:
 docker-compose up > /tmp/someArchive and then tail -f /tmp/someArchive | grep --line-buffered
 
+###Robomongo
+Download the lastest robomongo version, which is available at https://robomongo.org/
 
 ## Supervisor-API-Documentation
 
