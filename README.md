@@ -59,8 +59,9 @@ Install [Docker Compose](http://docs.docker.com/compose/) on your system.
 * 2- create theeye root directory where you'll work and then fech each piece:    
     * 2.a-supervisor   :    git clone git@bitbucket.org:interactar/supervisor.git     
     * 2.b-web interface:    git clone git@bitbucket.org:interactar/web.git      
-    * 2.c-agent        :    git@github.com:interactar/theeye-agent.git      
-* 3- download/ or clone https://gist.github.com/jailbirt/0523a8d4aab2e90bbf66     
+    * 2.c-agent        :    git clone https://github.com/interactar/theeye-agent.git
+     
+* 3- download gist https://gist.github.com/jailbirt/0523a8d4aab2e90bbf66    , save it as docker-compose.yml at the root directory.
 
 
 ## Start
