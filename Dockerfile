@@ -1,4 +1,4 @@
-FROM node:4.2.2
+FROM node:4.3.2
 ENV destDir /src/theeye/supervisor
 # Create app directory
 RUN mkdir -p ${destDir}
