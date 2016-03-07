@@ -9,8 +9,8 @@ module.exports = {
     "driver": "local"
   },
   "system": {
-    "base_url": "http://0.0.0.0:60080",
-    "web_url": "http://0.0.0.0:6080",
+    "base_url": "http://theeye-supervisor:60080",
+    "web_url": "http://theeye-web:6080",
     "file_upload_folder" : join(__dirname + '/', 'uploads')
   },
   "mongo": {

@@ -1,16 +1,103 @@
-# ThE EyE Supervisor REST API Documentation
+# TheEye Supervisor REST API Documentation
+
+**TheEye** is a **Servers Automation Platform made easier**
+
+It's a tool that let you resolve infrastructure problems in a very simple way and from your phone. 
+
+## Table of contents
+
+* [Architecture](#markdown-header-architecture)
+      * [Theeye system components](#markdown-header-components)
+      * [Theeye overall structure](#markdown-header-structure)
+* [Prerequisites](#markdown-header-prerequisites)
+* [Setup](#markdown-header-setup)
+* [Supervisor](#Supervisor-API-Documentation)
+
+##Architecture
+### Components
+
+**TheEye** system is composed by: 
+
+* **TheEye Supervisor** - The **Supervisor** is an API that receives events from **TheEye Agents** which are running within customers hosts/servers. The Supervisor also trigger events with different mechanisms, to those the clients can subscribe to receive the events information via email, via a web interface or with another custom integration.
+
+* **TheEye Agent**. The **Agent** is the client running on the customers host. It gather data and information from the environment, send reports to the **TheEye Supervisor** and enables the Supervisor to send tasks to the servers in the form of scripts and commands.
+
+* **TheEye Web Interface**. - The **Web Interface** is a web client. It allows users
+to get access to resources status and graphical information about all the resources monitored by the Agents that are running on the customer's servers. It also allows the user to react to events by triggering tasks which are processed by the supervisor and executed via the Agents.
+
+### Structure
+
+      worker1 
+    (checks dstat
+    on a customer's
+      server)
+         â”‚
+         â”œâ”€â”€â”€â”€ TheEye Agent â”€â”€â”€â”€â”€â”€â”€â”€ TheEye Supervisor â”€â”€â”€â”€ TheEye Web
+         â”‚   (customer's host or external host)
+         â”‚
+      worker2 
+    (scraps a 
+     customer's
+     service)
+
+## Prerequisites
+
+Install [Docker](https://www.docker.com/) on your system.
+
+* [Install instructions](https://docs.docker.com/installation/mac/) for Mac OS X
+* [Install instructions](https://docs.docker.com/installation/ubuntulinux/) for Ubuntu Linux
+* [Install instructions](https://docs.docker.com/installation/) for other platforms
+
+Install [Docker Compose](http://docs.docker.com/compose/) on your system.
+
+* Python/pip: `sudo pip install -U docker-compose`
+* Other: ``curl -L https://github.com/docker/compose/releases/download/1.6.0/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose; chmod +x /usr/local/bin/docker-compose``
+
+[Login or register at dockerhub](https://docs.docker.com/engine/reference/commandline/login/)
+
+## Setup
+* 1- do a docker login
+* 2- create theeye root directory where you'll work and then fech each piece:    
+    * 2.a-supervisor   :    git clone git@bitbucket.org:interactar/supervisor.git     
+    * 2.b-web interface:    git clone git@bitbucket.org:interactar/web.git      
+    * 2.c-agent        :    git clone https://github.com/interactar/theeye-agent.git
+     
+* 3- download gist https://gist.github.com/jailbirt/0523a8d4aab2e90bbf66    , save it as docker-compose.yml at the root directory.
+
+
+## Start
+
+1- Run `docker-compose up` that should start all the components whose are  agent,web,supervisor containers. 
+The app should then be running on your docker daemon on port 6080 (On OS X you can use `boot2docker ip` to find out the IP address).
+
+2- Optional, use dump for fullfill initial data, web user/pass are demo:12345678.
+                We aim you to run:
+                2.a cd misc/mongodb
+                2.b tar -xvzf dump.tar.gz
+                2.c mongorestore --db theeye ./dump/theeye
+
+3- Congrats, you are ready brave man.
+
+## Workarounds
+
+###Logs
+For easier logs read you can run:
+docker-compose up > /tmp/someArchive and then tail -f /tmp/someArchive | grep --line-buffered
+
+###Robomongo
+Download the lastest robomongo version, which is available at https://robomongo.org/
+
+## Supervisor-API-Documentation
 
 > _NOTE1  "**:hostname**" part of all routes should be replaced with the registered hostname_   
 > _NOTE2 dates are always YYYY-MM-DDTHH:mm:ss.sssZ ISO 8601. except otherwise specified.
 
 ______
 
-## Scripts (authentication not required so far)
-
-> _NOTE3 "**user**" parameter is temporal until authentication is implemented. then it will be available throw the provided authentication parameters_
+### Scripts (authentication not required so far)
 
 
-### Get a Script
+#### Get a Script
 
 **method** : GET   
 **service url** : /script/:id   
@@ -29,10 +116,10 @@ ______
 }
 ```
 
-### Fetch Scripts
+#### Fetch Scripts
 
 **method** : GET   
-**service url** : /script?user=username   
+**service url** : /script   
 **query parameters**    
 
 * user : string  
@@ -63,7 +150,7 @@ ______
 ```
 
 
-### Create a Script
+#### Create a Script
 
 **method** : POST   
 **service url** : /script/   
@@ -88,7 +175,7 @@ ______
 }
 ```
 
-### Update a Script
+#### Update a Script
 
 **method** : PUT   
 **service url** : /script/   
@@ -120,7 +207,7 @@ ______
 
 
 
-### Delete a Script
+#### Delete a Script
 
 **service url** /script/{id}    
 **method :** DELETE    
@@ -132,10 +219,10 @@ ______
 
 _____
 
-## Scripts Download
+### Scripts Download
 
 
-### Download a Script
+#### Download a Script
 
 **method** : GET   
 **service url** : /script/download/:id   
@@ -159,9 +246,9 @@ echo "end"
 
 _____
 
-## Tasks controller
+### Tasks controller
 
-### Get a single Task
+#### Get a single Task
 
 **service url** : /task/:id    
 
@@ -185,7 +272,7 @@ _____
 }
 ```
 
-### Fetch Tasks
+#### Fetch Tasks
 
 **service url** : /task/    
 **method :** GET    
@@ -232,7 +319,7 @@ _____
 }
 ```
 
-### Create a Task
+#### Create a Task
 
 **service url** /task/    
 **method :** POST    
@@ -260,7 +347,7 @@ _____
 }
 ```
 
-### Update a Task
+#### Update a Task
 
 **service url** /task/{id}    
 **method :** PUT    
@@ -292,7 +379,7 @@ _____
 }
 ```
 
-### Delete a Task
+#### Delete a Task
 
 **service url** /task/{id}    
 **method :** DELETE    
@@ -304,7 +391,7 @@ _____
 
 ____
 
-## Job controller
+### Job controller
 
 **service url** : /job/:hostname/   
 
@@ -313,9 +400,9 @@ ____
 
 ____
 
-## Trigger Controller
+### Trigger Controller
 
-### Create a Trigger
+#### Create a Trigger
 
 **service url** /trigger    
 **method** POST    
@@ -344,9 +431,9 @@ ____
 
 ____
 
-## Macro Controller
+### Macro Controller
 
-### Run a new macro
+#### Run a new macro
 
 **service url** /macro/:script_id/run    
 **method** POST    
@@ -386,7 +473,7 @@ ____
 ```
 
 
-## User Controller
+### User Controller
 
 **User entity definition**    
 
@@ -400,7 +487,7 @@ ____
 * last_update : {Date} 
 * creation_date : {Date}
 
-### Create
+#### Create
 
 **service url** /user     
 **method** POST    
@@ -448,7 +535,7 @@ ____
 
 ```
 
-### Get
+#### Get
 
 **service url** /user/:user_id     
 **method** GET    
@@ -490,4 +577,4 @@ ____
 ```
 
 
-## Customer Controller
+### Customer Controller
