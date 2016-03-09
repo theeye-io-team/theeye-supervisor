@@ -99,8 +99,9 @@ docker-compose up > /tmp/someArchive and then tail -f /tmp/someArchive | grep --
 
 ###MongoDB
 MongoDB is run on one of the containers. If you have a local MongoDB running, you should expect conflicts on the default port. As a workaround you can:
-  * temporarily stop your local mongo `sudo service mongodb stop`
-  * other workarounds are accepted in this section
+
+* temporarily stop your local mongo `sudo service mongodb stop`
+* other workarounds are accepted in this section
 
 ###Robomongo
 Download the lastest robomongo version, which is available at https://robomongo.org/
