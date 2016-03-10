@@ -57,32 +57,52 @@ Install [Docker Compose](http://docs.docker.com/compose/) on your system.
 
 ## Setup
 * 1- do a docker login
-* 2- create theeye root directory where you'll work and then fech each piece:    
+* 2- create theeye root directory where you'll clone each component:    
     * 2.a-supervisor   :    git clone git@bitbucket.org:interactar/supervisor.git     
     * 2.b-web interface:    git clone git@bitbucket.org:interactar/web.git      
     * 2.c-agent        :    git clone https://github.com/interactar/theeye-agent.git
      
-* 3- download gist https://gist.github.com/jailbirt/0523a8d4aab2e90bbf66    , save it as docker-compose.yml at the root directory.
+* 3- download gist https://gist.github.com/jailbirt/0523a8d4aab2e90bbf66, save it as docker-compose.yml at the root directory.
 
 
 ## Start
 
-1- Run `docker-compose up` that should start all the components whose are  agent,web,supervisor containers. 
-The app should then be running on your docker daemon on port 6080 (On OS X you can use `boot2docker ip` to find out the IP address).
+1- Run `docker-compose up`, that should start all the components (agent, web and supervisor) containers. 
+The web frontend should be running on your docker daemon on port 6080 (On OS X you can use `boot2docker ip` to find out the IP address).
 
-2- Optional, use dump for fullfill initial data, web user/pass are demo:12345678.
-                We aim you to run:
-                2.a cd misc/mongodb
-                2.b tar -xvzf dump.tar.gz
-                2.c mongorestore --db theeye ./dump/theeye
+2- Use demo data to restore a working mongoDB.
+To restore demo data into the mongoDB:
+
+* 2.a `cd misc/mongodb`
+* 2.b `tar -xvzf dump.tar.gz`
+* 2.c `mongorestore --db theeye ./dump/theeye`
 
 3- Congrats, you are ready brave man.
+
+### Installing local Agent
+As an option, you can install and run a local `agent`. It's good practice to experience a basic `agent` installation.
+
+**Note:** For this step, you should've restored the demo data mentioned on the previous step
+
+With the components running (at least supervisor and web are needed) you can login to the frontend. Go to http://localhost:6080 on your browser. Login with user `demo` and password `12345678`.
+
+The first screen should state you have no agents running and will provide you with a *curl based* installation, something like:
+
+`sudo curl -s "http://interactar.com/public/install/XXXXXXXXXXXXXXXXXXXXXXXXXX/setup_generic.sh" | bash -s "sauron" "sauron" "demo"`
+
+**Remember the installation needs elevated privileges**
 
 ## Workarounds
 
 ###Logs
 For easier logs read you can run:
 docker-compose up > /tmp/someArchive and then tail -f /tmp/someArchive | grep --line-buffered
+
+###MongoDB
+MongoDB is run on one of the containers. If you have a local MongoDB running, you should expect conflicts on the default port. As a workaround you can:
+
+* temporarily stop your local mongo `sudo service mongodb stop`
+* other workarounds are accepted in this section
 
 ###Robomongo
 Download the lastest robomongo version, which is available at https://robomongo.org/
