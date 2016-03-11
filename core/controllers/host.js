@@ -6,6 +6,7 @@ var debug = require('debug')('eye:supervisor:controller:host');
 var config = require('config');
 var _ = require('underscore');
 var paramsResolver = require('../router/param-resolver');
+var NotificationService = require('../service/notification');
 
 var elastic = require('../lib/elastic');
 
@@ -170,6 +171,17 @@ var controller = {
       var resource = result.resource;
 
       debug('host "%s" registration completed.', hostname);
+
+      NotificationService.sendSNSNotification({
+        'resource'      : 'host',
+        'event'         : 'host_registered',
+        'customer_name' : host.customer_name,
+        'hostname'      : host.hostname
+      },{ 
+        topicArn : 'arn:aws:sns:us-east-1:691060090647:events' ,
+        subject : 'host_registered' ,
+        apiRoute : '/events/update'
+      }); 
 
       var response = _.extend({
         "resource_id": resource ? resource._id : null,
