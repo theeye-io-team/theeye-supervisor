@@ -6,6 +6,11 @@ fi
 
 export DEBUG
 
-NO_MONITORING='true' NODE_ENV='localdev' ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' $PWD/core/main.js
+if [ -z $DOCKER ];then
+	echo "Verifing/updating packages"
+	npm install
+fi
+
+NODE_ENV='localdev' ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' $PWD/core/main.js
 
 exit 0;
