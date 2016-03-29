@@ -1,4 +1,5 @@
 FROM node:4.3.2
+RUN apt-get update && apt-get upgrade -y sendmail && rm -rf /var/lib/apt/lists/*
 MAINTAINER Javier Ailbirt <jailbirt@interactar.com>
 ENV destDir /src/theeye/supervisor
 # Create app directory
