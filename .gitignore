@@ -4,3 +4,4 @@ newrelic_*.log
 scripts/
 config/*
 misc/playground/aws/config.json
+supervisor

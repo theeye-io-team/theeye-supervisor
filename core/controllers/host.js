@@ -177,11 +177,11 @@ var controller = {
         'event'         : 'host_registered',
         'customer_name' : host.customer_name,
         'hostname'      : host.hostname
-      },{ 
-        topicArn : 'arn:aws:sns:us-east-1:691060090647:events' ,
-        subject : 'host_registered' ,
+      },{
+        topicArn : 'arn:aws:sns:us-east-1:691060090647:events',
+        subject : 'host_registered',
         apiRoute : '/events/update'
-      }); 
+      });
 
       var response = _.extend({
         "resource_id": resource ? resource._id : null,
