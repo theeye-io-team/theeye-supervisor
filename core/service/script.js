@@ -178,9 +178,12 @@ var Service = {
     }
     });
   },
-  getScriptStream : function(script,next)
-  {
-    storageMedia.getStream(script.keyname,script.customer_name, next);
+  getScriptStream: function(script,next) {
+    storageMedia.getStream(
+      script.keyname,
+      script.customer_name,
+      next
+    );
   }
 };
 

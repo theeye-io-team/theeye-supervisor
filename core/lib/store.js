@@ -1,15 +1,11 @@
 var AWS = require('aws-sdk');
-
 var config = require("config");
 var systemConfig = config.get("system") ;
-
 var path = require('path');
 var fs = require('fs');
 var zlib = require('zlib');
-
-var scriptsBucket = 'theeye.scripts';
-
 var debug = require('debug')('eye:supervisor:lib:store');
+var scriptsBucket = 'theeye.scripts';
 
 var S3Storage = {
   save : function(input,next)
@@ -57,14 +53,14 @@ var S3Storage = {
       }
     });
   },
-  getStream : function(key,customer_name,next)
+  getStream: function(key,customer_name,next)
   {
     var params = {
-      Bucket : scriptsBucket,
+      Bucket: scriptsBucket,
       Key: key
     };
 
-    var s3 = new AWS.S3({ params : params });
+    var s3 = new AWS.S3({ params: params });
 
     s3.getObject(params)
     .on('error',function(error){
@@ -152,7 +148,10 @@ var LocalStorage = {
     var scriptsPath = customerPath + '/scripts';
     var file = path.join(scriptsPath, key);
 
-    next(null,fs.createReadStream(file));
+    fs.access(file, fs.R_OK, function(err){
+      if(err) return next(err);
+      next(null,fs.createReadStream(file));
+    });
   },
   remove : function(script,next)
   {
