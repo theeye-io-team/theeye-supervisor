@@ -22,4 +22,10 @@ if [ -z ${DEBUG+x} ]; then
 fi
 export DEBUG
 
+if [ -z $NODE_ENV ];then
+	NODE_ENV='production'
+fi
+
+echo running NODE_ENV=$NODE_ENV
+
 NODE_ENV=production $require --harmony_proxies -i . $path/core/main.js
