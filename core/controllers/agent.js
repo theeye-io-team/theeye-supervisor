@@ -28,15 +28,14 @@ var controller = {
     var host = req.host ;
 
     NotificationService.sendSNSNotification({
-      'state'        : 'normal',
-      'message'       : 'agent running',
-      'customer_name' : host.customer_name,
-      'hostname'      : host.hostname,
-      'type'          : 'agent'
+      'state': 'normal',
+      'message': 'agent running',
+      'customer_name': host.customer_name,
+      'hostname': host.hostname,
+      'type': 'agent'
     },{
-      topicArn : 'arn:aws:sns:us-east-1:691060090647:events' ,
-      subject : 'agent_update' ,
-      apiRoute : '/events/update'
+      topic : 'events',
+      subject : 'agent_update'
     });
 
     debug.log('agent keep alive registered');

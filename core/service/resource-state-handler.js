@@ -137,9 +137,8 @@ ResourceStateHandler.prototype = {
           'hostname'      : resource.hostname,
           'type'          : 'resource'
         },{
-          topicArn : 'arn:aws:sns:us-east-1:691060090647:events' ,
-          subject : 'service_update' ,
-          apiRoute : '/events/update'
+          topic : 'events',
+          subject : 'service_update'
         });
       }
     }

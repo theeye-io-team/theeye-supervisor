@@ -109,9 +109,8 @@ Service.prototype._handleFailureState = function(input) {
           'hostname': self.resource.hostname,
           'type': 'resource'
         },{
-          topicArn : 'arn:aws:sns:us-east-1:691060090647:events' ,
-          subject : 'resource_update' ,
-          apiRoute : '/events/update'
+          topic : 'events' ,
+          subject : 'resource_update'
         });
       }
     }
@@ -127,9 +126,8 @@ Service.prototype._handleFailureState = function(input) {
           'hostname' : self.resource.hostname,
           'type' : 'resource'
         },{
-          topicArn : 'arn:aws:sns:us-east-1:691060090647:events' ,
-          subject : 'resource_update' ,
-          apiRoute : '/events/update'
+          topic : 'events' ,
+          subject : 'resource_update' 
         });
       }
     }
@@ -194,9 +192,8 @@ Service.prototype._handleNormalState = function(input) {
             'id': resource.id,
             'hostname': resource.hostname
           },{
-            topicArn: 'arn:aws:sns:us-east-1:691060090647:events',
-            subject: 'resource_update',
-            apiRoute: '/events/update'
+            topic : 'events' ,
+            subject: 'resource_update'
           });
         }
       } else {
@@ -214,9 +211,8 @@ Service.prototype._handleNormalState = function(input) {
             'id' : resource.id,
             'hostname' : resource.hostname
           },{
-            topicArn : 'arn:aws:sns:us-east-1:691060090647:events',
-            subject : 'resource_update',
-            apiRoute : '/events/update'
+            topic : 'events' ,
+            subject : 'resource_update'
           });
         }
         resource.state = newState;
@@ -275,9 +271,8 @@ Service.prototype._handleUpdatesStoppedState = function(input) {
           'hostname': self.resource.hostname,
           'type': 'resource'
         },{
-          topicArn: 'arn:aws:sns:us-east-1:691060090647:events' ,
-          subject: 'resource_update' ,
-          apiRoute: '/events/update'
+          'topic': 'events',
+          'subject': 'resource_update'
         });
 
       }

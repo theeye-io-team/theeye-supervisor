@@ -46,9 +46,8 @@ var controller = {
       hostname: host.hostname,
       type: "psaux"
     },{
-      topicArn: "arn:aws:sns:us-east-1:691060090647:host-stats",
-      subject: "psaux_update",
-      apiRoute: '/hoststats/update'
+      topic: "host-stats",
+      subject: "psaux_update"
     });
 
     res.send(200); 

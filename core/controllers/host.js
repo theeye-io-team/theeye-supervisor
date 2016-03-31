@@ -178,9 +178,8 @@ var controller = {
         'customer_name' : host.customer_name,
         'hostname'      : host.hostname
       },{
-        topicArn : 'arn:aws:sns:us-east-1:691060090647:events',
-        subject : 'host_registered',
-        apiRoute : '/events/update'
+        topic : 'events',
+        subject : 'host_registered'
       });
 
       var response = _.extend({

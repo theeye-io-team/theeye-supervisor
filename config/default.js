@@ -4,8 +4,8 @@ module.exports = {
     "driver": "s3" // local or s3
   },
   "system": {
-    "base_url": "http://127.0.0.1:6080",
-    "web_url": "http://127.0.0.1:8080",
+    "base_url": "",
+    "web_url": "",
     "view_teamplates_path": __dirname + "/../core/view/template",
     "file_upload_folder": "/tmp"
   },
@@ -34,7 +34,22 @@ module.exports = {
     "username":"",
     "accessKeyId": "",
     "secretAccessKey": "",
-    "region": ""
+    "region": "",
+  },
+  "sns": {
+    "topicArn": {
+      "events": "",
+      "host-stats": "",
+      "jobs": ""
+    }
+  },
+  // development no AWS-SNS endpoints
+  "web-sns":{
+    "topicEndpoint": {
+      "events": "/events/update",
+      "host-stats": "/hoststats/update",
+      "jobs": "/palanca/update"
+    }
   },
   "elasticsearch": {
     "enabled":false,

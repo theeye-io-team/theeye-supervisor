@@ -72,9 +72,8 @@ var controller = {
     elastic.submit(customer.name,'host-stats', data);
 
     NotificationService.sendSNSNotification(data,{
-      topicArn: "arn:aws:sns:us-east-1:691060090647:host-stats",
-      subject: "dstat_update",
-      apiRoute: '/hoststats/update'
+      topic: 'host-stats',
+      subject: 'dstat_update'
     });
 
     return res.send(200);

@@ -115,14 +115,11 @@ var controller = {
         job.result = input;
         job.save();
         // notify job result to clients
-        if( job.notify )
-        {
-          job.publish(function(data)
-          {
+        if( job.notify ) {
+          job.publish(function(data) {
             notificationService.sendSNSNotification(data,{
-              topicArn : "arn:aws:sns:us-east-1:691060090647:jobs",
-              subject : "job_update",
-              apiRoute : "/palanca/update"
+              topicArn : "jobs",
+              subject : "job_update"
             });
           });
         }

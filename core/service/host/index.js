@@ -84,14 +84,13 @@ HostService.prototype = {
       });
 
       NotificationService.sendSNSNotification({
-        'resource'      : 'host',
-        'event'         : vent,
-        'customer_name' : host.customer_name,
-        'hostname'      : host.hostname
+        'resource': 'host',
+        'event': vent,
+        'customer_name': host.customer_name,
+        'hostname': host.hostname
       },{
-        topicArn : 'arn:aws:sns:us-east-1:691060090647:events' ,
-        subject : 'host_update' ,
-        apiRoute : '/events/update'
+        topic: 'events' ,
+        subject: 'host_update'
       });
   }
 };
