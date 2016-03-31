@@ -33,12 +33,12 @@ var controller = {
     debug.log('Handling host dstat data');
 
     var host = req.host;
-    if(host===null) return res.send(404);
+    if(!host) return res.send(404,'host not found');
 
     var customer = req.customer;
     var stats = req.params.dstat;
 
-    if(!stats) return res.send(400);
+    if(!stats) return res.send(400,'no stats supplied');
 
     HostStats.findOneByHostAndType( host._id, 'dstat',
       function(error,dstat){

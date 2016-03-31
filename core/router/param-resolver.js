@@ -57,6 +57,13 @@ function validMongoId (_id) {
 function hostnameToHost (options) {
   return function(req,res,next) {
     var hostname = req.params.hostname || req.body.hostname || req.query.hostname;
+    var customer = req.customer;
+
+    if(!customer) {
+      debug('no customer');
+      req.host = null;
+      return next();
+    }
 
     if(!hostname) {
       debug('no hostname');
@@ -66,7 +73,11 @@ function hostnameToHost (options) {
 
     debug('resolving host with hostname "%s"', hostname);
 
-    var query = { hostname : hostname };
+    var query = {
+      'hostname': hostname,
+      'customer_name': customer.name
+    };
+
     Host.findOne(query,function(queryError,host){
       if(queryError) {
         debug(queryError);

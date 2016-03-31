@@ -7,6 +7,7 @@ var paramsResolver = require('../router/param-resolver');
 module.exports = function(server, passport) {
 	server.post('/psaux/:hostname', [
     passport.authenticate('bearer', {session:false}),
+    paramsResolver.customerNameToEntity({}),
     paramsResolver.hostnameToHost({})
   ], controller.create);
 }

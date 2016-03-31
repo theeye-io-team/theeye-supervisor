@@ -2,13 +2,14 @@ var Script = require("../entity/script").Entity;
 var json = require("../lib/jsonresponse");
 var debug = require('debug')('eye:supervisor:controller:agent-config');
 var async = require('async');
-var hostnameToHostResolver = require('../router/param-resolver').hostnameToHost;
+var paramsResolver = require('../router/param-resolver');
 var ResourceMonitorService = require("../service/resource/monitor");
 
 module.exports = function(server, passport) {
 	server.get('/agent/:hostname/config',[
     passport.authenticate('bearer', {session:false}),
-    hostnameToHostResolver({})
+    paramsResolver.customerNameToEntity({}),
+    paramsResolver.hostnameToHost({})
   ],controller.fetch);
 
   return {
@@ -16,7 +17,10 @@ module.exports = function(server, passport) {
       {
         route: '/agent/:hostname/config',
         method: 'get',
-        middleware: [ hostnameToHostResolver({}) ],
+        middleware: [ 
+          paramsResolver.customerNameToEntity({}),
+          paramsResolver.hostnameToHost({})
+        ],
         action: controller.fetch
       }
     ]

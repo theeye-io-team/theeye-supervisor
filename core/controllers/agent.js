@@ -7,6 +7,7 @@ var paramsResolver = require('../router/param-resolver');
 module.exports = function(server, passport){
 	server.put('/agent/:hostname',[
     passport.authenticate('bearer', {session:false}),
+    paramsResolver.customerNameToEntity({}),
     paramsResolver.hostnameToHost({})
   ],controller.update);
 
@@ -15,7 +16,10 @@ module.exports = function(server, passport){
       {
         route: '/agent/:hostname',
         method: 'put',
-        middleware: [ paramsResolver.hostnameToHost({}) ],
+        middleware: [
+          paramsResolver.customerNameToEntity({}),
+          paramsResolver.hostnameToHost({}) 
+        ],
         action: controller.update
       }
     ]

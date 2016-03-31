@@ -13,6 +13,7 @@ module.exports = function(server, passport) {
 
   server.get('/job',[
     passport.authenticate('bearer', {session:false}),
+    paramsResolver.customerNameToEntity({}),
     paramsResolver.hostnameToHost({})
   ], controller.fetch);
 
@@ -32,6 +33,7 @@ module.exports = function(server, passport) {
         route: '/job',
         method: 'get',
         middleware: [
+          paramsResolver.customerNameToEntity({}),
           paramsResolver.hostnameToHost({})
         ],
         action: controller.fetch
