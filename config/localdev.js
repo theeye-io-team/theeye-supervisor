@@ -26,8 +26,9 @@ module.exports = {
     "reply_to": "Support <support@theeye.io>",
     "only_support": true,
     "include_support_bcc": true,
-    "support": [
-      "support@theeye.io"
-    ]
+    "support": [ "support@theeye.io" ],
+    "transport": {
+      "type":"sendmail"
+    }
   }
 }

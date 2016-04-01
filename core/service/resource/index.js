@@ -80,20 +80,20 @@ Service.prototype._handleFailureState = function(input) {
         var severity = self.getEventSeverity(input);
         self.resource.failure_severity = severity ;
 
-        var subject = '[:priority Priority] :customer resource failed'
-          .replace(':customer', customer_name)
+        var subject = '[:priority] :resource failure'
+          .replace(':resource', self.resource.name)
           .replace(':priority', severity)
           ;
 
-        resourceNotification( self.resource, input.event, input.data,
+        resourceNotification(self.resource, input.event, input.data,
           function(content){
             CustomerService.getAlertEmails(customer_name,function(emails){
               debug('sending email notifications');
               NotificationService.sendEmailNotification({
-                to : emails.join(','),
-                customer_name : customer_name,
-                subject : subject,
-                content : content
+                'to': emails.join(','),
+                'customer_name': customer_name,
+                'subject': subject,
+                'content': content
               });
             });
           }
@@ -170,10 +170,10 @@ Service.prototype._handleNormalState = function(input) {
           var severity = resource.failure_severity || 'undefined';
           self.resource.failure_severity = null ;
 
-          var subject = '[:priority Priority] :customer resource recovered'
-            .replace(':customer', customer_name)
-            .replace(':priority', severity)
-            ;
+          var subject = '[:priority] :resource recovered'
+          .replace(':resource', self.resource.name)
+          .replace(':priority', severity)
+          ;
 
           CustomerService.getAlertEmails(customer_name, function(emails){
             NotificationService.sendEmailNotification({
@@ -248,8 +248,8 @@ Service.prototype._handleUpdatesStoppedState = function(input) {
         var severity = self.getEventSeverity(input);
         self.resource.failure_severity = severity ;
 
-        var subject = '[:priority Priority] :customer resource notifications stopped'
-          .replace(':customer', customer_name)
+        var subject = '[:priority] :resource unreachable'
+          .replace(':resource', self.resource.name)
           .replace(':priority', severity)
           ;
 

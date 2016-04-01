@@ -10,14 +10,13 @@ var HostGroup = require('./group');
 
 var debug = require("debug")("eye:supervisor:service:host") ;
 
-function HostService(host)
-{
+function HostService(host) {
   var self = this;
   this.host = host ;
-} ;
+}
 
 HostService.prototype = {
-  agentUnreachable:function()
+  agentUnreachable: function()
   {
     var self = this;
     var vent = 'agent_unreachable' ;
@@ -27,25 +26,22 @@ HostService.prototype = {
       host.customer_id,
       function(error,config){
         host.fails_count += 1;
-
         var maxFails = config.fails_count_alert;
-
         debug('fails count %d/%d', host.fails_count, maxFails);
 
-        if( host.fails_count > maxFails )
-        {
-          if( host.state != vent )
-          {
+        if( host.fails_count > maxFails ) {
+          if( host.state != vent ) {
             debug('host "%s" state has changed to "%s"', host.hostname, vent);
             host.state = vent ;
 
             debug('processing "%s" event',vent);
-            self.handleEvent('ALERT',vent);
+            sendEventNotification(host,vent);
           }
         }
 
         host.save();
-      });
+      }
+    );
   },
   agentRunning:function()
   {
@@ -60,44 +56,56 @@ HostService.prototype = {
       host.save();
 
       debug('processing "%s" event',vent);
-      this.handleEvent('ALERT',vent);
+      sendEventNotification(host,vent);
     }
   },
-  handleEvent:function(type,vent)
-  {
-    var host = this.host;
-
-    Handlebars.render(
-      'email/host/' + vent, 
-      {hostname:host.hostname}, 
-      function(content){
-
-        CustomerService.getAlertEmails(host.customer_name,function(emails){
-
-          NotificationService.sendEmailNotification({
-            to : emails.join(','),
-            customer_name : host.customer_name,
-            subject : '[' + type + '] ' + host.customer_name + ' host state has changed',
-            content : content
-          });
-        });
-      });
-
-      NotificationService.sendSNSNotification({
-        'resource': 'host',
-        'event': vent,
-        'customer_name': host.customer_name,
-        'hostname': host.hostname
-      },{
-        topic: 'events' ,
-        subject: 'host_update'
-      });
-  }
 };
 
+function sendEventNotification (host,vent)
+{
+  var str = '[HIGH] :customer/:hostname :event';
+  var subject = str
+  .replace(':customer', host.customer_name)
+  .replace(':hostname', host.hostname);
+
+  switch(vent)
+  {
+    case 'agent_unreachable':
+      subject = subject.replace(':event','unreachable');
+      break;
+    case 'agent_running':
+      subject = subject.replace(':event','recovered');
+      break;
+  }
+
+  var template = 'email/host/' + vent;
+  var params = { 'hostname': host.hostname };
+
+  Handlebars.render(template, params, function(content){
+    CustomerService.getAlertEmails(host.customer_name,function(emails){
+      NotificationService.sendEmailNotification({
+        'to': emails.join(','),
+        'customer_name': host.customer_name,
+        'subject': subject,
+        'content': content
+      });
+    });
+  });
+
+  NotificationService.sendSNSNotification({
+    'resource': 'host',
+    'event': vent,
+    'customer_name': host.customer_name,
+    'hostname': host.hostname
+  },{
+    'topic': 'events',
+    'subject': 'host_update'
+  });
+}
+
 /**
- * create a dstats and psaux monitoring workers
- */
+* create a dstats and psaux monitoring workers
+*/
 function createHostMonitoringWorkers (input, doneFn) {
   ResourceMonitorService.createMonitor('dstat', input,
     function(error,dstat){
@@ -114,21 +122,21 @@ function createHostMonitoringWorkers (input, doneFn) {
 }
 
 /**
- *
- * @author Facundo
- *
- * @param {String} hostname
- * @param {Object} customer , a Customer object
- * @param {Object} info
- *    @property {String} agent_version
- *    @property {String} ip
- *    @property {String} os_name
- *    @property {String} os_version
- *    @property {String} state
- * @param {Function} next callback
- * @return null
- *
- */
+*
+* @author Facundo
+*
+* @param {String} hostname
+* @param {Object} customer , a Customer object
+* @param {Object} info
+*    @property {String} agent_version
+*    @property {String} ip
+*    @property {String} os_name
+*    @property {String} os_version
+*    @property {String} state
+* @param {Function} next callback
+* @return null
+*
+*/
 HostService.register = function(
   hostname,
   customer,

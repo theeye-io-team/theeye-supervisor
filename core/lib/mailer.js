@@ -1,32 +1,47 @@
-
-function Mailer(tr,cfg) {
-  this.transporter = tr ;
-  this.config = cfg ;
-}
-
-Mailer.prototype.sendMail = function(options,callback) {
-  var config = this.config ;
-  var from = config.from.replace(/%customer%/g, options.customer_name) ;
-
-  options.from = from;
-  options.replyTo = config.reply_to;
-
-  if( config.only_support || ! options.to ) {
-    options.to = config.support.join(',');
-  } else if( config.include_support_bcc ) {
-    options.bcc = config.support.join(',');
-  }
-
-  this.transporter.sendMail(options,callback);
-}
+var config = require('config') ;
+var nodemailer = require('nodemailer');
 
 /**
  * http://www.nodemailer.com/
  */
-var nodemailer = require('nodemailer');
-var sendmailTransport = require('nodemailer-sendmail-transport');
-var transporter = nodemailer.createTransport( sendmailTransport() );
+var mailercfg = config.get('mailer');
+var trType = mailercfg.transport.type;
+var options = mailercfg.transport.options || {};
+switch(trType)
+{
+  case 'ses':
+    var transport = require('nodemailer-ses-transport')(options);
+    break;
+  case 'sendmail':
+    var transport = require('nodemailer-sendmail-transport')(options);
+    break;
+  case 'smtp':
+    var transport = require('nodemailer-smtp-transport')(options);
+    break;
+  default:
+    var msg = 'nodemailer transport ' + trType + ' not implemented.';
+    throw new Error(msg);
+    break;
+}
 
-var config = require('config').get('mailer') ;
+var transporter = nodemailer.createTransport(transport);
 
-module.exports = new Mailer( transporter, config ) ;
+module.exports = {
+  sendMail: function(options, callback) {
+    var config = mailercfg;
+    var from = config
+      .from
+      .replace(/%customer%/g, options.customer_name) ;
+
+    options.from = from;
+    options.replyTo = config.reply_to;
+
+    if( config.only_support || ! options.to ) {
+      options.to = config.support.join(',');
+    } else if( config.include_support_bcc ) {
+      options.bcc = config.support.join(',');
+    }
+
+    transporter.sendMail(options, callback);
+  }
+}

@@ -29,7 +29,7 @@ module.exports = {
       }
     }
   },
-  /* aws sns , s3 */
+  /** aws sns, s3, ses **/
   "aws": {
     "username":"",
     "accessKeyId": "",
@@ -41,6 +41,51 @@ module.exports = {
       "events": "",
       "host-stats": "",
       "jobs": ""
+    }
+  },
+  "mailer": {
+    "from": "The Eye %customer% <%customer%@theeye.io>",
+    "reply_to": "Support <support@theeye.io>",
+    "only_support": false,
+    "include_support_bcc": false,
+    "support": [],
+    "transport": {
+      /** use aws email service **/
+      "type":"ses",
+      /**
+      "options":{
+        "accessKeyId":"",
+        "secretAccessKey":"",
+        "sessionToken":"",
+        "region":"",
+        "httpOptions":"",
+        "rateLimit":"",
+      }
+      */
+      /**
+       * use local sendmail smtp , with no options
+       * "type":"sendmail",
+       *
+       * or
+       *
+       * "type":"smtp",
+       * "options":{
+       *   "port":"",
+       *   "host":"",
+       *   "secure":"",
+       *   "auth":"",
+       *   "ignoreTLS":"",
+       *   "name":"",
+       *   "localAddress":"",
+       *   "connectionTimeout":"",
+       *   "greetingTimeout":"",
+       *   "socketTimeout":"",
+       *   "logger":"",
+       *   "debug":"",
+       *   "authMethod":"",
+       *   "tls":"",
+       * }
+       */
     }
   },
   // development no AWS-SNS endpoints
@@ -55,17 +100,6 @@ module.exports = {
     "enabled":false,
     "url":"",
     "db":""
-  },
-  "mailer": {
-    "from": "The Eye %customer% <%customer%@theeye.io>",
-    "reply_to": "Support <support@theeye.io>",
-    "only_support": false,
-    "include_support_bcc": false,
-    "support": [
-  //me quema la cabezaaa    "facugon@interactar.com",
-  //me quema la cabezaaa    "jailbirt@interactar.com",
-  //me quema la cabezaaa    "jgzurano@interactar.com"
-    ]
   },
   "server": {
     "name": "TheEye", 
