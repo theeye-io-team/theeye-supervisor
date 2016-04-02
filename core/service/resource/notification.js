@@ -67,15 +67,15 @@ module.exports = function (
   var type = resource.type;
   if( resources.hasOwnProperty(type) )
   {
-    var value = resource[type];
+    var value = resources[type];
     var events = value.events;
     if(events.length == 0 || !event_name){
       return done(format('resource "%s" checks failed', resource.description));
     } else {
       for(var i=0; i<events.length; i++){
         var evnt = events[i];
-        if(event.name == event_name){
-          return done(event.message(resource, event_data));
+        if(evnt.name == event_name){
+          return done(evnt.message(resource, event_data));
         }
       }
     }
