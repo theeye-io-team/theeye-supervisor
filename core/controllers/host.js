@@ -80,10 +80,23 @@ function registerHostname (options, doneFn) {
         hostname,
         customer,
         properties,
-        doneFn
+        function(err,res){
+          if(err) return doneFn(err);
+          doneFn(err,res);
+          var host = res.host;
+
+          NotificationService.sendSNSNotification({
+            'resource': 'host',
+            'event': 'host_registered',
+            'customer_name': host.customer_name,
+            'hostname': host.hostname
+          },{
+            topic: 'events',
+            subject: 'host_registered'
+          });
+        }
       );
     } else {
-
       debug('host found');
       if(!host.enable) {
         var error = new Error('host is disabled');
@@ -171,16 +184,6 @@ var controller = {
       var resource = result.resource;
 
       debug('host "%s" registration completed.', hostname);
-
-      NotificationService.sendSNSNotification({
-        'resource'      : 'host',
-        'event'         : 'host_registered',
-        'customer_name' : host.customer_name,
-        'hostname'      : host.hostname
-      },{
-        topic : 'events',
-        subject : 'host_registered'
-      });
 
       var response = _.extend({
         "resource_id": resource ? resource._id : null,
