@@ -9,12 +9,12 @@ module.exports = {
     "driver": "local"
   },
   "system": {
-    "base_url": "http://localhost:60080",
-    "web_url": "http://localhost:6080",
+    "base_url": "http://theeye-supervisor:60080",
+    "web_url": "http://theeye-web:6080",
     "file_upload_folder" : join(__dirname + '/', 'uploads')
   },
   "mongo": {
-    "hosts": "localhost",
+    "hosts": "theeye-db",
     "database": "theeye",
     "port": "27017",
     "user": "",
