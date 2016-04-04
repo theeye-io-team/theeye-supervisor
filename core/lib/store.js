@@ -1,18 +1,18 @@
 var AWS = require('aws-sdk');
-var config = require("config");
-var systemConfig = config.get("system") ;
 var path = require('path');
 var fs = require('fs');
 var zlib = require('zlib');
 var debug = require('debug')('eye:supervisor:lib:store');
-var scriptsBucket = 'theeye.scripts';
+
+var config = require("config");
+var systemConfig = config.get('system');
 
 var S3Storage = {
   save : function(input,next)
   {
     var params = {
-      Bucket : scriptsBucket,
-      Key : input.script.keyname
+      'Bucket': config.get('s3').bucket,
+      'Key': input.script.keyname
     };
 
     var s3obj = new AWS.S3({ params : params });
@@ -22,7 +22,9 @@ var S3Storage = {
     .pipe( zlib.createGzip() );
 
     s3obj.upload({ Body : body })
-    .on('httpUploadProgress', function(evt) { debug('upload progress %j', evt); })
+    .on('httpUploadProgress', function(evt) {
+      debug('upload progress %j', evt); 
+    })
     .send(function(error, data) {
       if(error) {
         debug('failed to create s3 script');
@@ -38,8 +40,8 @@ var S3Storage = {
     if(!next) next = function(){};
 
     var params = {
-      Bucket : scriptsBucket,
-      Key : script.name
+      'Bucket': config.get('s3').bucket,
+      'Key': script.name
     };
 
     var s3 = new AWS.S3({ params : params });
@@ -56,8 +58,8 @@ var S3Storage = {
   getStream: function(key,customer_name,next)
   {
     var params = {
-      Bucket: scriptsBucket,
-      Key: key
+      'Bucket': config.get('s3').bucket,
+      'Key': key
     };
 
     var s3 = new AWS.S3({ params: params });

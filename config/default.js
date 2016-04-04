@@ -36,6 +36,9 @@ module.exports = {
     "secretAccessKey": "",
     "region": "",
   },
+  "s3": {
+    "bucket":"theeye.scripts"
+  },
   "sns": {
     "topicArn": {
       "events": "",
