@@ -4,7 +4,7 @@ var fs = require('fs');
 var json = require('../lib/jsonresponse');
 var debug = require('../lib/logger')('eye:supervisor:controller:script');
 var ScriptService = require('../service/script');
-var MonitorService = require('../service/resource/monitor');
+var ResourceService = require('../service/resource');
 
 var Script = require('../entity/script').Entity;
 
@@ -129,7 +129,7 @@ var controller = {
         return res.send(500);
       }
 
-      MonitorService.disableScriptMonitorsWithDeletedScript(script);
+      ResourceService.onScriptRemoved(script);
 
       res.send(204);
     });
@@ -156,7 +156,7 @@ var controller = {
     },function(error, script){
       if(error) return res.send(500);
 
-      MonitorService.notifyScriptMonitorsUpdate(script);
+      ResourceService.onScriptUpdated(script);
 
       script.publish(function(error, data){
         res.send(200,{ 'script': data });
