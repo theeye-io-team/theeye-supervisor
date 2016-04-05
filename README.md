@@ -73,7 +73,7 @@ The web frontend should be running on your docker daemon on port 6080 (On OS X y
 2- Use demo data to restore a working mongoDB.
 To restore demo data into the mongoDB:
 
-* 2.a `cd misc/mongodb`
+* 2.a `cd supervisor/misc/mongodb`
 * 2.b `tar -xvzf dump.tar.gz`
 * 2.c `mongorestore --db theeye ./dump/theeye`
 
