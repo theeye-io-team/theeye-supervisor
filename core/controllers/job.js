@@ -120,7 +120,7 @@ var controller = {
         if( job.notify ) {
           job.publish(function(data) {
             notificationService.sendSNSNotification(data,{
-              topicArn : "jobs",
+              topic : "jobs",
               subject : "job_update"
             });
           });

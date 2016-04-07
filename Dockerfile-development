@@ -9,4 +9,4 @@ RUN npm install
 # Bundle app source
 COPY . ${destDir}
 EXPOSE 60080
-CMD [ "npm", "run","devel" ]
+CMD ["npm","run","devel"]

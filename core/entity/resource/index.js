@@ -7,7 +7,7 @@ var ObjectId = require('mongoose').Schema.Types.ObjectId;
 var debug = require('debug')('eye:entity:resource');
 var _ = require('lodash');
 
-var INITIAL_STATE = 'unknown' ;
+var INITIAL_STATE = 'normal' ;
 
 /**
  * Extended Schema. Includes non template attributes

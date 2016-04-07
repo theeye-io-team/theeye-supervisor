@@ -36,6 +36,9 @@ module.exports = {
     "secretAccessKey": "",
     "region": "",
   },
+  "s3": {
+    "bucket":"theeye.scripts"
+  },
   "sns": {
     "topicArn": {
       "events": "",
@@ -50,7 +53,12 @@ module.exports = {
     "include_support_bcc": false,
     "support": [],
     "transport": {
-      /** use aws email service **/
+      /** 
+       * use aws email service 
+       * more options
+       * https://github.com/andris9/nodemailer-ses-transport
+       *
+       **/
       "type":"ses",
       /**
       "options":{
@@ -66,7 +74,9 @@ module.exports = {
        * use local sendmail smtp , with no options
        * "type":"sendmail",
        *
-       * or
+       * or smtp
+       * more options
+       * https://github.com/nodemailer/nodemailer-smtp-transport
        *
        * "type":"smtp",
        * "options":{

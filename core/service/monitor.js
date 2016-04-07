@@ -34,7 +34,8 @@ module.exports = {
       'enable': true,
       'type': 'host'
     },function(err,resources){
-      resources.forEach(function(resource,index){
+      for(var i=0; i<resources.length; i++){
+        var resource = resources[i];
         CustomerService.getCustomerConfig(
           resource.customer_id,
           function(error,customerConfig){
@@ -55,7 +56,7 @@ module.exports = {
             }
           }
         );
-      });
+      }
     });
   },
   checkResourcesState : function()
@@ -67,7 +68,9 @@ module.exports = {
     },function(err,resources){
       var nowTime = Date.now(); // milliseconds
 
-      resources.forEach(function(resource,index){
+      for(var i=0; i<resources.length; i++){
+        var resource = resources[i];
+
         ResourceMonitor.findOne({
           'enable': true,
           'resource_id' : resource._id 
@@ -83,7 +86,7 @@ module.exports = {
               // EVERY TIME OPERATION HERE IS PERFORMED IN MILLISECONDS
               var threshold = monitor.looptime + customerConfig.resources_alert_failure_threshold_milliseconds ;
               var lastUpdate = nowTime - resource.last_update.getTime() ;
-              if( lastUpdate > threshold ) // milliseconds comparation
+              if( lastUpdate > threshold ) // milliseconds comparison
               {
                 // how many loops come into the time passed
                 // since last resource state update received
@@ -99,7 +102,7 @@ module.exports = {
               }
             });
         });
-      });
+      }
     });
   }
 };
