@@ -20,15 +20,15 @@ echo running NODE_ENV=$NODE_ENV
 
 path=`dirname $0`
 execute=''
-require=$(which pm2)
+require=$(which supervisor)
 if [ $? -eq 1 ]
 then
     echo "Error $require is not present on this system, using nodemon instead" 
     require=$(which nodemon)
     execute="$require --harmony_proxies -i . $path/core/main.js"
 else
-    echo running on pm2.
-    echo "$require start  $path/core/main.js --node-args='--harmony_proxies'"
-    execute="$require start  $path/core/main.js --node-args='--harmony_proxies'"
+    echo running on supervisor.
+    echo "$require --harmony -i . $path/core/main.js"
+    execute="$require --harmony -i . $path/core/main.js"
 fi
 $execute
