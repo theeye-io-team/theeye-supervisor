@@ -1,16 +1,6 @@
 #/bin/bash
 
 echo -e "\e[92m"
-
-require=$(which supervisor)
-path=`dirname $0`
-
-if [ ! -f $require ]
-then
-    echo "Error $require is not present on this system, please install it by typing npm install -g supervisor" 
-    exit
-fi
-
 DIR=$(dirname $0)
 cd $DIR
 echo "Executing on $DIR && $(pwd)"
@@ -21,11 +11,24 @@ if [ -z ${DEBUG+x} ]; then
   DEBUG='eye:*:error'
 fi
 export DEBUG
-
 if [ -z $NODE_ENV ];then
 	NODE_ENV='production'
 fi
+export NODE_ENV
 
 echo running NODE_ENV=$NODE_ENV
 
-NODE_ENV=production $require --harmony_proxies -i . $path/core/main.js
+path=`dirname $0`
+execute=''
+require=$(which pm2)
+if [ $? -eq 1 ]
+then
+    echo "Error $require is not present on this system, using nodemon instead" 
+    require=$(which nodemon)
+    execute="$require --harmony_proxies -i . $path/core/main.js"
+else
+    echo running on pm2.
+    echo "$require start  $path/core/main.js --node-args='--harmony_proxies'"
+    execute="$require start  $path/core/main.js --node-args='--harmony_proxies'"
+fi
+$execute
