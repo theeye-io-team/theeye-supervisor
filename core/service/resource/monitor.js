@@ -6,14 +6,13 @@
 var _ = require('lodash');
 var logger = require('../../lib/logger')('eye:supervisor:service:resource:monitor');
 var ResourceMonitorSchema = require('../../entity/monitor');
-var ResourceMonitor = ResourceMonitorSchema.Entity;
-var ResourceTemplateService = require('../../service/resource/template');
-var ResourceService = require('../../service/resource');
+var MonitorEntity = ResourceMonitorSchema.Entity;
+
+var ResourceTemplateService = require('./template');
+var ResourceService = require('./index');
 var Job = require('../../entity/job').Entity;
 
 
-exports.disableScriptMonitorsWithDeletedScript = disableScriptMonitorsWithDeletedScript;
-exports.notifyScriptMonitorsUpdate = notifyScriptMonitorsUpdate;
 exports.findBy = findBy;
 exports.createMonitor = createMonitor;
 exports.setMonitorData = setMonitorData;
@@ -168,7 +167,7 @@ function createMonitor(type, input, next) {
 				logger.log(monitor);
 
 				monitor.resource = monitor.resource_id = input.resource._id;
-				ResourceMonitor.create(
+				MonitorEntity.create(
 					monitor,
 					function(error,monitor){
 						if(error) {
@@ -186,97 +185,59 @@ function createMonitor(type, input, next) {
 /**
  *
  * @author Facundo
- * @param {Object} script, a script entity
- * @return null
- *
- */
-function disableScriptMonitorsWithDeletedScript (script) {
-  logger.log('disabling script "%s" resource-monitor', script._id);
-  ResourceMonitor.find({
-    'type': 'script'
-  }, function(error, monitors) {
-    if(error) return logger.log(error);
-    if(monitors.length > 0){
-      for(var i=0; i<monitors.length; i++) {
-        var monitor = monitors[i];
-        if(monitor.config.script_id == script._id) {
-          var monitor = monitors[i];
-          monitor.enable = false;
-          monitor.config.script_id = null;
-          monitor.config.script_arguments = [];
-          monitor.save(function(error){
-            if(error) return logger.log(error);
-            logger.log('monitor changes saved');
-            logger.log('notifying "%s"', monitor.host_id);
-            Job.createAgentConfigUpdate(monitor.host_id);
-          });
-        }
-      }
-    }
-  });
-}
-
-/**
- *
- * search script-monitor and create a notify job to the monitor agents.
- *
- * @author Facundo
- * @param {Object} script, a script entity
- * @return null
- *
- */
- function notifyScriptMonitorsUpdate (script) {
-   logger.log('preparing agent notification "%s"', script._id);
-   // if script is in Monitor? refresh agent
-   ResourceMonitor.find({
-     'type': 'script',
-   },function(error, monitors){
-     if(error) return logger.log(error);
-     if(monitors.length > 0){
-       var hosts = [];
-       for(var i=0; i<monitors.length; i++){
-         var monitor = monitors[i];
-         if(monitor.config.script_id == script._id ) {
-           if( hosts.indexOf(monitor.host_id) === -1 ){
-             hosts.push(monitor.host_id);
-             logger.log('notifying "%s"', monitor.host_id);
-             Job.createAgentConfigUpdate(monitor.host_id);
-           }
-         }
-       }
-     }
-   });
- }
-
-/**
- *
- * @author Facundo
  * @param {Object} filters
  *    @property {Boolean} enable
  *    @property {ObjectId} host_id, valid mongo id string
  * @param {Function} doneFn
  *
  */
-function findBy (filters, doneFn) {
+function findBy (filters, options, doneFn) {
   var query = {};
   filters = filters || {};
-  doneFn = doneFn || function(){};
 
-  for(var idx in filters) {
-    var value = filters[idx];
-    switch(idx) {
-      case 'enable': query.enable = value; break;
-      case 'host_id': query.host_id = value; break;
+  if(typeof options == 'function'){
+    doneFn = options;
+    options = {};
+  } else {
+    options = options || {};
+    doneFn = doneFn || function(){};
+  }
+
+  for(var prop in filters) {
+    var value = filters[prop];
+    switch(prop){
+      case 'enable':
+      case 'host_id':
+      case 'type': 
+        query[prop] = value; 
+        break;
+      case 'script':
+        query['config.script_id'] = value.toString(); // why to string is required to get it work ??? WTF ???
+        break;
     }
   }
 
-  ResourceMonitor.find(query, function(error,monitors){
-    if(error) {
-      logger.error(error);
-      return doneFn(error);
+  function doneExec (err, monitors) {
+    logger.log('done searching');
+    if(err) {
+      logger.error(err);
+      return doneFn(err);
     }
     return doneFn(null, monitors);
-  });
+  }
+
+  logger.log('running query %j', query);
+  if( options.populate ){
+    logger.log('populating monitors');
+    MonitorEntity
+      .find(query)
+      .populate('resource')
+      .exec(doneExec);
+  } else {
+    MonitorEntity
+      .find(query)
+      .exec(doneExec);
+  }
 }
 
 /**

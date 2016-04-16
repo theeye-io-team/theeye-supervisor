@@ -114,25 +114,23 @@ var Service = {
   },
   remove : function(script,next)
   {
-    storageMedia.remove(script,
-      function(error,data)
-      {
-        Script.remove({
-          _id : script._id
-        },function(error){
-          next(error,null);
-        });
+    var query ;
+    storageMedia.remove(script, function(error,data){
+      logger.log('script removed from storage');
 
-        Task.find({
-          script_id : script._id
-        },function(error,tasks){
-          tasks.forEach(function(task,idx){
-            task.script_id = null;
-            task.save();
-          });
+      query = { '_id' : script._id };
+      Script.remove(query,function(error){
+        next(error,null);
+      });
+
+      query = { 'script_id' : script._id };
+      Task.find(query,function(error,tasks){
+        tasks.forEach(function(task,idx){
+          task.script_id = null;
+          task.save();
         });
-      }
-    );
+      });
+    });
   },
   createEntity : function(input,next)
   {
