@@ -93,8 +93,8 @@ var Service = {
     var file = input.file;
 
     updateScriptFile(
-      file, 
-      script, 
+      file,
+      script,
       function(error, data){
         var updates = {
           'description': input.description,
@@ -156,7 +156,7 @@ var Service = {
     var publishedScripts = [];
     Script.find(
       input,{},{ sort: { description:1 } }, function(error,scripts){
-      var notFound = scripts == null || scripts instanceof Array && scripts.length === 0;
+      var notFound = scripts === null || scripts instanceof Array && scripts.length === 0;
       if( notFound ) next([]);
     else
     {
