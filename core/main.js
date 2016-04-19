@@ -1,3 +1,5 @@
+"use strict";
+
 var debug = require('debug')('eye:supervisor:main');
 debug('initializing supervisor');
 
@@ -19,18 +21,19 @@ process.on('exit', function(){ // always that the process ends, throws this even
   process.exit(0);
 });
 
-require("./environment").setenv( process.env.NODE_ENV, function start(){
+require("./environment").setenv(
+  process.env.NODE_ENV, 
+  () => {
+    debug('initializing server');
+    let server = require("./server");
+    server.start();
 
-  debug('initializing server');
-  var server = require("./server");
-  server.start();
+    if( ! process.env.NO_MONITORING ) {
+      debug('initializing monitor');
+      let monitor = require('./service/monitor');
+      monitor.start();
+    }
 
-  if( ! process.env.NO_MONITORING ) {
-    debug('initializing monitor');
-    var monitor = require('./service/monitor');
-    monitor.start();
+    debug('supervisor is running');
   }
-
-  debug('supervisor is running');
-
-});
+);

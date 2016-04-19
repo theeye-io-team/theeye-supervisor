@@ -226,15 +226,19 @@ Service.prototype._handleNormalState = function(input) {
 Service.prototype._handleUpdatesStoppedState = function(input) {
   var newState = input.state;
   var self = this;
-  var msg = 'resource "%s" notifications has stopped'.replace("%s",self.resource.name);
+  var msg = 'resource ":name[:id]" notifications has stopped'
+    .replace(":name",self.resource.name)
+    .replace(":id",self.resource._id)
+    ;
   var customer_name = self.resource.customer_name;
   logger.log(msg);
 
   self.resource.fails_count++;
   self.getConfig(function(config) {
     logger.log(
-      'resource %s fails count %s/%s', 
+      'resource %s[%s] fails count %s/%s', 
       self.resource.description, 
+      self.resource._id, 
       self.resource.fails_count,
       config.fails_count_alert
     );

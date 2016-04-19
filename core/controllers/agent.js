@@ -28,8 +28,13 @@ module.exports = function(server, passport){
 
 var controller = {
   update : function(req, res, next) {
-    debug.log('receiving agent keep alive for %s', req.params.id);
+    var hid = req.params.id;
+    debug.log('receiving agent keep alive for %s',hid);
     var host = req.host ;
+    if(!host){
+      debug.error('invalid request for id %s. host not found', hid);
+      return res.send(404, 'invalid host');
+    }
 
     NotificationService.sendSNSNotification({
       'state': 'normal',

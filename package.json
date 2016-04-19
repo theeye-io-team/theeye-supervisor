@@ -37,7 +37,9 @@
     "devel": "/bin/bash ./run.debug.sh",
     "local": "NODE_ENV='localdev' /bin/bash ./run.debug.sh"
   },
-  "engine": "node >= 0.10.*",
+  "engines": {
+    "node": ">=4.*"
+  },
   "devDependencies": {
     "nodemon": "^1.7.1"
   }

@@ -22,12 +22,10 @@ function SetBasicStrategy() {
       client_secret: client_secret
     }, function(error, user) {
       if( error ) { return done(error); }
-      if( ! user )
-      {
+      if( ! user ) {
         debug.error('invalid request, client %s', client_id);
         return done(Error('invalid user data'), false); 
-      }
-      else {
+      } else {
         debug.log('client "%s" connected [basic]', user.client_id);
         return done(null, user);
       }

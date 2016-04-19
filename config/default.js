@@ -11,15 +11,13 @@ module.exports = {
   },
   "monitor": {
     /* cantidad de fallas antes de emitir alertas */
-    "fails_count_alert": 4,
+    "fails_count_alert": 3,
     /* cada cuanto tiempo chequear estado */
     "agents_check_disconnected_interval_milliseconds": 20000,
-    /* despues de cuantos segundos de no enviar estado esta en alerta */
-    "agents_alert_disconnected_interval_seconds": 60,
     /* cada cuanto tiempo chequear estado */
-    "resources_check_failure_interval_milliseconds": 20000,
+    "resources_check_failure_interval_milliseconds": 10000,
     /* despues de cuantos milisegundos de no actualizar estado entra en alerta */
-    "resources_alert_failure_threshold_milliseconds": 40000
+    "resources_alert_failure_threshold_milliseconds": 30000
   },
   "agent": {
     "core_workers": {
