@@ -21,16 +21,16 @@ var EntitySchema = Schema({
 
 EntitySchema.methods.getFullPath = function() {
   return path.join(
-    uploadFolderPath, 
-    this.customer_name, 
-    'scripts', 
+    uploadFolderPath,
+    this.customer_name,
+    'scripts',
     this.filename
   ) ;
-}
+};
 
 EntitySchema.methods.getCleanFilename = function(next) {
   return this.keyname.replace(/\[ts:.*\]/,'');
-}
+};
 
 EntitySchema.methods.publish = function(next) {
   var script = this;
@@ -45,14 +45,14 @@ EntitySchema.methods.publish = function(next) {
   };
 
   return next(null, data);
-}
+};
 
 EntitySchema.methods.update = function(input,next) {
   var script = this;
   script.last_update = new Date();
   script.description = input.description;
   script.keyname = input.keyname; // name.extension + [ts:########]
-  script.inputname = input.name;
+  script.filename = input.name;
   script.mimetype = input.mimetype;
   script.size = input.size;
   script.extension = input.extension;
@@ -62,7 +62,7 @@ EntitySchema.methods.update = function(input,next) {
     if(error) return next(error);
     if(next) return next(null,script);
   });
-}
+};
 
 EntitySchema.statics.create = function(data,next)
 {
@@ -85,10 +85,9 @@ EntitySchema.statics.create = function(data,next)
   script.save(function(error){
     next(error,script);
   });
-}
+};
 
 var Entity = mongodb.db.model('Script', EntitySchema);
 Entity.ensureIndexes();
 
 exports.Entity = Entity;
-

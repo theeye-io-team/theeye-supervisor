@@ -11,6 +11,7 @@ if [ -z $DOCKER ];then
 	npm install
 fi
 if [ -z $NODE_ENV ];then
+	echo "no env, assuming default"
 	NODE_ENV='development'
 fi
 echo running NODE_ENV=$NODE_ENV
