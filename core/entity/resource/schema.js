@@ -10,7 +10,8 @@ var properties = exports.properties = {
 	'name' : { type:String, required:true },
 	'type' : { type:String, 'default':DEFAULT_TYPE },
 	'attend_failure' : { type:Boolean, 'default':false },
-  'failure_severity' : { type:String, 'default':null }
+  'failure_severity' : { type:String, 'default':null },
+  'muted': {type:Boolean, 'default':false}
 };
 
 /**
@@ -31,6 +32,7 @@ EntitySchema.methods.publish = function(next)
     'name': resource.name,
     'description': resource.description,
     'type': resource.type,
+    'mute': resource.muted
   };
   next ? next(null,data) : null;
   return data;

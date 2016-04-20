@@ -21,7 +21,7 @@ module.exports = {
 };
 
 function checkResourcesState() {
-  debug.log('<<<<< checking resources status >>>>>');
+  debug.log('***** CHECKING RESOURCES STATUS *****');
 
   let query = { 'enable': true };
   Resource.find(query,(err,resources) => {
@@ -72,8 +72,8 @@ function checkResourceMonitorStatus(resource,cconfig,done){
       if(!valid){
         var manager = new ResourceService(resource);
         manager.handleState({
-          'state': 'updates_stopped',
-          'last_check': Date.now()
+          'state':'updates_stopped',
+          'last_check':Date.now()
         });
       }
       done();
@@ -86,16 +86,16 @@ function checkHostResourceStatus(resource,done){
 
   debug.log('checking host resource %s', resource.name);
   validLastupdate({
-    'loop_duration': config.get('agent').core_workers.host_ping.looptime,
-    'loop_threshold': config.get('monitor').resources_alert_failure_threshold_milliseconds,
-    'last_update': resource.last_update.getTime(),
-    'fails_count': resource.fails_count
+    'loop_duration':config.get('agent').core_workers.host_ping.looptime,
+    'loop_threshold':config.get('monitor').resources_alert_failure_threshold_milliseconds,
+    'last_update':resource.last_update.getTime(),
+    'fails_count':resource.fails_count
   }, (error,valid) => {
     if(!valid){
       var manager = new ResourceService(resource);
       manager.handleState({
-        'state': 'updates_stopped',
-        'last_check': Date.now()
+        'state':'updates_stopped',
+        'last_check':Date.now()
       });
     }
     done();
@@ -114,13 +114,14 @@ function validLastupdate(options,done)
   var timeElapsed = nowTime - lastUpdate ;
   var updateThreshold = loopDuration + loopThreshold ;
 
-  debug.log('last update time elapsed %s minutes', Math.floor(timeElapsed/1000/60));
+  var elapsedMinutes = Math.floor(timeElapsed/1000/60);
+  debug.log(`last update time elapsed ${elapsedMinutes} minutes`);
 
   var failedLoops = Math.floor(timeElapsed / loopDuration);
   debug.log('failed loops count %s', failedLoops);
   if(timeElapsed > updateThreshold) {
     if(failedLoops > failedLoopsCount) {
-      debug.error('last update check failed %s times', failedLoopsCount);
+      debug.error(`last update check failed ${failedLoops} times`);
       done(null,false);
     } else {
       done(null,true);
