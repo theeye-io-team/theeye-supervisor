@@ -113,11 +113,12 @@ var controller = {
     }
 
     var input = _.extend({}, req.body);
-    var scriptArgs = filter.toArray(req.body.script_arguments);
-    input.script_arguments = scriptArgs;
+    if(req.body.script_arguments){
+      var args = req.body.script_arguments;
+      input.script_arguments = filter.toArray(args);
+    }
     if(req.host) input.host = req.host;
 
-    debug('updating resource');
     var manager = new ResourceManager(resource);
     manager.updateResource(input,function(error, result){
       if(error) res.send(500,json.error('update error', error.message));

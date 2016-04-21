@@ -26,7 +26,7 @@ var MonitorSchema = BaseSchema.EntitySchema.extend(properties);
 /**
  * Exports all my properties
  */
-exports.properties = _.extend( {}, BaseSchema.properties, properties );
+exports.properties = _.extend({},BaseSchema.properties,properties);
 
 /**
  *

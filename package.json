@@ -35,7 +35,9 @@
   "scripts": {
     "start": "/bin/bash ./run.sh",
     "devel": "/bin/bash ./run.debug.sh",
-    "local": "NODE_ENV='localdev' /bin/bash ./run.debug.sh"
+    "local": "NODE_ENV='localdev' /bin/bash ./run.debug.sh",
+    "local-no-monitoring": "NO_MONITORING=true NODE_ENV='localdev' /bin/bash ./run.debug.sh",
+    "local-debug-monitoring": "DEBUG='eye:supervisor:service:monitor*' NODE_ENV='localdev' /bin/bash ./run.debug.sh"
   },
   "engines": {
     "node": ">=4.*"

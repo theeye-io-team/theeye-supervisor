@@ -1,4 +1,4 @@
-"use static";
+"use strict";
 var util = require('util');
 var events = require('events');
 var logger = require('../../lib/logger')('eye:supervisor:service:resource');
@@ -172,7 +172,7 @@ function handleFailureState (resource,input,config)
       logStateChange(resource,input);
 
       if(resource.state != Resource.INITIAL_STATE){
-        if(!resource.muted===true){
+        if(resource.alerts!==false){
           sendResourceFailureAlerts(resource,input);
         }
       }
@@ -209,7 +209,7 @@ function handleNormalState (resource,input,config)
       logger.log('resource "%s" restored', resource.name);
       input.severity = getEventSeverity(input);
       logStateChange(resource,input);
-      if(!resource.muted===true){
+      if(resource.alerts!==false){
         sendResourceRestoredAlerts(resource, input);
       }
       stateChangeNormalSNS();
@@ -259,7 +259,7 @@ function handleUpdatesStoppedState (resource,input,config)
       resource.failure_severity = input.severity = getEventSeverity(input);
       logStateChange(resource,input);
 
-      if(!resource.muted===true){
+      if(resource.alerts!==false){
         sendResourceUpdatesStoppedAlerts(resource,input);
       }
 
@@ -304,49 +304,78 @@ Service.prototype.handleState = function(input,next) {
   );
 }
 
-Service.prototype.updateResource = function(input,next) {
-  var resource = this.resource;
+function patchResource (resource,input,next) {
+  logger.log('updating resource');
+  next=next||()=>{};
   var updates = {};
-
-  if(input.host){
-    input.host_id = input.host._id;
-    input.hostname = input.host.hostname;
-  }
-
-  for(var propName in ResourceSchema.properties){
+  for(let propName in ResourceSchema.properties){
     if(input.hasOwnProperty(propName) && input[propName]){
       updates[propName] = input[propName];
     }
   }
+  if(Object.keys(updates).length>0){
+    logger.log('resource update %j', updates);
+    resource.update(updates, function(error){
+      if(error) {
+        logger.log('update error %j', error);
+      }
+      logger.log('resource %s updated', resource.name);
+      next(error);
+    });
+  } else {
+    logger.log('no resource updates');
+    next();
+  }
+}
 
-  resource.update(updates, function(error){
-    if(error) {
-      logger.log('update error %j', error);
-      return next(error);
+function patchResourceMonitors (resource,input,next) {
+  logger.log('updating resource monitors');
+  next=next||()=>{};
+  var updates = {};
+  for(var propName in ResourceMonitorSchema.properties){
+    if(input.hasOwnProperty(propName) && input[propName]){
+      updates[propName] = input[propName];
     }
-
+  }
+  if(Object.keys(updates).length>0){
     MonitorEntity.findOne({
       'resource_id': resource._id
     },function(error,monitor){
-      if(error) next(error);
-      if(!monitor) next(new Error('resource monitor not found'), null);
-      if(monitor){
-        var previous_host = monitor.host_id;
-        monitor.update(input, function(error){
-          if(!error){
-            Job.createAgentConfigUpdate(updates.host_id);
-            // if monitor host changes, the new and the old agents should be notified
-            if(previous_host != updates.host_id){
-              logger.log('monitor host(%s) has changed. notifying agent', previous_host);
-              Job.createAgentConfigUpdate(previous_host);
-            }
-          }
-          else logger.log('monitor update error: %s', error);
-          next(error);
-        });
+      if(error){
+        next(error);
       }
+      if(!monitor){
+        next(new Error('resource monitor not found'), null);
+      }
+
+      var previous_host = monitor.host_id;
+      monitor.update(input, function(error){
+        if(!error){
+          Job.createAgentConfigUpdate(updates.host_id);
+          // if monitor host changes, the new and the old agents should be notified
+          if(previous_host != updates.host_id){
+            logger.log('monitor host(%s) has changed. notifying agent', previous_host);
+            Job.createAgentConfigUpdate(previous_host);
+          }
+        }
+        else logger.log('monitor update error: %s', error);
+        next(error);
+      });
     });
-  });
+  } else {
+    logger.log('no monitor updates');
+    next();
+  }
+}
+
+Service.prototype.updateResource = function(input,next) {
+  if(input.host){
+    input.host_id = input.host._id;
+    input.hostname = input.host.hostname;
+  }
+  patchResource(this.resource,input);
+  patchResourceMonitors(this.resource,input);
+  next();
 }
 
 function getEventSeverity (input) {
