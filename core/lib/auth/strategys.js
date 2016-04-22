@@ -21,7 +21,9 @@ function SetBasicStrategy() {
       client_id: client_id,
       client_secret: client_secret
     }, function(error, user) {
-      if( error ) { return done(error); }
+      if( error ) {
+        return done(error); 
+      }
       if( ! user ) {
         debug.error('invalid request, client %s', client_id);
         return done(Error('invalid user data'), false); 

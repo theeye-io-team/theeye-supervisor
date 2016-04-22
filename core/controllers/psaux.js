@@ -17,6 +17,9 @@ var controller = {
     var host = req.host ;
     var stats = req.params.psaux ;
 
+    if(!host) return res.send(404,'host not found');
+    if(!stats) return res.send(400,'psaux data required');
+
     debug.log('Handling host psaux data');
 
     HostStats.findOneByHostAndType(
