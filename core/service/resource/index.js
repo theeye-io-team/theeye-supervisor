@@ -379,7 +379,7 @@ Service.prototype.updateResource = function(input,next) {
 }
 
 function getEventSeverity (input) {
-  var event = input.event;
+  var severity, event = input.event;
   logger.log('resource event "%s"', event);
   if( event && /^host:stats:.*$/.test(event) ) {
     severity = 'Low';
