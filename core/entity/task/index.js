@@ -13,6 +13,7 @@ var properties = exports.properties = {
   'creation_date' : { type: Date, 'default': Date.now() },
   'last_update' : { type: Date, 'default': Date.now() },
   'template' : { type: ObjectId, ref: 'TaskTemplate', 'default': null },
+  'public' : { type: Boolean, 'default': false } ,
 };
 
 /**
@@ -70,6 +71,7 @@ TaskSchema.statics.create = function(input,next)
   instance.script_arguments = input.script_arguments;
   instance.user_id          = input.user._id;
   instance.name             = input.name || null;
+  instance.public           = input.public || false;
   instance.description      = input.description || null;
   instance.save(function(error,entity){
     next(null, entity);

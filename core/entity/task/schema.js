@@ -38,6 +38,7 @@ EntitySchema.methods.publish = function(next)
       'name': task.name,
       'description': task.description,
       'script_arguments': task.script_arguments,
+      'public': task.public,
       'customer_id': task.customer_id,
     };
 

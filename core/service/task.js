@@ -51,12 +51,12 @@ var TaskService = {
       }
     });
   },
-  createResourceTask : function (input, doneFn) {
+  createResourceTask : function (input, doneFn){
     var hostId = input.resource.host_id;
     Host.findById(hostId, function(error, host){
       input.host = host;
       Task.create(input, function(error, task){
-        task.publish(function(published) {
+        task.publish((published) => {
           debug('host id %s task created', hostId);
           doneFn(null, published);
         });

@@ -49,7 +49,7 @@ var controller = {
    * @author Facundo
    *
    */
-  create: function(req, res, next) {
+  create (req, res, next) {
     var input = {
       'customer': req.customer,
       'user': req.user,
@@ -57,8 +57,13 @@ var controller = {
       'script': req.script,
       'description': req.body.description,
       'name': req.body.name,
-      'hosts': req.body.hosts
+      'hosts': req.body.hosts,
+      'public': false
     };
+
+    if(req.body.public){
+      input.public = filter.toBoolean(req.body.public);
+    }
 
     var scriptArgs = filter.toArray(req.body.script_arguments);
     input.script_arguments = scriptArgs;
@@ -83,7 +88,7 @@ var controller = {
    * @method GET
    * @route /task
    */
-  fetch : function(req, res, next) {
+  fetch (req, res, next) {
     var host = req.host;
     var customer = req.customer;
 
@@ -105,7 +110,7 @@ var controller = {
    * @param {String} :task , mongo ObjectId
    *
    */
-  get : function(req, res, next) {
+  get (req, res, next) {
     var task = req.task;
     if(!task) return res.send(404);
 
@@ -121,7 +126,7 @@ var controller = {
    * @param {String} :task , mongo ObjectId
    *
    */
-  remove : function(req,res,next) {
+  remove (req,res,next) {
     var task = req.task;
     if(!task) return res.send(404);
 
@@ -141,7 +146,7 @@ var controller = {
    * @param ...
    *
    */
-  patch : function(req, res, next) {
+  patch (req, res, next) {
     var task = req.task;
     var input = {};
 
@@ -149,6 +154,9 @@ var controller = {
 
     if(req.host) input.host_id = req.host._id;
     if(req.script) input.script_id = req.script._id;
+    if(req.body.public){
+      input.public = filter.toBoolean(req.body.public);
+    }
     if(req.body.description) input.description = req.body.description;
     if(req.body.name) input.name = req.body.name;
     if(req.resource) {
@@ -165,7 +173,6 @@ var controller = {
     debug.log('updating task %j', input);
     task.update(input, function(error){
       if(error) return res.send(500,error);
-
       debug.log('publishing task');
       task.publish(function(pub){
         res.send(200,{task : pub});
