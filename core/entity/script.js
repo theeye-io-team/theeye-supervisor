@@ -16,7 +16,8 @@ var EntitySchema = Schema({
   creation_date: { type: Date, 'default': Date.now },
   last_update: { type: Date, 'default': Date.now },
   description: { type: String, 'default' : '' },
-  md5: { type: String, 'default': null }
+  md5: { type: String, 'default': null },
+  public : { type: Boolean, 'default': false }
 });
 
 EntitySchema.methods.getFullPath = function() {
@@ -41,7 +42,8 @@ EntitySchema.methods.publish = function(next) {
     mimetype : script.mimetype,
     extension : script.extension,
     size : script.size,
-    md5 : script.md5
+    md5 : script.md5,
+    public: script.public
   };
 
   return next(null, data);
@@ -57,6 +59,7 @@ EntitySchema.methods.update = function(input,next) {
   script.size = input.size;
   script.extension = input.extension;
   script.md5 = input.md5;
+  script.public = input.public;
 
   script.save(function(error){
     if(error) return next(error);
@@ -79,6 +82,7 @@ EntitySchema.statics.create = function(data,next)
     "last_update"   : new Date(),
     "description"   : data.description || data.filename,
     "md5"           : data.md5,
+    "public"        : data.public
   };
 
   var script = new Entity(options);
