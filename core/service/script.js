@@ -104,6 +104,7 @@ var Service = {
           'mimetype': file.mimetype,
           'size': file.size,
           'extension': file.extension,
+          'public': input.public
         };
         logger.log('updating script data');
         script.update(updates, function(error){
@@ -144,7 +145,8 @@ var Service = {
       mimetype    : input.script.mimetype,
       extension   : input.script.extension,
       size        : input.script.size,
-      md5         : input.script.md5
+      md5         : input.script.md5,
+      public      : input.public
     };
 
     Script.create(options,function(error,script){
