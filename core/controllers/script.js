@@ -12,7 +12,7 @@ var resolve = require('../router/param-resolver');
 var validate = require('../router/param-validator');
 
 module.exports = function(server, passport) {
-  server.get('/script', [ 
+  server.get('/script', [
     passport.authenticate('bearer', {session:false}),
     resolve.customerNameToEntity({})
   ], controller.fetch);
@@ -91,12 +91,12 @@ var controller = {
 
     var description = req.body.description;
     var name = req.body.name;
-
     debug.log('creating script');
 
     ScriptService.handleUploadedScript({
       description: description,
       name: name,
+      public: req.body.public || false,
       script: script,
       customer: customer,
       user: user
@@ -152,6 +152,7 @@ var controller = {
       'script' : script,
       'description' : description,
       'name' : name,
+      'public': req.body.public || false,
       'file' : file
     },function(error, script){
       if(error) return res.send(500);
