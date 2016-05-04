@@ -1,7 +1,10 @@
+"use strict";
+
 var resolver = require('../router/param-resolver');
 var validator = require('../router/param-validator');
 var logger = require('../lib/logger')('eye:controller:group-task-template');
 var TaskService = require('../service/task');
+var Task = require('../entity/task').Entity;
 /**
  *
  * exports routes
@@ -58,7 +61,7 @@ var controller = {
    * @method GET
    *
    */
-  get: function(req,res,next){
+  get (req,res,next){
     validateRequest(req,res);
     var taskTpl = req.tasktemplate;
     taskTpl.publish(function(tpl){
@@ -70,7 +73,7 @@ var controller = {
    * @method GET
    *
    */
-  fetch: function(req,res,next){
+  fetch (req,res,next){
     if(!req.group)
       return res.send(404,'group not found');
 
@@ -85,31 +88,36 @@ var controller = {
    * @method POST
    *
    */
-  create: function(req,res,next){
-    if(!req.group) return res.send(404,'group not found')
-    if(!req.body.task) return res.send(400,'tasks required')
-
+  create(req,res,next){
+    if(!req.group) return res.send(404,'group not found');
+    if(!req.body.task) return res.send(400,'tasks required');
     var group = req.group;
-    var tasks = [ req.body.task ]
+    var tasks = [ req.body.task ];
+
+    function addTemplateToGroup(group,template,done){
+      group.task_templates.push( template );
+      group.save(function(err){
+        if(err) logger.error(err);
+        addTaskTemplateInstancesToGroupHosts(
+          template,
+          group,
+          (err)=>{}
+        );
+        return done(err);
+      });
+    }
+
     TaskService.tasksToTemplates( 
       tasks,
       req.customer,
       req.user,
       function(err, templates){
-        if(err) return res.send(err.statusCode, err.message)
-
-        var template = templates[0]
-
-        group.task_templates.push( template )
-        group.save(function(err){
-          if(err) {
-            logger.error(err)
-            return res.send(500);
-          }
-          group.publish({}, function(e,g){
-            res.send(200, {'task':template})
-          });
-        })
+        if(err) return res.send(err.statusCode, err.message);
+        let template = templates[0];
+        addTemplateToGroup(group,template,(err)=>{
+          if(err) return res.send(500);
+          res.send(200, {'task':template});
+        });
       }
     )
   },
@@ -118,15 +126,19 @@ var controller = {
    * @method PUT
    *
    */
-  replace: function(req,res,next){
+  replace(req,res,next){
     validateRequest(req,res);
 
     //var group = req.group;
-    var task = req.tasktemplate;
+    var template = req.tasktemplate;
     var updates = req.body.task;
-    task.update(updates, function(err, task){
+    template.update(updates, (err)=>{
       if(err) return res.send(500);
-      task.publish(function(pub){
+      updateTaskInstancesOnHostGroups(template,(err)=>{
+        logger.log('all tasks updated');
+      });
+
+      template.publish(function(pub){
         res.send(200, {'task': pub});
       });
     });
@@ -136,13 +148,83 @@ var controller = {
    * @method DELETE
    *
    */
-  remove: function(req,res,next){
+  remove(req,res,next){
     validateRequest(req,res);
-
-    var task = req.tasktemplate;
-    task.remove(function(err){
-      if(err) res.send(500)
-      res.send(200)
-    });
+    var template = req.tasktemplate;
+    removeTaskTemplateInstancesFromHostGroups(
+      template,
+      function(err){
+        if(err) res.send(500);
+        template.remove(function(err){
+          if(err) res.send(500);
+          res.send(200);
+        });
+      }
+    );
   },
+}
+
+function removeTaskTemplateInstancesFromHostGroups(template,done)
+{
+  done=done||()=>{};
+  var query = { 'template': template._id };
+  Task.find(query).exec(function(err, tasks){
+    if(err){ logger.error(err); return done(err); }
+
+    if(!tasks || tasks.length==0){
+      logger.log('tasks not found');
+      return done();
+    }
+
+    for(var i=0; i<tasks.length; i++){
+      var task = tasks[i];
+      task.remove(err=>{
+        if(err) return logger.error(err);
+        // notify monitor host agent
+        Job.createAgentConfigUpdate(task.host_id);
+      });
+    }
+    done();
+  });
+}
+
+function addTaskTemplateInstancesToGroupHosts(
+  template, group, done
+){
+  Resource.find({
+    'type':'host',
+    'template':group,
+  },(err,resources)=>{
+    for(let i=0;i<resources.length;i++){
+      let resource=resources[i];
+      Host.findById(resource.host_id,(err,host)=>{
+        // ... and attach the new task to the host
+        let options = { 'host': host };
+        Task.FromTemplate(template,options,(err)=>{
+          Job.createAgentConfigUpdate(host._id);
+        });
+      });
+    }
+  });
+}
+
+function updateTaskInstancesOnHostGroups(template, done)
+{
+  done=done||()=>{};
+  var query = { 'template': template._id };
+  Task.find(query).exec(function(err,tasks){
+    if(err){ logger.error(err); return done(err); }
+    if(!tasks || tasks.length==0){
+      logger.log('tasks not found');
+      return done();
+    }
+    for(var i=0; i<tasks.length; i++){
+      var task = tasks[i];
+      task.update(template.values(),err=>{
+        if(err) return logger.error(err);
+        Job.createAgentConfigUpdate(task.host_id);
+      });
+    };
+    done();
+  });
 }

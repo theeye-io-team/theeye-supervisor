@@ -1,3 +1,5 @@
+"use strict";
+
 var json = require("../lib/jsonresponse");
 var Host = require("../entity/host").Entity;
 var Resource = require('../entity/resource').Entity;
@@ -165,8 +167,10 @@ var controller = {
     var input = req.params.info;
     input.agent_version = req.params.version;
 
-    if(!customer)
-      return res.send(400, json.error('customer is required'));
+    if(!customer){
+      let msg = json.error('customer is required');
+      return res.send(400, msg);
+    }
 
     debug('processing hostname "%s" registration request', hostname);
 

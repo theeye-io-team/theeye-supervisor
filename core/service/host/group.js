@@ -84,10 +84,12 @@ exports.searchAndRegisterHostIntoGroup = function(host, next) {
         logger.log('group found : %s', group.hostname_regex);
         hostProvisioning(host, group, function(err){
           if(err) return next(err);
-          next(null);
+          next(null,group);
         });
+        break;
       }
     }
+    next(null);
   });
 }
 

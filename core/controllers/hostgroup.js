@@ -1,3 +1,4 @@
+"use strict";
 var _ = require('lodash');
 var async = require('async');
 
@@ -83,7 +84,7 @@ var createGroup = function(data, done)
     logger.log(e);
   }
 
-  group.save(function(err, instance){
+  group.save((err, instance) => {
     if(err) {
       logger.error(err);
       return done(err);
@@ -107,10 +108,10 @@ var controller = {
    * @method GET
    *
    */
-  get : function (req,res,next) {
+  get (req,res,next) {
     var group = req.group;
     if(!group) return res.send(400);
-    group.publish({}, function(e,g){
+    group.publish({}, (e,g) => {
       res.send(200, { 'group':g });
     });
   },
@@ -120,7 +121,7 @@ var controller = {
    * @method GET
    *
    */
-  fetch : function (req,res,next) {
+  fetch (req,res,next) {
     var customer = req.customer;
 
     if(!customer) return res.send(400, 'customer required');
@@ -150,7 +151,7 @@ var controller = {
    * @method POST
    *
    */
-  create : function (req,res,next){
+  create (req,res,next){
     logger.log('group data received %j', req.params);
 
     var customer = req.customer;
@@ -162,8 +163,8 @@ var controller = {
     var hostnameregex = group.hostname_regex;
     if(!hostnameregex) return res.send(400,'hostname regexp required');
 
-    var responseError = function(e){
-      var errorRes = {
+    var responseError = (e) => {
+      let errorRes = {
         "error": e.message,
         "info": []
       };
@@ -172,38 +173,38 @@ var controller = {
     }
 
     async.parallel({
-      'tasks' : function(doneFn){
+      'tasks': (callback) => {
         logger.log('processing group tasks');
-        var tasks = group.tasks || [];
+        let tasks = group.tasks || [];
         TaskService.tasksToTemplates( 
           tasks,
           req.customer,
           req.user,
-          doneFn
+          callback
         );
       },
-      'provtasks' : function(doneFn){
+      'provtasks': (callback) => {
         logger.log('processing group provisioning tasks');
-        var provtasks = group.provtasks || [];
+        let provtasks = group.provtasks || [];
         TaskService.tasksToTemplates( 
           provtasks,
           req.customer,
           req.user,
-          doneFn
+          callback
         );
       },
-      'resourcemonitors' : function(doneFn){
+      'resourcemonitors': (callback) => {
         logger.log('processing group monitors & resources');
-        var monitors = group.monitors || [];
+        let monitors = group.monitors || [];
 
         ResourceMonitorService.resourceMonitorsToTemplates(
           monitors,
           req.customer,
           req.user,
-          doneFn
+          callback
         );
       }
-    }, function(error, templates){
+    }, (error, templates) => {
       if(error) return responseError(error);
       createGroup({
         'regex': hostnameregex,
@@ -211,7 +212,7 @@ var controller = {
         'resourcemonitors': templates.resourcemonitors,
         'provisioningtasks': templates.provtasks,
         'customer': req.customer,
-      }, function(error, group) {
+      }, (error, group) => {
         if(error) return responseError(error);
         logger.log('group created');
         res.send(200,{ 'group': group });
@@ -224,11 +225,9 @@ var controller = {
    * @method DELETE
    *
    */
-  remove : function (req,res,next) {
+  remove (req,res,next) {
     var group = req.group;
     if(!group) return res.send(400);
-    HostGroupService.removeGroup(group, function(){
-      res.send(204);
-    });
+    HostGroupService.removeGroup(group, ()=>res.send(204));
   },
 }

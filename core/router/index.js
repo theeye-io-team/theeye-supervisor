@@ -17,10 +17,9 @@ Router.loadControllers = function(server, passport)
   var controllersPath = join(__dirname, "../controllers");
 
   fs.readdirSync(controllersPath).forEach(function(file) {
-    if( /.*\.js$/.test(file) )
-    {
+    if( /.*\.js$/.test(file) ) {
+      logger.log('setting up controller "%s"', file);
       require( join(controllersPath, file) )(server, passport);
-      logger.log('controller set "%s"', file);
     }
   });
 };

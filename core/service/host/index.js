@@ -179,9 +179,16 @@ HostService.register = function(
         data.host = host;
         data.resource = resource;
         createHostMonitoringWorkers(data, function(){
-          HostGroup.searchAndRegisterHostIntoGroup(host, function(){
-            Job.createAgentConfigUpdate(host._id);
-          });
+          HostGroup.searchAndRegisterHostIntoGroup(
+            host,
+            function(err,group){
+              if(!err && typeof group != 'undefined'){
+                resource.template = group;
+                resource.save();
+                Job.createAgentConfigUpdate(host._id);
+              }
+            }
+          );
         });
       });
     }

@@ -56,10 +56,7 @@ EntitySchema.statics.publishAll = function(entities, next){
  *
  *
  */
-EntitySchema.methods.setUpdates = function(
-  input,
-  next
-) {
+EntitySchema.methods.setUpdates = function(input, next) {
   next=next||function(){};
   var monitor = this;
   var type = monitor.type;
@@ -78,17 +75,28 @@ EntitySchema.methods.setUpdates = function(
   }
 
   var config = monitor.config;
+  if(input.config) _.assign(input, input.config);
   switch(type)
   {
     case 'scraper':
+      if(
+        typeof input.config != 'undefined' && 
+        typeof input.config.request_options != 'undefined'
+      ) _.assign(input, input.config.request_options);
+
       monitor.host_id = input.external_host_id || input.host_id;
       config.external = typeof input.external_host_id != 'undefined';
-      if(input.pattern) config.pattern = input.pattern;
-      if(input.url) config.request_options.url = input.url;
-      if(input.timeout) config.request_options.timeout = input.timeout;
-      if(input.method) config.request_options.method = input.method;
+      if(input.pattern ) config.pattern = input.pattern;
+      if(input.url     ) config.request_options.url = input.url;
+      if(input.timeout ) config.request_options.timeout = input.timeout;
+      if(input.method  ) config.request_options.method = input.method;
       break;
     case 'process':
+      if(
+        typeof input.config != 'undefined' && 
+        typeof input.config.ps != 'undefined'
+      ) _.assign(input, input.config.ps);
+
       if(input.pattern) config.ps.pattern = input.pattern;
       if(input.psargs) config.ps.psargs = input.psargs;
       break;
@@ -97,6 +105,11 @@ EntitySchema.methods.setUpdates = function(
       if(input.script_arguments) config.script_arguments = input.script_arguments;
       break;
     case 'dstat':
+      if(
+        typeof input.config != 'undefined' && 
+        typeof input.config.limit != 'undefined'
+      ) _.assign(input, input.config.limit);
+
       if(input.cpu) config.limit.cpu = input.cpu;
       if(input.mem) config.limit.mem = input.mem;
       if(input.cache) config.limit.cache = input.cache;

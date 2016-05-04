@@ -1,3 +1,5 @@
+"use strict";
+
 var resolver = require('../router/param-resolver');
 var validator = require('../router/param-validator');
 var logger = require('../lib/logger')('eye:controller:group-monitor-template');
@@ -7,6 +9,7 @@ var ResourceTemplate = require('../entity/resource/template').Entity;
 var Monitor = require('../entity/monitor').Entity;
 var Resource = require('../entity/resource').Entity;
 var Job = require('../entity/job').Entity;
+var Host = require('../entity/host').Entity;
 /**
  *
  * exports routes
@@ -60,7 +63,7 @@ function validateRequest (req,res) {
 /**
  *
  * searches hosts which belongs to this group
- * and add the new monitor.
+ * and add the new monitor/resource pair.
  * agents must be notified of the new monitor being added
  *
  * @author Facundo
@@ -69,7 +72,25 @@ function validateRequest (req,res) {
  * @param {Function} done
  *
  */
-function addMonitorInstancesToGroupHosts(template, hostregex, done){
+function addMonitorInstancesToGroupHosts(
+  template, group, done
+){
+  // search for hosts resources linked to the group ...
+  Resource.find({
+    'type':'host',
+    'template':group,
+  },(err,resources)=>{
+    for(let i=0;i<resources.length;i++){
+      let resource=resources[i];
+      Host.findById(resource.host_id,(err,host)=>{
+        let opts = { 'host': host };
+        // ... and attach the new monitor to the host
+        Monitor.FromTemplate(template,opts,(err)=>{
+          Job.createAgentConfigUpdate(host._id);
+        });
+      });
+    }
+  });
 }
 
 /**
@@ -84,7 +105,29 @@ function addMonitorInstancesToGroupHosts(template, hostregex, done){
  * @param {Function} done
  *
  */
-function removeMonitorInstancesFromGroupHosts(template, done){
+function removeMonitorTemplateInstancesFromGroupHosts(
+  template, done
+){
+  done=done||()=>{};
+  var query = { 'template': template._id };
+  Monitor.find(query).exec(function(err, monitors){
+    if(err){ logger.error(err); return done(err); }
+
+    if(!monitors || monitors.length==0){
+      logger.log('no monitors were found');
+      return done();
+    }
+
+    for(var i=0; i<monitors.length; i++){
+      var monitor = monitors[i];
+      monitor.remove(err=>{
+        if(err) return logger.error(err);
+        // notify monitor host agent
+        Job.createAgentConfigUpdate(monitor.host_id);
+      });
+    }
+    done();
+  });
 }
 
 /**
@@ -99,83 +142,70 @@ function removeMonitorInstancesFromGroupHosts(template, done){
  * @param {Function} done
  *
  */
-function updateMonitorInstancesOfGroupHosts(template, done)
+function updateMonitorInstancesOnHostGroups(template, done)
 {
-  logger.log('updating template monitor "%s"(%s) instances', template.name, template._id)
-  done = done || function(){}
-  var query = { template: template._id }
+  logger.log('updating template monitor "%s"(%s) instances', template.name, template._id);
+  done = done || function(){};
+  var query = { template: template._id };
 
   Monitor
   .find(query)
   .exec(function(err, monitors){
-    if(err){
-      logger.error(err)
-      return done(err)
-    }
+    if(err){ logger.error(err); return done(err); }
 
     if(!monitors || monitors.length==0){
-      logger.log('no monitors were found')
-      return done()
+      logger.log('no monitors were found');
+      return done();
     }
 
     for(var i=0; i<monitors.length; i++){
-      var monitor = monitors[i]
-      monitor.update(template.values(), function(err){
-        if(err)
-          return logger.error(err)
+      var monitor = monitors[i];
+      var updates = template.values();
+      monitor.update(updates,(err)=>{
+        if(err) return logger.error(err);
         // notify monitor host agent
-        Job.createAgentConfigUpdate(monitor.host_id)
-        logger.log(
-          'monitor "%s" agent "%s" notification created',
-          monitor.name,
-          monitor.host_id
-        )
-      })
-    }
-    done()
+        Job.createAgentConfigUpdate(monitor.host_id);
+      });
+    };
+    done();
   })
 }
 
 /**
  * 
  */
-function updateResourceInstancesOfGroupHosts(template, done)
+function updateResourceInstancesOnHostGroups(template, done)
 {
   logger.log('updating template resource "%s"(%s) instances',
     template.description,
     template._id
   )
-  done = done || function(){}
-  var query = { template: template._id }
+  done = done || function(){};
+  var query = { template: template._id };
 
  Resource 
   .find(query)
   .exec(function(err, resources){
     if(err){
-      logger.error(err)
-      return done(err)
+      logger.error(err);
+      return done(err);
     }
 
     if(!resources || resources.length==0){
-      logger.log('no resources were found')
-      return done()
+      logger.log('no resources were found');
+      return done();
     }
 
     for(var i=0; i<resources.length; i++){
-      var resource = resources[i]
+      var resource = resources[i];
       resource.update(template.values(), function(err){
         if(err)
-          return logger.error(err)
+          return logger.error(err);
         // notify resource host agent
         Job.createAgentConfigUpdate(resource.host_id)
-        logger.log(
-          'resource "%s" agent "%s" notification created',
-          resource.name,
-          resource.host_id
-        )
       })
-    }
-    done()
+    };
+    done();
   })
 }
 
@@ -195,8 +225,8 @@ var controller = {
   get: function(req,res,next){
     validateRequest(req,res);
     var tpl = req.monitortemplate;
-    tpl.publish({},function(err,tpl){
-      res.send(200,{ 'monitor': tpl });
+    tpl.publish({},function(err,p){
+      res.send(200,{ 'monitor': p });
     });
   },
   /**
@@ -223,31 +253,37 @@ var controller = {
     if(!req.group) return res.send(404,'group not found')
     if(!req.body.monitor) return res.send(400,'monitors required')
     var group = req.group;
-    var monitors = [ req.body.monitor ]
+    var monitors = [ req.body.monitor ];
+
+    function addTemplateToGroup(group,templates,done){
+      var monitor_template = templates[0].monitor_template;
+      var resource_template = templates[0].resource_template;
+      group.monitor_templates.push(monitor_template);
+      group.resource_templates.push(resource_template);
+      group.save(function(err){
+        if(err) logger.error(err);
+        addMonitorInstancesToGroupHosts(
+          monitor_template,
+          group,
+          (err)=>{}
+        );
+        return done(err);
+      })
+    };
+
     ResourceMonitorService.resourceMonitorsToTemplates(
       monitors,
       req.customer,
       req.user,
-      function(err,templates){
-
-        if(err) return res.send(err.statusCode, err.message)
-
-        var monitor_template = templates[0].monitor_template;
-        var resource_template = templates[0].resource_template;
-
-        group.monitor_templates.push(monitor_template)
-        group.resource_templates.push(resource_template)
-        group.save(function(err){
-          if(err) {
-            logger.error(err)
-            return res.send(500);
-          }
-          group.publish({}, function(e,g){
-            res.send(200, {'monitor':monitor_template})
-          });
-        })
+      function(err,templates) {
+        if(err) return res.send(err.statusCode, err.message);
+        addTemplateToGroup(group,templates,(err)=>{
+          if(err) return res.send(500);
+          let template = templates[0].monitor_template;
+          res.send(200, { 'monitor':template });
+        });
       }
-    )
+    );
   },
   /**
    *
@@ -266,19 +302,19 @@ var controller = {
         var updates = {
           'name': input.name,
           'description': input.description
-        } 
+        }; 
         // updates resource template
         resourcetemplate.update(updates,function(err){
           // looking for monitor with this template
-          updateMonitorInstancesOfGroupHosts(monitortemplate, function(){
-            updateResourceInstancesOfGroupHosts(resourcetemplate, function(){
-              logger.log('all updates done')
-            })
-          })
-        })
-      })
+          updateMonitorInstancesOnHostGroups(monitortemplate, function(){
+            updateResourceInstancesOnHostGroups(resourcetemplate, function(){
+              logger.log('all updates done');
+            });
+          });
+        });
+      });
 
-      monitortemplate.publish({}, function(err,pub){
+      monitortemplate.publish({}, (err,pub)=>{
         res.send(200, {'monitor': pub}); 
       });
     });
@@ -290,11 +326,13 @@ var controller = {
    */
   remove: function(req,res,next){
     validateRequest(req,res);
-
-    var monitor = req.monitortemplate;
-    monitor.remove(function(err){
-      if(err) res.send(500)
-      res.send(200)
+    var template = req.monitortemplate;
+    template.remove(function(err){
+      if(err) return res.send(500);
+      removeMonitorTemplateInstancesFromGroupHosts(
+        template,(err)=>{}
+      );
+      res.send(200);
     });
   },
 }

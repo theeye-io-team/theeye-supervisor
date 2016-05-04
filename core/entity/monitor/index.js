@@ -1,3 +1,5 @@
+"use strict";
+
 require('mongoose-schema-extend');
 var ObjectId = require('mongoose').Schema.Types.ObjectId;
 var mongodb = require("../../lib/mongodb").db;
@@ -96,6 +98,7 @@ MonitorSchema.methods.toTemplate = function(doneFn)
  */
 MonitorSchema.statics.FromTemplate = function(template, options, doneFn)
 {
+  doneFn=doneFn||()=>{};
   var host = options.host;
   Template.populate(template, {
     path: 'template_resource' 
