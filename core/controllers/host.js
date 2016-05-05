@@ -125,19 +125,18 @@ function registerHostname (options, doneFn) {
       }
 
       Resource.findOne({
-        'host_id': host._id,
-        'type': 'host'
+        'host_id':host._id,
+        'type':'host'
       },function(error,resource){
         if(error) return doneFn(error);
-
         if(!resource) {
-          debug('ERROR resource for registered host "%s" not found', host._id);
+          debug('resource for registered host "%s" not found', host._id);
           var error = new Error('host resource not found');
           error.statusCode = 500;
-          return doneFn(error);
+          return doneFn(error,{'host':host});
         }
 
-        return doneFn(null, {'host':host, 'resource':resource});
+        return doneFn(null, {'host':host,'resource':resource});
       });
     }
   });
@@ -179,10 +178,7 @@ var controller = {
       'hostname': hostname,
       'host_properties': input
     }, function (error,result) {
-      if(error) {
-        debug(error);
-        res.send(500);
-      }
+      if(error) debug(error);
 
       var host = result.host;
       var resource = result.resource;

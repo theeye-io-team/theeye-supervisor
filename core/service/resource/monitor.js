@@ -1,8 +1,4 @@
-/**
- * Monitor object namespace for manipulating resources monitor
- * @author Facundo
- */
-
+"use strict";
 var _ = require('lodash');
 var logger = require('../../lib/logger')('eye:supervisor:service:resource:monitor');
 var ResourceMonitorSchema = require('../../entity/monitor');
@@ -12,6 +8,11 @@ var ResourceTemplateService = require('./template');
 var ResourceService = require('./index');
 var Job = require('../../entity/job').Entity;
 
+
+/**
+ * Monitor object namespace for manipulating resources monitor
+ * @author Facundo
+ */
 
 exports.findBy = findBy;
 exports.createMonitor = createMonitor;
@@ -75,6 +76,18 @@ function setMonitorForScript(input) {
 	};
 }
 
+function setMonitorForHost(input){
+	var looptime = input.looptime ? input.looptime : 10000 ;
+	return {
+    'customer_name':input.customer_name,
+		'host_id':input.host_id,
+		'type':'host',
+		'name':'host',
+		'looptime':looptime,
+		'config':{ }
+	};
+}
+
 function setMonitorForDstat(input){
 	var looptime = input.looptime ? input.looptime : 10000 ;
 	return {
@@ -111,6 +124,7 @@ function setType(resourceType, monitorType) {
 }
 
 function setMonitorData(type, input, next){
+  var monitor;
 	logger.log('setting up monitor data');
 	try {
 		switch(type) {
@@ -138,8 +152,12 @@ function setMonitorData(type, input, next){
 				monitor = setMonitorForPsaux(input);
 				next(null, monitor);
 				break;
+			case 'host':
+				monitor = setMonitorForHost(input);
+				next(null, monitor);
+				break;
 			default:
-				throw new Error('monitor type is invalid');
+				throw new Error(`monitor type ${type} is invalid`);
 				break;
 		}
 	} catch(e) {
@@ -151,35 +169,35 @@ function setMonitorData(type, input, next){
 
 function createMonitor(type, input, next) {
 	logger.log('processing monitor %s creation data', type);
-	setMonitorData( type, input,
-		function(error,monitor){
-			if(error) {
-				logger.log(error);
-				return next(error, monitor);
-			} else if(monitor==null) {
-				var msg = 'invalid resource data';
-				logger.log(msg);
-				var error = new Error(msg);
-				error.statusCode = 400;
-				return next(error,data);
-			} else {
-				logger.log('creating monitor type %s', type);
-				logger.log(monitor);
+	setMonitorData(type, input,
+    function(error,monitor){
+      if(error) {
+        logger.log(error);
+        return next(error, monitor);
+      } else if(monitor==null) {
+        var msg = 'invalid resource data';
+        logger.log(msg);
+        var error = new Error(msg);
+        error.statusCode = 400;
+        return next(error,data);
+      } else {
+        logger.log('creating monitor type %s', type);
+        logger.log(monitor);
 
-				monitor.resource = monitor.resource_id = input.resource._id;
-				MonitorEntity.create(
-					monitor,
-					function(error,monitor){
-						if(error) {
-							logger.log(error);
-							return next(error);
-						}
+        monitor.resource = monitor.resource_id = input.resource._id;
+        MonitorEntity.create(
+          monitor,
+          function(error,monitor){
+            if(error) {
+              logger.log(error);
+              return next(error);
+            }
 
-						logger.log('monitor created');
-						return next(null, monitor);
-					});
-			}
-		});
+            logger.log('monitor created');
+            return next(null, monitor);
+          });
+      }
+    });
 }
 
 /**

@@ -191,7 +191,7 @@ function handleNormalState (resource,input,config)
   function stateChangeNormalSNS () {
     NotificationService.sendSNSNotification({
       'state':input.state,
-      'message':'resource normal',
+      'message':input.message||'resource normal',
       'customer_name':resource.customer_name,
       'resource':resource.name,
       'id':resource.id,
@@ -270,6 +270,7 @@ function handleUpdatesStoppedState (resource,input,config)
 }
 
 Service.prototype.handleState = function(input,next) {
+  next=next||()=>{};
   var resource = this.resource;
   getCustomerConfig(
     resource.customer_id,
@@ -298,8 +299,7 @@ Service.prototype.handleState = function(input,next) {
       if(input.last_check)
         resource.last_check = input.last_check;
       resource.save();
-
-      if(next) next();
+      next();
     }
   );
 }
@@ -691,7 +691,8 @@ function handleHostIdAndData(hostId, input, doneFn){
  * set data and create entities
  *
  */
-function createResourceAndMonitorForHost (input, next) {
+Service.createResourceAndMonitorForHost = function createResourceAndMonitorForHost (input, next) {
+  next=next||()=>{};
   logger.log('creating resource for host %s', input.hostname);
   var resource_data = {
     'host_id' : input.host_id,
@@ -707,7 +708,9 @@ function createResourceAndMonitorForHost (input, next) {
     input.monitor_type,
     input,
     function(error,monitor_data){
-      if(error) return next(error);
+      if(error){
+        return next(error);
+      }
       else if(!monitor_data) {
         var e = new Error('invalid resource data');
         e.statusCode = 400;

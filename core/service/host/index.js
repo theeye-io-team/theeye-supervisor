@@ -1,14 +1,16 @@
+"use strict";
+var _ = require('lodash');
 var Host = require("../../entity/host").Entity;
 var Resource = require("../../entity/resource").Entity;
 var NotificationService = require("../notification");
 var CustomerService = require("../customer");
 var Handlebars = require("../../lib/handlebars");
 var ResourceService = require("../resource");
-var ResourceMonitorService = require("../resource/monitor");
 var Job = require('../../entity/job').Entity;
 var HostGroup = require('./group');
+var logger = require("../../lib/logger")("eye:supervisor:service:host") ;
 
-var debug = require("debug")("eye:supervisor:service:host") ;
+var createMonitor = ResourceService.createResourceAndMonitorForHost;
 
 function HostService(host) {
   var self = this;
@@ -27,14 +29,14 @@ HostService.prototype = {
       function(error,config){
         host.fails_count += 1;
         var maxFails = config.fails_count_alert;
-        debug('fails count %d/%d', host.fails_count, maxFails);
+        logger.log('fails count %d/%d', host.fails_count, maxFails);
 
         if( host.fails_count > maxFails ) {
           if( host.state != vent ) {
-            debug('host "%s" state has changed to "%s"', host.hostname, vent);
+            logger.log('host "%s" state has changed to "%s"', host.hostname, vent);
             host.state = vent ;
 
-            debug('processing "%s" event',vent);
+            logger.log('processing "%s" event',vent);
             sendEventNotification(host,vent);
           }
         }
@@ -50,12 +52,12 @@ HostService.prototype = {
 
     if( host.state != vent )
     {
-      debug('host "%s" state has changed to "%s"', host.hostname, vent);
+      logger.log('host "%s" state has changed to "%s"', host.hostname, vent);
       host.state = vent;
       host.fails_count = 0;
       host.save();
 
-      debug('processing "%s" event',vent);
+      logger.log('processing "%s" event',vent);
       sendEventNotification(host,vent);
     }
   },
@@ -106,19 +108,13 @@ function sendEventNotification (host,vent)
 /**
 * create a dstats and psaux monitoring workers
 */
-function createHostMonitoringWorkers (input, doneFn) {
-  ResourceMonitorService.createMonitor('dstat', input,
-    function(error,dstat){
-      ResourceMonitorService.createMonitor('psaux', input,
-        function(error,psaux){
-          if(doneFn) doneFn(null,{
-            dstat_monitor: dstat,
-            psaux_monitor: psaux
-          });
-        }
-      );
-    }
-  );
+function createBaseMonitors (input, doneFn){
+  logger.log('creating base monitors');
+  doneFn=doneFn||()=>{};
+  let dstat = Object.assign({},input,{'monitor_type':'dstat'});
+  let psaux = Object.assign({},input,{'monitor_type':'psaux'});
+  createMonitor(dstat);
+  createMonitor(psaux);
 }
 
 /**
@@ -143,7 +139,7 @@ HostService.register = function(
   info,
   next
 ){
-  debug('registering new host "%s"', hostname);
+  logger.log('registering new host "%s"', hostname);
 
   var data = {
     'hostname'      : hostname,
@@ -158,7 +154,7 @@ HostService.register = function(
     data, 
     customer, 
     function(error, host){
-      debug('host registered. creating host resource');
+      logger.log('host registered. creating host resource');
 
       var data = {
         'host_id': host._id,
@@ -167,36 +163,36 @@ HostService.register = function(
         'customer_name': customer.name,
         'name': host.hostname,
         'type': 'host',
-        'enable': true, 
-        'description': host.hostname,
+        'monitor_type':'host',
+        'enable': true,
+        'description': host.hostname
       };
 
-      Resource.create(data, function(error, resource){
-        debug('resource registered.');
+      createMonitor(data,function(error, resource){
+        logger.log('resource registered.');
 
         next(error,{ host: host, resource: resource });
 
         data.host = host;
         data.resource = resource;
-        createHostMonitoringWorkers(data, function(){
-          HostGroup.searchAndRegisterHostIntoGroup(
-            host,
-            function(err,group){
-              if(!err && typeof group != 'undefined'){
-                resource.template = group;
-                resource.save();
-                Job.createAgentConfigUpdate(host._id);
-              }
-            }
-          );
-        });
+        HostGroup.searchAndRegisterHostIntoGroup(
+          host,
+          (err,group)=>{
+            if(err) return logger.error(err);
+            if(!group) return createBaseMonitors(data);
+
+            resource.template = group;
+            resource.save();
+            Job.createAgentConfigUpdate(host._id);
+          }
+        );
       });
     }
   );
 }
 
 HostService.fetchBy = function(query,next) {
-  debug('fetching hosts by customer %s',query.customer_name);
+  logger.log('fetching hosts by customer %s',query.customer_name);
 
   Host.find(query,function(error,hosts){
     if(error) return next(error,null);
@@ -219,7 +215,7 @@ HostService.disableHostsByCustomer = function(customer, doneFn){
         host.enable = false;
         host.save(function(error){
           if(error) {
-            debug('ERROR updating host property');
+            logger.error('ERROR updating host property');
             throw error;
           }
         });
