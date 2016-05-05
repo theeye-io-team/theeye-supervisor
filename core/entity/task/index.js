@@ -4,7 +4,6 @@ var BaseSchema = require('./schema');
 var Template = require('./template').Entity;
 var ObjectId = require('mongoose').Schema.Types.ObjectId;
 var logger = require('../../lib/logger')('eye:entity:task');
-var _ = require('lodash');
 
 /** Entity properties **/
 var properties = exports.properties = {
@@ -13,7 +12,7 @@ var properties = exports.properties = {
   'creation_date' : { type: Date, 'default': Date.now() },
   'last_update' : { type: Date, 'default': Date.now() },
   'template' : { type: ObjectId, ref: 'TaskTemplate', 'default': null },
-  'public' : { type: Boolean, 'default': false } ,
+  'public' : { type: Boolean, 'default': false }
 };
 
 /**
@@ -47,13 +46,25 @@ TaskSchema.methods.toTemplate = function(doneFn) {
  * @param {Object} template, published task template - flattened object
  *
  */
-TaskSchema.statics.FromTemplate = function(template, options, doneFn) {
+TaskSchema.statics.FromTemplate = function(
+  template,
+  options,
+  doneFn
+) {
   logger.log('creating task from template %j', template);
-  var instance = new this( template );
+
+  var instance = new this(template);
   instance.resource_id = options.resource ? options.resource._id : null;
-  instance.host_id = options.host._id;
+  instance.host_id = options.host ? options.host._id : null;
   instance.template = template._id || template.id;
-  instance.save(doneFn);
+  instance.id = null;
+  instance.user_id = null;
+  instance._id = null;
+  instance._type = 'Task';
+  instance.save((err,task)=>{
+    if(err) logger.error(err);
+    doneFn(err,task);
+  });
 }
 
 /**
@@ -72,6 +83,7 @@ TaskSchema.statics.create = function(input,next)
   instance.user_id          = input.user._id;
   instance.name             = input.name || null;
   instance.public           = input.public || false;
+  instance.template         = template_id || null;
   instance.description      = input.description || null;
   instance.save(function(error,entity){
     next(null, entity);

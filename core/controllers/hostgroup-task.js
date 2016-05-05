@@ -2,9 +2,12 @@
 
 var resolver = require('../router/param-resolver');
 var validator = require('../router/param-validator');
-var logger = require('../lib/logger')('eye:controller:group-task-template');
+var logger = require('../lib/logger')('eye:controller:template:task');
 var TaskService = require('../service/task');
 var Task = require('../entity/task').Entity;
+var Resource = require('../entity/resource').Entity;
+var Host = require('../entity/host').Entity;
+var Job = require('../entity/job').Entity;
 /**
  *
  * exports routes
@@ -98,6 +101,8 @@ var controller = {
       group.task_templates.push( template );
       group.save(function(err){
         if(err) logger.error(err);
+
+        logger.log('task added to group');
         addTaskTemplateInstancesToGroupHosts(
           template,
           group,
@@ -151,12 +156,15 @@ var controller = {
   remove(req,res,next){
     validateRequest(req,res);
     var template = req.tasktemplate;
+    var group = req.group;
     removeTaskTemplateInstancesFromHostGroups(
       template,
       function(err){
         if(err) res.send(500);
+        group.detachTaskTemplate(template);
         template.remove(function(err){
           if(err) res.send(500);
+          logger.log('task removed from group');
           res.send(200);
         });
       }
@@ -195,6 +203,7 @@ function addTaskTemplateInstancesToGroupHosts(
     'type':'host',
     'template':group,
   },(err,resources)=>{
+    logger.log(resources);
     for(let i=0;i<resources.length;i++){
       let resource=resources[i];
       Host.findById(resource.host_id,(err,host)=>{

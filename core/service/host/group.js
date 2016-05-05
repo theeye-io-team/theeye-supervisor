@@ -83,12 +83,14 @@ exports.searchAndRegisterHostIntoGroup = function(host, next) {
       if( new RegExp( group.hostname_regex ).test( host.hostname ) === true ){
         logger.log('group found : %s', group.hostname_regex);
         hostProvisioning(host, group, function(err){
+          logger.log('provisioning completed');
           if(err) return next(err);
           next(null,group);
         });
-        break;
+        return;
       }
     }
+    logger.log('group not found');
     next(null);
   });
 }
@@ -109,6 +111,11 @@ function hostProvisioning( host, group, doneFn )
     var taskTpls = data.tasks;
     var monitorTpls = data.monitors;
     var operations = taskTpls.length + monitorTpls.length;
+
+    if(operations==0){
+      logger.log('group is empty. not templates defined');
+      return doneFn();
+    }
 
     var completed = _.after(operations,function(){
       Job.createAgentConfigUpdate(host._id);

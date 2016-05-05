@@ -2,9 +2,8 @@
 
 var resolver = require('../router/param-resolver');
 var validator = require('../router/param-validator');
-var logger = require('../lib/logger')('eye:controller:group-monitor-template');
+var logger = require('../lib/logger')('eye:controller:template:monitor');
 var ResourceMonitorService = require('../service/resource/monitor');
-
 var ResourceTemplate = require('../entity/resource/template').Entity;
 var Monitor = require('../entity/monitor').Entity;
 var Resource = require('../entity/resource').Entity;
@@ -93,6 +92,28 @@ function addMonitorInstancesToGroupHosts(
   });
 }
 
+function removeResourceTemplateInstancesFromGroupHosts(
+  template, done
+){
+  done=done||()=>{};
+  Resource.find(template).exec(function(err,resources){
+    if(err){ logger.error(err); return done(err); }
+
+    if(!resources||resources.length==0){
+      logger.log('no resources were found');
+      return done();
+    }
+
+    for(var i=0; i<resources.length; i++){
+      var resource = resources[i];
+      resource.remove(err=>{
+        if(err) return logger.error(err);
+      });
+    }
+    done();
+  });
+};
+
 /**
  *
  * searches monitors with this template 
@@ -109,24 +130,35 @@ function removeMonitorTemplateInstancesFromGroupHosts(
   template, done
 ){
   done=done||()=>{};
-  var query = { 'template': template._id };
-  Monitor.find(query).exec(function(err, monitors){
+  logger.log('removing monitor instances');
+
+  removeResourceTemplateInstancesFromGroupHosts(
+    {'template':template.template_resource},(err)=>{}
+  );
+
+  Monitor
+  .find({ 'template':template._id })
+  .exec(function(err, monitors){
     if(err){ logger.error(err); return done(err); }
 
-    if(!monitors || monitors.length==0){
+    if(!monitors||monitors.length==0){
       logger.log('no monitors were found');
       return done();
     }
 
     for(var i=0; i<monitors.length; i++){
       var monitor = monitors[i];
-      monitor.remove(err=>{
-        if(err) return logger.error(err);
-        // notify monitor host agent
-        Job.createAgentConfigUpdate(monitor.host_id);
-      });
+      removeMonitor(monitor);
     }
     done();
+  });
+}
+
+function removeMonitor(monitor){
+  monitor.remove(err=>{
+    if(err) return logger.error(err);
+    // notify monitor host agent
+    Job.createAgentConfigUpdate(monitor.host_id);
   });
 }
 
@@ -327,12 +359,40 @@ var controller = {
   remove: function(req,res,next){
     validateRequest(req,res);
     var template = req.monitortemplate;
-    template.remove(function(err){
-      if(err) return res.send(500);
-      removeMonitorTemplateInstancesFromGroupHosts(
-        template,(err)=>{}
-      );
-      res.send(200);
-    });
+    var group = req.group;
+    removeMonitorTemplateInstancesFromGroupHosts(
+      template,
+      function(err){
+        if(err) return res.send(500);
+        removeTemplates(template,err=>{
+          if(err) return res.send(500);
+
+          group.detachMonitorTemplate(template);
+          res.send(200);
+        });
+      }
+    );
   },
+}
+
+function doneError(err,next){
+  logger.error(err);
+  return next(err); 
+}
+
+function removeTemplates (monitorTemplate,doneFn) {
+  var rid = monitorTemplate.template_resource;
+  ResourceTemplate.findById(rid,function(err,resourceTemplate){
+    if(err) return doneError(err,doneFn);
+    if(!resourceTemplate) return doneFn();
+    logger.log('removing resource template');
+    resourceTemplate.remove(err=>{
+      if(err) return doneError(err,doneFn);
+      logger.log('removing monitor template');
+      monitorTemplate.remove(err=>{
+        if(err) return doneError(err,doneFn);
+        doneFn();
+      });
+    });
+  });
 }

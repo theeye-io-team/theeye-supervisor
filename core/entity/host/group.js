@@ -1,3 +1,5 @@
+"use strict";
+
 var mongodb = require("../../lib/mongodb");
 var Schema = require('mongoose').Schema;
 var debug = require('debug')('eye:entity:host:group');
@@ -120,6 +122,44 @@ EntitySchema.methods.setTemplatesProperty = function(prop, tpls){
   }
 
   return group;
+}
+
+EntitySchema.methods.detachTaskTemplate = function(template,done)
+{
+  done=done||()=>{};
+
+  var task = template._id;
+  Entity.update(this,{
+    $pullAll: { task_templates: [ task ] },
+  }, (err) => {
+    done();
+  });
+}
+
+EntitySchema.methods.detachMonitorTemplate = function(template,done){
+  done=done||()=>{};
+
+  function deleteMonitorTemplate(id,next){
+    Entity.update(this,{
+      $pullAll: { 'monitor_templates': [ id ] },
+    }, next);
+  }
+
+  function deleteResourceTemplate(id,next){
+    Entity.update(this,{
+      $pullAll: { 'resource_templates': [ id ] }
+    }, next);
+  }
+
+  let monitor = template._id;
+  deleteMonitorTemplate(monitor,(err)=>{
+    if(err) return done(err);
+    let resource = template.template_resource;
+    deleteResourceTemplate(resource,(err)=>{
+      if(err) return done(err);
+      done();
+    });
+  });
 }
 
 EntitySchema.methods.hasTaskTemplate = function(task){

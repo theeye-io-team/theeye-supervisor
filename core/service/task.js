@@ -189,6 +189,7 @@ TaskService.tasksToTemplates = function(
 
         data.customer = customer;
         data.user = user;
+        data._type = 'TaskTemplate';
         TaskTemplate.create(data, function(e, template){
           debug('task template create from scratch done');
           templates.push( template );
