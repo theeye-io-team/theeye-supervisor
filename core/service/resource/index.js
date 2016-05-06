@@ -435,7 +435,9 @@ Service.removeHostResource = function (resource) {
   Host
     .findById(hid)
     .exec(function(err, item){
-      item.remove(function(err){ });
+      if(err) return logger.error(err);
+      if(!item) return;
+      item.remove(err=>logger.error(err));
     });
 
   logger.log('removing host stats');
