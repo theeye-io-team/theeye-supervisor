@@ -1,3 +1,4 @@
+"use strict";
 var Script = require("../entity/script").Entity;
 var json = require("../lib/jsonresponse");
 var debug = require('debug')('eye:supervisor:controller:agent-config');
@@ -104,14 +105,18 @@ function generateAgentConfig(monitors,next) {
         case 'psaux':
           configDone(null, config);
           break;
+        case 'host':
+          configDone();
+        break;
         default:
-          var error = new Error(msg='unhandled monitor type');
+          let msg=`unhandled monitor type ${monitor.type}`;
+          let error = new Error();
           debug(error);
           configDone(error);
           break;
       }
     })(function(error, config){
-      if(!error) workers.push(config);
+      if(!error && config) workers.push(config);
       doneIteration();
     });
 

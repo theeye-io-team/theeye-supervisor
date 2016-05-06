@@ -1,4 +1,5 @@
 "use strict";
+
 var _ = require('lodash');
 var Host = require("../../entity/host").Entity;
 var Resource = require("../../entity/resource").Entity;
@@ -168,10 +169,11 @@ HostService.register = function(
         'description': host.hostname
       };
 
-      createMonitor(data,function(error, resource){
+      createMonitor(data,function(error, result){
+        let resource = result.resource;
         logger.log('resource registered.');
 
-        next(error,{ host: host, resource: resource });
+        next(error,{'host':host,'resource':resource});
 
         data.host = host;
         data.resource = resource;
