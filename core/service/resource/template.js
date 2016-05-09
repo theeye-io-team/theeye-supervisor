@@ -78,6 +78,8 @@ exports.createResourceMonitorsTemplates = function (input, done){
       delete monitor_data.host_id; // not needed. just in case...
 
       ResourceTemplate.create(resource_data, function(err, resTpl){
+        if(err) return debug(err);
+
         debug('templates created');
         monitor_data.template_resource = resTpl._id ;
         MonitorTemplate.create(monitor_data, function(err, monTpl){

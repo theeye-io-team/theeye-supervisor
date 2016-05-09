@@ -695,7 +695,7 @@ function handleHostIdAndData(hostId, input, doneFn){
  */
 Service.createResourceAndMonitorForHost = function createResourceAndMonitorForHost (input, next) {
   next=next||()=>{};
-  logger.log('creating resource for host %s', input.hostname);
+  logger.log('creating resource for host %j', input);
   var resource_data = {
     'host_id' : input.host_id,
     'hostname' : input.hostname,

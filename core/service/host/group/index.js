@@ -1,53 +1,22 @@
+"use strict";
+
+var appRoot = require('app-root-path');
 var Schema = require('mongoose').Schema;
 var _ = require('lodash');
-var logger = require('../../lib/logger')('eye:service:host:group');
+var logger = require(appRoot + '/lib/logger')('eye:service:host:group');
 
-var HostGroup = require('../../entity/host/group').Entity;
+var HostGroup = require(appRoot + '/entity/host/group').Entity;
 /** TEMPLATES **/
-var ResourceTemplate = require('../../entity/resource/template').Entity;
-var MonitorTemplate = require('../../entity/monitor/template').Entity;
-var TaskTemplate = require('../../entity/task/template').Entity;
+var ResourceTemplate = require(appRoot + '/entity/resource/template').Entity;
+var MonitorTemplate = require(appRoot + '/entity/monitor/template').Entity;
+var TaskTemplate = require(appRoot + '/entity/task/template').Entity;
 /** NON TEMPLATES **/
-var Resource = require('../../entity/resource').Entity;
-var Monitor = require('../../entity/monitor').Entity;
-var Task = require('../../entity/task').Entity;
-var Job = require('../../entity/job').Entity;
+var Resource = require(appRoot + '/entity/resource').Entity;
+var Monitor = require(appRoot + '/entity/monitor').Entity;
+var Task = require(appRoot + '/entity/task').Entity;
+var Job = require(appRoot + '/entity/job').Entity;
 
-/**
- *
- * @author Facundo
- */
-function removeTemplateEntities (
-  templates,
-  TemplateSchema,
-  LinkedSchema
-) {
-  for(var i=0; i<templates.length; i++){
-    var _id = templates[i];
-
-    // remove templates
-    TemplateSchema.remove({
-      '_id': _id
-    }, function(err){
-      if(err) return logger.error(err);
-
-      // remove template from linked entities
-      var query = LinkedSchema.find({ template: _id });
-      query.exec(function(err, entities){
-        if(err) return logger.error(err);
-
-        for(var i=0; i<entities.length; i++){
-          var entity = entities[i];
-          entity.template = null;
-          entity.save(function(err){
-            if(err) logger.error(err);
-          });
-        }
-      });
-    });
-  }
-}
-
+exports.Monitor = require('./monitor');
 
 /**
  * Remove all group template entities, and
@@ -138,4 +107,39 @@ function hostProvisioning( host, group, doneFn )
       });
     }
   });
+}
+
+/**
+ *
+ * @author Facundo
+ */
+function removeTemplateEntities (
+  templates,
+  TemplateSchema,
+  LinkedSchema
+) {
+  for(var i=0; i<templates.length; i++){
+    var _id = templates[i];
+
+    // remove templates
+    TemplateSchema.remove({
+      '_id': _id
+    }, function(err){
+      if(err) return logger.error(err);
+
+      // remove template from linked entities
+      var query = LinkedSchema.find({ template: _id });
+      query.exec(function(err, entities){
+        if(err) return logger.error(err);
+
+        for(var i=0; i<entities.length; i++){
+          var entity = entities[i];
+          entity.template = null;
+          entity.save(function(err){
+            if(err) logger.error(err);
+          });
+        }
+      });
+    });
+  }
 }

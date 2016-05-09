@@ -18,7 +18,6 @@ exports.findBy = findBy;
 exports.createMonitor = createMonitor;
 exports.setMonitorData = setMonitorData;
 exports.setType = setType;
-exports.resourceMonitorsToTemplates = resourceMonitorsToTemplates;
 
 /**
  *
@@ -77,7 +76,7 @@ function setMonitorForScript(input) {
 }
 
 function setMonitorForHost(input){
-	var looptime = input.looptime ? input.looptime : 10000 ;
+	var looptime = input.looptime || 10000 ;
 	return {
     'customer_name':input.customer_name,
 		'host_id':input.host_id,
@@ -168,6 +167,7 @@ function setMonitorData(type, input, next){
 }
 
 function createMonitor(type, input, next) {
+  next=next||()=>{};
 	logger.log('processing monitor %s creation data', type);
 	setMonitorData(type, input,
     function(error,monitor){
@@ -266,12 +266,16 @@ function findBy (filters, options, doneFn) {
  * @param {Array} monitors
  *
  */
-function resourceMonitorsToTemplates (
+exports.resourceMonitorsToTemplates = function (
   resource_monitors, 
   customer, 
   user,
   done
 ) {
+  var user_id = user ? user._id : null;
+  var customer_name = customer.name;
+  var customer_id = customer._id;
+
   if(!resource_monitors) {
     var e = new Error('resource monitors definition required');
     e.statusCode = 400;
@@ -289,7 +293,7 @@ function resourceMonitorsToTemplates (
     return done(null,[]);
   }
 
-  var templatized = _.after( resource_monitors.length, function(){
+  var templatized = _.after(resource_monitors.length, function(){
     logger.log('all resources & monitorese templates processed');
     done(null, templates);
   });
@@ -325,7 +329,7 @@ function resourceMonitorsToTemplates (
         return done(e);
       }
     }
-    /* create templates from user input.  */
+    /* create templates from input */
     else {
       logger.log('setting up template data');
       ResourceService.setResourceMonitorData(value, function(valErr, data) {
@@ -336,9 +340,9 @@ function resourceMonitorsToTemplates (
           return done(e);
         }
 
-        data.customer_id = customer._id;
-        data.customer_name = customer.name;
-        data.user_id = user._id;
+        data.customer_id = customer_id;
+        data.customer_name = customer_name;
+        data.user_id = user_id;
         logger.log('creating template from scratch');
         ResourceTemplateService.createResourceMonitorsTemplates(data, function(err, tpls){
           if(err) {

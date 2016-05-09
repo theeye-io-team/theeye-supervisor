@@ -3,6 +3,7 @@
   "description": "The Eye Dependencies",
   "author": "Facundo S. Gonzalez <facugon@interactar.com>",
   "dependencies": {
+    "app-root-path": "1.0.0",
     "async": "^1.2.1",
     "aws-sdk": "^2.1.26",
     "bcrypt": "^0.8.5",
