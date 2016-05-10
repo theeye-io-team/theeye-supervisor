@@ -126,8 +126,8 @@ var controller = {
 
     if(!customer) return res.send(400, 'customer required');
 
-    HostGroup.find({ 
-      customer_name : customer.name 
+    HostGroup.find({
+      customer_name : customer.name
     }).exec(function(err,groups){
       if(groups.length == 0){
         return res.send(200,{'groups':[]});
@@ -162,6 +162,12 @@ var controller = {
 
     var hostnameregex = group.hostname_regex;
     if(!hostnameregex) return res.send(400,'hostname regexp required');
+    try {
+      var a = new RegExp(hostnameregex);
+      console.log(a);
+    }catch(e) {
+      return res.send(406,'Invalid regular expression');
+    }
 
     var responseError = (e) => {
       let errorRes = {
@@ -176,7 +182,7 @@ var controller = {
       'tasks': (callback) => {
         logger.log('processing group tasks');
         let tasks = group.tasks || [];
-        TaskService.tasksToTemplates( 
+        TaskService.tasksToTemplates(
           tasks,
           req.customer,
           req.user,
@@ -186,7 +192,7 @@ var controller = {
       'provtasks': (callback) => {
         logger.log('processing group provisioning tasks');
         let provtasks = group.provtasks || [];
-        TaskService.tasksToTemplates( 
+        TaskService.tasksToTemplates(
           provtasks,
           req.customer,
           req.user,
