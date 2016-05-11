@@ -1,4 +1,5 @@
 "use strict";
+
 var _ = require('lodash');
 var logger = require('../../lib/logger')('eye:supervisor:service:resource:monitor');
 var ResourceMonitorSchema = require('../../entity/monitor');
@@ -30,7 +31,7 @@ function setMonitorForScraper(input) {
 	return {
     'customer_name': input.customer_name,
 		'host_id': host_id,
-		'name': input.name,
+		'name': input.name || 'scraper',
 		'type': 'scraper',
 		'looptime': input.looptime,
 		'config': {
@@ -49,7 +50,7 @@ function setMonitorForProcess(input) {
 	return {
     'customer_name': input.customer_name,
 		'host_id': input.host_id,
-		'name': input.name,
+		'name': input.name || 'process',
 		'type': 'process',
 		'looptime': input.looptime,
 		'config': {
@@ -65,7 +66,7 @@ function setMonitorForScript(input) {
 	return {
     'customer_name': input.customer_name,
 		'host_id': input.host_id,
-		'name': input.name,
+		'name': input.name || 'script',
 		'type': 'script',
 		'looptime': input.looptime,
 		'config': {
@@ -81,7 +82,7 @@ function setMonitorForHost(input){
     'customer_name':input.customer_name,
 		'host_id':input.host_id,
 		'type':'host',
-		'name':'host',
+		'name': input.name || 'host',
 		'looptime':looptime,
 		'config':{ }
 	};
@@ -93,14 +94,14 @@ function setMonitorForDstat(input){
     'customer_name': input.customer_name,
 		'host_id': input.host_id,
 		'type': 'dstat',
-		'name': 'dstat',
+		'name': input.name || 'dstat',
 		'looptime': looptime,
 		'config': {
 			'limit': {
-				'cpu': 50,
-				'disk': 90,
-				'mem': 70,
-				'cache': 70
+				'cpu': input.cpu || 50,
+				'disk': input.disk || 90,
+				'mem': input.mem || 70,
+				'cache': input.cache || 70
 			}
 		}
 	};
@@ -111,7 +112,7 @@ function setMonitorForPsaux(input){
 	return {
     'customer_name': input.customer_name,
 		'host_id': input.host_id,
-		'name': 'psaux',
+		'name': input.name || 'psaux',
 		'type': 'psaux',
 		'looptime': looptime,
 		'config': {}
@@ -124,7 +125,7 @@ function setType(resourceType, monitorType) {
 
 function setMonitorData(type, input, next){
   var monitor;
-	logger.log('setting up monitor data');
+	logger.log('setting up monitor data %j',input);
 	try {
 		switch(type) {
 			case 'scraper':
@@ -334,7 +335,9 @@ exports.resourceMonitorsToTemplates = function (
       logger.log('setting up template data');
       ResourceService.setResourceMonitorData(value, function(valErr, data) {
         if(valErr || !data) {
-          var e = new Error('invalid resource monitor data');
+          let msg = 'invalid resource monitor data';
+          logger.error(msg);
+          let e = new Error(msg);
           e.statusCode = 400;
           e.info = valErr;
           return done(e);
@@ -344,16 +347,19 @@ exports.resourceMonitorsToTemplates = function (
         data.customer_name = customer_name;
         data.user_id = user_id;
         logger.log('creating template from scratch');
-        ResourceTemplateService.createResourceMonitorsTemplates(data, function(err, tpls){
-          if(err) {
-            logger.error(err);
-            return done(err);
-          }
+        ResourceTemplateService
+        .createResourceMonitorsTemplates(
+          data, function(err, tpls){
+            if(err) {
+              logger.error(err);
+              return done(err);
+            }
 
-          logger.log('templates from scratch created');
-          templates.push( tpls );
-          templatized();
-        });
+            logger.log('templates from scratch created');
+            templates.push( tpls );
+            templatized();
+          }
+        );
       });
     }
   }

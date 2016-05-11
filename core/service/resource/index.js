@@ -594,6 +594,16 @@ Service.setResourceMonitorData = function(input,done) {
       var scriptArgs = filter.toArray(input.script_arguments);
       data.script_arguments = scriptArgs;
       break;
+    case 'dstat':
+      data.cpu = input.cpu;
+      data.mem = input.mem;
+      data.cache = input.cache;
+      data.disk = input.disk;
+      break;
+    case 'psaux': break;
+    default:
+      throw new Error('monitor type not handle');
+      break;
   }
 
   var error = errors.hasErrors() ? errors : null;

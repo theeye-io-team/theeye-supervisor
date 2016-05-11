@@ -4,6 +4,7 @@ var ResourceService = require('../service/resource');
 var ResourceMonitorService = require('../service/resource/monitor');
 var HostGroupService = require('../service/host/group');
 
+var Task = require('../entity/task').Entity;
 var Resource = require('../entity/resource').Entity;
 var ResourceMonitor = require('../entity/monitor').Entity;
 var Host = require('../entity/host').Entity;
@@ -23,6 +24,9 @@ module.exports = function(server){
 
   server.get('/create_missing_dstat_psaux_on_templates', [
   ],controller.addDstatPsauxToTemplates);
+
+  server.get('/rebuild_hostgroups', [
+  ],controller.relinkHostResourcesToGroups);
 };
 
 function createMonitorTypeHost(done){
@@ -31,8 +35,14 @@ function createMonitorTypeHost(done){
   },function(err,resources){
     var created = _.after(resources.length,()=>done());
     resources.forEach(function(resource){
-      var input = _.assign({},resource.toObject(),{'resource':resource});
-      MonitorService.createMonitor('host', input, (err)=>created());
+      ResourceMonitor.find({
+        'type':'host',
+        'host_id':resource.host_id
+      },function(err,monitors){
+        if(monitors.length!=0) return created();
+        var input = _.assign({},resource.toObject(),{'resource':resource});
+        MonitorService.createMonitor('host', input, (err)=>created());
+      });
     });
   });
 }
@@ -40,10 +50,15 @@ function createMonitorTypeHost(done){
 function removeAllDstatPsaux(done){
   ResourceMonitor.remove({'type':'dstat'},(err)=>{
     if(err) return done(err);
-    ResourceMonitor.remove({'type':'psaux'},(err)=>{
+    Resource.remove({'type':'dstat'},(err)=>{
       if(err) return done(err);
-      console.log('done removing');
-      done();
+      ResourceMonitor.remove({'type':'psaux'},(err)=>{
+        if(err) return done(err);
+        Resource.remove({'type':'psaux'},(err)=>{
+          if(err) return done(err);
+          done();
+        });
+      });
     });
   });
 }
@@ -51,25 +66,51 @@ function removeAllDstatPsaux(done){
 function createHostsDstatPsaux(done){
   Host.find(function(err,hosts){
     hosts.forEach(function(host){
-      let dstat = Object.assign({},host.toObject(),{
-        'host_id':host._id,
-        'name':'dstat',
-        'monitor_type':'dstat',
-        'description':'host stats',
-      });
-      delete dstat._id;
-      createMonitor(dstat);
+      // process host resource but 
+      // only if template=null
+      Resource.find({
+        'type':'host',
+        'template':null,
+        'host_id':host._id
+      },function(err,resources){
+        // ignore thoese with template
+        if(resources.length==0) return;
+        var resource = resources[0];
+        let dstat = Object.assign({},host.toObject(),{
+          'host_id':host._id,
+          'name':'dstat',
+          'monitor_type':'dstat',
+          'description':'host stats',
+        });
+        delete dstat._id;
+        createMonitor(dstat);
 
-      let psaux = Object.assign({},host.toObject(),{
-        'host_id':host._id,
-        'name':'psaux',
-        'monitor_type':'psaux',
-        'description':'host process',
+        let psaux = Object.assign({},host.toObject(),{
+          'host_id':host._id,
+          'name':'psaux',
+          'monitor_type':'psaux',
+          'description':'host process',
+        });
+        delete psaux._id;
+        createMonitor(psaux);
       });
-      delete psaux._id;
-      createMonitor(psaux);
     });
-    done();
+  });
+  done();
+}
+
+function removeMonitorsAndTasksLinkedToTemplates(done){
+  var query = { 'template':{$ne:null} };
+  // remove tasks linked to templates
+  Task.remove(query,err=>{
+    // remove monitors linked to templates
+    ResourceMonitor.remove(query,err=>{
+      // remove resources linked to templates
+      query['type'] = {$ne:'host'};
+      Resource.remove(query,err=>{
+        done()
+      });
+    });
   });
 }
 
@@ -82,14 +123,13 @@ var controller = {
   createBaseResources (req,res) {
     removeAllDstatPsaux((err)=>{
       if(err) return res.send(500);
-      //createHostsDstatPsaux((err)=>{
-      //  if(err) return res.send(500);
+      createHostsDstatPsaux((err)=>{
+        if(err) return res.send(500);
         res.send(200);
-      //});
+      });
     });
   },
-  addDstatPsauxToTemplates(req,res)
-  {
+  addDstatPsauxToTemplates(req,res) {
     HostGroup.find(function(err,groups){
       groups.forEach(function(group){
         var customer = {
@@ -114,7 +154,31 @@ var controller = {
       });
     });
     return res.send(200);
-  }
+  },
+  relinkHostResourcesToGroups (req,res) {
+    removeMonitorsAndTasksLinkedToTemplates(function(){
+      // search all hosts
+      Host.find(function(err,hosts){
+        hosts.forEach(function(host){
+          HostGroupService.searchAndRegisterHostIntoGroup(
+            host,(err,group)=>{
+              if(group){
+                Resource.find({
+                  type:'host',
+                  host_id:host._id
+                },function(err,resources){
+                  var resource = resources[0];
+                  resource.template = group;
+                  resource.save();
+                });
+              }
+            }
+          );
+        });
+      });
+    });
+    res.send();
+  },
 };
 
 var dstatConfig = {
