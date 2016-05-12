@@ -275,8 +275,7 @@ Service.prototype.handleState = function(input,next) {
   getCustomerConfig(
     resource.customer_id,
     (config) => {
-      switch(input.state)
-      {
+      switch(input.state) {
         case 'failure':
           input.last_update = Date.now();
           handleFailureState(resource,input,config);

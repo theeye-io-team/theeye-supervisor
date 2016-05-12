@@ -6,7 +6,7 @@ var Host = require('../entity/host').Entity;
 var ResourceService = require('./resource');
 var CustomerService = require('./customer');
 var HostService = require('./host');
-var debug = require('../lib/logger')('eye:supervisor:service:monitor');
+var logger = require('../lib/logger')('eye:supervisor:service:monitor');
 
 var config = require('config');
 
@@ -21,7 +21,7 @@ module.exports = {
 };
 
 function checkResourcesState() {
-  debug.log('***** CHECKING RESOURCES STATUS *****');
+  logger.log('***** CHECKING RESOURCES STATUS *****');
 
   let query = { 'enable': true };
   Resource.find(query,(err,resources) => {
@@ -43,8 +43,12 @@ function runChecks(resource) {
         case 'script':
         case 'scraper':
         case 'process':
+        case 'dstat':
+        case 'psaux':
           checkResourceMonitorStatus(resource,cconfig);
+          break;
         case 'default':
+          logger.error('unhandled resource %s', resource.type);
           break;
       }
     }
@@ -59,17 +63,18 @@ function checkResourceMonitorStatus(resource,cconfig,done){
     'resource_id': resource._id 
   },(error,monitor) => {
 
-    if(error) return debug.error('Resource monitor query error : %s', error.message);
+    if(error) return logger.error('Resource monitor query error : %s', error.message);
     if(!monitor) return;
 
-    debug.log('checking monitor %s', resource.name);
+    logger.log('checking monitor %s', resource.name);
     validLastupdate({
       'loop_duration': monitor.looptime,
       'loop_threshold': cconfig.resources_alert_failure_threshold_milliseconds,
       'last_update': resource.last_update.getTime(),
       'fails_count': resource.fails_count
-    }, (error,valid) => {
+    }, (error,valid,failedLoops) => {
       if(!valid){
+        resource.fails_count = (failedLoops - 1);
         var manager = new ResourceService(resource);
         manager.handleState({
           'state':'updates_stopped',
@@ -84,14 +89,15 @@ function checkResourceMonitorStatus(resource,cconfig,done){
 function checkHostResourceStatus(resource,done){
   done=done||()=>{};
 
-  debug.log('checking host resource %s', resource.name);
+  logger.log('checking host resource %s', resource.name);
   validLastupdate({
     'loop_duration':config.get('agent').core_workers.host_ping.looptime,
     'loop_threshold':config.get('monitor').resources_alert_failure_threshold_milliseconds,
     'last_update':resource.last_update.getTime(),
     'fails_count':resource.fails_count
-  }, (error,valid) => {
+  }, (error,valid,failedLoops) => {
     if(!valid){
+      resource.fails_count = (failedLoops - 1);
       var manager = new ResourceService(resource);
       manager.handleState({
         'state':'updates_stopped',
@@ -105,7 +111,7 @@ function checkHostResourceStatus(resource,done){
 function validLastupdate(options,done)
 {
   done=done||()=>{};
-  debug.log(options);
+  logger.log(options);
   var nowTime = Date.now();
   var loopDuration = options.loop_duration;
   var loopThreshold = options.loop_threshold;
@@ -115,16 +121,16 @@ function validLastupdate(options,done)
   var updateThreshold = loopDuration + loopThreshold ;
 
   var elapsedMinutes = Math.floor(timeElapsed/1000/60);
-  debug.log(`last update time elapsed ${elapsedMinutes} minutes`);
+  logger.log(`last update time elapsed ${elapsedMinutes} minutes`);
 
   var failedLoops = Math.floor(timeElapsed / loopDuration);
-  debug.log('failed loops count %s', failedLoops);
+  logger.log('failed loops count %s', failedLoops);
   if(timeElapsed > updateThreshold) {
     if(failedLoops > failedLoopsCount) {
-      debug.error(`last update check failed ${failedLoops} times`);
-      done(null,false);
+      logger.error(`last update check failed ${failedLoops} times`);
+      done(null,false,failedLoops);
     } else {
-      done(null,true);
+      done(null,true,failedLoops);
     }
   }
 }
