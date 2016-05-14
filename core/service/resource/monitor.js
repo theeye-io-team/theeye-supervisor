@@ -317,13 +317,16 @@ exports.resourceMonitorsToTemplates = function (
     if( value.hasOwnProperty('id') ){
       if( validator.isMongoId(value.id) ){
         logger.log('creating template from existent resource monitors');
-        ResourceTemplateService.resourceMonitorToTemplate(value.id, function(error, tpls){
-          if(error) done(error);
-
-          logger.log('templates created');
-          templates.push( tpls );
-          templatized();
-        });
+        ResourceTemplateService
+        .resourceMonitorToTemplate(
+          value.id,
+          function(error, tpls){
+            if(error) done(error);
+            logger.log('templates created');
+            templates.push( tpls );
+            templatized();
+          }
+        );
       } else {
         var e = new Error('invalid monitor id');
         e.statusCode = 400;

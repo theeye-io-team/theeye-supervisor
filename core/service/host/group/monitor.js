@@ -6,21 +6,21 @@ var Host = require(appRoot + '/entity/host').Entity;
 var Monitor = require(appRoot + '/entity/monitor').Entity;
 var Job = require(appRoot + '/entity/job').Entity;
 var logger = require(appRoot + '/lib/logger')('eye:service:group:monitor');
+var _ = require('lodash');
 
-exports.addTemplateToGroup = function(group,template,done){
-  var monitor_template = template.monitor_template;
-  var resource_template = template.resource_template;
-  group.monitor_templates.push(monitor_template);
-  group.resource_templates.push(resource_template);
-  group.save(function(err){
-    if(err) logger.error(err);
+exports.addTemplatesToGroup = function(group,templates,done){
+  done=done||()=>{};
+  var published = _.after(templates.length,()=>done());
+  templates.forEach(template=>{
+    group.addMonitorTemplate(template);
     addMonitorInstancesToGroupHosts(
-      monitor_template,
+      template.monitor_template,
       group,
-      (err)=>{}
+      err=>published(err)
     );
-    return done(err);
-  })
+  });
+  group.save();
+  return this;
 }
 
 /**
@@ -84,6 +84,7 @@ function addMonitorInstancesToGroupHosts(
     'type':'host',
     'template':group,
   },(err,resources)=>{
+    var created = _.after(resources.length,()=>done());
     for(let i=0;i<resources.length;i++){
       let resource=resources[i];
       Host.findById(resource.host_id,(err,host)=>{
@@ -91,6 +92,7 @@ function addMonitorInstancesToGroupHosts(
         // ... and attach the new monitor to the host
         Monitor.FromTemplate(template,opts,(err)=>{
           logger.log('monitor created');
+          created();
           Job.createAgentConfigUpdate(host._id);
         });
       });

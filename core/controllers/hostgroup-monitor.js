@@ -190,12 +190,10 @@ var controller = {
       monitors,
       req.customer,
       req.user,
-      function(err,templates) {
+      function(err,templates){
         if(err) return res.send(err.statusCode, err.message);
-        GroupMonitorService.addTemplateToGroup(
-          group,
-          templates[0],
-          (err)=>{
+        GroupMonitorService.addTemplatesToGroup(
+          group, templates, function(err){
             if(err) return res.send(500);
             let template = templates[0].monitor_template;
             res.send(200, { 'monitor':template });

@@ -114,6 +114,28 @@ function removeMonitorsAndTasksLinkedToTemplates(done){
   });
 }
 
+function createDstatPsaux (group){
+  var customer = {
+    'name':group.customer_name,
+    '_id':group.customer
+  };
+  var user = null;
+  ResourceMonitorService
+  .resourceMonitorsToTemplates(
+    [ dstatConfig, psauxConfig ],
+    customer,
+    user,
+    function(err,templates){
+      if(err) return console.log(err);
+      HostGroupService
+      .Monitor
+      .addTemplatesToGroup(
+        group, templates
+      );
+    }
+  );
+}
+
 var controller = {
   createHostMonitors (req,res) {
     createMonitorTypeHost(()=>{
@@ -130,27 +152,9 @@ var controller = {
     });
   },
   addDstatPsauxToTemplates(req,res) {
-    HostGroup.find(function(err,groups){
+    HostGroup.find((err,groups)=>{
       groups.forEach(function(group){
-        var customer = {
-          'name':group.customer_name,
-          '_id':group.customer
-        };
-        var user = null;
-        ResourceMonitorService
-        .resourceMonitorsToTemplates(
-          [ dstatConfig ],
-          customer,
-          user,
-          (err,templates)=>{
-            if(err){
-              return console.log(err);
-            }
-            HostGroupService.Monitor.addTemplateToGroup(
-              group, templates[0], ()=>{}
-            );
-          }
-        );
+        createDstatPsaux(group);
       });
     });
     return res.send(200);
