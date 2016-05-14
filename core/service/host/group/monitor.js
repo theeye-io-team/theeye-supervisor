@@ -84,7 +84,9 @@ function addMonitorInstancesToGroupHosts(
     'type':'host',
     'template':group,
   },(err,resources)=>{
+    if(resources.length==0) return done();
     var created = _.after(resources.length,()=>done());
+    logger.log('creating %s monitors', resources.length);
     for(let i=0;i<resources.length;i++){
       let resource=resources[i];
       Host.findById(resource.host_id,(err,host)=>{
