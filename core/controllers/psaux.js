@@ -1,8 +1,11 @@
+"use strict";
+
 var json = require("../lib/jsonresponse");
 var HostStats = require("../entity/host/stats").Entity;
 var NotificationService = require('../service/notification');
 var debug = require("../lib/logger")('eye:supervisor:controller:psaux');
 var paramsResolver = require('../router/param-resolver');
+var ResourceManager = require("../service/resource");
 
 module.exports = function(server, passport) {
 	server.post('/psaux/:hostname', [
@@ -13,7 +16,7 @@ module.exports = function(server, passport) {
 }
 
 var controller = {
-  create : function create(req, res, next) {
+  create (req, res, next) {
     var host = req.host ;
     var stats = req.params.psaux ;
 
@@ -43,19 +46,29 @@ var controller = {
       }
     );
 
+    let options = {
+      'type':'psaux',
+      'ensureOne':true
+    };
+    ResourceManager
+    .findHostResources(host,options,(err,resource)=>{
+      if(err||!resource)return;
+      var handler = new ResourceManager(resource);
+      handler.handleState({ state:'normal' });
+    });
+
     NotificationService.sendSNSNotification({
-      timestamp: (new Date()).getTime(),
-      stat: req.params.psaux,
-      customer_name: host.customer_name,
-      hostname: host.hostname,
-      type: "psaux"
+      'timestamp': (new Date()).getTime(),
+      'stat': req.params.psaux,
+      'customer_name': host.customer_name,
+      'hostname': host.hostname,
+      'type': 'psaux'
     },{
-      topic: "host-stats",
-      subject: "psaux_update"
+      'topic': 'host-stats',
+      'subject': 'psaux_update'
     });
 
     res.send(200); 
-
     return next();
   }
 };

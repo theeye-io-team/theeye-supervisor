@@ -48,8 +48,12 @@ var Service = module.exports = {
   getCustomerConfig : function(customer_id,next)
   {
     Customer.findById(customer_id, function(error,customer){
-      if(!customer) {
+      if(error){
         logger.error(error);
+        return next(error);
+      }
+      if(!customer) {
+        logger.error('customer %s not found', customer_id);
         return next(error);
       }
       // replace default options with customer defined options

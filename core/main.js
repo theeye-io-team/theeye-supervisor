@@ -1,5 +1,8 @@
 "use strict";
 
+var rootPath = require('app-root-path');
+require('app-root-path').setPath(rootPath + '/core');
+
 var debug = require('debug')('eye:supervisor:main');
 debug('initializing supervisor');
 

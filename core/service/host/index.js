@@ -8,7 +8,7 @@ var CustomerService = require("../customer");
 var Handlebars = require("../../lib/handlebars");
 var ResourceService = require("../resource");
 var Job = require('../../entity/job').Entity;
-var HostGroup = require('./group');
+var HostGroupService = require('./group');
 var logger = require("../../lib/logger")("eye:supervisor:service:host") ;
 
 var createMonitor = ResourceService.createResourceAndMonitorForHost;
@@ -177,7 +177,7 @@ HostService.register = function(
 
         data.host = host;
         data.resource = resource;
-        HostGroup.searchAndRegisterHostIntoGroup(
+        HostGroupService.searchAndRegisterHostIntoGroup(
           host,
           (err,group)=>{
             if(err) return logger.error(err);

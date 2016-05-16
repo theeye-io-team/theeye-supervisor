@@ -67,24 +67,21 @@ var createGroup = function(data, done)
     group.hostname_regex = regex;
     group.customer = customer._id;
     group.customer_name = customer.name;
-    group.task_templates = tasks.map(function(item){ return item._id });
+    group.task_templates = tasks.map(item=>item._id);
     group.monitor_templates = [];
     group.resource_templates = [];
     group.provisioning_task_templates = [];
 
-    for(var i=0; i<resourcemonitors.length; i++) {
-      var monitor = resourcemonitors[i].monitor_template;
-      var resource = resourcemonitors[i].resource_template;
-      group.monitor_templates.push(monitor._id);
-      group.resource_templates.push(resource._id);
-    }
+    resourcemonitors.forEach(template=>{
+      group.addMonitorTemplate(template);
+    });
 
     logger.log(group);
   } catch (e) {
     logger.log(e);
   }
 
-  group.save((err, instance) => {
+  group.save((err,instance) => {
     if(err) {
       logger.error(err);
       return done(err);

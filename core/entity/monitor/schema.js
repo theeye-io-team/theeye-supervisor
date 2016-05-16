@@ -116,6 +116,7 @@ EntitySchema.methods.setUpdates = function(input, next) {
       if(input.disk) config.limit.disk = input.disk;
       break;
     case 'psaux':
+      // no custom configuration
       break;
     default: 
       return next( new Error('monitor type "' + type + '" unsupported') ); 

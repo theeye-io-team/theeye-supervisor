@@ -275,8 +275,8 @@ Service.prototype.handleState = function(input,next) {
   getCustomerConfig(
     resource.customer_id,
     (config) => {
-      switch(input.state)
-      {
+      if(!config) throw new Error('config not found');
+      switch(input.state) {
         case 'failure':
           input.last_update = Date.now();
           handleFailureState(resource,input,config);
@@ -366,6 +366,29 @@ function patchResourceMonitors (resource,input,next) {
     logger.log('no monitor updates');
     next();
   }
+}
+
+Service.findHostResources = function(host,options,done) {
+  var query = { 'host_id': host._id };
+  if(options.type) query.type = options.type;
+  Resource.find(query,(err,resources)=>{
+    if(err){
+      logger.error(err);
+      return done(err);
+    }
+    if(!resources||resources.length===0){
+      logger.log('host resources not found');
+      return done();
+    }
+    if(options.ensureOne){
+      if(resources.length>1){
+        logger.error('more than one resources found');
+        return done();
+      }
+      else return done(null,resources[0]);
+    }
+    done(null,resources);
+  });
 }
 
 Service.prototype.updateResource = function(input,next) {
@@ -594,6 +617,16 @@ Service.setResourceMonitorData = function(input,done) {
       var scriptArgs = filter.toArray(input.script_arguments);
       data.script_arguments = scriptArgs;
       break;
+    case 'dstat':
+      data.cpu = input.cpu;
+      data.mem = input.mem;
+      data.cache = input.cache;
+      data.disk = input.disk;
+      break;
+    case 'psaux': break;
+    default:
+      throw new Error('monitor type not handle');
+      break;
   }
 
   var error = errors.hasErrors() ? errors : null;
@@ -695,7 +728,7 @@ function handleHostIdAndData(hostId, input, doneFn){
  */
 Service.createResourceAndMonitorForHost = function createResourceAndMonitorForHost (input, next) {
   next=next||()=>{};
-  logger.log('creating resource for host %s', input.hostname);
+  logger.log('creating resource for host %j', input);
   var resource_data = {
     'host_id' : input.host_id,
     'hostname' : input.hostname,
