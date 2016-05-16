@@ -22,15 +22,15 @@ process.on('exit', function(){ // always that the process ends, throws this even
 });
 
 require("./environment").setenv(
-  process.env.NODE_ENV, 
-  () => {
+  process.env.NODE_ENV,
+  function() {
     debug('initializing server');
-    let server = require("./server");
+    var server = require("./server");
     server.start();
 
     if( ! process.env.NO_MONITORING ) {
       debug('initializing monitor');
-      let monitor = require('./service/monitor');
+      var monitor = require('./service/monitor');
       monitor.start();
     }
 

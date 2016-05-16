@@ -3,6 +3,7 @@
   "description": "The Eye Dependencies",
   "author": "Facundo S. Gonzalez <facugon@interactar.com>",
   "dependencies": {
+    "agenda": "^0.8.1",
     "async": "^1.2.1",
     "aws-sdk": "^2.1.26",
     "bcrypt": "^0.8.5",
@@ -36,7 +37,7 @@
   "scripts": {
     "start": "/bin/bash ./run.sh",
     "devel": "/bin/bash ./run.debug.sh",
-    "local": "NODE_ENV='localdev' /bin/bash ./run.debug.sh",
+    "local": "DEBUG='eye:supervisor:lib:*' NODE_ENV='localdev' /bin/bash ./run.debug.sh",
     "local-no-monitoring": "NO_MONITORING=true NODE_ENV='localdev' /bin/bash ./run.debug.sh",
     "local-debug-monitoring": "DEBUG='eye:supervisor:service:monitor*' NODE_ENV='localdev' /bin/bash ./run.debug.sh"
   },

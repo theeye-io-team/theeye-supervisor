@@ -5,10 +5,14 @@ var Task = require(process.env.BASE_PATH + "/entity/task").Entity;
 var debug = require('../lib/logger')('eye:supervisor:controller:job');
 var notificationService = require('../service/notification');
 var paramsResolver = require('../router/param-resolver');
+var scheduler;
 
 module.exports = function(server, passport) {
-	server.get('/job/:id',[
-    passport.authenticate('bearer', {session:false}),
+  //bring the scheduler from server
+  scheduler = server.scheduler;
+
+  server.get('/job/:id',[
+    passport.authenticate('bearer', {session:false})
   ],controller.get);
 
   server.get('/job',[
@@ -18,13 +22,18 @@ module.exports = function(server, passport) {
   ], controller.fetch);
 
   server.put('/job/:id',[
-    passport.authenticate('bearer', {session:false}),
+    passport.authenticate('bearer', {session:false})
   ],controller.update);
 
   server.post('/job',[
     passport.authenticate('bearer', {session:false}),
     paramsResolver.customerNameToEntity({})
   ],controller.create);
+
+  server.post('/job/schedule',[
+    passport.authenticate('bearer', {session:false}),
+    paramsResolver.customerNameToEntity({})
+  ],controller.schedule);
 
   /*
   return {
@@ -62,7 +71,7 @@ module.exports = function(server, passport) {
     ]
   };
   */
-}
+};
 
 var controller = {
   get : function (req, res, next) {
@@ -85,12 +94,13 @@ var controller = {
 
     if( req.params.process_next ) {
       JobService.processNextJob(input,function(error,job){
+        var jobs = [];
         if( job != null ) {
-          var msg = 'next job ready' ;
-          var jobs = [ job ];
+          // var msg = 'next job ready' ;
+          jobs.push(job);
         } else {
-          var msg = 'no more jobs' ;
-          var jobs = [] ;
+          // var msg = 'no more jobs' ;
+          // var jobs = [] ;
         }
 
         res.send(200, { jobs : jobs });
@@ -133,6 +143,8 @@ var controller = {
   },
   create : function(req,res,next) {
     debug.log('new task received');
+    // console.log(req.body);
+    // return res.send(200, json.success('ok', req.body));
 
     var task_id = req.body.task_id || req.params.task_id ;
     var user = req.user ;
@@ -150,7 +162,7 @@ var controller = {
           res.send(400, json.error('invalid task provided'));
         } else {
           Job.create({
-            task: task, 
+            task: task,
             user: user,
             customer: customer,
             notify: true
@@ -162,5 +174,54 @@ var controller = {
         }
       }
     });
+  },
+  schedule: function(req, res, next){
+    console.log('CONTROLLER SCHEDULE');
+    console.log(req.body);
+    console.log(req.params);
+
+    var task_id = req.body.task_id || req.params.task_id ;
+
+    if(!task_id) return res.send(400,json.error('task required'));
+
+    var user = req.user ;
+    var customer = req.customer ;
+
+    if(!user) return res.send(400,json.error('user required'));
+    if(!customer) return res.send(400,json.error('customer required'));
+
+    Task.findById(task_id,function(error,task){
+      if(error) {
+        debug.error('unable to fetch tasks database');
+        res.send(500, json.error('internal error'));
+      } else {
+        if( task == null ) {
+          res.send(400, json.error('invalid task provided'));
+        } else {
+          // var job = scheduler.scheduleTask();
+          //estaria bueno aca solo guardar para el agendaJob
+          //los ._id de cada uno de estos, y luego que los busque el processor
+          var jobData = {
+            task: task,
+            user: user,
+            customer: customer,
+            notify: true
+          };
+          console.log(jobData);
+          // Job.create({
+          //   task: task,
+          //   user: user,
+          //   customer: customer,
+          //   notify: true
+          // },function(job) {
+          //   job.publish(function(published){
+          //     res.send(200, {job : published});
+          //   });
+          // });
+          res.send(200,jobData);
+        }
+      }
+    });
+
   }
-}
+};

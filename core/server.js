@@ -12,13 +12,15 @@ var serverConfig = config.get('server');
 function start() {
   var server = restify.createServer({ name : serverConfig.name });
 
-  // Set the auth strategy 
+  // Set the auth strategy
   passport = strategys.setStrategy( serverConfig.auth_strategy );
 
   server.pre(function (req,res,next) {
     logger.log('REQUEST %s %s', req.method, req.url);
     next();
   });
+
+  require('./lib/scheduler')(server);
 
   server.use(restify.acceptParser(server.acceptable));
   server.use(restify.gzipResponse());
@@ -52,7 +54,7 @@ function start() {
   });
 
   if( serverConfig.socket.enable ) {
-    socket.connect(server); 
+    socket.connect(server);
   }
 }
 
