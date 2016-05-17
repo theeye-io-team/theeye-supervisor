@@ -119,7 +119,7 @@ ResourceStateHandler.prototype = {
 
         var content = format('resource "%s" is "%s"',resource.name,state);
 
-        CustomerService.getAlertEmails(customer_name,function(emails){
+        CustomerService.getAlertEmails(customer_name,function(error,emails){
           NotificationService.sendEmailNotification({
             to : emails.join(','),
             customer_name : customer_name,

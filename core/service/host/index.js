@@ -85,7 +85,8 @@ function sendEventNotification (host,vent)
   var params = { 'hostname': host.hostname };
 
   Handlebars.render(template, params, function(content){
-    CustomerService.getAlertEmails(host.customer_name,function(emails){
+    CustomerService.getAlertEmails(host.customer_name,
+    function(error,emails){
       NotificationService.sendEmailNotification({
         'to': emails.join(','),
         'customer_name': host.customer_name,

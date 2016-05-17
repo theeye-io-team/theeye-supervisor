@@ -41,10 +41,7 @@ function sendResourceFailureAlerts (resource,input)
 {
   logger.log('preparing to send email alerts');
   var severity = input.severity;
-  var subject = '[:priority] :resource failure'
-  .replace(':resource', resource.name)
-  .replace(':priority', severity)
-  ;
+  var subject = `[${severity}] ${resource.hostname} failure`;
 
   resourceNotification(
     resource,
@@ -53,8 +50,7 @@ function sendResourceFailureAlerts (resource,input)
     (content) => {
       CustomerService.getAlertEmails(
         resource.customer_name,
-        (emails) => {
-          logger.log('sending email notifications');
+        (error,emails) => {
           NotificationService.sendEmailNotification({
             'to': emails.join(','),
             'customer_name': resource.customer_name,
@@ -70,15 +66,13 @@ function sendResourceRestoredAlerts (resource,input)
 {
   logger.log('sending resource restored alerts ' + resource.customer_name);
 
-  var content = `resource ${resource.description}(${resource.hostname}) recovered.`;
   var severity = input.severity;
-  var subject = '[:priority] :resource recovered'
-  .replace(':resource', resource.name)
-  .replace(':priority', severity) ;
+  var subject = `[${severity}] ${resource.hostname} recovered`;
+  var content = `${resource.description} recovered.`;
 
   CustomerService.getAlertEmails(
     resource.customer_name, 
-    (emails) => {
+    (error,emails) => {
       NotificationService.sendEmailNotification({
         'to': emails.join(','),
         'customer_name': resource.customer_name,
@@ -92,12 +86,12 @@ function sendResourceRestoredAlerts (resource,input)
 function sendResourceUpdatesStoppedAlerts (resource,input)
 {
   var severity = input.severity;
-  var subject = `[${severity}] ${resource.name} unreachable`;
-  var content = `resource ${resource.name}(${resource.hostname}) stopped sending updates`;
+  var subject = `[${severity}] ${resource.hostname} unreachable`;
+  var content = `${resource.name} stopped sending updates`;
 
   CustomerService.getAlertEmails(
     resource.customer_name, 
-    (emails) => {
+    (error,emails) => {
       NotificationService.sendEmailNotification({
         'to':emails.join(','),
         'customer_name':resource.customer_name,
