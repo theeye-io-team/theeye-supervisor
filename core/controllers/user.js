@@ -103,7 +103,7 @@ function UserInterface (req, next)
 
 
   return {
-    'errors': errors, 
+    'errors': errors,
     'values': values,
     'valueObject': function() {
       var output = {};
@@ -142,12 +142,12 @@ var controller = {
     var params = new UserInterface(req,next);
     var updates = params.valueObject();
 
-    if(params.values.length === 0) 
+    if(params.values.length === 0)
       return res.send(400, json.error('nothing to update'));
 
     UserService.update(user._id, updates, function(error, user){
       if(error) {
-        if(error.statusCode) 
+        if(error.statusCode)
           return res.send(error.statusCode, error.message);
 
         else {
@@ -155,8 +155,8 @@ var controller = {
           return res.send(500,'internal error');
         }
       } else {
-        user.publish({ 
-          populateCustomers : true 
+        user.publish({
+          populateCustomers : true
         }, function(error, data){
           res.send(200, { 'user' : data });
         });
@@ -226,7 +226,7 @@ var controller = {
           var options = ( credential && credential == 'agent' ) ?
             { publishSecret : true } : {} ;
 
-          var data = user.publish(options, function(error,data){ 
+          var data = user.publish(options, function(error,data){
             // hook here to have populated customers
           });
           pub.push( data );
@@ -244,14 +244,14 @@ var controller = {
     var user = req.user ;
 
     token.create(
-      user.client_id, 
-      user.client_secret, 
+      user.client_id,
+      user.client_secret,
       function(error, data) {
         if(error) return res.send(400, 'Error');
         else {
           debug.log('creating new token');
           user.update({
-            'token': data.token, 
+            'token': data.token,
             'timestamp': data.timestamp
           }, function(error) {
             if(error) throw new Error('user token update fails');
@@ -275,7 +275,7 @@ var controller = {
     if(!user) return res.send(404);
 
     user.remove(function(error){
-      if(error) return res.send(500);
+      if(error) return res.send(500, error);
       res.send(204);
     });
   }

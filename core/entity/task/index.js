@@ -33,12 +33,12 @@ TaskSchema.methods.toTemplate = function(doneFn) {
   for(var key in BaseSchema.properties){
     values[ key ] = entity[ key ];
   }
-  
+
   var template = new Template(values);
   template.save(function(error){
     doneFn(error, template);
   });
-}
+};
 
 /**
  *
@@ -61,11 +61,11 @@ TaskSchema.statics.FromTemplate = function(
   instance.user_id = null;
   instance._id = null;
   instance._type = 'Task';
-  instance.save((err,task)=>{
+  instance.save(function(err,task){
     if(err) logger.error(err);
     doneFn(err,task);
   });
-}
+};
 
 /**
  *
@@ -83,12 +83,12 @@ TaskSchema.statics.create = function(input,next)
   instance.user_id          = input.user._id;
   instance.name             = input.name || null;
   instance.public           = input.public || false;
-  instance.template         = template_id || null;
+  instance.template         = input.template_id || null;
   instance.description      = input.description || null;
   instance.save(function(error,entity){
     next(null, entity);
   });
-}
+};
 
 var Entity = mongodb.model('Task', TaskSchema);
 Entity.ensureIndexes();
