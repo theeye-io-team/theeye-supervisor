@@ -70,9 +70,7 @@ function sendResourceRestoredAlerts (resource,input)
 {
   logger.log('sending resource restored alerts ' + resource.customer_name);
 
-  var content = 'resource ":description" recovered.'
-  .replace(":description", resource.description);
-
+  var content = `resource ${resource.description}(${resource.hostname}) recovered.`;
   var severity = input.severity;
   var subject = '[:priority] :resource recovered'
   .replace(':resource', resource.name)
@@ -95,7 +93,7 @@ function sendResourceUpdatesStoppedAlerts (resource,input)
 {
   var severity = input.severity;
   var subject = `[${severity}] ${resource.name} unreachable`;
-  var content = `resource ${resource.name} stopped sending updates`;
+  var content = `resource ${resource.name}(${resource.hostname}) stopped sending updates`;
 
   CustomerService.getAlertEmails(
     resource.customer_name, 
