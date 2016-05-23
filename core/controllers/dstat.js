@@ -33,18 +33,16 @@ var controller = {
     debug.log('Handling host dstat data');
 
     var host = req.host;
-    if(!host) return res.send(404,'host not found');
-
     var customer = req.customer;
     var stats = req.params.dstat;
 
+    if(!host) return res.send(404,'host not found');
     if(!stats) return res.send(400,'no stats supplied');
 
-    HostStats.findOneByHostAndType( host._id, 'dstat',
+    HostStats.findOneByHostAndType(host._id,'dstat',
       function(error,dstat){
-        if(error) {
-          debug.error(error);
-        } else if(dstat == null) {
+        if(error) return debug.error(error);
+        if(dstat == null) {
           debug.log('creating host dstat');
           HostStats.create(host,'dstat',stats);
         } else {
@@ -58,17 +56,16 @@ var controller = {
         }
       }
     );
-    
+
     var data = {
-      timestamp: (new Date()).getTime(),
-      date:(new Date()).toISOString(),
-      customer_name: customer.name,
-      hostname: host.hostname,
-      stats: req.params.dstat,
-      type: 'host-stats'
+      'timestamp': (new Date()).getTime(),
+      'date': (new Date()).toISOString(),
+      'customer_name': customer.name,
+      'hostname': host.hostname,
+      'stats': req.params.dstat,
+      'type': 'host-stats'
     };
 
-    //elastic.submit(customer.name,'hoststats', data);
     elastic.submit(customer.name,'host-stats', data);
 
     NotificationService.sendSNSNotification(data,{

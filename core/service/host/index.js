@@ -8,7 +8,7 @@ var CustomerService = require("../customer");
 var Handlebars = require("../../lib/handlebars");
 var ResourceService = require("../resource");
 var Job = require('../../entity/job').Entity;
-var HostGroup = require('./group');
+var HostGroupService = require('./group');
 var logger = require("../../lib/logger")("eye:supervisor:service:host") ;
 
 var createMonitor = ResourceService.createResourceAndMonitorForHost;
@@ -85,7 +85,8 @@ function sendEventNotification (host,vent)
   var params = { 'hostname': host.hostname };
 
   Handlebars.render(template, params, function(content){
-    CustomerService.getAlertEmails(host.customer_name,function(emails){
+    CustomerService.getAlertEmails(host.customer_name,
+    function(error,emails){
       NotificationService.sendEmailNotification({
         'to': emails.join(','),
         'customer_name': host.customer_name,
@@ -177,7 +178,7 @@ HostService.register = function(
 
         data.host = host;
         data.resource = resource;
-        HostGroup.searchAndRegisterHostIntoGroup(
+        HostGroupService.searchAndRegisterHostIntoGroup(
           host,
           (err,group)=>{
             if(err) return logger.error(err);

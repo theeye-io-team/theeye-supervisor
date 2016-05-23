@@ -162,6 +162,14 @@ EntitySchema.methods.detachMonitorTemplate = function(template,done){
   });
 }
 
+EntitySchema.methods.addMonitorTemplate = function(template){
+  var monitor_template = template.monitor_template;
+  var resource_template = template.resource_template;
+  this.monitor_templates.push(monitor_template);
+  this.resource_templates.push(resource_template);
+  return this;
+}
+
 EntitySchema.methods.hasTaskTemplate = function(task){
   return this.task_templates.indexOf(task._id) != -1;
 }

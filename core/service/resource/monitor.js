@@ -1,4 +1,5 @@
 "use strict";
+
 var _ = require('lodash');
 var logger = require('../../lib/logger')('eye:supervisor:service:resource:monitor');
 var ResourceMonitorSchema = require('../../entity/monitor');
@@ -18,7 +19,6 @@ exports.findBy = findBy;
 exports.createMonitor = createMonitor;
 exports.setMonitorData = setMonitorData;
 exports.setType = setType;
-exports.resourceMonitorsToTemplates = resourceMonitorsToTemplates;
 
 /**
  *
@@ -31,7 +31,7 @@ function setMonitorForScraper(input) {
 	return {
     'customer_name': input.customer_name,
 		'host_id': host_id,
-		'name': input.name,
+		'name': input.name || 'scraper',
 		'type': 'scraper',
 		'looptime': input.looptime,
 		'config': {
@@ -50,7 +50,7 @@ function setMonitorForProcess(input) {
 	return {
     'customer_name': input.customer_name,
 		'host_id': input.host_id,
-		'name': input.name,
+		'name': input.name || 'process',
 		'type': 'process',
 		'looptime': input.looptime,
 		'config': {
@@ -66,7 +66,7 @@ function setMonitorForScript(input) {
 	return {
     'customer_name': input.customer_name,
 		'host_id': input.host_id,
-		'name': input.name,
+		'name': input.name || 'script',
 		'type': 'script',
 		'looptime': input.looptime,
 		'config': {
@@ -77,12 +77,12 @@ function setMonitorForScript(input) {
 }
 
 function setMonitorForHost(input){
-	var looptime = input.looptime ? input.looptime : 10000 ;
+	var looptime = input.looptime || 10000 ;
 	return {
     'customer_name':input.customer_name,
 		'host_id':input.host_id,
 		'type':'host',
-		'name':'host',
+		'name': input.name || 'host',
 		'looptime':looptime,
 		'config':{ }
 	};
@@ -94,14 +94,14 @@ function setMonitorForDstat(input){
     'customer_name': input.customer_name,
 		'host_id': input.host_id,
 		'type': 'dstat',
-		'name': 'dstat',
+		'name': input.name || 'dstat',
 		'looptime': looptime,
 		'config': {
 			'limit': {
-				'cpu': 50,
-				'disk': 90,
-				'mem': 70,
-				'cache': 70
+				'cpu': input.cpu || 50,
+				'disk': input.disk || 90,
+				'mem': input.mem || 70,
+				'cache': input.cache || 70
 			}
 		}
 	};
@@ -112,7 +112,7 @@ function setMonitorForPsaux(input){
 	return {
     'customer_name': input.customer_name,
 		'host_id': input.host_id,
-		'name': 'psaux',
+		'name': input.name || 'psaux',
 		'type': 'psaux',
 		'looptime': looptime,
 		'config': {}
@@ -125,7 +125,7 @@ function setType(resourceType, monitorType) {
 
 function setMonitorData(type, input, next){
   var monitor;
-	logger.log('setting up monitor data');
+	logger.log('setting up monitor data %j',input);
 	try {
 		switch(type) {
 			case 'scraper':
@@ -168,6 +168,7 @@ function setMonitorData(type, input, next){
 }
 
 function createMonitor(type, input, next) {
+  next=next||()=>{};
 	logger.log('processing monitor %s creation data', type);
 	setMonitorData(type, input,
     function(error,monitor){
@@ -266,12 +267,16 @@ function findBy (filters, options, doneFn) {
  * @param {Array} monitors
  *
  */
-function resourceMonitorsToTemplates (
+exports.resourceMonitorsToTemplates = function (
   resource_monitors, 
   customer, 
   user,
   done
 ) {
+  var user_id = user ? user._id : null;
+  var customer_name = customer.name;
+  var customer_id = customer._id;
+
   if(!resource_monitors) {
     var e = new Error('resource monitors definition required');
     e.statusCode = 400;
@@ -289,7 +294,7 @@ function resourceMonitorsToTemplates (
     return done(null,[]);
   }
 
-  var templatized = _.after( resource_monitors.length, function(){
+  var templatized = _.after(resource_monitors.length, function(){
     logger.log('all resources & monitorese templates processed');
     done(null, templates);
   });
@@ -312,44 +317,52 @@ function resourceMonitorsToTemplates (
     if( value.hasOwnProperty('id') ){
       if( validator.isMongoId(value.id) ){
         logger.log('creating template from existent resource monitors');
-        ResourceTemplateService.resourceMonitorToTemplate(value.id, function(error, tpls){
-          if(error) done(error);
-
-          logger.log('templates created');
-          templates.push( tpls );
-          templatized();
-        });
+        ResourceTemplateService
+        .resourceMonitorToTemplate(
+          value.id,
+          function(error, tpls){
+            if(error) done(error);
+            logger.log('templates created');
+            templates.push( tpls );
+            templatized();
+          }
+        );
       } else {
         var e = new Error('invalid monitor id');
         e.statusCode = 400;
         return done(e);
       }
     }
-    /* create templates from user input.  */
+    /* create templates from input */
     else {
       logger.log('setting up template data');
       ResourceService.setResourceMonitorData(value, function(valErr, data) {
         if(valErr || !data) {
-          var e = new Error('invalid resource monitor data');
+          let msg = 'invalid resource monitor data';
+          logger.error(msg);
+          let e = new Error(msg);
           e.statusCode = 400;
           e.info = valErr;
           return done(e);
         }
 
-        data.customer_id = customer._id;
-        data.customer_name = customer.name;
-        data.user_id = user._id;
+        data.customer_id = customer_id;
+        data.customer_name = customer_name;
+        data.user_id = user_id;
         logger.log('creating template from scratch');
-        ResourceTemplateService.createResourceMonitorsTemplates(data, function(err, tpls){
-          if(err) {
-            logger.error(err);
-            return done(err);
-          }
+        ResourceTemplateService
+        .createResourceMonitorsTemplates(
+          data, function(err, tpls){
+            if(err) {
+              logger.error(err);
+              return done(err);
+            }
 
-          logger.log('templates from scratch created');
-          templates.push( tpls );
-          templatized();
-        });
+            logger.log('templates from scratch created');
+            templates.push( tpls );
+            templatized();
+          }
+        );
       });
     }
   }

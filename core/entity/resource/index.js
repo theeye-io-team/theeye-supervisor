@@ -103,12 +103,13 @@ ResourceSchema.statics.FromTemplate = function(
   doneFn
 ) {
   var data = {
-    host_id: options.host._id,
-    hostname: options.host.hostname,
-    template: template._id
+    'host_id': options.host._id,
+    'hostname': options.host.hostname,
+    'template': template._id
   };
   var input = _.extend( data, template.toObject() );
-  input.name = input.name || input.description;
+  input.description = input.description;
+  input.name = input.name;
   debug('creating resource from template %j', input);
   this.create(input, doneFn);
 }

@@ -41,10 +41,7 @@ function sendResourceFailureAlerts (resource,input)
 {
   logger.log('preparing to send email alerts');
   var severity = input.severity;
-  var subject = '[:priority] :resource failure'
-  .replace(':resource', resource.name)
-  .replace(':priority', severity)
-  ;
+  var subject = `[${severity}] ${resource.hostname} failure`;
 
   resourceNotification(
     resource,
@@ -53,8 +50,7 @@ function sendResourceFailureAlerts (resource,input)
     (content) => {
       CustomerService.getAlertEmails(
         resource.customer_name,
-        (emails) => {
-          logger.log('sending email notifications');
+        (error,emails) => {
           NotificationService.sendEmailNotification({
             'to': emails.join(','),
             'customer_name': resource.customer_name,
@@ -70,17 +66,13 @@ function sendResourceRestoredAlerts (resource,input)
 {
   logger.log('sending resource restored alerts ' + resource.customer_name);
 
-  var content = 'resource ":description" recovered.'
-  .replace(":description", resource.description);
-
   var severity = input.severity;
-  var subject = '[:priority] :resource recovered'
-  .replace(':resource', resource.name)
-  .replace(':priority', severity) ;
+  var subject = `[${severity}] ${resource.hostname} recovered`;
+  var content = `${resource.description} recovered.`;
 
   CustomerService.getAlertEmails(
     resource.customer_name, 
-    (emails) => {
+    (error,emails) => {
       NotificationService.sendEmailNotification({
         'to': emails.join(','),
         'customer_name': resource.customer_name,
@@ -94,12 +86,12 @@ function sendResourceRestoredAlerts (resource,input)
 function sendResourceUpdatesStoppedAlerts (resource,input)
 {
   var severity = input.severity;
-  var subject = `[${severity}] ${resource.name} unreachable`;
-  var content = `resource ${resource.name} stopped sending updates`;
+  var subject = `[${severity}] ${resource.hostname} unreachable`;
+  var content = `${resource.name} stopped sending updates`;
 
   CustomerService.getAlertEmails(
     resource.customer_name, 
-    (emails) => {
+    (error,emails) => {
       NotificationService.sendEmailNotification({
         'to':emails.join(','),
         'customer_name':resource.customer_name,
@@ -275,8 +267,8 @@ Service.prototype.handleState = function(input,next) {
   getCustomerConfig(
     resource.customer_id,
     (config) => {
-      switch(input.state)
-      {
+      if(!config) throw new Error('config not found');
+      switch(input.state) {
         case 'failure':
           input.last_update = Date.now();
           handleFailureState(resource,input,config);
@@ -366,6 +358,29 @@ function patchResourceMonitors (resource,input,next) {
     logger.log('no monitor updates');
     next();
   }
+}
+
+Service.findHostResources = function(host,options,done) {
+  var query = { 'host_id': host._id };
+  if(options.type) query.type = options.type;
+  Resource.find(query,(err,resources)=>{
+    if(err){
+      logger.error(err);
+      return done(err);
+    }
+    if(!resources||resources.length===0){
+      logger.log('host resources not found');
+      return done();
+    }
+    if(options.ensureOne){
+      if(resources.length>1){
+        logger.error('more than one resources found');
+        return done();
+      }
+      else return done(null,resources[0]);
+    }
+    done(null,resources);
+  });
 }
 
 Service.prototype.updateResource = function(input,next) {
@@ -594,6 +609,16 @@ Service.setResourceMonitorData = function(input,done) {
       var scriptArgs = filter.toArray(input.script_arguments);
       data.script_arguments = scriptArgs;
       break;
+    case 'dstat':
+      data.cpu = input.cpu;
+      data.mem = input.mem;
+      data.cache = input.cache;
+      data.disk = input.disk;
+      break;
+    case 'psaux': break;
+    default:
+      throw new Error('monitor type not handle');
+      break;
   }
 
   var error = errors.hasErrors() ? errors : null;
@@ -695,7 +720,7 @@ function handleHostIdAndData(hostId, input, doneFn){
  */
 Service.createResourceAndMonitorForHost = function createResourceAndMonitorForHost (input, next) {
   next=next||()=>{};
-  logger.log('creating resource for host %s', input.hostname);
+  logger.log('creating resource for host %j', input);
   var resource_data = {
     'host_id' : input.host_id,
     'hostname' : input.hostname,

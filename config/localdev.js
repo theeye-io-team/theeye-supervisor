@@ -24,8 +24,8 @@ module.exports = {
   "mailer": {
     "from": "The Eye Development %customer% <%customer%@theeye.io>",
     "reply_to": "Support <support@theeye.io>",
-    "only_support": true,
-    "include_support_bcc": true,
+    "only_support": false,
+    "include_support_bcc": false,
     "support": [ "support@theeye.io" ],
     "transport": {
       "type":"sendmail"

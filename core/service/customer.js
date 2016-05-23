@@ -15,6 +15,7 @@ var Service = module.exports = {
   getAlertEmails : function(customerName, next)
   {
     var self = this;
+    var emails = [];
 
     Customer.findOne({
       'name': customerName
@@ -26,20 +27,29 @@ var Service = module.exports = {
 
       if(!customer) {
         logger.log('customer %s data does not exist!', customerName);
-        return next(null);
+        return next(null,emails);
       }
 
-      next(customer.emails);
-      /**
-      User.find({
-        'customers._id' : customerName
-      }, function(error, users){
+      emails = customer.emails;
 
+      var query = { 'customers._id' : customer._id };
+      User.find(query,(error,users)=>{
+        if(error){
+          logger.log(error);
+          return next(error);
+        }
+
+        if(!users||users.length==0){
+          next(null,customer.emails);
+        }
+
+        for(var i=0;i<users.length;i++){
+          emails.push( users[i].email );
+        }
+
+        return next(null,emails);
       });
-      */
-
     });
-
   },
   /**
    *
@@ -48,8 +58,12 @@ var Service = module.exports = {
   getCustomerConfig : function(customer_id,next)
   {
     Customer.findById(customer_id, function(error,customer){
-      if(!customer) {
+      if(error){
         logger.error(error);
+        return next(error);
+      }
+      if(!customer) {
+        logger.error('customer %s not found', customer_id);
         return next(error);
       }
       // replace default options with customer defined options
