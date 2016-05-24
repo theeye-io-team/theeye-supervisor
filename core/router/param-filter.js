@@ -1,6 +1,4 @@
-"use strict";
-var debug = require('debug')('eye:supervisor:router:param-filter-middleware');
-var _ = require('lodash');
+'use strict';
 
 module.exports = {
   /**
@@ -11,16 +9,17 @@ module.exports = {
    * @return {Array} filtered value
    *
    */
-  toArray (value) {
-    if( Array.isArray( value ) ) {
+
+  toArray: function toArray(value) {
+    if (Array.isArray(value)) {
       return value;
     } else {
-      let isString = Object.prototype.toString.call( value ) === '[object String]';
-      let isNumber = Object.prototype.toString.call( value ) === '[object Number]';
-      if( isString || isNumber ) return [ value ];
-      else return []; // invalid or undefined
+      var isString = Object.prototype.toString.call(value) === '[object String]';
+      var isNumber = Object.prototype.toString.call(value) === '[object Number]';
+      if (isString || isNumber) return [value];else return []; // invalid or undefined
     }
   },
+
   /**
    *
    * remove duplicated elements from input array
@@ -29,17 +28,16 @@ module.exports = {
    * @return {Array} filtered value
    *
    */
-  uniq (value) {
-    var isArray = Object.prototype.toString.call( value ) === '[object Array]';
-    if( isArray ) return _.uniq( value );
-    else return [ value ]; // unique value into an array
+  uniq: function uniq(value) {
+    var isArray = Object.prototype.toString.call(value) === '[object Array]';
+    if (isArray) return _.uniq(value);else return [value]; // unique value into an array
   },
-
-  toBoolean (value) {
-    if( value === true || value === 'true' ) return true;
-    if( value === false || value === 'false' ) return false;
+  toBoolean: function toBoolean(value) {
+    if (value === true || value === 'true') return true;
+    if (value === false || value === 'false') return false;
     return null;
   },
+
   /**
    *
    * call with param and and filter funtion name
@@ -50,18 +48,17 @@ module.exports = {
    * @return {Function} middleware interface function
    *
    */
-  spawn (options) {
+  spawn: function spawn(options) {
+    var _this = this;
+
     var name = options.param;
     var filterFn = options.filter;
-  
-    return (req, res, next) => {
-  		let value = req[name] 
-        || req.params[name] 
-        || req.body[name] 
-        || req.query[name];
-  
-      req[name] = this[filterFn](value);
+
+    return function (req, res, next) {
+      var value = req[name] || req.params[name] || req.body[name] || req.query[name];
+
+      req[name] = _this[filterFn](value);
       next();
-    }
+    };
   }
-}
+};

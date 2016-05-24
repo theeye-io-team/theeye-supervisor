@@ -1,0 +1,32 @@
+{
+    "env": {
+        "browser": true,
+        "node": true,
+        "jquery": true
+    },
+    "extends": "eslint:recommended",
+    "rules": {
+        "indent": [
+            "error",
+            2,
+            { "SwitchCase": 1 }
+        ],
+        "linebreak-style": [
+            "error",
+            "unix"
+        ],
+        "quotes": [
+            "off",
+            "single"
+        ],
+        "semi": [
+            "error",
+            "always"
+        ],
+        "no-console": [
+          "off"
+        ],
+        "no-undef": ["warn"],
+        "no-unused-vars": ["warn", { "vars": "all", "args": "none" }]
+    }
+}
