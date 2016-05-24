@@ -176,14 +176,18 @@ var controller = {
     });
   },
   schedule: function(req, res, next){
-    console.log('CONTROLLER SCHEDULE');
-    console.log(req.body);
-    console.log(req.params);
+    // console.log('CONTROLLER SCHEDULE');
+    // console.log(req.body);
+    // console.log(req.params);
 
     var task_id = req.body.task_id || req.params.task_id ;
+    var schedule = req.body.scheduleData;
 
     if(!task_id) return res.send(400,json.error('task required'));
 
+    if(!schedule || !schedule.runDate) {
+      return res.send(406,json.error('Must have a date'));
+    }
     var user = req.user ;
     var customer = req.customer ;
 
@@ -202,23 +206,32 @@ var controller = {
           //estaria bueno aca solo guardar para el agendaJob
           //los ._id de cada uno de estos, y luego que los busque el processor
           var jobData = {
-            task: task,
-            user: user,
-            customer: customer,
-            notify: true
+            // task: task,
+            // user: user,
+            // customer: customer,
+            // notify: true
           };
-          console.log(jobData);
-          // Job.create({
-          //   task: task,
-          //   user: user,
-          //   customer: customer,
-          //   notify: true
-          // },function(job) {
-          //   job.publish(function(published){
-          //     res.send(200, {job : published});
-          //   });
-          // });
-          res.send(200,jobData);
+          jobData.task_id = task._id ;
+          jobData.host_id = task.host_id ;
+          jobData.script_id = task.script_id ;
+          jobData.script_arguments = task.script_arguments ;
+          jobData.user_id = user._id;
+          jobData.name = task.name ;
+          jobData.customer_id = customer._id;
+          jobData.customer_name = customer.name;
+          jobData.state = 'new' ;
+          jobData.notify = true ;
+          jobData.scheduleData = schedule;
+
+          // console.log(jobData);
+          scheduler.scheduleTask(jobData, function(err){
+            if(err) {
+              console.log(err);
+              console.log(arguments);
+              res.send(500, err);
+            }
+            res.send(200, {nextRun : schedule.runDate});
+          });
         }
       }
     });
