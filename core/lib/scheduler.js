@@ -10,11 +10,8 @@ var Script = require("../entity/script").Entity;
 var Customer = require("../entity/customer").Entity;
 var User = require("../entity/user").Entity;
 var Job = require("../entity/job").Entity;
+var format = require('util').format;
 
-
-// var monk = require("monk");
-// var db = monk(config.get("mongodb").url);
-// var request = require('request');
 
 module.exports = Scheduler;
 
@@ -29,7 +26,23 @@ function Scheduler(app) {
   app.scheduler = this;
 
   var mongo = config.get('mongo');
-  var mongoConnectionString = mongo.hosts + ":" + mongo.port + "/" + mongo.database;
+  var mongoConnectionString;
+  if(mongo.user && mongo.password) {
+    mongoConnectionString = format(
+      'mongodb://%s:%s@%s/%s',
+      mongo.user,
+      mongo.password,
+      mongo.hosts,
+      mongo.database
+    );
+  }else{
+    mongoConnectionString = format(
+      'mongodb://%s/%s',
+      mongo.hosts,
+      mongo.database
+    );
+  }
+
   this.app = app;
   this.agenda = new Agenda({
     db: {
