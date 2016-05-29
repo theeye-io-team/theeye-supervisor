@@ -107,12 +107,11 @@ function registerHostname (options, doneFn) {
       }
 
       /** update agent reported version **/
-      if( host.agent_version != properties.agent_version ) {
+      function updateAgentVersion () {
         debug('updating agent version');
         host.agent_version = properties.agent_version;
         host.last_update = new Date();
         host.save();
-
         var data = {
           timestamp: (new Date()).getTime(),
           date:(new Date()).toISOString(),
@@ -120,9 +119,10 @@ function registerHostname (options, doneFn) {
           hostname: host.hostname,
           agent_version: host.agent_version
         };
-
         elastic.submit(customer.name, 'agentversion', data);
       }
+      //if( host.agent_version != properties.agent_version ) {
+      updateAgentVersion();
 
       Resource.findOne({
         'host_id':host._id,
