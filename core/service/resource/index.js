@@ -718,7 +718,7 @@ function handleHostIdAndData(hostId, input, doneFn){
  * set data and create entities
  *
  */
-Service.createResourceAndMonitorForHost = function createResourceAndMonitorForHost (input, next) {
+function createResourceAndMonitorForHost (input, next) {
   next=next||()=>{};
   logger.log('creating resource for host %j', input);
   var resource_data = {
@@ -750,6 +750,8 @@ Service.createResourceAndMonitorForHost = function createResourceAndMonitorForHo
       }, next);
     });
 }
+
+Service.createResourceAndMonitorForHost = createResourceAndMonitorForHost;
 
 /**
  *
