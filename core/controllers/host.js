@@ -113,11 +113,11 @@ function registerHostname (options, doneFn) {
         host.last_update = new Date();
         host.save();
         var data = {
-          timestamp: (new Date()).getTime(),
-          date:(new Date()).toISOString(),
-          customer_name: customer.name,
-          hostname: host.hostname,
-          agent_version: host.agent_version
+          'timestamp': (new Date()).getTime(),
+          'date': (new Date()).toISOString(),
+          'customer_name': customer.name,
+          'hostname': host.hostname,
+          'agent_version': host.agent_version
         };
         elastic.submit(customer.name, 'agentversion', data);
       }

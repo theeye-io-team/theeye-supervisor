@@ -108,6 +108,12 @@ function removeMonitorsAndTasksLinkedToTemplates(done){
       // remove resources linked to templates
       query['type'] = {$ne:'host'};
       Resource.remove(query,err=>{
+        Resource.find({type:'host'},function(err,hosts){
+          hosts.forEach(function(host){
+            host.template=null;
+            host.save();
+          });
+        });
         done()
       });
     });
@@ -160,12 +166,17 @@ var controller = {
     return res.send(200);
   },
   relinkHostResourcesToGroups (req,res) {
+    var unlinkOnly = req.params.unlink_only;
+
+    res.send('processing');
     removeMonitorsAndTasksLinkedToTemplates(function(){
+      console.log('templates unlinked');
+      if(unlinkOnly) return;
       // search all hosts
       Host.find(function(err,hosts){
         hosts.forEach(function(host){
           HostGroupService.searchAndRegisterHostIntoGroup(
-            host,(err,group)=>{
+            host,function(err,group){
               if(group){
                 Resource.find({
                   type:'host',
@@ -181,7 +192,6 @@ var controller = {
         });
       });
     });
-    res.send();
   },
 };
 

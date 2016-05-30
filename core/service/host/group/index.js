@@ -41,7 +41,8 @@ exports.removeGroup = function(group, doneFn){
   return;
 }
 
-exports.searchAndRegisterHostIntoGroup = function(host, next) {
+exports.searchAndRegisterHostIntoGroup = function(host, next)
+{
   logger.log('searching group for host %s', host.hostname);
   HostGroup.find({
     'customer': host.customer_id
@@ -94,7 +95,7 @@ function hostProvisioning( host, group, doneFn )
     for(var i=0; i<taskTpls.length; i++){
       var tpl = taskTpls[i];
       logger.log('creating task %s', tpl.name);
-      Task.FromTemplate(tpl,{ 'host': host },function(err){
+      Task.FromTemplate(tpl,{'host':host},(err)=>{
         completed();
       });
     }
@@ -102,7 +103,7 @@ function hostProvisioning( host, group, doneFn )
     for(var i=0; i<monitorTpls.length; i++){
       var tpl = monitorTpls[i];
       logger.log('creating monitor %s', tpl.name);
-      Monitor.FromTemplate(tpl,{ 'host': host },function(err){
+      Monitor.FromTemplate(tpl,{'host':host},(err)=>{
         completed();
       });
     }

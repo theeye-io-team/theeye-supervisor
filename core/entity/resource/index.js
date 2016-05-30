@@ -13,15 +13,15 @@ var INITIAL_STATE = 'normal' ;
  * Extended Schema. Includes non template attributes
  */
 var properties = {
-	'host_id' : { type:String },
-	'hostname' : { type:String },
-	'fails_count' : { type:Number, 'default':0 },
-	'state' : { type:String, 'default':INITIAL_STATE },
-	'enable' : { type:Boolean, 'default':true },
-	'last_check' : { type:Date, 'default':null },
-	'creation_date' : { type:Date, 'default':Date.now },
-	'last_update' : { type:Date, 'default':Date.now },
-  'template' : { type: ObjectId, ref: 'ResourceTemplate', 'default': null },
+  'host_id': { type:String },
+  'hostname': { type:String },
+  'fails_count': { type:Number, 'default':0 },
+  'state': { type:String, 'default':INITIAL_STATE },
+  'enable': { type:Boolean, 'default':true },
+  'last_check': { type:Date, 'default':null },
+  'creation_date': { type:Date, 'default':Date.now },
+  'last_update': { type:Date, 'default':Date.now },
+  'template': { type: ObjectId, ref: 'ResourceTemplate', 'default': null },
 }; 
 
 var ResourceSchema = BaseSchema.EntitySchema.extend(properties);
@@ -110,8 +110,18 @@ ResourceSchema.statics.FromTemplate = function(
   var input = _.extend( data, template.toObject() );
   input.description = input.description;
   input.name = input.name;
+  delete input._id;
   debug('creating resource from template %j', input);
-  this.create(input, doneFn);
+
+  var model = new this(input);
+  model.last_update = new Date();
+  model.save(function(err){
+    if(err){
+      debug('ERROR with %j',input);
+      debug(err.message);
+    }
+    doneFn(err,model);
+  });
 }
 
 var Entity = mongodb.model('Resource', ResourceSchema);

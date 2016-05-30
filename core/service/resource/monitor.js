@@ -194,7 +194,7 @@ function createMonitor(type, input, next) {
               return next(error);
             }
 
-            logger.log('monitor created');
+            logger.log('monitor %s created', monitor.name);
             return next(null, monitor);
           });
       }

@@ -11,8 +11,8 @@ var logger = require('../lib/logger')('eye:supervisor:service:monitor');
 var config = require('config');
 
 module.exports = {
-  start() {
-    let interval = config
+  start: function() {
+    var interval = config
       .get('monitor')
       .resources_check_failure_interval_milliseconds;
 
@@ -22,11 +22,10 @@ module.exports = {
 
 function checkResourcesState() {
   logger.log('***** CHECKING RESOURCES STATUS *****');
-
-  let query = { 'enable': true };
-  Resource.find(query,(err,resources) => {
-    for(let i=0; i<resources.length; i++){
-      let resource = resources[i];
+  var query = { 'enable': true };
+  Resource.find(query,function(err,resources){
+    for(var i=0; i<resources.length; i++){
+      var resource = resources[i];
       runChecks(resource);
     }
   });
@@ -35,7 +34,7 @@ function checkResourcesState() {
 function runChecks(resource) {
   CustomerService.getCustomerConfig(
     resource.customer_id,
-    (error,cconfig) => {
+    function(error,cconfig) {
       switch(resource.type){
         case 'host':
           checkHostResourceStatus(resource);
@@ -58,21 +57,23 @@ function runChecks(resource) {
 function checkResourceMonitorStatus(resource,cconfig,done){
   done=done||()=>{};
 
-  ResourceMonitor.findOne({
+  Resource.findOne({
     'enable': true,
     'resource_id': resource._id 
-  },(error,monitor) => {
+  },function(error,monitor){
 
     if(error) return logger.error('Resource monitor query error : %s', error.message);
     if(!monitor) return;
 
-    logger.log('checking monitor %s', resource.name);
+    logger.log('checking monitor "%s"', resource.name);
+    var last_update = resource.last_update.getTime();
+
     validLastupdate({
       'loop_duration': monitor.looptime,
       'loop_threshold': cconfig.resources_alert_failure_threshold_milliseconds,
-      'last_update': resource.last_update.getTime(),
+      'last_update': last_update,
       'fails_count': resource.fails_count
-    }, (error,valid,failedLoops) => {
+    }, function(error,valid,failedLoops){
       if(!valid){
         resource.fails_count = (failedLoops - 1);
         var manager = new ResourceService(resource);
@@ -95,7 +96,7 @@ function checkHostResourceStatus(resource,done){
     'loop_threshold':config.get('monitor').resources_alert_failure_threshold_milliseconds,
     'last_update':resource.last_update.getTime(),
     'fails_count':resource.fails_count
-  }, (error,valid,failedLoops) => {
+  },function(error,valid,failedLoops){
     if(!valid){
       resource.fails_count = (failedLoops - 1);
       var manager = new ResourceService(resource);
@@ -117,17 +118,17 @@ function validLastupdate(options,done)
   var loopThreshold = options.loop_threshold;
   var failedLoopsCount = options.fails_count;
   var lastUpdate = options.last_update;
-  var timeElapsed = nowTime - lastUpdate ;
-  var updateThreshold = loopDuration + loopThreshold ;
+  var timeElapsed = nowTime - lastUpdate;
+  var updateThreshold = loopDuration + loopThreshold;
 
   var elapsedMinutes = Math.floor(timeElapsed/1000/60);
-  logger.log(`last update time elapsed ${elapsedMinutes} minutes`);
+  logger.log('last update time elapsed ' + elapsedMinutes + ' minutes');
 
   var failedLoops = Math.floor(timeElapsed / loopDuration);
   logger.log('failed loops count %s', failedLoops);
   if(timeElapsed > updateThreshold) {
     if(failedLoops > failedLoopsCount) {
-      logger.error(`last update check failed ${failedLoops} times`);
+      logger.log('last update check failed %s times',failedLoops);
       done(null,false,failedLoops);
     } else {
       done(null,true,failedLoops);
