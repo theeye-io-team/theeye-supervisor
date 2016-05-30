@@ -10,10 +10,6 @@ var request = require("request").defaults({
 
 var submitFn = function (index,endpoint, data) {
 
-  if( config.is_dev ) {
-    debug('elastic search disabled by "config.is_dev" environment');
-    return;
-  }
   if( ! config.elasticsearch.enabled ){
     debug('elastic search disabled by config');
     return;
