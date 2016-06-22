@@ -31,7 +31,6 @@ module.exports = function(server, passport){
   server.post('/task',[
     passport.authenticate('bearer', {session:false}),
     resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'resource'}),
     resolver.idToEntity({param:'script'})
   ],controller.create);
 
@@ -49,40 +48,32 @@ var controller = {
    * @author Facundo
    *
    */
-  create (req, res, next) {
-    var input = {
-      'customer': req.customer,
-      'user': req.user,
-      'resource': req.resource,
-      'script': req.script,
-      'description': req.body.description,
-      'name': req.body.name,
-      'hosts': req.body.hosts,
-      'public': false
-    };
+   create (req, res, next) {
+     var input = {
+       'customer': req.customer,
+       'user': req.user,
+       'script': req.script,
+       'description': req.body.description,
+       'name': req.body.name,
+       'hosts': req.body.hosts,
+       'public': false
+     };
 
-    if(req.body.public){
-      input.public = filter.toBoolean(req.body.public);
-    }
+     if(req.body.public){
+       input.public = filter.toBoolean(req.body.public);
+     }
 
-    var scriptArgs = filter.toArray(req.body.script_arguments);
-    input.script_arguments = scriptArgs;
+     var scriptArgs = filter.toArray(req.body.script_arguments);
+     input.script_arguments = scriptArgs;
 
-    if(!input.script) return res.send(400, json.error('script is required'));
-    if(!input.customer) return res.send(400, json.error('customer is required'));
-    if(!input.resource && !input.hosts) return res.send(400, json.error('resource or hosts are required'));
-    if(input.resource) {
-      TaskService.createResourceTask(input, function(error, task){
-        res.send(200, { task: task });
-        next();
-      });
-    } else {
-      TaskService.createManyTasks(input, function(error, tasks) {
-        res.send(200, { tasks: tasks });
-        next();
-      });
-    }
-  },
+     if(!input.script) return res.send(400, json.error('script is required'));
+     if(!input.customer) return res.send(400, json.error('customer is required'));
+     if(!input.hosts) return res.send(400, json.error('hosts are required'));
+     TaskService.createManyTasks(input, function(error, tasks) {
+       res.send(200, { tasks: tasks });
+       next();
+     });
+   },
   /**
    * @author Facundo
    * @method GET
