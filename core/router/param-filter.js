@@ -1,5 +1,7 @@
 'use strict';
 
+var _ = require('lodash');
+
 module.exports = {
   /**
    *
@@ -30,7 +32,8 @@ module.exports = {
    */
   uniq: function uniq(value) {
     var isArray = Object.prototype.toString.call(value) === '[object Array]';
-    if (isArray) return _.uniq(value);else return [value]; // unique value into an array
+    if (isArray) return _.uniq(value);
+    else return [value]; // unique value into an array
   },
   toBoolean: function toBoolean(value) {
     if (value === true || value === 'true') return true;
@@ -49,7 +52,7 @@ module.exports = {
    *
    */
   spawn: function spawn(options) {
-    var _this = this;
+    var self = this;
 
     var name = options.param;
     var filterFn = options.filter;
@@ -57,7 +60,7 @@ module.exports = {
     return function (req, res, next) {
       var value = req[name] || req.params[name] || req.body[name] || req.query[name];
 
-      req[name] = _this[filterFn](value);
+      req[name] = self[filterFn](value);
       next();
     };
   }

@@ -14,6 +14,7 @@ var _ = require('lodash');
 var createMonitor = ResourceService.createResourceAndMonitorForHost;
 
 module.exports = function(server){
+/**
   server.get('/create_host_monitors',[
     //passport.authenticate('bearer',{session:false}),
   ],controller.createHostMonitors);
@@ -27,6 +28,7 @@ module.exports = function(server){
 
   server.get('/rebuild_hostgroups', [
   ],controller.relinkHostResourcesToGroups);
+  */
 };
 
 function createMonitorTypeHost(done){
