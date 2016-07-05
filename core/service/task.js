@@ -9,8 +9,54 @@ var _ = require('lodash');
 
 var validator = require('../router/param-validator');
 var filter = require('../router/param-filter');
+var elastic = require('../lib/elastic');
+var config = require('config');
+
+function registerTaskCRUDOperation(customer,data) {
+  var key = config.elasticsearch.keys.task.crud;
+  elastic.submit(customer,key,data);
+}
 
 var TaskService = {
+  remove:function(options){
+    Task.remove(options.task,function(error){
+      if(error) {
+        return options.fail(error);
+      } else {
+        registerTaskCRUDOperation(
+          options.customer.name,{
+            'customer':options.customer.name,
+            'user_id':options.user.id,
+            'user_email':options.user.email,
+            'operation':'delete'
+          }
+        );
+        options.done();
+      }
+    });
+  },
+  update:function(options){
+    var task = options.task;
+    var updates = options.updates;
+    task.update(updates, function(error){
+      if(error){
+        return options.fail(error);
+      } else {
+        debug('publishing task');
+        task.publish(function(pub){
+          registerTaskCRUDOperation(
+            options.customer.name,{
+              'customer':options.customer.name,
+              'user_id':options.user.id,
+              'user_email':options.user.email,
+              'operation':'update'
+            }
+          );
+          options.done(pub);
+        });
+      }
+    });
+  },
   /**
    *
    * @author Facundo
@@ -56,6 +102,14 @@ var TaskService = {
     Host.findById(hostId, function(error, host){
       input.host = host;
       Task.create(input, function(error, task){
+
+        registerTaskCRUDOperation(input.customer.name,{
+          'customer':input.customer.name,
+          'user_id':input.user.id,
+          'user_email':input.user.email,
+          'operation':'create'
+        });
+
         task.publish((published) => {
           debug('host id %s task created', hostId);
           doneFn(null, published);
@@ -74,6 +128,14 @@ var TaskService = {
             var props = _.extend({}, input, { host: host });
             Task.create(props, function(err,task) {
               debug('task created');
+
+              registerTaskCRUDOperation(input.customer.name,{
+                'customer':input.customer.name,
+                'user_id':input.user.id,
+                'user_email':input.user.email,
+                'operation':'create'
+              });
+
               task.publish(function(published) {
                 debug('host id %s task created', hostId);
                 asyncCb(null, published);

@@ -19,6 +19,7 @@ var Task = require('../../entity/task').Entity;
 var HostStats = require('../../entity/host/stats').Entity;
 var Job = require('../../entity/job').Entity;
 var resourceNotification = require('./notification');
+var globalconfig = require('config');
 
 var filter = require('../../router/param-filter');
 
@@ -115,11 +116,8 @@ function logStateChange (resource,input) {
     'type': 'resource-stats'
   };
 
-  elastic.submit(
-    resource.customer_name,
-    'resource-stats', 
-    data
-  );
+  var key = globalconfig.elasticsearch.keys.resource.stats;
+  elastic.submit(resource.customer_name,key,data);
 }
 
 function handleFailureState (resource,input,config)

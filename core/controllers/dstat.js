@@ -3,6 +3,7 @@ var HostStats = require("../entity/host/stats").Entity;
 var debug = require("../lib/logger")("eye:supervisor:controller:dstat");
 var NotificationService = require("../service/notification");
 var paramsResolver = require('../router/param-resolver');
+var config = require('config');
 
 var elastic = require('../lib/elastic');
 
@@ -66,7 +67,8 @@ var controller = {
       'type': 'host-stats'
     };
 
-    elastic.submit(customer.name,'host-stats', data);
+    var key = config.elasticsearch.keys.host.stats;
+    elastic.submit(customer.name,key,data);
 
     NotificationService.sendSNSNotification(data,{
       topic: 'host-stats',

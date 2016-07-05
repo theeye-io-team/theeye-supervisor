@@ -107,7 +107,28 @@ module.exports = {
   "elasticsearch": {
     "enabled":false,
     "url":"",
-    "db":""
+    "db":"",
+    "keys":{
+      "agent":{
+        "version":"agent-version"
+      },
+      "host":{
+        "stats":"host-stats",
+      },
+      "resource":{
+        "stats":"resource-stats",
+      },
+      "monitor":{
+        "crud":"crud-monitor"
+      },
+      "script":{
+        "crud":"crud-script"
+      },
+      "task":{
+        "execution":"task-execution",
+        "crud":"crud-task"
+      }
+    }
   },
   "server": {
     "name": "TheEye", 

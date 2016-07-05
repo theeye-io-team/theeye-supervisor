@@ -113,13 +113,13 @@ function registerHostname (options, doneFn) {
         host.last_update = new Date();
         host.save();
         var data = {
-          'timestamp': (new Date()).getTime(),
-          'date': (new Date()).toISOString(),
-          'customer_name': customer.name,
+          'customer': customer.name,
           'hostname': host.hostname,
-          'agent_version': host.agent_version
+          'version': host.agent_version
         };
-        elastic.submit(customer.name, 'agentversion', data);
+
+        var key = config.elasticsearch.keys.agent.version;
+        elastic.submit(customer.name,key,data);
       }
       //if( host.agent_version != properties.agent_version ) {
       updateAgentVersion();

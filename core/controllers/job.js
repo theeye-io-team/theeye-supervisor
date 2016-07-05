@@ -6,6 +6,7 @@ var debug = require('../lib/logger')('eye:supervisor:controller:job');
 var notificationService = require('../service/notification');
 var paramsResolver = require('../router/param-resolver');
 var scheduler;
+var elastic = require('../lib/elastic');
 
 module.exports = function(server, passport) {
   //bring the scheduler from server
@@ -72,6 +73,11 @@ module.exports = function(server, passport) {
   };
   */
 };
+
+function registerTaskExecution(customer,data){
+  var key = config.elasticsearch.keys.task.execution;
+  elastic.submit(customer,key,data);
+}
 
 var controller = {
   get : function (req, res, next) {
@@ -167,6 +173,15 @@ var controller = {
             customer: customer,
             notify: true
           },function(job) {
+						registerTaskExecution(customer.name,{
+							'customer': customer.name,
+              'user_id': user.id,
+              'user_email': user.email,
+              'task_id':task.id,
+              'task_name':task.name,
+              'script_id':task.script_id
+						});
+
             job.publish(function(published){
               res.send(200, {job : published});
             });

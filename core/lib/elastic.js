@@ -8,26 +8,34 @@ var request = require("request").defaults({
   gzip: true
 });
 
-var submitFn = function (index,endpoint, data) {
-
+var submitFn = function(index,endpoint,data)
+{
   if( ! config.elasticsearch.enabled ){
     debug('elastic search disabled by config');
     return;
   }
 
   var elastic = config.elasticsearch ;
-  if( !elastic.url || !elastic.db ) return debug('ERROR invalid elasticsearch configuration.');
+  if( !elastic.url || !elastic.db ){
+    return debug('ERROR invalid elasticsearch configuration.');
+  }
+
+  data.type = endpoint;
+  data.timestamp || ( data.timestamp = (new Date()).getTime() );
+  data.date || ( data.date = (new Date()).toISOString() );
+
+  var url = elastic.url + '/' + path.join(index, endpoint);
 
   request.post({
-//Cambiado    url: path.join(elastic.url, elastic.db, endpoint), 
-//Cambiado dos, cada customer va a tener su propia db.
-    url: elastic.url+'/'+path.join(index, endpoint),
+    url: url,
     body: data
-  },function(err, httpResponse, body){
-    if (!err) 
-      debug(' elastic [url:'+elastic.url+'] [index:'+index+'] submited to "%s"', endpoint);
-    else
-      debug('joined '+elastic.url+path.join(index, endpoint)+'  elasticsearch post error!!!'+err);
+  },function(err,respose,body){
+    if(err) {
+      debug('ERROR %s',err);
+      debug(arguments);
+      return;
+    }
+    debug('submit done to %s', url);
   });
 }
 

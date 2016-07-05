@@ -1,3 +1,5 @@
+"use strict";
+
 var debug = require('../lib/logger')('eye:supervisor:controller:task');
 var json = require(process.env.BASE_PATH + "/lib/jsonresponse");
 var Task = require(process.env.BASE_PATH + '/entity/task').Entity;
@@ -22,6 +24,7 @@ module.exports = function(server, passport){
 
   server.patch('/task/:task',[
     passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'task'}),
     resolver.idToEntity({param:'host'}),
     resolver.idToEntity({param:'resource'}),
@@ -36,6 +39,7 @@ module.exports = function(server, passport){
 
   server.del('/task/:task',[
     passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'task'}),
   ],controller.remove);
 };
@@ -117,17 +121,22 @@ var controller = {
    * @param {String} :task , mongo ObjectId
    *
    */
-  remove (req,res,next) {
-    var task = req.task;
-    if(!task) return res.send(404);
+   remove (req,res,next) {
+     var task = req.task;
+     if(!task) return res.send(404);
 
-    Task.remove({
-      _id : task._id
-    }, function(error){
-      if(error) return res.send(500);
-      res.send(204);
-    });
-  },
+     TaskService.remove({
+       task:task,
+       user:req.user,
+       customer:req.customer,
+       done:function(){
+         res.send(204);
+       },
+       fail:function(error){
+         res.send(500);
+       }
+     });
+   },
   /**
    *
    * @author Facundo
@@ -162,12 +171,17 @@ var controller = {
     if( scriptArgs.length > 0 ) input.script_arguments = scriptArgs;
 
     debug.log('updating task %j', input);
-    task.update(input, function(error){
-      if(error) return res.send(500,error);
-      debug.log('publishing task');
-      task.publish(function(pub){
-        res.send(200,{task : pub});
-      });
+    TaskService.update({
+      user:req.user,
+      customer:req.customer,
+      task:task,
+      updates:input,
+      done:function(task){
+        res.send(200,{task:task});
+      },
+      fail:function(error){
+        res.send(500);
+      }
     });
   }
 };

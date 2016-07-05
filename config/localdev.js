@@ -13,11 +13,16 @@ module.exports = {
     "web_url": "http://localhost:6080",
     "file_upload_folder" : join(__dirname + '/', 'uploads')
   },
-  "mongo" : {
-    "user"     : "",
-    "password" : "",
-    "hosts"    : "localhost:27017",
-    "database" : "theeye"
+  "mongo": {
+    "user": "",
+    "password": "",
+    "hosts": "localhost:27017",
+    "database": "theeye"
+  },
+  "elasticsearch": {
+    "enabled":true,
+    "url":"http://localhost:9200",
+    "db":"theeye_allcustomers",
   },
   "mailer": {
     "from": "The Eye Development %customer% <%customer%@theeye.io>",
