@@ -7,6 +7,7 @@ var async = require('async');
 var md5 = require('md5');
 var fs = require('fs');
 var config = require('config');
+var elastic = require('../lib/elastic');
 
 var storageMedia = (function getStorageMedia(){
   return config.get("storage").driver == 'local' ?
@@ -56,9 +57,14 @@ function getScriptKeyname (filename)
   return filename + '[ts:' + Date.now() + ']' ;
 }
 
+function registerScriptCRUDOperation(customer,data) {
+  var key = config.elasticsearch.keys.script.crud;
+  elastic.submit(customer,key,data);
+}
+
+
 var Service = {
-  handleUploadedScript : function(input,next)
-  {
+  create:function(input,next) {
     var service = this ;
 
     input.script.keyname = getScriptKeyname(input.script.name);
@@ -82,59 +88,8 @@ var Service = {
       }
     });
   },
-  /**
-   * Update a script.
-   * @author Facundo
-   * @param {Object} input
-   */
-  handleUpdateUploadedScript : function(input, next)
-  {
-    var script = input.script;
-    var file = input.file;
-
-    updateScriptFile(
-      file,
-      script,
-      function(error, data){
-        var updates = {
-          'description': input.description,
-          'keyname': data.keyname, // name.extension + [ts:########]
-          'md5': data.md5,
-          'name': file.name,
-          'mimetype': file.mimetype,
-          'size': file.size,
-          'extension': file.extension,
-          'public': input.public
-        };
-        logger.log('updating script data');
-        script.update(updates, function(error){
-          logger.log('script update completed');
-          if(next) next(error, script);
-        });
-      });
-  },
-  remove : function(script,next)
-  {
-    var query ;
-    storageMedia.remove(script, function(error,data){
-      logger.log('script removed from storage');
-
-      query = { '_id' : script._id };
-      Script.remove(query,function(error){
-        next(error,null);
-      });
-
-      query = { 'script_id' : script._id };
-      Task.find(query,function(error,tasks){
-        tasks.forEach(function(task,idx){
-          task.script_id = null;
-          task.save();
-        });
-      });
-    });
-  },
-  createEntity : function(input,next)
-  {
+  createEntity : function(input,next) {
+    next||(next=function(){});
     logger.log('creating script');
     var options = {
       customer    : input.customer,
@@ -150,7 +105,89 @@ var Service = {
     };
 
     Script.create(options,function(error,script){
-      if(next) next(error, script);
+      var customer_name = input.customer.name;
+      if(error) return next(error,null);
+
+      registerScriptCRUDOperation(customer_name,{
+        'name':script.name,
+        'customer':customer_name,
+        'user_id':input.user.id,
+        'user_email':input.user.email,
+        'operation':'create'
+      });
+      return next(null,script);
+    });
+  },
+  /**
+   * Update a script.
+   * @author Facundo
+   * @param {Object} input
+   */
+  update: function(input, next)
+  {
+    next||(next=function(){});
+    var script = input.script;
+    var file = input.file;
+
+    updateScriptFile(file,script,
+      function(error, data){
+        var updates = {
+          'description': input.description,
+          'keyname': data.keyname, // name.extension + [ts:########]
+          'md5': data.md5,
+          'name': file.name,
+          'mimetype': file.mimetype,
+          'size': file.size,
+          'extension': file.extension,
+          'public': input.public
+        };
+
+        logger.log('updating script data');
+        script.update(updates, function(error){
+          if(error) return next(error);
+          registerScriptCRUDOperation(input.customer.name,{
+            'name':script.name,
+            'customer':input.customer.name,
+            'user_id':input.user.id,
+            'user_email':input.user.email,
+            'operation':'update'
+          });
+          logger.log('script update completed');
+          next(null,script);
+        });
+      }
+    );
+  },
+  remove : function(input,next)
+  {
+    next||(next=function(){});
+
+    var script = input.script;
+    var query ;
+    storageMedia.remove(script, function(error,data){
+      logger.log('script removed from storage');
+
+      Script.remove(script,function(error){
+        if(error) return next(error);
+
+        registerScriptCRUDOperation(input.customer.name,{
+          'name':script.name,
+          'customer':input.customer.name,
+          'user_id':input.user.id,
+          'user_email':input.user.email,
+          'operation':'delete'
+        });
+
+        next();
+      });
+
+      query = { 'script_id' : script._id };
+      Task.find(query,function(error,tasks){
+        tasks.forEach(function(task,idx){
+          task.script_id = null;
+          task.save();
+        });
+      });
     });
   },
   fetchBy : function(input,next)

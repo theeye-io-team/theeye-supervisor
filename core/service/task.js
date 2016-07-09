@@ -25,7 +25,7 @@ var TaskService = {
       } else {
         registerTaskCRUDOperation(
           options.customer.name,{
-            'task':options.task.name,
+            'name':options.task.name,
             'customer':options.customer.name,
             'user_id':options.user.id,
             'user_email':options.user.email,
@@ -47,7 +47,7 @@ var TaskService = {
         task.publish(function(pub){
           registerTaskCRUDOperation(
             options.customer.name,{
-              'task':task.name,
+              'name':task.name,
               'customer':options.customer.name,
               'user_id':options.user.id,
               'user_email':options.user.email,
@@ -106,7 +106,7 @@ var TaskService = {
       Task.create(input, function(error, task){
 
         registerTaskCRUDOperation(input.customer.name,{
-          'task':task.name,
+          'name':task.name,
           'customer':input.customer.name,
           'user_id':input.user.id,
           'user_email':input.user.email,
@@ -133,7 +133,7 @@ var TaskService = {
               debug('task created');
 
               registerTaskCRUDOperation(input.customer.name,{
-                'task':task.name,
+                'name':task.name,
                 'customer':input.customer.name,
                 'user_id':input.user.id,
                 'user_email':input.user.email,

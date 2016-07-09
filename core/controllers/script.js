@@ -5,34 +5,35 @@ var json = require('../lib/jsonresponse');
 var debug = require('../lib/logger')('eye:supervisor:controller:script');
 var ScriptService = require('../service/script');
 var ResourceService = require('../service/resource');
-
 var Script = require('../entity/script').Entity;
-
 var resolve = require('../router/param-resolver');
 var validate = require('../router/param-validator');
 
 module.exports = function(server, passport) {
-  server.get('/script', [
+  server.get('/:customer/script', [
     passport.authenticate('bearer', {session:false}),
     resolve.customerNameToEntity({})
   ], controller.fetch);
 
-  server.post('/script', [
+  server.post('/:customer/script', [
     passport.authenticate('bearer', {session:false}),
     resolve.customerNameToEntity({})
   ], controller.create);
 
-  server.get('/script/:script', [
+  server.get('/:customer/script/:script', [
+    resolve.customerNameToEntity({}),
     passport.authenticate('bearer', {session:false}),
     resolve.idToEntity({param:'script'}),
   ], controller.get);
 
-  server.patch('/script/:script', [
+  server.patch('/:customer/script/:script', [
+    resolve.customerNameToEntity({}),
     passport.authenticate('bearer', {session:false}),
     resolve.idToEntity({param:'script'}),
   ], controller.patch);
 
-  server.del('/script/:script', [
+  server.del('/:customer/script/:script', [
+    resolve.customerNameToEntity({}),
     passport.authenticate('bearer', {session:false}),
     resolve.idToEntity({param:'script'}),
   ], controller.remove);
@@ -93,13 +94,13 @@ var controller = {
     var name = req.body.name;
     debug.log('creating script');
 
-    ScriptService.handleUploadedScript({
+    ScriptService.create({
+      customer: customer,
+      user: user,
       description: description,
       name: name,
       public: req.body.public || false,
       script: script,
-      customer: customer,
-      user: user
     },function(error,script){
       if(error) {
         debug.error(error);
@@ -123,14 +124,17 @@ var controller = {
 
     if(!script) return res.send(404,json.error('script not found'));
 
-    ScriptService.remove(script, function(error,data){
+    ScriptService.remove({
+      script: script,
+      user: req.user,
+      customer: req.customer
+    },function(error,data){
       if(error) {
         debug.error(error);
         return res.send(500);
       }
 
       ResourceService.onScriptRemoved(script);
-
       res.send(204);
     });
   },
@@ -138,7 +142,7 @@ var controller = {
    *
    *
    */
-  patch : function(req, res, next) {
+  patch: function(req, res, next) {
     var script = req.script;
     var file = req.files.script;
     var description = req.body.description;
@@ -148,12 +152,14 @@ var controller = {
     if(!file && !description && !name)
       return res.send(400, json.error('nothing to update'));
 
-    ScriptService.handleUpdateUploadedScript({
-      'script' : script,
-      'description' : description,
-      'name' : name,
-      'public': req.body.public || false,
-      'file' : file
+    ScriptService.update({
+      customer: req.customer,
+      user: req.user,
+      script: script,
+      description: description,
+      name: name,
+      public: req.body.public||false,
+      file: file
     },function(error, script){
       if(error) return res.send(500);
 

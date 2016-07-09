@@ -3,10 +3,12 @@ var Script = require('../entity/script').Entity;
 var ScriptService = require('../service/script');
 var json = require("../lib/jsonresponse");
 var debug = require('../lib/logger')('eye:supervisor:controller:script-download');
+var resolve = require('../router/param-resolver');
 
 module.exports = function(server, passport){
-	server.get('/script/:id/download',[
+	server.get('/:customer/script/:id/download',[
     passport.authenticate('bearer', {session:false}),
+    resolve.customerNameToEntity({})
   ],controller.get);
 }
 

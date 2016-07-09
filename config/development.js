@@ -11,7 +11,7 @@ module.exports = {
   "system": {
     "base_url": "http://theeye-supervisor:60080",
     "web_url": "http://theeye-web:6080",
-    "file_upload_folder" : join(__dirname + '/', 'uploads')
+    "file_upload_folder" : join(__dirname , '..', 'uploads')
   },
   "mongo": {
     "hosts": "theeye-db",

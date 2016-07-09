@@ -123,15 +123,12 @@ var LocalStorage = {
 
     this.createCustomerScriptsPath(
       input.customer_name,
-      function(scriptsPath)
-      {
+      function(scriptsPath) {
         fs.rename(
           currentPath,
           path.join(scriptsPath, scriptName),
-          function(error)
-          {
-            if(error)
-            {
+          function(error) {
+            if(error) {
               debug(error);
               next(error,null);
             }
@@ -143,16 +140,26 @@ var LocalStorage = {
   },
   getStream : function(key,customer_name,next)
   {
-    // not implemented
-    debug('get script stream');
+    debug('getting script stream');
+    var self = this;
     var storagePath = systemConfig.file_upload_folder;
     var customerPath = storagePath + '/' + customer_name;
     var scriptsPath = customerPath + '/scripts';
-    var file = path.join(scriptsPath, key);
+    var filepath = path.join(scriptsPath, key);
 
-    fs.access(file, fs.R_OK, function(err){
-      if(err) return next(err);
-      next(null,fs.createReadStream(file));
+    fs.access(filepath, fs.R_OK, function(err){
+      if(err){
+        if(err.code=='ENOENT'){
+          self.createCustomerScriptsPath(customer_name,function(path){
+            fs.writeFile(filepath,"EMPTY FILE CREATED",function(err){
+              if(err) return next(err);
+              next(null,fs.createReadStream(filepath));
+            });
+          });
+        }
+        else return next(err);
+      }
+      else return next(null,fs.createReadStream(filepath));
     });
   },
   remove : function(script,next)
