@@ -170,7 +170,7 @@ HostService.register = function(
         'description': host.hostname
       };
 
-      createMonitor(data,function(error, result){
+      ResourceService.create(data,function(error, result){
         let resource = result.resource;
         logger.log('resource registered.');
 

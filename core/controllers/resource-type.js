@@ -1,7 +1,7 @@
 var json = require('../lib/jsonresponse');
 
 module.exports = function(server, passport) {
-  server.get('/resource/type', [
+  server.get('/:customer/resource/type', [
     passport.authenticate('bearer', {session:false}),
   ], controller.fetch);
 };

@@ -9,7 +9,10 @@ var Resource = require('../resource').Entity;
 var logger = require('../../lib/logger')('eye:entity:monitor');
 var _ = require('lodash');
 
-var properties = {
+/**
+ * Exports all my properties
+ */
+var properties = exports.properties = _.extend({},BaseSchema.properties,{
   'host_id': { type: String, required: true },
   'resource': { type: ObjectId, ref: 'Resource' },
   'resource_id': { type: String },
@@ -17,17 +20,12 @@ var properties = {
   'creation_date': { type: Date, 'default': Date.now },
   'last_update': { type: Date, 'default': Date.now },
   'template': { type: ObjectId, ref: 'MonitorTemplate', 'default': null },
-}; 
+});
 
 /**
  * Extended Schema. Includes non template attributes
  */
 var MonitorSchema = BaseSchema.EntitySchema.extend(properties);
-
-/**
- * Exports all my properties
- */
-exports.properties = _.extend({},BaseSchema.properties,properties);
 
 /**
  *
@@ -144,20 +142,26 @@ MonitorSchema.statics.FromTemplate = function(template, options, doneFn)
   });
 }
 
-MonitorSchema.methods.update = function(
-  input, next
-) {
+MonitorSchema.methods.update = function(input,next) {
   var monitor = this;
   monitor.setUpdates(input, function(err,updates){
-    Entity.update(
-      { _id: monitor._id },
-      updates,
-      function(error, qr) {
-        if(error) logger.error(error);
-        if(next) next(error, qr);
-      }
-    );
+    Entity.update({ _id: monitor._id },updates,next);
   });
+}
+
+MonitorSchema.methods.patch = function(input,next) {
+  next||(next=function(){});
+  var updates = {};
+  for(var propName in properties){
+    if(input.hasOwnProperty(propName) && input[propName]){
+      updates[propName] = input[propName];
+    }
+  }
+  if(Object.keys(updates).length>0){
+    this.update(input, function(error){
+      next(error);
+    });
+  } else next();
 }
 
 

@@ -1,3 +1,5 @@
+"use strict";
+
 var debug = require('debug')('eye:supervisor:entity:task');
 var Schema = require('mongoose').Schema;
 var _ = require('lodash');

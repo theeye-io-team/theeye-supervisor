@@ -38,6 +38,11 @@ function getCustomerConfig (customer_id, done) {
   );
 }
 
+function registerResourceCRUDOperation(customer,data) {
+  var key = globalconfig.elasticsearch.keys.monitor.crud;
+  elastic.submit(customer,key,data);
+}
+
 function sendResourceFailureAlerts (resource,input)
 {
   logger.log('preparing to send email alerts');
@@ -294,71 +299,8 @@ Service.prototype.handleState = function(input,next) {
   );
 }
 
-function patchResource (resource,input,next) {
-  logger.log('updating resource');
-  next=next||()=>{};
-  var updates = {};
-  for(let propName in ResourceSchema.properties){
-    if(input.hasOwnProperty(propName) && input[propName]){
-      updates[propName] = input[propName];
-    }
-  }
-  if(Object.keys(updates).length>0){
-    logger.log('resource update %j', updates);
-    resource.update(updates, function(error){
-      if(error) {
-        logger.log('update error %j', error);
-      }
-      logger.log('resource %s updated', resource.name);
-      next(error);
-    });
-  } else {
-    logger.log('no resource updates');
-    next();
-  }
-}
-
-function patchResourceMonitors (resource,input,next) {
-  logger.log('updating resource monitors');
-  next=next||()=>{};
-  var updates = {};
-  for(var propName in ResourceMonitorSchema.properties){
-    if(input.hasOwnProperty(propName) && input[propName]){
-      updates[propName] = input[propName];
-    }
-  }
-  if(Object.keys(updates).length>0){
-    MonitorEntity.findOne({
-      'resource_id': resource._id
-    },function(error,monitor){
-      if(error){
-        next(error);
-      }
-      if(!monitor){
-        next(new Error('resource monitor not found'), null);
-      }
-
-      var previous_host = monitor.host_id;
-      monitor.update(input, function(error){
-        if(!error){
-          Job.createAgentConfigUpdate(updates.host_id);
-          // if monitor host changes, the new and the old agents should be notified
-          if(previous_host != updates.host_id){
-            logger.log('monitor host(%s) has changed. notifying agent', previous_host);
-            Job.createAgentConfigUpdate(previous_host);
-          }
-        }
-        else logger.log('monitor update error: %s', error);
-        next(error);
-      });
-    });
-  } else {
-    logger.log('no monitor updates');
-    next();
-  }
-}
-
-Service.findHostResources = function(host,options,done) {
+Service.findHostResources = function(host,options,done)
+{
   var query = { 'host_id': host._id };
   if(options.type) query.type = options.type;
   Resource.find(query,(err,resources)=>{
@@ -381,14 +323,102 @@ Service.findHostResources = function(host,options,done) {
   });
 }
 
-Service.prototype.updateResource = function(input,next) {
-  if(input.host){
-    input.host_id = input.host._id;
-    input.hostname = input.host.hostname;
+/**
+ *
+ * create entities
+ *
+ */
+Service.create = function (input, next) {
+  next||(next=function(){});
+  logger.log('creating resource for host %j', input);
+  var resource_data = {
+    'host_id' : input.host_id,
+    'hostname' : input.hostname,
+    'customer_id' : input.customer_id,
+    'customer_name' : input.customer_name,
+    'name' : input.name,
+    'type' : ResourceMonitorService.setType(input.type, input.monitor_type),
+    'description' : input.description
   }
-  patchResource(this.resource,input);
-  patchResourceMonitors(this.resource,input);
-  next();
+
+  ResourceMonitorService.setMonitorData(
+    input.monitor_type,
+    input,
+    function(error,monitor_data){
+      if(error){
+        return next(error);
+      }
+      else if(!monitor_data) {
+        var e = new Error('invalid resource data');
+        e.statusCode = 400;
+        return next(e);
+      }
+
+      createResourceAndMonitor({
+        resource_data: resource_data,
+        monitor_data: monitor_data
+      },function(error,result){
+        var monitor = result.monitor;
+        logger.log('resource & monitor created');
+        registerResourceCRUDOperation(
+          input.customer.name,{
+            'name':monitor.name,
+            'customer':monitor.customer_name,
+            'user_id':input.user.id,
+            'user_email':input.user.email,
+            'operation':'create'
+          }
+        );
+        Job.createAgentConfigUpdate(monitor.host_id);
+        next(null,result);
+      });
+    });
+};
+
+/**
+ *
+ * update entities
+ *
+ */
+Service.update = function(input,next) {
+  var updates = input.updates;
+  var resource = input.resource;
+
+  if(updates.host){
+    updates.host_id = updates.host._id;
+    updates.hostname = updates.host.hostname;
+  }
+  resource.patch(updates,function(error){
+    if(error) return next(error);
+    MonitorEntity.findOne({
+      'resource_id': resource._id
+    },function(error,monitor){
+      if(error) return next(error);
+      if(!monitor) return next(new Error('resource monitor not found'), null);
+
+      var previous_host = monitor.host_id;
+      monitor.patch(updates,function(error){
+        if(error) return next(error);
+
+        registerResourceCRUDOperation(
+          monitor.customer_name,{
+            'name':monitor.name,
+            'customer':monitor.customer_name,
+            'user_id':input.user.id,
+            'user_email':input.user.email,
+            'operation':'update'
+          }
+        );
+        Job.createAgentConfigUpdate(updates.host_id);
+        // if monitor host changes, the new and the old agents should be notified
+        if(previous_host != updates.host_id){
+          Job.createAgentConfigUpdate(previous_host);
+        }
+
+        next();
+      });
+    });
+  });
 }
 
 function getEventSeverity (input) {
@@ -466,20 +496,12 @@ Service.removeHostResource = function (resource) {
   );
 
   function removeResource(resource, done){
-    Service.removeResourceMonitors(
-      resource,
-      false,
-      function(err){
-        if(err) return done(err);
-        logger.log('removing host resource "%s"', resource.name);
-
-        resource.remove(function(err){
-          if(err) return done(err);
-          logger.log('resource "%s" removed', resource.name);
-          done();
-        });
-      }
-    );
+    logger.log('removing host resource "%s"', resource.name);
+    Service.remove(resource,false,function(err){
+      if(err) return done(err);
+      logger.log('resource "%s" removed', resource.name);
+      done();
+    });
   }
 
   Resource
@@ -527,47 +549,50 @@ Service.removeHostResource = function (resource) {
  *
  *
  */
-function removeMonitor(monitor, done) {
-  logger.log('removing monitor "%s" type "%s"', monitor.name, monitor.type);
-  monitor.remove(function(err){
-    if(err) return done(err);
-    logger.log('monitor %s removed', monitor.name);
-    done();
-  });
-}
-
 /**
  *
  * @author Facundo
  *
  */
-Service.removeResourceMonitors = function (resource, notifyAgent, next) {
+Service.remove = function (input, done) {
+  done||(done=function(){});
+
+  var resource = input.resource;
+  var notifyAgents = input.notifyAgents;
+
   logger.log('removing resource "%s" monitors', resource.name);
 
-	MonitorEntity.find({
-		'resource_id': resource._id
-	},function(error,monitors){
+  MonitorEntity.find({
+    'resource_id': resource._id
+  },function(error,monitors){
+    if(monitors.length !== 0){
+      var monitor = monitors[0];
+      monitor.remove(function(err){
+        if(err) return logger.error(err);
 
-		if(monitors.length !== 0) {
-      var doneMonitorsRemoval = _.after(monitors.length, function(){
-        if(notifyAgent) {
+        logger.log('monitor %s removed', monitor.name);
+        if(notifyAgents) {
           Job.createAgentConfigUpdate(monitor.host_id);
         }
       });
+    } else logger.error('monitor not found.');
 
-      for(var i=0; i<monitors.length; i++) {
-        var monitor = monitors[i];
-        removeMonitor(monitor, function(err){
-          doneMonitorsRemoval();
-        });
-      }
+    resource.remove(function(err){
+      if(err) return done(err);
 
-      next(null);
-		} else {
-      logger.log('no monitors found. skipping');
-      next(null);
-    }
-	});
+      registerResourceCRUDOperation(
+        resource.customer_name,{
+          'name':resource.name,
+          'customer':resource.customer_name,
+          'user_id':input.user.id,
+          'user_email':input.user.email,
+          'operation':'delete'
+        }
+      );
+
+      done();
+    });
+  });
 }
 
 /**
@@ -655,10 +680,9 @@ Service.disableResourcesByCustomer = function(customer, doneFn){
  * @author Facundo
  *
  */
-Service.createManyResourcesMonitor = function(input, doneFn) {
+Service.createResourceOnHosts = function(hosts,input,doneFn) {
   logger.log('preparing to create resources');
   logger.log(input);
-  var hosts = input.hosts;
   var errors = null;
   var monitors = [];
 
@@ -682,7 +706,7 @@ Service.createManyResourcesMonitor = function(input, doneFn) {
 
   for(var i=0; i<hosts.length; i++) {
     var hostId = hosts[i];
-    handleHostIdAndData(hostId, input, function(error, result){
+    handleHostIdAndData(hostId,input,function(error,result){
       hostProcessed(hosts[i], error, result);
     });
   }
@@ -707,49 +731,9 @@ function handleHostIdAndData(hostId, input, doneFn){
     input.host_id = host._id;
     input.hostname = host.hostname;
 
-    createResourceAndMonitorForHost(input, doneFn);
+    Service.create(input, doneFn);
   });
 }
-
-/**
- *
- * set data and create entities
- *
- */
-function createResourceAndMonitorForHost (input, next) {
-  next=next||()=>{};
-  logger.log('creating resource for host %j', input);
-  var resource_data = {
-    'host_id' : input.host_id,
-    'hostname' : input.hostname,
-    'customer_id' : input.customer_id,
-    'customer_name' : input.customer_name,
-    'name' : input.name,
-    'type' : ResourceMonitorService.setType(input.type, input.monitor_type),
-    'description' : input.description
-  }
-
-  ResourceMonitorService.setMonitorData(
-    input.monitor_type,
-    input,
-    function(error,monitor_data){
-      if(error){
-        return next(error);
-      }
-      else if(!monitor_data) {
-        var e = new Error('invalid resource data');
-        e.statusCode = 400;
-        return next(e);
-      }
-
-      createResourceAndMonitor({
-        resource_data: resource_data,
-        monitor_data: monitor_data
-      }, next);
-    });
-}
-
-Service.createResourceAndMonitorForHost = createResourceAndMonitorForHost;
 
 /**
  *
@@ -761,8 +745,8 @@ function createResourceAndMonitor(input, done){
   var resource_data = input.resource_data;
 
   logger.log('creating resource');
-  Resource.create(resource_data, function(err,resource){
-    if(err) throw err;
+  Resource.create(resource_data, function(error,resource){
+    if(error) throw error;
     else {
       logger.log('creating resource %s monitor', resource._id);
       logger.log(monitor_data);
@@ -773,12 +757,8 @@ function createResourceAndMonitor(input, done){
 
       MonitorEntity.create(
         monitor_data,
-        function(err, monitor){
-          if(err) throw err;
-
-          Job.createAgentConfigUpdate(monitor.host_id);
-
-          logger.log('resource & monitor created');
+        function(error, monitor){
+          if(error) throw error;
           return done(null,{
             'resource': resource, 
             'monitor': monitor 

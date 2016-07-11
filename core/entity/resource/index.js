@@ -1,3 +1,5 @@
+"use strict";
+
 require('mongoose-schema-extend');
 var mongodb = require('../../lib/mongodb').db;
 var BaseSchema = require('./schema');
@@ -10,9 +12,9 @@ var _ = require('lodash');
 var INITIAL_STATE = 'normal' ;
 
 /**
- * Extended Schema. Includes non template attributes
+ * Exports all my properties
  */
-var properties = {
+var properties = exports.properties = _.extend({}, BaseSchema.properties, {
   'host_id': { type:String },
   'hostname': { type:String },
   'fails_count': { type:Number, 'default':0 },
@@ -22,14 +24,12 @@ var properties = {
   'creation_date': { type:Date, 'default':Date.now },
   'last_update': { type:Date, 'default':Date.now },
   'template': { type: ObjectId, ref: 'ResourceTemplate', 'default': null },
-}; 
-
-var ResourceSchema = BaseSchema.EntitySchema.extend(properties);
+});
 
 /**
- * Exports all my properties
+ * Extended Schema. Includes non template attributes
  */
-exports.properties = _.extend( {}, BaseSchema.properties, properties );
+var ResourceSchema = BaseSchema.EntitySchema.extend(properties);
 
 ResourceSchema.statics.INITIAL_STATE = INITIAL_STATE ;
 
@@ -59,7 +59,7 @@ ResourceSchema.methods.publish = function(next){
 ResourceSchema.statics.create = function(input, next){
   var data = { };
   next = next || function(){};
-  for(var propname in BaseSchema.properties){
+  for(var propname in properties){
     if(input[propname]){
       data[propname] = input[propname];
     }
@@ -73,6 +73,26 @@ ResourceSchema.statics.create = function(input, next){
     if(err) throw err;
     next(null, instance);
   });
+}
+
+/**
+ *
+ * @author Facundo
+ *
+ */
+ResourceSchema.methods.patch = function(input, next){
+  next||(next=function(){});
+  var updates = {};
+  for(let propName in properties){
+    if(input.hasOwnProperty(propName) && input[propName]){
+      updates[propName] = input[propName];
+    }
+  }
+  if(Object.keys(updates).length>0){
+    this.update(updates, function(error,result){
+      next(error,result);
+    });
+  } else next();
 }
 
 /**
