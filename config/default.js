@@ -124,9 +124,14 @@ module.exports = {
       "script":{
         "crud":"crud-script"
       },
+      "template":{
+        "crud":"crud-template",
+        "task":{"crud":"crud-task-template"},
+        "monitor":{"crud":"crud-monitor-template"}
+      },
       "task":{
+        "crud":"crud-task",
         "execution":"task-execution",
-        "crud":"crud-task"
       }
     }
   },

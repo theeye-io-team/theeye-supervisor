@@ -8,6 +8,15 @@ var Task = require('../entity/task').Entity;
 var Resource = require('../entity/resource').Entity;
 var Host = require('../entity/host').Entity;
 var Job = require('../entity/job').Entity;
+var config = require('config');
+var elastic = require('../lib/elastic');
+
+function registerCRUDOperation (customer,data){
+  var key = config.elasticsearch.keys.template.task.crud;
+  elastic.submit(customer,key,data);
+}
+
+
 /**
  *
  * exports routes
@@ -15,35 +24,37 @@ var Job = require('../entity/job').Entity;
  *
  */
 module.exports = function(server, passport) {
-  server.get('/hostgroup/:group/tasktemplate/:tasktemplate',[
+  server.get('/:customer/hostgroup/:group/tasktemplate/:tasktemplate',[
     passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
     resolver.idToEntity({ param: 'group', entity: 'host/group' }),
     resolver.idToEntity({ param: 'tasktemplate', entity: 'task/template' }),
   ], controller.get);
 
-  server.del('/hostgroup/:group/tasktemplate/:tasktemplate',[
+  server.del('/:customer/hostgroup/:group/tasktemplate/:tasktemplate',[
     passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
     resolver.idToEntity({ param: 'group', entity: 'host/group' }),
     resolver.idToEntity({ param: 'tasktemplate', entity: 'task/template' }),
   ], controller.remove);
 
-  server.put('/hostgroup/:group/tasktemplate/:tasktemplate',[
+  server.put('/:customer/hostgroup/:group/tasktemplate/:tasktemplate',[
     passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
     resolver.idToEntity({ param: 'group', entity: 'host/group' }),
     resolver.idToEntity({ param: 'tasktemplate', entity: 'task/template' }),
-    resolver.customerNameToEntity({}),
   ], controller.replace);
 
-  server.get('/hostgroup/:group/tasktemplate',[
+  server.get('/:customer/hostgroup/:group/tasktemplate',[
     passport.authenticate('bearer', {session:false}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
     resolver.customerNameToEntity({}),
+    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
   ], controller.fetch);
 
-  server.post('/hostgroup/:group/tasktemplate',[
+  server.post('/:customer/hostgroup/:group/tasktemplate',[
     passport.authenticate('bearer', {session:false}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
     resolver.customerNameToEntity({}),
+    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
   ], controller.create);
 }
 
@@ -91,7 +102,7 @@ var controller = {
    * @method POST
    *
    */
-  create(req,res,next){
+  create (req,res,next){
     if(!req.group) return res.send(404,'group not found');
     if(!req.body.task) return res.send(400,'tasks required');
     var group = req.group;
@@ -119,6 +130,16 @@ var controller = {
       function(err, templates){
         if(err) return res.send(err.statusCode, err.message);
         let template = templates[0];
+
+        registerCRUDOperation(req.customer.name,{
+          'template':group.hostname_regex,
+          'name': template.name,
+          'customer':req.customer.name,
+          'user_id':req.user.id,
+          'user_email':req.user.email,
+          'operation':'create'
+        });
+
         addTemplateToGroup(group,template,(err)=>{
           if(err) return res.send(500);
           res.send(200, {'task':template});
@@ -134,13 +155,25 @@ var controller = {
   replace(req,res,next){
     validateRequest(req,res);
 
-    //var group = req.group;
+    if(!req.group) return res.send(404,'group not found');
+    if(!req.tasktemplate) return res.send(404,'task not found');
+    if(!req.body.task) return res.send(400,'invalid request. body task required');
+
     var template = req.tasktemplate;
     var updates = req.body.task;
-    template.update(updates, (err)=>{
+    template.update(updates,(err)=>{
       if(err) return res.send(500);
       updateTaskInstancesOnHostGroups(template,(err)=>{
         logger.log('all tasks updated');
+      });
+
+      registerCRUDOperation(req.customer.name,{
+        'template':group.hostname_regex,
+        'name':template.name,
+        'customer':req.customer.name,
+        'user_id':req.user.id,
+        'user_email':req.user.email,
+        'operation':'update'
       });
 
       template.publish(function(pub){
@@ -161,10 +194,19 @@ var controller = {
       template,
       function(err){
         if(err) res.send(500);
-        group.detachTaskTemplate(template);
         template.remove(function(err){
           if(err) res.send(500);
-          logger.log('task removed from group');
+
+          registerCRUDOperation(req.customer.name,{
+            'template':group.hostname_regex,
+            'name':template.name,
+            'customer':req.customer.name,
+            'user_id':req.user.id,
+            'user_email':req.user.email,
+            'operation':'delete'
+          });
+
+          group.detachTaskTemplate(template);
           res.send(200);
         });
       }

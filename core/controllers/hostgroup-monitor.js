@@ -11,6 +11,14 @@ var Monitor = require('../entity/monitor').Entity;
 var Resource = require('../entity/resource').Entity;
 var Job = require('../entity/job').Entity;
 var Host = require('../entity/host').Entity;
+var config = require('config');
+var elastic = require('../lib/elastic');
+
+function registerCRUDOperation (customer,data){
+  var key = config.elasticsearch.keys.template.monitor.crud;
+  elastic.submit(customer,key,data);
+}
+
 /**
  *
  * exports routes
@@ -18,33 +26,35 @@ var Host = require('../entity/host').Entity;
  *
  */
 module.exports = function(server, passport) {
-  server.get('/hostgroup/:group/monitortemplate/:monitortemplate',[
+  server.get('/:customer/hostgroup/:group/monitortemplate/:monitortemplate',[
     passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
     resolver.idToEntity({ param: 'monitortemplate', entity: 'monitor/template' }),
     resolver.idToEntity({ param: 'group', entity: 'host/group' }),
   ], controller.get);
 
-  server.put('/hostgroup/:group/monitortemplate/:monitortemplate',[
+  server.put('/:customer/hostgroup/:group/monitortemplate/:monitortemplate',[
     passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
     resolver.idToEntity({ param: 'monitortemplate', entity: 'monitor/template' }),
     resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-    resolver.customerNameToEntity({}),
   ], controller.replace);
 
-  server.get('/hostgroup/:group/monitortemplate',[
+  server.get('/:customer/hostgroup/:group/monitortemplate',[
     passport.authenticate('bearer', {session:false}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
     resolver.customerNameToEntity({}),
+    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
   ], controller.fetch);
 
-  server.post('/hostgroup/:group/monitortemplate',[
+  server.post('/:customer/hostgroup/:group/monitortemplate',[
     passport.authenticate('bearer', {session:false}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
     resolver.customerNameToEntity({}),
+    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
   ], controller.create);
 
-  server.del('/hostgroup/:group/monitortemplate/:monitortemplate',[
+  server.del('/:customer/hostgroup/:group/monitortemplate/:monitortemplate',[
     passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
     resolver.idToEntity({ param: 'monitortemplate', entity: 'monitor/template' }),
     resolver.idToEntity({ param: 'group', entity: 'host/group' }),
   ], controller.remove);
@@ -192,6 +202,17 @@ var controller = {
       req.user,
       function(err,templates){
         if(err) return res.send(err.statusCode, err.message);
+
+        var name = templates[0].monitor_template.name;
+        registerCRUDOperation(req.customer.name,{
+          'template':req.group.hostname_regex,
+          'name':name,
+          'customer':req.customer.name,
+          'user_id':req.user.id,
+          'user_email':req.user.email,
+          'operation':'create'
+        });
+
         GroupMonitorService.addTemplatesToGroup(
           group, templates, function(err){
             if(err) return res.send(500);
@@ -212,6 +233,10 @@ var controller = {
     var monitortemplate = req.monitortemplate;
     var input = req.body.monitor;
     var group = req.group;
+
+    if(!req.group) return res.send(404,'group not found');
+    if(!req.monitortemplate) return res.send(404,'monitor not found');
+    if(!req.body.monitor) return res.send(400,'invalid request. body task required');
     
     monitortemplate.update(input, function(err,qr){
       monitortemplate.populate(function(err){
@@ -222,6 +247,15 @@ var controller = {
         }; 
         // updates resource template
         resourcetemplate.update(updates,function(err){
+
+          registerCRUDOperation(req.customer.name,{
+            'template':req.group.hostname_regex,
+            'name':monitortemplate.name,
+            'customer':req.customer.name,
+            'user_id':req.user.id,
+            'user_email':req.user.email,
+            'operation':'update'
+          });
           // looking for monitor with this template
           updateMonitorInstancesOnHostGroups(monitortemplate, function(){
             updateResourceInstancesOnHostGroups(resourcetemplate, function(){
@@ -251,6 +285,15 @@ var controller = {
         if(err) return res.send(500);
         removeTemplates(template,err=>{
           if(err) return res.send(500);
+
+          registerCRUDOperation(req.customer.name,{
+            'template':req.group.hostname_regex,
+            'name':template.name,
+            'customer':req.customer.name,
+            'user_id':req.user.id,
+            'user_email':req.user.email,
+            'operation':'delete'
+          });
 
           group.detachMonitorTemplate(template);
           res.send(200);

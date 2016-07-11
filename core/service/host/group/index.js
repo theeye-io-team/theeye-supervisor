@@ -15,8 +15,16 @@ var Resource = require(appRoot + '/entity/resource').Entity;
 var Monitor = require(appRoot + '/entity/monitor').Entity;
 var Task = require(appRoot + '/entity/task').Entity;
 var Job = require(appRoot + '/entity/job').Entity;
+var config = require('config');
+
+var elastic = require(appRoot + '/lib/elastic');
 
 exports.Monitor = require('./monitor');
+
+var registerGroupCRUDOperation = function(customer,data){
+  var key = config.elasticsearch.keys.template.crud;
+  elastic.submit(customer,key,data);
+};
 
 /**
  * Remove all group template entities, and
@@ -24,7 +32,9 @@ exports.Monitor = require('./monitor');
  *
  * @author Facundo
  */
-exports.removeGroup = function(group, doneFn){
+exports.remove = function(input, doneFn){
+
+  var group = input.group;
   var tasks = group.task_templates;
   var resources = group.resource_templates;
   var monitors = group.monitor_templates;
@@ -35,10 +45,71 @@ exports.removeGroup = function(group, doneFn){
   removeTemplateEntities(monitors  , MonitorTemplate  , Monitor  ); 
 
   group.remove(function(err){
-  });
+    if(err) return doneFn(err);
 
-  doneFn();
-  return;
+    registerGroupCRUDOperation(group.customer_name,{
+      'name':group.hostname_regex,
+      'customer':group.customer_name,
+      'user_id':input.user.id,
+      'user_email':input.user.email,
+      'operation':'delete'
+    });
+    doneFn();
+  });
+}
+
+/**
+ *
+ * create group definition.
+ *
+ * @param {Object} data , group data properties
+ *    @property {Array} tasks
+ *    @property {Array} monitors
+ *    @property {Array} provtasks , provisioning data
+ * @author Facundo
+ *
+ */
+exports.create = function(input, done){
+  logger.log('creating group');
+  var group;
+  var user               = input.user;
+  var customer           = input.customer;
+  var regex              = input.regex;
+  var tasks              = input.tasks;
+  var resourcemonitors   = input.resourcemonitors;
+  var provisioning_tasks = input.provisioningtasks;
+
+  try {
+    group = new HostGroup();
+    group.hostname_regex = regex;
+    group.customer = customer._id;
+    group.customer_name = customer.name;
+    group.task_templates = tasks.map(item=>item._id);
+    group.monitor_templates = [];
+    group.resource_templates = [];
+    group.provisioning_task_templates = [];
+
+    resourcemonitors.forEach(template=>{
+      group.addMonitorTemplate(template);
+    });
+
+    logger.log(group);
+  } catch (e) {
+    logger.log(e);
+  }
+
+  group.save(err => {
+    if(err) throw new err;
+
+    registerGroupCRUDOperation(group.customer_name,{
+      'name':group.hostname_regex,
+      'customer':group.customer_name,
+      'user_id':input.user.id,
+      'user_email':input.user.email,
+      'operation':'create'
+    });
+    done(null,group);
+  });
 }
 
 exports.searchAndRegisterHostIntoGroup = function(host, next)

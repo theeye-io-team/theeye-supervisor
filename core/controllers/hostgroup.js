@@ -20,75 +20,27 @@ var HostGroup = require('../entity/host/group').Entity;
  *
  */
 module.exports = function(server, passport) {
-  server.get('/hostgroup/:group',[
+  server.get('/:customer/hostgroup/:group',[
     passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
     resolver.idToEntity({ param: 'group', entity: 'host/group' }),
   ], controller.get);
 
-  server.del('/hostgroup/:group',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-  ], controller.remove);
-
-  server.get('/hostgroup',[
+  server.get('/:customer/hostgroup',[
     passport.authenticate('bearer', {session:false}),
     resolver.customerNameToEntity({}),
   ], controller.fetch);
 
-  server.post('/hostgroup',[
+  server.post('/:customer/hostgroup',[
     passport.authenticate('bearer', {session:false}),
     resolver.customerNameToEntity({}),
   ], controller.create);
-}
 
-/**
- *
- * create group definition.
- *
- * @param {Object} data , group data properties
- *    @property {Array} tasks
- *    @property {Array} monitors
- *    @property {Array} provtasks , provisioning data
- * @author Facundo
- *
- */
-var createGroup = function(data, done)
-{
-  logger.log('creating group');
-  var group;
-  var customer = data.customer;
-  var regex = data.regex;
-  var tasks = data.tasks;
-  var resourcemonitors = data.resourcemonitors;
-  var provisioning_tasks = data.provisioningtasks;
-
-  try {
-    group = new HostGroup();
-    group.hostname_regex = regex;
-    group.customer = customer._id;
-    group.customer_name = customer.name;
-    group.task_templates = tasks.map(item=>item._id);
-    group.monitor_templates = [];
-    group.resource_templates = [];
-    group.provisioning_task_templates = [];
-
-    resourcemonitors.forEach(template=>{
-      group.addMonitorTemplate(template);
-    });
-
-    logger.log(group);
-  } catch (e) {
-    logger.log(e);
-  }
-
-  group.save((err,instance) => {
-    if(err) {
-      logger.error(err);
-      return done(err);
-    }
-    // instance has _id set
-    done(null, instance);
-  });
+  server.del('/:customer/hostgroup/:group',[
+    passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
+    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
+  ], controller.remove);
 }
 
 /**
@@ -159,10 +111,10 @@ var controller = {
 
     var hostnameregex = group.hostname_regex;
     if(!hostnameregex) return res.send(400,'hostname regexp required');
+
     try {
-      var a = new RegExp(hostnameregex);
-      console.log(a);
-    }catch(e) {
+      new RegExp(hostnameregex);
+    } catch(e) {
       return res.send(406,'Invalid regular expression');
     }
 
@@ -209,13 +161,14 @@ var controller = {
       }
     }, (error, templates) => {
       if(error) return responseError(error);
-      createGroup({
+      HostGroupService.create({
+        'user':req.user,
         'regex': hostnameregex,
         'tasks': templates.tasks,
         'resourcemonitors': templates.resourcemonitors,
         'provisioningtasks': templates.provtasks,
         'customer': req.customer,
-      }, (error, group) => {
+      },function(error, group){
         if(error) return responseError(error);
         logger.log('group created');
         res.send(200,{ 'group': group });
@@ -231,6 +184,9 @@ var controller = {
   remove (req,res,next) {
     var group = req.group;
     if(!group) return res.send(400);
-    HostGroupService.removeGroup(group, ()=>res.send(204));
+    HostGroupService.remove({
+      group:group,
+      user:req.user,
+    },()=>res.send(204));
   },
 }
