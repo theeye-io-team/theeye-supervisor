@@ -136,13 +136,9 @@ module.exports = {
     }
   },
   "server": {
-    "name": "TheEye", 
-    "version": "1.0.0",
-    "port": 60080,
+    "name": "TheEye",
+    "version": process.env.VERSION || "0.0.0",
+    "port": process.env.PORT || 60080,
     "auth_strategy": "bearer",
-    "socket": false
   },
-  "socket": {
-    "enable": false
-  }
 }

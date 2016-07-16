@@ -309,12 +309,12 @@ Service.findHostResources = function(host,options,done)
       return done(err);
     }
     if(!resources||resources.length===0){
-      logger.log('host resources not found');
+      logger.log('host resources not found for host %s', host._id);
       return done();
     }
     if(options.ensureOne){
       if(resources.length>1){
-        logger.error('more than one resources found');
+        logger.error('more than once resources found for host %s', host._id);
         return done();
       }
       else return done(null,resources[0]);

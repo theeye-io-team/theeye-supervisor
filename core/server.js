@@ -52,10 +52,6 @@ function start() {
   server.listen( serverConfig.port, function() {
     logger.error('server started. "%s" listening at "%s"', server.name, server.url);
   });
-
-  if( serverConfig.socket.enable ) {
-    socket.connect(server);
-  }
 }
 
 exports.start = start;

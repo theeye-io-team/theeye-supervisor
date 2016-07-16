@@ -10,14 +10,17 @@ process.on('SIGINT', function(){
   logger.log('supervisor process ends on "SIGINT"');
   process.exit(0);
 });
+
 process.on('SIGTERM', function(){
   logger.log('supervisor process ends on "SIGTERM"');
   process.exit(0);
 });
+
 process.on('exit', function(){ // always that the process ends, throws this event
   logger.log('supervisor process ends on "process.exit"');
   process.exit(0);
 });
+
 process.on('uncaughtException', function(error){
   logger.error('supervisor process on "uncaughtException"');
   logger.error(error);

@@ -7,8 +7,9 @@ var ResourceService = require('./resource');
 var CustomerService = require('./customer');
 var HostService = require('./host');
 var logger = require('../lib/logger')('eye:supervisor:service:monitor');
-
 var config = require('config');
+var MonitorChecker = require('../entity/monitor/checker').Entity;
+var _ = require('lodash');
 
 module.exports = {
   start: function() {
@@ -16,54 +17,137 @@ module.exports = {
       .get('monitor')
       .resources_check_failure_interval_milliseconds;
 
+    Checker.setup();
     setInterval(checkResourcesState, interval);
   }
 };
 
-function checkResourcesState() {
-  logger.log('***** CHECKING RESOURCES STATUS *****');
-  var query = { 'enable': true };
-  Resource.find(query,function(err,resources){
-    for(var i=0; i<resources.length; i++){
-      var resource = resources[i];
-      runChecks(resource);
+var Checker = {
+  setup:function(){
+    MonitorChecker.find().exec(function(err,checker){
+      if(err) throw err;
+      if(Array.isArray(checker)){
+        if(checker.length == 0){
+          logger.log('not found. creating default settings');
+          checker = new MonitorChecker();
+          checker.save();
+        }
+        else {
+          logger.log('checker job found.');
+        }
+      }
+    });
+  },
+  getJob: function(next){
+    next||(next=function(){});
+    MonitorChecker.find().exec(function(err,result){
+      if(err) throw err;
+      if(Array.isArray(result)){
+        if(result.length == 0){
+          logger.log('not found. checker not initialized');
+          return next(null);
+        }
+        var checker = result[0];
+        next(checker);
+      }
+    });
+  }
+};
+
+
+
+function takeCheckerJob(next){
+  Checker.getJob(function(job){
+    if(!job) return;
+    if(!job.inProgress()){
+      logger.log('taking check job');
+      job.take(next);
+    } else {
+      logger.log('in progress');
     }
   });
 }
 
-function runChecks(resource) {
+function releaseCheckerJob(next){
+  Checker.getJob(function(job){
+    if(!job) return;
+    if(job.inProgress()){
+      logger.log('releasing check job');
+      job.release(function(){
+        logger.log('released!');
+      });
+    }
+  });
+}
+
+function checkResourcesState(){
+  logger.log('preparing monitoring cicle');
+  takeCheckerJob(function(){
+    logger.log('***** CHECKING RESOURCES STATUS *****');
+    var query = { 'enable': true };
+    Resource.find(query,function(err,resources){
+
+      var total = resources.length;
+      logger.log('running %s checks',total);
+      var completed = _.after(total,function(){
+        logger.log('releasing monitoring job');
+        releaseCheckerJob();
+      });
+
+      var count = 0;
+      for(var i=0; i<resources.length; i++){
+        var resource = resources[i];
+        runChecks(resource,function(){
+          logger.log('check completed %s',++count);
+          completed();
+        });
+      }
+    });
+  });
+}
+
+function runChecks(resource,completed) {
   CustomerService.getCustomerConfig(
     resource.customer_id,
     function(error,cconfig) {
       switch(resource.type){
         case 'host':
-          checkHostResourceStatus(resource);
+          checkHostResourceStatus(resource,completed);
           break;
         case 'script':
         case 'scraper':
         case 'process':
         case 'dstat':
         case 'psaux':
-          checkResourceMonitorStatus(resource,cconfig);
+          checkResourceMonitorStatus(resource,cconfig,completed);
           break;
         case 'default':
           logger.error('unhandled resource %s', resource.type);
+          completed();
           break;
       }
     }
   );
 }
 
-function checkResourceMonitorStatus(resource,cconfig,done){
-  done=done||()=>{};
+function checkResourceMonitorStatus(resource,cconfig,done)
+{
+  done||(done=function(){});
 
   Resource.findOne({
     'enable': true,
     'resource_id': resource._id 
   },function(error,monitor){
 
-    if(error) return logger.error('Resource monitor query error : %s', error.message);
-    if(!monitor) return;
+    if(error){
+      logger.error('Resource monitor query error : %s', error.message);
+      return done();
+    }
+
+    if(!monitor){
+      logger.log('resource has not got any monitor');
+      return done();
+    }
 
     logger.log('checking monitor "%s"', resource.name);
     var last_update = resource.last_update.getTime();
@@ -87,8 +171,9 @@ function checkResourceMonitorStatus(resource,cconfig,done){
   });
 }
 
-function checkHostResourceStatus(resource,done){
-  done=done||()=>{};
+function checkHostResourceStatus(resource,done)
+{
+  done||(done=function(){});
 
   logger.log('checking host resource %s', resource.name);
   validLastupdate({
@@ -111,9 +196,9 @@ function checkHostResourceStatus(resource,done){
 
 function validLastupdate(options,done)
 {
-  done=done||()=>{};
+  done||(done=()=>{});
   logger.log(options);
-  var nowTime = Date.now();
+  var valid, nowTime = Date.now();
   var loopDuration = options.loop_duration;
   var loopThreshold = options.loop_threshold;
   var failedLoopsCount = options.fails_count;
@@ -129,9 +214,11 @@ function validLastupdate(options,done)
   if(timeElapsed > updateThreshold) {
     if(failedLoops > failedLoopsCount) {
       logger.log('last update check failed %s times',failedLoops);
-      done(null,false,failedLoops);
+      done(null,valid=false,failedLoops);
     } else {
-      done(null,true,failedLoops);
+      done(null,valid=true,failedLoops);
     }
+  } else {
+    done(null,valid=true);
   }
 }

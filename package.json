@@ -30,7 +30,6 @@
     "readable-stream": "1.0.33",
     "request": "2.72.0",
     "restify": "2.8.5",
-    "socket.io": "1.4.6",
     "stream-buffers": "2.2.0",
     "underscore": "1.8.3",
     "validator": "4.9.0"
