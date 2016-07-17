@@ -59,7 +59,9 @@ var controller = {
     });
   },
   fetch : function(req,res,next) {
-    if(req.customer == null) return res.send(400,json.error('customer is required'));
+    if(!req.customer){
+      return res.send(400,json.error('customer is required'));
+    }
 
     var input = {
       customer: req.customer,
@@ -69,8 +71,8 @@ var controller = {
     if(req.query.type) input.type = req.query.type;
 
     ResourceManager.fetchBy(input,function(error,resources){
-      if(error || resources == null) {
-        res.send(500,json.error('internal server error'));
+      if(error||!resources) {
+        res.send(500);
       } else {
         res.send(200,{ resources : resources });
       }

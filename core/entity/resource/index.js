@@ -36,19 +36,21 @@ var ResourceSchema = BaseSchema.EntitySchema.extend(properties);
 ResourceSchema.statics.INITIAL_STATE = INITIAL_STATE ;
 
 ResourceSchema.methods.publish = function(next){
-  var publishFn = BaseSchema.EntitySchema.methods.publish;
   var resource = this;
-  next = next || function(){};
+  var publishFn = BaseSchema.EntitySchema.methods.publish;
+  next||(next=function(){});
 
   debug('publishing resource');
   publishFn.call(this, function(error, data){
-    if(error) return next(error);
+    if(error){
+      debug(error);
+      return next(error);
+    }
     data.state = resource.state;
     data.enable = resource.enable;
     data.host_id = resource.host_id;
     data.hostname = resource.hostname;
     data.last_update = resource.last_update;
-
     next(null,data);
   });
 }
@@ -139,6 +141,7 @@ ResourceSchema.statics.FromTemplate = function(
 
   var model = new this(input);
   model.last_update = new Date();
+  model._type = 'Resource';
   model.save(function(err){
     if(err){
       debug('ERROR with %j',input);

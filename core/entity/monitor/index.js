@@ -112,6 +112,7 @@ MonitorSchema.statics.FromTemplate = function(template, options, doneFn)
         input.resource = input.resource_id = resource._id;
         input.template = monitorTemplate._id || monitorTemplate.id;
         input.customer_name = options.host.customer_name;
+        input._type = 'ResourceMonitor';
         // take shared properties from template
         for(var propname in BaseSchema.properties){
           if(template[propname]){

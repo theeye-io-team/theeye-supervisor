@@ -449,7 +449,7 @@ Service.fetchBy = function(input,next) {
 
   Resource
     .find(query)
-    .sort({ 'fails_count':-1, 'type':1 })
+    .sort({'fails_count':-1,'type':1})
     .exec(function(error,resources){
       if(error) {
         logger.log('unable to fetch resources from database');
