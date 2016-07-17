@@ -9,10 +9,7 @@ var Resource = require('../resource').Entity;
 var logger = require('../../lib/logger')('eye:entity:monitor');
 var _ = require('lodash');
 
-/**
- * Exports all my properties
- */
-var properties = exports.properties = _.extend({},BaseSchema.properties,{
+var properties = {
   'host_id': { type: String, required: true },
   'resource': { type: ObjectId, ref: 'Resource' },
   'resource_id': { type: String },
@@ -20,18 +17,17 @@ var properties = exports.properties = _.extend({},BaseSchema.properties,{
   'creation_date': { type: Date, 'default': Date.now },
   'last_update': { type: Date, 'default': Date.now },
   'template': { type: ObjectId, ref: 'MonitorTemplate', 'default': null },
-});
+}
 
-/**
- * Extended Schema. Includes non template attributes
- */
+/** Extended Schema. Includes non template attributes **/
 var MonitorSchema = BaseSchema.EntitySchema.extend(properties);
 
+/** Exports all the properties **/
+//exports.properties = _.extend({},BaseSchema.properties,properties);
+
 /**
- *
  * extends publishing method to include Entity specific definitions
  * @author Facundo
- *
  */
 MonitorSchema.methods.publish = function(options, next)
 {
@@ -151,19 +147,19 @@ MonitorSchema.methods.update = function(input,next) {
 
 MonitorSchema.methods.patch = function(input,next) {
   next||(next=function(){});
-  var updates = {};
-  for(var propName in properties){
-    if(input.hasOwnProperty(propName) && input[propName]){
-      updates[propName] = input[propName];
-    }
-  }
-  if(Object.keys(updates).length>0){
+  //var updates = {};
+  //for(var propName in properties){
+  //  if(input.hasOwnProperty(propName) && input[propName]){
+  //    updates[propName] = input[propName];
+  //  }
+  //}
+  //if(Object.keys(updates).length>0){
+  //  this.update(updates, function(error,result){
     this.update(input, function(error){
       next(error);
     });
-  } else next();
+  //} else next();
 }
-
 
 var Entity = mongodb.model('ResourceMonitor', MonitorSchema);
 Entity.ensureIndexes();

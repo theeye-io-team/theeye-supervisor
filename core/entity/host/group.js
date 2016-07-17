@@ -181,6 +181,6 @@ EntitySchema.methods.hasMonitorTemplate = function(monitor){
 var Entity = mongodb.db.model('HostGroup', EntitySchema)
 Entity.ensureIndexes();
 
-exports.properties = properties;
+//exports.properties = properties;
 exports.EntitySchema = EntitySchema;
 exports.Entity = Entity;

@@ -6,7 +6,7 @@ var ObjectId = require('mongoose').Schema.Types.ObjectId;
 var logger = require('../../lib/logger')('eye:entity:task');
 
 /** Entity properties **/
-var properties = exports.properties = {
+var properties = {
   'host_id' : { type: String, 'default': null },
   'resource_id' : { type: String, 'default': null },
   'creation_date' : { type: Date, 'default': Date.now() },
@@ -19,6 +19,8 @@ var properties = exports.properties = {
  * Extended Schema. Includes non template attributes
  */
 var TaskSchema = BaseSchema.EntitySchema.extend(properties);
+
+//exports.properties = properties;
 
 /**
  *

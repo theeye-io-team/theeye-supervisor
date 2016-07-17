@@ -14,7 +14,7 @@ var INITIAL_STATE = 'normal' ;
 /**
  * Exports all my properties
  */
-var properties = exports.properties = _.extend({}, BaseSchema.properties, {
+var properties = {
   'host_id': { type:String },
   'hostname': { type:String },
   'fails_count': { type:Number, 'default':0 },
@@ -24,12 +24,14 @@ var properties = exports.properties = _.extend({}, BaseSchema.properties, {
   'creation_date': { type:Date, 'default':Date.now },
   'last_update': { type:Date, 'default':Date.now },
   'template': { type: ObjectId, ref: 'ResourceTemplate', 'default': null },
-});
+}
 
 /**
  * Extended Schema. Includes non template attributes
  */
 var ResourceSchema = BaseSchema.EntitySchema.extend(properties);
+
+//exports.properties = _.extend({}, BaseSchema.properties, properties);
 
 ResourceSchema.statics.INITIAL_STATE = INITIAL_STATE ;
 
@@ -57,18 +59,19 @@ ResourceSchema.methods.publish = function(next){
  *
  */
 ResourceSchema.statics.create = function(input, next){
-  var data = { };
-  next = next || function(){};
-  for(var propname in properties){
-    if(input[propname]){
-      data[propname] = input[propname];
-    }
-  }
+  var data = {};
+  next||(next=function(){});
 
-  var entity = new Entity(data);
+  //for(var propname in properties){
+  //  if(input[propname]){
+  //    data[propname] = input[propname];
+  //  }
+  //}
+  //var entity = new Entity(data);
+  var entity = new Entity(input);
   entity.host_id = input.host_id;
   entity.hostname = input.hostname;
-  entity.template = input.template || null;
+  entity.template = input.template||null;
   entity.save(function(err, instance){
     if(err) throw err;
     next(null, instance);
@@ -82,17 +85,18 @@ ResourceSchema.statics.create = function(input, next){
  */
 ResourceSchema.methods.patch = function(input, next){
   next||(next=function(){});
-  var updates = {};
-  for(let propName in properties){
-    if(input.hasOwnProperty(propName) && input[propName]){
-      updates[propName] = input[propName];
-    }
-  }
-  if(Object.keys(updates).length>0){
-    this.update(updates, function(error,result){
+  //var updates = {};
+  //for(let propName in properties){
+  //  if(input.hasOwnProperty(propName) && input[propName]){
+  //    updates[propName] = input[propName];
+  //  }
+  //}
+  //if(Object.keys(updates).length>0){
+  //  this.update(updates, function(error,result){
+    this.update(input, function(error,result){
       next(error,result);
     });
-  } else next();
+  //} else next();
 }
 
 /**

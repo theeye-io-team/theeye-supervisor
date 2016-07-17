@@ -46,8 +46,7 @@ var controller = {
         'type':'host',
         'ensureOne':true
       };
-      ResourceManager
-      .findHostResources(host,options,(err,resource)=>{
+      ResourceManager.findHostResources(host,options,(err,resource)=>{
         if(err||!resource)return;
         var handler = new ResourceManager(resource);
         handler.handleState({ state:'normal' });
