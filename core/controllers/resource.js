@@ -132,12 +132,14 @@ var controller = {
     if(!resource) return res.send(404,json.error('not found'));
 
     if(resource.type == 'host') {
+      debug('removing host resource');
       ResourceManager.removeHostResource({
         resource:resource,
         user:req.user
       });
       res.send(204);
     } else {
+      debug('removing resource');
       ResourceManager.remove({
         resource:resource,
         notifyAgents:true,

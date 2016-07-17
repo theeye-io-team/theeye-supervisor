@@ -7,6 +7,7 @@ var notificationService = require('../service/notification');
 var paramsResolver = require('../router/param-resolver');
 var scheduler;
 var elastic = require('../lib/elastic');
+var globalconfig = require('config');
 
 module.exports = function(server, passport) {
   //bring the scheduler from server
@@ -75,7 +76,7 @@ module.exports = function(server, passport) {
 };
 
 function registerTaskExecution(customer,data){
-  var key = config.elasticsearch.keys.task.execution;
+  var key = globalconfig.elasticsearch.keys.task.execution;
   elastic.submit(customer,key,data);
 }
 

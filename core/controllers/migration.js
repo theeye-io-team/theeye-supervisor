@@ -11,7 +11,7 @@ var Host = require('../entity/host').Entity;
 var HostGroup = require('../entity/host/group').Entity;
 var _ = require('lodash');
 
-var createMonitor = ResourceService.createResourceAndMonitorForHost;
+var createMonitor = ResourceService.createResourceOnHost;
 
 module.exports = function(server){
 /**
@@ -85,7 +85,7 @@ function createHostsDstatPsaux(done){
           'description':'host stats',
         });
         delete dstat._id;
-        createMonitor(dstat);
+        createMonitor([host],dstat);
 
         let psaux = Object.assign({},host.toObject(),{
           'host_id':host._id,
@@ -94,7 +94,7 @@ function createHostsDstatPsaux(done){
           'description':'host process',
         });
         delete psaux._id;
-        createMonitor(psaux);
+        createMonitor([host],psaux);
       });
     });
   });

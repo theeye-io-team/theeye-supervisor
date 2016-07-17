@@ -332,14 +332,14 @@ Service.create = function (input, next) {
   next||(next=function(){});
   logger.log('creating resource for host %j', input);
   var resource_data = {
-    'host_id' : input.host_id,
-    'hostname' : input.hostname,
-    'customer_id' : input.customer_id,
-    'customer_name' : input.customer_name,
-    'name' : input.name,
-    'type' : ResourceMonitorService.setType(input.type, input.monitor_type),
-    'description' : input.description
-  }
+    'host_id':input.host_id,
+    'hostname':input.hostname,
+    'customer_id':input.customer_id,
+    'customer_name':input.customer_name,
+    'name':input.name,
+    'type':ResourceMonitorService.setType(input.type, input.monitor_type),
+    'description':input.description
+  };
 
   ResourceMonitorService.setMonitorData(
     input.monitor_type,
@@ -359,10 +359,12 @@ Service.create = function (input, next) {
         monitor_data: monitor_data
       },function(error,result){
         var monitor = result.monitor;
+        var resource = result.resource;
         logger.log('resource & monitor created');
         registerResourceCRUDOperation(
-          input.customer.name,{
+          monitor.customer_name,{
             'name':monitor.name,
+            'type':resource.type,
             'customer':monitor.customer_name,
             'user_id':input.user.id,
             'user_email':input.user.email,
@@ -403,6 +405,7 @@ Service.update = function(input,next) {
         registerResourceCRUDOperation(
           monitor.customer_name,{
             'name':monitor.name,
+            'type':resource.type,
             'customer':monitor.customer_name,
             'user_id':input.user.id,
             'user_email':input.user.email,
@@ -469,9 +472,9 @@ Service.fetchBy = function(input,next) {
  * @author Facundo
  *
  */
-Service.removeHostResource = function (resource) {
-  var hid = resource.host_id;
-  var rid = resource._id;
+Service.removeHostResource = function (input,done) {
+  var hid = input.resource.host_id;
+  var rid = input.resource._id;
 
   logger.log('removing host "%s" resource "%s" resources', hid, rid);
 
@@ -480,7 +483,9 @@ Service.removeHostResource = function (resource) {
     .exec(function(err, item){
       if(err) return logger.error(err);
       if(!item) return;
-      item.remove(err=>logger.error(err));
+      item.remove(function(err){
+        if(err) logger.error(err);
+      });
     });
 
   logger.log('removing host stats');
@@ -497,7 +502,11 @@ Service.removeHostResource = function (resource) {
 
   function removeResource(resource, done){
     logger.log('removing host resource "%s"', resource.name);
-    Service.remove(resource,false,function(err){
+    Service.remove({
+      resource:resource,
+      notifyAgents:false,
+      user:input.user
+    },function(err){
       if(err) return done(err);
       logger.log('resource "%s" removed', resource.name);
       done();
@@ -583,6 +592,7 @@ Service.remove = function (input, done) {
       registerResourceCRUDOperation(
         resource.customer_name,{
           'name':resource.name,
+          'type':resource.type,
           'customer':resource.customer_name,
           'user_id':input.user.id,
           'user_email':input.user.email,
@@ -680,7 +690,9 @@ Service.disableResourcesByCustomer = function(customer, doneFn){
  * @author Facundo
  *
  */
-Service.createResourceOnHosts = function(hosts,input,doneFn) {
+Service.createResourceOnHosts = function(hosts,input,doneFn)
+{
+  doneFn||(doneFn=function(){});
   logger.log('preparing to create resources');
   logger.log(input);
   var errors = null;

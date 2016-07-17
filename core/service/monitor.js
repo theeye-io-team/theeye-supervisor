@@ -28,23 +28,22 @@ var Checker = {
       if(err) throw err;
       if(Array.isArray(checker)){
         if(checker.length == 0){
-          logger.log('not found. creating default settings');
           checker = new MonitorChecker();
-          checker.save();
-        }
-        else {
-          logger.log('checker job found.');
+          checker.save(function(err){
+            if(err) logger.error(err);
+            else logger.log('monitoring job created');
+          });
         }
       }
     });
   },
   getJob: function(next){
     next||(next=function(){});
-    MonitorChecker.find().exec(function(err,result){
+    MonitorChecker.find({enabled:true}).exec(function(err,result){
       if(err) throw err;
       if(Array.isArray(result)){
         if(result.length == 0){
-          logger.log('not found. checker not initialized');
+          logger.log('no checker enabled');
           return next(null);
         }
         var checker = result[0];

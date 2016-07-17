@@ -9,7 +9,8 @@ var properties = {
   last_worker: { type:String, 'default':null },
   start_time: { type:Number, 'default':null },
   end_time: { type:Number, 'default':null },
-  last_update: { type:Date, 'default':new Date() }
+  last_update: { type:Date, 'default':new Date() },
+  enabled: { type:Boolean, 'default':true },
 };
 
 /** Schema **/

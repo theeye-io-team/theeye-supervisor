@@ -129,6 +129,10 @@ module.exports = {
         "task":{"crud":"crud-task-template"},
         "monitor":{"crud":"crud-monitor-template"}
       },
+      "host":{
+        "crud":"crud-host",
+        "stats":"host-stats"
+      },
       "task":{
         "crud":"crud-task",
         "execution":"task-execution",

@@ -57,7 +57,7 @@ module.exports = function(server, passport) {
  * register a hostname.
  *
  * @author Facundo
- * @param {Object} options
+ * @param {Object} input
  *    @property {Object} customer
  *    @property {String} hostname
  *    @property {Object} host_properties
@@ -65,10 +65,10 @@ module.exports = function(server, passport) {
  * @return null
  *
  */
-function registerHostname (options, doneFn) {
-  var customer = options.customer;
-  var hostname = options.hostname;
-  var properties = options.host_properties;
+function registerHostname (input, doneFn) {
+  var customer = input.customer;
+  var hostname = input.hostname;
+  var properties = input.host_properties;
 
   Host.findOne({
     hostname: hostname,
@@ -78,26 +78,26 @@ function registerHostname (options, doneFn) {
 
     if(!host){
       debug("hostname '%s' not found.", hostname);
-      return HostService.register(
-        hostname,
-        customer,
-        properties,
-        function(err,res){
-          if(err) return doneFn(err);
-          doneFn(err,res);
-          var host = res.host;
+      return HostService.register({
+        'user':input.user,
+        'hostname':hostname,
+        'customer':customer,
+        'info':properties,
+      },function(err,res){
+        if(err) return doneFn(err);
+        doneFn(err,res);
+        var host = res.host;
 
-          NotificationService.sendSNSNotification({
-            'resource': 'host',
-            'event': 'host_registered',
-            'customer_name': host.customer_name,
-            'hostname': host.hostname
-          },{
-            topic: 'events',
-            subject: 'host_registered'
-          });
-        }
-      );
+        NotificationService.sendSNSNotification({
+          'resource': 'host',
+          'event': 'host_registered',
+          'customer_name': host.customer_name,
+          'hostname': host.hostname
+        },{
+          topic: 'events',
+          subject: 'host_registered'
+        });
+      });
     } else {
       debug('host found');
       if(!host.enable) {
@@ -174,6 +174,7 @@ var controller = {
     debug('processing hostname "%s" registration request', hostname);
 
     registerHostname({
+      'user':req.user,
       'customer': customer,
       'hostname': hostname,
       'host_properties': input

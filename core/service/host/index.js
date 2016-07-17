@@ -11,7 +11,7 @@ var Job = require('../../entity/job').Entity;
 var HostGroupService = require('./group');
 var logger = require("../../lib/logger")("eye:supervisor:service:host") ;
 
-var createMonitor = ResourceService.createResourceAndMonitorForHost;
+var createMonitor = ResourceService.createResourceOnHosts;
 
 function HostService(host) {
   var self = this;
@@ -115,8 +115,8 @@ function createBaseMonitors (input, doneFn){
   doneFn=doneFn||()=>{};
   let dstat = Object.assign({},input,{'monitor_type':'dstat'});
   let psaux = Object.assign({},input,{'monitor_type':'psaux'});
-  createMonitor(dstat);
-  createMonitor(psaux);
+  createMonitor([input.host],dstat);
+  createMonitor([input.host],psaux);
 }
 
 /**
@@ -135,12 +135,10 @@ function createBaseMonitors (input, doneFn){
 * @return null
 *
 */
-HostService.register = function(
-  hostname,
-  customer,
-  info,
-  next
-){
+HostService.register = function(input,next) {
+  var hostname = input.hostname;
+  var customer = input.customer;
+  var info = input.info;
   logger.log('registering new host "%s"', hostname);
 
   var data = {
@@ -159,8 +157,10 @@ HostService.register = function(
       logger.log('host registered. creating host resource');
 
       var data = {
+        'user':input.user,
         'host_id': host._id,
         'hostname': host.hostname,
+        'customer': customer,
         'customer_id': customer._id,
         'customer_name': customer.name,
         'name': host.hostname,
