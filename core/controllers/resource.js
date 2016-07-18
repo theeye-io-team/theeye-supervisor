@@ -211,6 +211,5 @@ var controller = {
       if(error) res.send(500,json.error('update error', error.message));
       else res.send(204);
     });
-  },
+  }
 };
-

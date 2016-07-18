@@ -133,7 +133,7 @@ function checkResourceMonitorStatus(resource,cconfig,done)
 {
   done||(done=function(){});
 
-  Resource.findOne({
+  ResourceMonitor.findOne({
     'enable': true,
     'resource_id': resource._id 
   },function(error,monitor){

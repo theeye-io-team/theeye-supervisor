@@ -161,7 +161,7 @@ function handleFailureState (resource,input,config)
   // current resource state
   if(resource.state != newState) {
     if(resource.fails_count >= failure_threshold) {
-      logger.log('resource "%s" status is failure', resource.name);
+      logger.log('resource "%s" state failure', resource.name);
       resource.state = newState ;
       resource.failure_severity = input.severity = getEventSeverity(input);
       logStateChange(resource,input);
@@ -265,17 +265,13 @@ function handleUpdatesStoppedState (resource,input,config)
 }
 
 Service.prototype.handleState = function(input,next) {
-  next=next||()=>{};
+  next||(next=function(){});
   var resource = this.resource;
   getCustomerConfig(
     resource.customer_id,
     (config) => {
       if(!config) throw new Error('config not found');
       switch(input.state) {
-        case 'failure':
-          input.last_update = Date.now();
-          handleFailureState(resource,input,config);
-          break;
         case 'normal':
           input.last_update = Date.now();
           handleNormalState(resource,input,config);
@@ -285,7 +281,10 @@ Service.prototype.handleState = function(input,next) {
           handleUpdatesStoppedState(resource,input,config);
           break;
         default:
-          logger.log('resource "%s" state "%s" is unknown', this.resource.name, input.state);
+          logger.log('resource "%s" unknown state "%s" reported', this.resource.name, input.state);
+        case 'failure':
+          input.last_update = Date.now();
+          handleFailureState(resource,input,config);
           break;
       }
 
