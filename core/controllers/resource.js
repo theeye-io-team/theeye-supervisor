@@ -34,6 +34,12 @@ module.exports = function(server, passport) {
     resolver.idToEntity({param:'resource'})
   ], controller.update);
 
+  server.put('/resource/:resource',[
+    //resolver.customerNameToEntity({}),
+    passport.authenticate('bearer', {session:false}),
+    resolver.idToEntity({param:'resource'})
+  ], controller.update);
+
   server.patch('/:customer/resource/:resource',[
     resolver.customerNameToEntity({}),
     passport.authenticate('bearer', {session:false}),

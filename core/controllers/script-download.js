@@ -10,6 +10,11 @@ module.exports = function(server, passport){
     passport.authenticate('bearer', {session:false}),
     resolve.customerNameToEntity({})
   ],controller.get);
+
+	server.get('/script/:id/download',[
+    passport.authenticate('bearer', {session:false}),
+    resolve.customerNameToEntity({})
+  ],controller.get);
 }
 
 var controller = {
