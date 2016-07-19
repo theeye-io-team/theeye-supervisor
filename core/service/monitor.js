@@ -56,6 +56,8 @@ var Checker = {
 
 
 function takeCheckerJob(next){
+return next();
+/*
   Checker.getJob(function(job){
     if(!job) return;
     if(!job.inProgress()){
@@ -65,6 +67,7 @@ function takeCheckerJob(next){
       logger.log('in progress');
     }
   });
+  */
 }
 
 function releaseCheckerJob(next){
