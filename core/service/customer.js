@@ -62,7 +62,7 @@ var Service = module.exports = {
         logger.error(error);
         return next(error);
       }
-      if(!customer) {
+      if(!customer){
         logger.error('customer %s not found', customer_id);
         return next(error);
       }

@@ -112,6 +112,15 @@ function runChecks(resource,completed) {
   CustomerService.getCustomerConfig(
     resource.customer_id,
     function(error,cconfig) {
+      if(error){
+        logger.error('customer %s configuration fetch failed',resource.customer_name);
+        return completed();
+      }
+      if(!cconfg){
+        logger.error('customer %s configuration not found',resource.customer_name);
+        return completed();
+      }
+
       switch(resource.type){
         case 'host':
           checkHostResourceStatus(resource,completed);
