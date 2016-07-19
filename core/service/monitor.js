@@ -54,10 +54,7 @@ var Checker = {
 };
 
 
-
 function takeCheckerJob(next){
-return next();
-/*
   Checker.getJob(function(job){
     if(!job) return;
     if(!job.inProgress()){
@@ -67,7 +64,6 @@ return next();
       logger.log('in progress');
     }
   });
-  */
 }
 
 function releaseCheckerJob(next){
@@ -116,7 +112,7 @@ function runChecks(resource,completed) {
         logger.error('customer %s configuration fetch failed',resource.customer_name);
         return completed();
       }
-      if(!cconfg){
+      if(!cconfig){
         logger.error('customer %s configuration not found',resource.customer_name);
         return completed();
       }

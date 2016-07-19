@@ -13,8 +13,9 @@ module.exports = function(server, passport) {
   //bring the scheduler from server
   scheduler = server.scheduler;
 
-  server.get('/job/:id',[
-    passport.authenticate('bearer', {session:false})
+  server.get('/job/:job',[
+    passport.authenticate('bearer', {session:false}),
+    paramsResolver.idToEntity({param:'job'})
   ],controller.get);
 
   server.get('/job',[
@@ -81,21 +82,19 @@ function registerTaskExecution(customer,data){
 }
 
 var controller = {
-  get : function (req, res, next) {
-    var id = req.params.id ;
-    Job.findById(id,function(error,job){
-      if(job == null){
-        res.send(404,json.error('job not found'));
-      } else {
-        job.publish(function(error,published){
-          res.send(200,{ job : published });
-        });
-      }
+  get: function(req,res,next) {
+    var job = req.job;
+    if(!job) return res.send(404,json.error('not found'));
+    job.publish(function(pub){
+      res.send(200,{'job':pub});
     });
   },
-  fetch : function (req, res, next) {
+  fetch: function(req,res,next) {
     debug.log('querying jobs');
+    if(!req.customer) return res.send(400,json.error('customer is required'));
     if(!req.host) return res.send(400,json.error('host is required'));
+    var host = req.host;
+    var customer = req.customer;
 
     var input = { host: req.host };
 
@@ -103,17 +102,17 @@ var controller = {
       JobService.processNextJob(input,function(error,job){
         var jobs = [];
         if( job != null ) {
-          // var msg = 'next job ready' ;
           jobs.push(job);
-        } else {
-          // var msg = 'no more jobs' ;
-          // var jobs = [] ;
         }
-
         res.send(200, { jobs : jobs });
       });
     } else {
-      res.send(400, json.error('invalid request'));
+      Job.find({
+        host_id:host.id,
+        customer_name:customer.name
+      }).exec(function(err,jobs){
+        res.send(200, { jobs : jobs });
+      });
     }
   },
   update : function (req, res, next) {
@@ -251,6 +250,5 @@ var controller = {
         }
       }
     });
-
   }
 };
