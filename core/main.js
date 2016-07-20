@@ -3,6 +3,8 @@
 var rootPath = require('app-root-path');
 require('app-root-path').setPath(rootPath + '/core');
 
+var ErrorHandler = require('./lib/errorHandler');
+
 var logger = require('./lib/logger')('eye:supervisor:main');
 logger.log('initializing supervisor');
 
@@ -24,7 +26,9 @@ process.on('exit', function(){ // always that the process ends, throws this even
 process.on('uncaughtException', function(error){
   logger.error('supervisor process on "uncaughtException"');
   logger.error(error);
-  //process.exit(0);
+
+  var handler = new ErrorHandler();
+  handler.sendExceptionAlert(error);
 });
 
 require("./environment").setenv(

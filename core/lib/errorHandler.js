@@ -1,14 +1,18 @@
-var ErrorHandler = module.exports = function(){
+var appRoot = require('app-root-path');
+var notification = require(appRoot + '/service/notification');
+var config = require('config');
+
+var ErrorHandler = function(){
   var errors = [];
 
-  function required(name){
+  this.required = function(name){
     var e = new Error(name + ' is required');
     e.statusCode = 400;
     errors.push( e );
 		return e;
   }
 
-  function invalid(name,value){
+  this.invalid = function(name,value){
     var e = new Error(name + ' is invalid');
     e.statusCode = 400;
     e.extras = value;
@@ -22,7 +26,7 @@ var ErrorHandler = module.exports = function(){
    * Array knows how turn it self into string
    *
    */
-  function toString(){
+  this.toString = function(){
     var e = [];
     for(var i=0; i<errors.length; i++){
       e.push({
@@ -34,14 +38,46 @@ var ErrorHandler = module.exports = function(){
     return e;
   }
 
-  function hasErrors(){
+  function errorLine(error){
+    var message = error.message;
+    var statusCode = error.statusCode;
+    var extras = error.extras;
+
+    var html = '<h2>Exception</h2>' ;
+    html += '<pre>' + error.stack + '</pre>' + "\n" ;
+    if(statusCode){
+      html += `<p>status code : ${statusCode}</p>`;
+    }
+    if(extras){
+      var str = JSON.stringify(extras);
+      html += `<p>extras : ${str}</p>`;
+    }
+    return html;
+  }
+
+  this.toHtml = function(){
+    var e = [];
+    for(var i=0; i<errors.length; i++){
+      e.push( errorLine( errors[i] ) );
+    }
+    return e.join('<br/>');
+  }
+
+  this.hasErrors = function(){
     return errors.length > 0;
   }
 
-  return {
-    required: required,
-    invalid: invalid,
-    toString: toString,
-    hasErrors: hasErrors
+  this.sendExceptionAlert = function(error){
+    errors.push( error );
+    notification.sendEmailNotification({
+      customer_name:'theeye',
+      subject:'Supervisor Exception',
+      to: config.support,
+      content: this.toHtml()
+    });
   }
+
+  return this;
 }
+
+module.exports = ErrorHandler;
