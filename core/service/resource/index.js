@@ -38,11 +38,6 @@ function getCustomerConfig (customer_id, done) {
   );
 }
 
-function registerResourceCRUDOperation(customer,data) {
-  var key = globalconfig.elasticsearch.keys.monitor.crud;
-  elastic.submit(customer,key,data);
-}
-
 function sendResourceFailureAlerts (resource,input)
 {
   logger.log('preparing to send email alerts');
@@ -123,6 +118,11 @@ function logStateChange (resource,input) {
 
   var key = globalconfig.elasticsearch.keys.resource.stats;
   elastic.submit(resource.customer_name,key,data);
+}
+
+function registerResourceCRUDOperation(customer,data) {
+  var key = globalconfig.elasticsearch.keys.monitor.crud;
+  elastic.submit(customer,key,data);
 }
 
 function handleFailureState (resource,input,config)
@@ -364,7 +364,7 @@ Service.create = function (input, next) {
           monitor.customer_name,{
             'name':monitor.name,
             'type':resource.type,
-            'customer':monitor.customer_name,
+            'customer_name':monitor.customer_name,
             'user_id':input.user.id,
             'user_email':input.user.email,
             'operation':'create'
@@ -405,7 +405,7 @@ Service.update = function(input,next) {
           monitor.customer_name,{
             'name':monitor.name,
             'type':resource.type,
-            'customer':monitor.customer_name,
+            'customer_name':monitor.customer_name,
             'user_id':input.user.id,
             'user_email':input.user.email,
             'operation':'update'
@@ -592,7 +592,7 @@ Service.remove = function (input, done) {
         resource.customer_name,{
           'name':resource.name,
           'type':resource.type,
-          'customer':resource.customer_name,
+          'customer_name':resource.customer_name,
           'user_id':input.user.id,
           'user_email':input.user.email,
           'operation':'delete'

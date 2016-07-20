@@ -134,7 +134,7 @@ var controller = {
         registerCRUDOperation(req.customer.name,{
           'template':group.hostname_regex,
           'name': template.name,
-          'customer':req.customer.name,
+          'customer_name':req.customer.name,
           'user_id':req.user.id,
           'user_email':req.user.email,
           'operation':'create'
@@ -170,7 +170,7 @@ var controller = {
       registerCRUDOperation(req.customer.name,{
         'template':group.hostname_regex,
         'name':template.name,
-        'customer':req.customer.name,
+        'customer_name':req.customer.name,
         'user_id':req.user.id,
         'user_email':req.user.email,
         'operation':'update'
@@ -200,7 +200,7 @@ var controller = {
           registerCRUDOperation(req.customer.name,{
             'template':group.hostname_regex,
             'name':template.name,
-            'customer':req.customer.name,
+            'customer_name':req.customer.name,
             'user_id':req.user.id,
             'user_email':req.user.email,
             'operation':'delete'

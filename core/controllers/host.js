@@ -113,7 +113,7 @@ function registerHostname (input, doneFn) {
         host.last_update = new Date();
         host.save();
         var data = {
-          'customer': customer.name,
+          'customer_name': customer.name,
           'hostname': host.hostname,
           'version': host.agent_version
         };

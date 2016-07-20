@@ -49,7 +49,7 @@ exports.remove = function(input, doneFn){
 
     registerGroupCRUDOperation(group.customer_name,{
       'name':group.hostname_regex,
-      'customer':group.customer_name,
+      'customer_name':group.customer_name,
       'user_id':input.user.id,
       'user_email':input.user.email,
       'operation':'delete'
@@ -103,7 +103,7 @@ exports.create = function(input, done){
 
     registerGroupCRUDOperation(group.customer_name,{
       'name':group.hostname_regex,
-      'customer':group.customer_name,
+      'customer_name':group.customer_name,
       'user_id':input.user.id,
       'user_email':input.user.email,
       'operation':'create'

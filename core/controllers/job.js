@@ -174,7 +174,7 @@ var controller = {
             notify: true
           },function(job) {
 						registerTaskExecution(customer.name,{
-							'customer': customer.name,
+							'customer_name': customer.name,
               'user_id': user.id,
               'user_email': user.email,
               'task_id':task.id,

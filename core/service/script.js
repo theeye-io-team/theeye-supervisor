@@ -110,7 +110,7 @@ var Service = {
 
       registerScriptCRUDOperation(customer_name,{
         'name':script.name,
-        'customer':customer_name,
+        'customer_name':customer_name,
         'user_id':input.user.id,
         'user_email':input.user.email,
         'operation':'create'
@@ -147,7 +147,7 @@ var Service = {
           if(error) return next(error);
           registerScriptCRUDOperation(input.customer.name,{
             'name':script.name,
-            'customer':input.customer.name,
+            'customer_name':input.customer.name,
             'user_id':input.user.id,
             'user_email':input.user.email,
             'operation':'update'
@@ -172,7 +172,7 @@ var Service = {
 
         registerScriptCRUDOperation(input.customer.name,{
           'name':script.name,
-          'customer':input.customer.name,
+          'customer_name':input.customer.name,
           'user_id':input.user.id,
           'user_email':input.user.email,
           'operation':'delete'

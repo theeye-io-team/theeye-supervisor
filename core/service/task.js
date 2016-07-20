@@ -26,7 +26,7 @@ var TaskService = {
         registerTaskCRUDOperation(
           options.customer.name,{
             'name':options.task.name,
-            'customer':options.customer.name,
+            'customer_name':options.customer.name,
             'user_id':options.user.id,
             'user_email':options.user.email,
             'operation':'delete'
@@ -48,7 +48,7 @@ var TaskService = {
           registerTaskCRUDOperation(
             options.customer.name,{
               'name':task.name,
-              'customer':options.customer.name,
+              'customer_name':options.customer.name,
               'user_id':options.user.id,
               'user_email':options.user.email,
               'operation':'update'
@@ -107,7 +107,7 @@ var TaskService = {
 
         registerTaskCRUDOperation(input.customer.name,{
           'name':task.name,
-          'customer':input.customer.name,
+          'customer_name':input.customer.name,
           'user_id':input.user.id,
           'user_email':input.user.email,
           'operation':'create'
@@ -134,7 +134,7 @@ var TaskService = {
 
               registerTaskCRUDOperation(input.customer.name,{
                 'name':task.name,
-                'customer':input.customer.name,
+                'customer_name':input.customer.name,
                 'user_id':input.user.id,
                 'user_email':input.user.email,
                 'operation':'create'
