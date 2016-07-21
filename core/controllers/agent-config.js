@@ -7,30 +7,16 @@ var paramsResolver = require('../router/param-resolver');
 var ResourceMonitorService = require("../service/resource/monitor");
 
 module.exports = function(server, passport) {
-	server.get('/agent/:hostname/config',[
+  server.get('/:customer/agent/:hostname/config',[
     passport.authenticate('bearer', {session:false}),
     paramsResolver.customerNameToEntity({}),
     paramsResolver.hostnameToHost({})
   ],controller.fetch);
-
-  return {
-    routes: [
-      {
-        route: '/agent/:hostname/config',
-        method: 'get',
-        middleware: [ 
-          paramsResolver.customerNameToEntity({}),
-          paramsResolver.hostnameToHost({})
-        ],
-        action: controller.fetch
-      }
-    ]
-  };
 }
 
 /**
  *
- * @route /agent/:hostname/config
+ * @route /:customer/agent/:hostname/config
  * agent-config controller
  *
  */
@@ -39,16 +25,22 @@ var controller = {
    *
    * @author Facundo
    * @method get
-   * @path /agent/:hostname/config
+   * @path /:customer/agent/:hostname/config
    *
    */
-  fetch : function (req, res, next) {
+  fetch: function (req, res, next) {
     var user = req.user;
     var host = req.host;
+    var customer = req.customer;
+
+    if(!host) return res.send(400,'hostname required');
+    if(!customer) return res.send(400,'customer required');
+    if(!user) return res.send(400,'authentication required');
 
     ResourceMonitorService.findBy({
       'enable': true,
-      'host_id': host._id
+      'host_id': host._id,
+      'customer_id': customer._id
     }, function(error, monitors){
       if(error) res.send(500);
       generateAgentConfig(monitors, function(config){

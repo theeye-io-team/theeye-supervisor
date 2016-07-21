@@ -142,18 +142,20 @@ HostService.register = function(input,next) {
   logger.log('registering new host "%s"', hostname);
 
   var data = {
-    'hostname'      : hostname,
-    'agent_version' : info.agent_version || 'not_informed',
-    'ip'            : info.ip || 'not_informed',
-    'os_name'       : info.os_name || 'not_informed',
-    'os_version'    : info.os_version || 'not_informed',
-    'state'         : info.state || 'not_informed'
+    'hostname': hostname,
+    'agent_version': info.agent_version || 'not_informed',
+    'ip': info.ip || 'not_informed',
+    'os_name': info.os_name || 'not_informed',
+    'os_version': info.os_version || 'not_informed',
+    'state': info.state || 'not_informed'
   };
 
   Host.create(
     data, 
     customer, 
     function(error, host){
+      if(error) throw new Error('host registration error. ' + error.message);
+
       logger.log('host registered. creating host resource');
 
       var data = {

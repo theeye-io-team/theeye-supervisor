@@ -8,12 +8,13 @@ var ResourceManager = require("../service/resource");
 
 
 module.exports = function(server, passport){
-	server.put('/agent/:hostname',[
+	server.put('/:customer/agent/:hostname',[
     passport.authenticate('bearer', {session:false}),
     paramsResolver.customerNameToEntity({}),
     paramsResolver.hostnameToHost({})
   ],controller.update);
 
+  /**
   return {
     routes: [
       {
@@ -27,6 +28,7 @@ module.exports = function(server, passport){
       }
     ]
   };
+  */
 }
 
 var controller = {

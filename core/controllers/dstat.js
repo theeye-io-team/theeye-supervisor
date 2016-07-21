@@ -8,12 +8,13 @@ var config = require('config');
 var elastic = require('../lib/elastic');
 
 module.exports = function(server, passport) {
-  server.post('/dstat/:hostname',[
+  server.post('/:customer/dstat/:hostname',[
     passport.authenticate('bearer', {session:false}),
     paramsResolver.customerNameToEntity({}),
     paramsResolver.hostnameToHost({})
   ],controller.create);
 
+/**
   return {
     routes: [
       {
@@ -27,6 +28,7 @@ module.exports = function(server, passport) {
       }
     ]
   }
+  */
 }
 
 var controller = {

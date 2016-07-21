@@ -13,27 +13,29 @@ module.exports = function(server, passport) {
   //bring the scheduler from server
   scheduler = server.scheduler;
 
-  server.get('/job/:job',[
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.idToEntity({param:'job'})
-  ],controller.get);
-
-  server.get('/job',[
+  server.get('/:customer/job',[
     passport.authenticate('bearer', {session:false}),
     paramsResolver.customerNameToEntity({}),
     paramsResolver.hostnameToHost({})
   ], controller.fetch);
 
-  server.put('/job/:id',[
-    passport.authenticate('bearer', {session:false})
+  server.get('/:customer/job/:job',[
+    passport.authenticate('bearer', {session:false}),
+    paramsResolver.customerNameToEntity({}),
+    paramsResolver.idToEntity({param:'job'})
+  ],controller.get);
+
+  server.put('/:customer/job/:id',[
+    passport.authenticate('bearer', {session:false}),
+    paramsResolver.customerNameToEntity({})
   ],controller.update);
 
-  server.post('/job',[
+  server.post('/:customer/job',[
     passport.authenticate('bearer', {session:false}),
     paramsResolver.customerNameToEntity({})
   ],controller.create);
 
-  server.post('/job/schedule',[
+  server.post('/:customer/job/schedule',[
     passport.authenticate('bearer', {session:false}),
     paramsResolver.customerNameToEntity({})
   ],controller.schedule);
