@@ -1,8 +1,10 @@
+var config = require('config');
 var AWS = require('aws-sdk'); 
-var SNS = new AWS.SNS();
+var SNS = new AWS.SNS(
+  new AWS.Config( config.aws )
+);
 
 var request = require('request');
-var config = require('config');
 var mailer = require('../lib/mailer');
 
 var debug = require('../lib/logger')('eye:supervisor:service:notification');

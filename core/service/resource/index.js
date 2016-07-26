@@ -129,7 +129,8 @@ function handleFailureState (resource,input,config)
 {
   var customer_name = resource.customer_name;
   var failure_threshold = config.fails_count_alert;
-  var newState = input.state;
+   
+  var newState = input.state = 'failure';
 
   logger.log('resource "%s" check fails.', resource.name);
 

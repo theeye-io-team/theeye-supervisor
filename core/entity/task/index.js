@@ -56,9 +56,9 @@ TaskSchema.statics.FromTemplate = function(
   logger.log('creating task from template %j', template);
 
   var instance = new this(template);
-  instance.resource_id = options.resource ? options.resource._id : null;
-  instance.host_id = options.host ? options.host._id : null;
-  instance.template = template._id || template.id;
+  instance.resource_id = options.resource?options.resource._id:null;
+  instance.host_id = options.host?options.host._id:null;
+  instance.template = template._id||template.id;
   instance.id = null;
   instance.user_id = null;
   instance._id = null;

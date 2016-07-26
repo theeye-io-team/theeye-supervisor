@@ -16,7 +16,7 @@ function setenv(env, next) {
     debug('seting up aws config');
     debug(config.get('aws'));
     var AWS = require('aws-sdk'); 
-    AWS.config.update( config.get("aws") );
+    AWS.config.update( config.get('aws') );
   }
 
   /**

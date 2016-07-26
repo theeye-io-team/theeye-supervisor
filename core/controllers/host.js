@@ -28,6 +28,7 @@ module.exports = function(server, passport) {
     paramsResolver.customerNameToEntity({}),
   ],controller.create);
 
+  /**
   return {
     routes: [
       {
@@ -50,6 +51,7 @@ module.exports = function(server, passport) {
       },
     ]
   };
+  */
 }
 
 /**

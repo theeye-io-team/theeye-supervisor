@@ -13,17 +13,17 @@ module.exports = function(server, passport) {
   //bring the scheduler from server
   scheduler = server.scheduler;
 
-  server.get('/:customer/job',[
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.customerNameToEntity({}),
-    paramsResolver.hostnameToHost({})
-  ], controller.fetch);
-
   server.get('/:customer/job/:job',[
     passport.authenticate('bearer', {session:false}),
     paramsResolver.customerNameToEntity({}),
     paramsResolver.idToEntity({param:'job'})
   ],controller.get);
+
+  server.get('/:customer/job',[
+    passport.authenticate('bearer', {session:false}),
+    paramsResolver.customerNameToEntity({}),
+    paramsResolver.hostnameToHost({})
+  ], controller.fetch);
 
   server.put('/:customer/job/:id',[
     passport.authenticate('bearer', {session:false}),

@@ -83,10 +83,11 @@ function generateAgentConfig(monitors,next) {
               throw error;
               configDone(error);
             } else {
-              config.script_id = script._id;
-              config.script_md5 = script.md5;
-              config.script_arguments = monitor.config.script_arguments || [];
-              configDone(null, config);
+              script.publish(function(err,data){
+                data.arguments = monitor.config.script_arguments||[];
+                config.script = data;
+                configDone(null, config);
+              });
             }
           });
           break;

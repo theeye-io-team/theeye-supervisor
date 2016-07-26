@@ -145,12 +145,10 @@ function checkResourceMonitorStatus(resource,cconfig,done)
     'enable': true,
     'resource_id': resource._id 
   },function(error,monitor){
-
     if(error){
       logger.error('Resource monitor query error : %s', error.message);
       return done();
     }
-
     if(!monitor){
       logger.log('resource has not got any monitor');
       return done();
@@ -164,7 +162,7 @@ function checkResourceMonitorStatus(resource,cconfig,done)
       'loop_threshold': cconfig.resources_alert_failure_threshold_milliseconds,
       'last_update': last_update,
       'fails_count': resource.fails_count
-    }, function(error,valid,failedLoops){
+    },function(error,valid,failedLoops){
       if(!valid){
         resource.fails_count = (failedLoops - 1);
         var manager = new ResourceService(resource);

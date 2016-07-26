@@ -43,11 +43,12 @@ EntitySchema.methods.publish = function(next){
     };
 
     if(script) {
-      pub.script_id = script._id;
-      pub.script_md5 = script.md5;
-      pub.script_arguments = job.script_arguments;
-    }
-    next(pub);
+      script.publish((err,data) => {
+        data.arguments = job.script_arguments;
+        pub.script = data;
+        next(pub);
+      });
+    } else next(pub);
   });
 };
 

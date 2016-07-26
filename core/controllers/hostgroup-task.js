@@ -159,6 +159,8 @@ var controller = {
     if(!req.tasktemplate) return res.send(404,'task not found');
     if(!req.body.task) return res.send(400,'invalid request. body task required');
 
+    var group = req.group;
+
     var template = req.tasktemplate;
     var updates = req.body.task;
     template.update(updates,(err)=>{
