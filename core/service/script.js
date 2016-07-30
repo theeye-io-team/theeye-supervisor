@@ -167,7 +167,8 @@ var Service = {
     storageMedia.remove(script, function(error,data){
       logger.log('script removed from storage');
 
-      Script.remove(script,function(error){
+      var filter = {_id:script._id};
+      Script.remove(filter,function(error){
         if(error) return next(error);
 
         registerScriptCRUDOperation(input.customer.name,{

@@ -1,8 +1,5 @@
 var mongodb = require("../lib/mongodb");
 var Schema  = require('mongoose').Schema;
-//var md5 	= require('md5');
-//var bcrypt 	= require('bcrypt');
-//var moment 	= require('moment');
 
 var EntitySchema = Schema({
   token : { type : String, index : true },
@@ -43,15 +40,12 @@ EntitySchema.methods.publish = function(options, nextFn)
   if(options.publishSecret)
     pub.client_secret = user.client_secret ;
 
-  if(options.populateCustomers)
-  {
-    Entity.populate(user, {path:'customers.customer'}, function(error, user){
-
+  if(options.populateCustomers) {
+    Entity.populate(user, { path:'customers.customer' }, function(error, user){
       var pubCustomers = [];
       for(var c=0; c < user.customers.length; c++) {
         pubCustomers.push( user.customers[c].customer.publish() );
       }
-
       pub.customers = pubCustomers;
       nextFn(null, pub);
     });

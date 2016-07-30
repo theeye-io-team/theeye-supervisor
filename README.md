@@ -1,6 +1,6 @@
 # TheEye Supervisor REST API Documentation
 
-## Supervisor-API-Documentation
+## Supervisor API Documentation
 
 > _NOTE1  "**:hostname**" part of all routes should be replaced with the registered hostname_   
 > _NOTE2 dates are always YYYY-MM-DDTHH:mm:ss.sssZ ISO 8601. except otherwise specified.

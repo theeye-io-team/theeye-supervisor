@@ -19,7 +19,8 @@ function registerTaskCRUDOperation(customer,data) {
 
 var TaskService = {
   remove:function(options){
-    Task.remove(options.task,function(error){
+    var filter = {_id:options.task._id};
+    Task.remove(filter,function(error){
       if(error) {
         return options.fail(error);
       } else {
