@@ -69,7 +69,7 @@ function sendResourceFailureAlerts (resource,input)
   );
 }
 
-function sendResourceRestoredAlerts (resource,input,extras) 
+function sendResourceRestoredAlerts (resource,input) 
 {
   if( resource.type=='dstat' || resource.type=='psaux'){
     if( resource.state == RESOURCE_STOPPED ) return;

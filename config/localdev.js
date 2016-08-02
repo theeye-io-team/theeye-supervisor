@@ -8,6 +8,12 @@ module.exports = {
   "storage": {
     "driver": "local"
   },
+  "monitor": {
+    "fails_count_alert": 3,
+    "agents_check_disconnected_interval_milliseconds": 20000,
+    "resources_check_failure_interval_milliseconds": 10000,
+    "resources_alert_failure_threshold_milliseconds": 30000
+  },
   "system": {
     "base_url": "http://localhost:60080",
     "web_url": "http://localhost:6080",
