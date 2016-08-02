@@ -1,4 +1,5 @@
 "use strict";
+
 var util = require('util');
 var events = require('events');
 var logger = require('../../lib/logger')('eye:supervisor:service:resource');
@@ -22,6 +23,11 @@ var resourceNotification = require('./notification');
 var globalconfig = require('config');
 
 var filter = require('../../router/param-filter');
+
+const RESOURCE_NORMAL  = 'normal';
+const RESOURCE_FAILURE = 'failure';
+const RESOURCE_STOPPED = 'updates_stopped';
+const AGENT_STOPPED    = 'agent_stopped';
 
 var Service = module.exports = function Service(resource) {
   this.resource = resource;
@@ -63,13 +69,17 @@ function sendResourceFailureAlerts (resource,input)
   );
 }
 
-function sendResourceRestoredAlerts (resource,input) 
+function sendResourceRestoredAlerts (resource,input,extras) 
 {
+  if( resource.type=='dstat' || resource.type=='psaux'){
+    if( resource.state == RESOURCE_STOPPED ) return;
+  }
+
   logger.log('sending resource restored alerts ' + resource.customer_name);
 
   var severity = input.severity;
   var subject = `[${severity}] ${resource.hostname} recovered`;
-  var content = `${resource.description} recovered.`;
+  var content = `${resource.description} ${resource.type} monitor recovered.`;
 
   CustomerService.getAlertEmails(
     resource.customer_name, 
@@ -86,9 +96,14 @@ function sendResourceRestoredAlerts (resource,input)
 
 function sendResourceUpdatesStoppedAlerts (resource,input)
 {
+  if(
+    resource.type == 'dstat' ||
+    resource.type == 'psaux' 
+  ) return;
+
   var severity = input.severity;
   var subject = `[${severity}] ${resource.hostname} unreachable`;
-  var content = `${resource.name} stopped sending updates`;
+  var content = `${resource.name} ${resource.type} monitor stopped receiving updates`;
 
   CustomerService.getAlertEmails(
     resource.customer_name, 
@@ -201,7 +216,7 @@ function handleNormalState (resource,input,config)
   var resource = resource ;
   // failed at least once
   if(resource.fails_count != 0){
-    if(resource.fails_count >= failure_threshold) { // was in alert or has incorrect status
+    if(resource.fails_count >= failure_threshold){
       logger.log('resource "%s" restored', resource.name);
       input.severity = getEventSeverity(input);
       logStateChange(resource,input);
@@ -273,17 +288,17 @@ Service.prototype.handleState = function(input,next) {
     (config) => {
       if(!config) throw new Error('config not found');
       switch(input.state) {
-        case 'normal':
+        case RESOURCE_NORMAL :
           input.last_update = Date.now();
           handleNormalState(resource,input,config);
           break;
-        case 'agent_stopped':
-        case 'updates_stopped':
+        case AGENT_STOPPED :
+        case RESOURCE_STOPPED :
           handleUpdatesStoppedState(resource,input,config);
           break;
         default:
           logger.log('resource "%s" unknown state "%s" reported', this.resource.name, input.state);
-        case 'failure':
+        case RESOURCE_FAILURE :
           input.last_update = Date.now();
           handleFailureState(resource,input,config);
           break;

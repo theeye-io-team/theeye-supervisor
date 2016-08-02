@@ -164,7 +164,6 @@ function checkResourceMonitorStatus(resource,cconfig,done)
       'fails_count': resource.fails_count
     },function(error,valid,failedLoops){
       if(!valid){
-        resource.fails_count = (failedLoops - 1);
         var manager = new ResourceService(resource);
         manager.handleState({
           'state':'updates_stopped',
@@ -188,7 +187,6 @@ function checkHostResourceStatus(resource,done)
     'fails_count':resource.fails_count
   },function(error,valid,failedLoops){
     if(!valid){
-      resource.fails_count = (failedLoops - 1);
       var manager = new ResourceService(resource);
       manager.handleState({
         'state':'updates_stopped',

@@ -2,32 +2,30 @@
 var format = require('util').format;
 
 var resources = {
-  'dstat': {
-    type: 'dstat',
-    priority: 'LOW',
+  'dstat': { type: 'dstat', priority: 'LOW',
     events:[{
       name: 'host:stats:cpu:high',
       message: function(resource, event_data){
-        var body = 'cpu checks failed';
+        var body = `cpu check failed. ${event_data.cpu}% CPU in use`;
         return body;
       }
     },{
       name: 'host:stats:mem:high',
       message: function(resource, event_data){
-        var body = 'mem checks failed';
+        var body = `mem check failed. ${event_data.mem}% MEM in use`;
         return body;
       }
     },{
       name: 'host:stats:cache:high',
       message: function(resource, event_data){
-        var body = 'cache checks failed';
+        var body = `cache check failed. ${event_data.cache}% CACHE in use`;
         return body;
       }
     },{
       name: 'host:stats:disk:high',
       message: function(resource, event_data){
         var disks = event_data.disk;
-        var body = 'disk checks failed';
+        var body = `disks check failed.`;
         return body;
       }
     }]
