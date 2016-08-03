@@ -1,34 +1,33 @@
+"use strict";
+
 var json = require(process.env.BASE_PATH + "/lib/jsonresponse");
 var Job = require(process.env.BASE_PATH + "/entity/job").Entity;
 var JobService = require(process.env.BASE_PATH + "/service/job");
 var Task = require(process.env.BASE_PATH + "/entity/task").Entity;
 var debug = require('../lib/logger')('eye:supervisor:controller:job');
-var notificationService = require('../service/notification');
 var paramsResolver = require('../router/param-resolver');
-var scheduler;
+var Scheduler = require('../lib/scheduler');
 var elastic = require('../lib/elastic');
 var globalconfig = require('config');
 
 module.exports = function(server, passport) {
-  //bring the scheduler from server
-  scheduler = server.scheduler;
-
   server.get('/:customer/job/:job',[
     passport.authenticate('bearer', {session:false}),
     paramsResolver.customerNameToEntity({}),
     paramsResolver.idToEntity({param:'job'})
   ],controller.get);
 
+  server.put('/:customer/job/:job',[
+    passport.authenticate('bearer', {session:false}),
+    paramsResolver.customerNameToEntity({}),
+    paramsResolver.idToEntity({param:'job'})
+  ],controller.update);
+
   server.get('/:customer/job',[
     passport.authenticate('bearer', {session:false}),
     paramsResolver.customerNameToEntity({}),
     paramsResolver.hostnameToHost({})
   ], controller.fetch);
-
-  server.put('/:customer/job/:id',[
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.customerNameToEntity({})
-  ],controller.update);
 
   server.post('/:customer/job',[
     passport.authenticate('bearer', {session:false}),
@@ -39,43 +38,6 @@ module.exports = function(server, passport) {
     passport.authenticate('bearer', {session:false}),
     paramsResolver.customerNameToEntity({})
   ],controller.schedule);
-
-  /*
-  return {
-    routes: [
-      {
-        route: '/job',
-        method: 'get',
-        middleware: [
-          paramsResolver.customerNameToEntity({}),
-          paramsResolver.hostnameToHost({})
-        ],
-        action: controller.fetch
-      }, {
-        route: '/job',
-        method: 'post',
-        middleware: [
-          paramsResolver.customerNameToEntity({}),
-        ],
-        action: controller.create
-      }, {
-        route: '/job/:job',
-        method: 'get',
-        middleware: [
-          paramsResolver.idToEntity({param:'job'})
-        ],
-        action: controller.get
-      }, {
-        route: '/job/:job',
-        method: 'put',
-        middleware: [
-          paramsResolver.idToEntity({param:'job'})
-        ],
-        action: controller.update
-      },
-    ]
-  };
-  */
 };
 
 function registerTaskExecution(customer,data){
@@ -84,14 +46,12 @@ function registerTaskExecution(customer,data){
 }
 
 var controller = {
-  get: function(req,res,next) {
+  get(req,res,next) {
     var job = req.job;
     if(!job) return res.send(404,json.error('not found'));
-    job.publish(function(pub){
-      res.send(200,{'job':pub});
-    });
+    job.publish( pub => res.send(200,{job:pub}) );
   },
-  fetch: function(req,res,next) {
+  fetch(req,res,next) {
     debug.log('querying jobs');
     if(!req.customer) return res.send(400,json.error('customer is required'));
     if(!req.host) return res.send(400,json.error('host is required'));
@@ -101,7 +61,7 @@ var controller = {
     var input = { host: req.host };
 
     if( req.params.process_next ) {
-      JobService.processNextJob(input,function(error,job){
+      JobService.getNextPendingJob(input,function(error,job){
         var jobs = [];
         if( job != null ) {
           jobs.push(job);
@@ -117,39 +77,17 @@ var controller = {
       });
     }
   },
-  update : function (req, res, next) {
-    debug.log('Handling job updates');
-
-    var id = req.params.id;
+  update(req, res, next) {
+    var job = req.job;
     var input = req.params.result ;
+    if(!job) return res.send(404, json.error('not found'));
+    if(!input) return res.send(400, json.error('result data is required'));
 
-    Job.findById(id, function(error, job)
-    {
-      if( job != null )
-      {
-        if(job.name == 'agent:config:update') {
-          job.state = 'agent-updated';
-        } else {
-          job.state = 'job-completed';
-        }
-        job.result = input;
-        job.save();
-        // notify job result to clients
-        if( job.notify ) {
-          job.publish(function(data) {
-            notificationService.sendSNSNotification(data,{
-              topic : "jobs",
-              subject : "job_update"
-            });
-          });
-        }
-
-        res.send(200);
-      }
-      else return res.send(404, json.error("not found"));
+    JobService.updateResult(job,input,error=>{
+      res.send(200,job);
     });
   },
-  create : function(req,res,next) {
+  create(req,res,next) {
     debug.log('new task received');
     // console.log(req.body);
     // return res.send(200, json.success('ok', req.body));
@@ -166,33 +104,33 @@ var controller = {
         debug.error('unable to fetch tasks database');
         res.send(500, json.error('internal error'));
       } else {
-        if( task == null ) {
+        if(task == null) {
           res.send(400, json.error('invalid task provided'));
         } else {
-          Job.create({
+          var data = {
             task: task,
             user: user,
             customer: customer,
             notify: true
-          },function(job) {
+          };
+
+          Job.create(data,job => {
 						registerTaskExecution(customer.name,{
 							'customer_name': customer.name,
               'user_id': user.id,
               'user_email': user.email,
-              'task_id':task.id,
+              //'task_id':task.id,
               'task_name':task.name,
-              'script_id':task.script_id
+              //'script_id':task.script_id
 						});
-
-            job.publish(function(published){
-              res.send(200, {job : published});
-            });
+            debug.log('job created. ready to publish');
+            job.publish( pub => res.send(200,{job:pub}) );
           });
         }
       }
     });
   },
-  schedule: function(req, res, next){
+  schedule(req, res, next){
     // console.log('CONTROLLER SCHEDULE');
     // console.log(req.body);
     // console.log(req.params);
@@ -232,7 +170,7 @@ var controller = {
           jobData.host_id = task.host_id ;
           jobData.script_id = task.script_id ;
           jobData.script_arguments = task.script_arguments ;
-          jobData.user_id = user._id;
+          jobData.user = user;
           jobData.name = task.name ;
           jobData.customer_id = customer._id;
           jobData.customer_name = customer.name;
@@ -241,7 +179,7 @@ var controller = {
           jobData.scheduleData = schedule;
 
           // console.log(jobData);
-          scheduler.scheduleTask(jobData, function(err){
+          Scheduler.scheduleTask(jobData, function(err){
             if(err) {
               console.log(err);
               console.log(arguments);

@@ -15,15 +15,14 @@ var format = require('util').format;
 
 module.exports = Scheduler;
 
-function Scheduler(app) {
+function Scheduler() {
   if (!(this instanceof Scheduler)) {
-    return new Scheduler(app);
+    return new Scheduler();
   }
 
   debug('Initialize');
   // var messages = db.get("messages");
   var _this = this;
-  app.scheduler = this;
 
   var mongo = config.get('mongo');
   var mongoConnectionString;
@@ -43,7 +42,6 @@ function Scheduler(app) {
     );
   }
 
-  this.app = app;
   this.agenda = new Agenda({
     db: {
       address: mongoConnectionString
@@ -78,12 +76,6 @@ function Scheduler(app) {
     _this.agenda.on('fail', function(err, job) {
       debug('EVENT: fail');
       debug("Job %s failed with: %j", job.name, err.stack);
-    });
-
-    // Listen the event emitted when a new message is created on the DB.
-    app.on("new_task_schedule", function(taskData) {
-      debug('Called event new_task_schedule');
-      _this.scheduleTask(taskData);
     });
 
     // Unlock agenda events when process finishes
@@ -122,7 +114,6 @@ Scheduler.prototype = {
    */
   schedule: function(starting, jobName, data, interval, done) {
     // var _this = this;
-    // var app = this.app;
 
     var agendaJob = this.agenda.create(jobName, data);
 

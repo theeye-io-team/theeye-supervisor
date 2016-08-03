@@ -20,8 +20,6 @@ function start() {
     next();
   });
 
-  require('./lib/scheduler')(server);
-
   server.use(restify.acceptParser(server.acceptable));
   server.use(restify.gzipResponse());
   //server.use(restify.bodyParser());
