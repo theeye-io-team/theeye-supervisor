@@ -133,7 +133,7 @@ var Service = {
       function(error, data){
         var updates = {
           'description': input.description,
-          'keyname': data.keyname, // name.extension + [ts:########]
+          'keyname': data.keyname,
           'md5': data.md5,
           'name': file.name,
           'mimetype': file.mimetype,

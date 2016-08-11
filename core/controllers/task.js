@@ -69,10 +69,12 @@ var controller = {
 
      var scriptArgs = filter.toArray(req.body.script_arguments);
      input.script_arguments = scriptArgs;
+     input.script_runas = req.body.script_runas||'';
 
      if(!input.script) return res.send(400, json.error('script is required'));
      if(!input.customer) return res.send(400, json.error('customer is required'));
      if(!input.hosts) return res.send(400, json.error('hosts are required'));
+
      TaskService.createManyTasks(input, function(error, tasks) {
        res.send(200, { tasks: tasks });
        next();
@@ -169,6 +171,7 @@ var controller = {
 
     var scriptArgs = filter.toArray(req.body.script_arguments);
     if( scriptArgs.length > 0 ) input.script_arguments = scriptArgs;
+    input.script_runas = req.body.script_runas||'';
 
     debug.log('updating task %j', input);
     TaskService.update({

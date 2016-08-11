@@ -2,7 +2,7 @@ var debug = require('debug')('eye:supervisor:router:param-validator-middleware')
 
 module.exports = {
   'isMongoId': isMongoId,
-  'isRecomendedFilename':isRecomendedFilename,
+  'isValidFilename':isValidFilename,
   'isEmail': isEmail,
 }
 
@@ -29,7 +29,7 @@ var filenameRegexp = /^[0-9a-zA-Z-_.]*$/;
 /**
  *
  */
-function isRecomendedFilename(filename){
+function isValidFilename(filename){
   if(!filename) return true;
   return filenameRegexp.test(filename);
 }

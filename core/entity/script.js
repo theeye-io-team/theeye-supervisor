@@ -91,6 +91,24 @@ EntitySchema.statics.create = function(data,next)
   });
 };
 
+
+// Duplicate the ID field.
+EntitySchema.virtual('id').get(function(){
+  return this._id.toHexString();
+});
+const specs = {
+	getters: true,
+	virtuals: true,
+	transform: function (doc, ret, options) {
+		// remove the _id of every document before returning the result
+		ret.id = ret._id;
+		delete ret._id;
+		delete ret.__v;
+	}
+}
+EntitySchema.set('toJSON', specs);
+EntitySchema.set('toObject', specs);
+
 var Entity = mongodb.db.model('Script', EntitySchema);
 Entity.ensureIndexes();
 

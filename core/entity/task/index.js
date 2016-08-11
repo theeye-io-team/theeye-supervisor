@@ -7,12 +7,11 @@ var logger = require('../../lib/logger')('eye:entity:task');
 
 /** Entity properties **/
 var properties = {
-  'host_id' : { type: String, 'default': null },
-  'resource_id' : { type: String, 'default': null },
-  'creation_date' : { type: Date, 'default': Date.now() },
-  'last_update' : { type: Date, 'default': Date.now() },
-  'template' : { type: ObjectId, ref: 'TaskTemplate', 'default': null },
-  'public' : { type: Boolean, 'default': false }
+  host_id : { type: String, 'default': null },
+  resource_id : { type: String, 'default': null },
+  creation_date : { type: Date, 'default': Date.now() },
+  last_update : { type: Date, 'default': Date.now() },
+  template : { type: ObjectId, ref: 'TaskTemplate', 'default': null },
 };
 
 /**

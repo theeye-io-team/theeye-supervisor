@@ -130,6 +130,7 @@ var TaskService = {
         if( hostId.match(/^[a-fA-F0-9]{24}$/) ) {
           Host.findById(hostId, function(error, host){
             var props = _.extend({}, input, { host: host });
+
             Task.create(props, function(err,task) {
               debug('task created');
 
@@ -146,6 +147,7 @@ var TaskService = {
                 asyncCb(null, published);
               });
             });
+
           });
         } else {
           debug('host id %s invalid', hostId);

@@ -7,8 +7,6 @@ var Task = require(process.env.BASE_PATH + "/entity/task").Entity;
 var debug = require('../lib/logger')('eye:supervisor:controller:job');
 var paramsResolver = require('../router/param-resolver');
 var Scheduler = require('../lib/scheduler');
-var elastic = require('../lib/elastic');
-var globalconfig = require('config');
 
 module.exports = function(server, passport) {
   server.get('/:customer/job/:job',[
@@ -31,6 +29,7 @@ module.exports = function(server, passport) {
 
   server.post('/:customer/job',[
     passport.authenticate('bearer', {session:false}),
+    paramsResolver.idToEntity({param:'task'}),
     paramsResolver.customerNameToEntity({})
   ],controller.create);
 
@@ -40,16 +39,11 @@ module.exports = function(server, passport) {
   ],controller.schedule);
 };
 
-function registerTaskExecution(customer,data){
-  var key = globalconfig.elasticsearch.keys.task.execution;
-  elastic.submit(customer,key,data);
-}
-
 var controller = {
   get(req,res,next) {
     var job = req.job;
     if(!job) return res.send(404,json.error('not found'));
-    job.publish( pub => res.send(200,{job:pub}) );
+    res.send(200,{ job: job });
   },
   fetch(req,res,next) {
     debug.log('querying jobs');
@@ -63,9 +57,7 @@ var controller = {
     if( req.params.process_next ) {
       JobService.getNextPendingJob(input,function(error,job){
         var jobs = [];
-        if( job != null ) {
-          jobs.push(job);
-        }
+        if( job != null ) jobs.push(job);
         res.send(200, { jobs : jobs });
       });
     } else {
@@ -77,7 +69,7 @@ var controller = {
       });
     }
   },
-  update(req, res, next) {
+  update (req, res, next) {
     var job = req.job;
     var input = req.params.result ;
     if(!job) return res.send(404, json.error('not found'));
@@ -87,47 +79,26 @@ var controller = {
       res.send(200,job);
     });
   },
-  create(req,res,next) {
+  create (req,res,next) {
     debug.log('new task received');
     // console.log(req.body);
     // return res.send(200, json.success('ok', req.body));
 
-    var task_id = req.body.task_id || req.params.task_id ;
+    var task = req.task ;
     var user = req.user ;
     var customer = req.customer ;
 
+    if(!task) return res.send(400,json.error('task required'));
     if(!user) return res.send(400,json.error('user required'));
     if(!customer) return res.send(400,json.error('customer required'));
 
-    Task.findById(task_id,function(error,task){
-      if(error) {
-        debug.error('unable to fetch tasks database');
-        res.send(500, json.error('internal error'));
-      } else {
-        if(task == null) {
-          res.send(400, json.error('invalid task provided'));
-        } else {
-          var data = {
-            task: task,
-            user: user,
-            customer: customer,
-            notify: true
-          };
-
-          Job.create(data,job => {
-						registerTaskExecution(customer.name,{
-							'customer_name': customer.name,
-              'user_id': user.id,
-              'user_email': user.email,
-              //'task_id':task.id,
-              'task_name':task.name,
-              //'script_id':task.script_id
-						});
-            debug.log('job created. ready to publish');
-            job.publish( pub => res.send(200,{job:pub}) );
-          });
-        }
-      }
+    JobService.create({
+      task: task,
+      user: user,
+      customer: customer,
+      notify: true
+    },(error,job) => {
+      res.send(200,{job: job});
     });
   },
   schedule(req, res, next){

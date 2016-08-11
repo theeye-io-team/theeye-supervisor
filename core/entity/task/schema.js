@@ -2,7 +2,7 @@
 
 var debug = require('debug')('eye:supervisor:entity:task');
 var Schema = require('mongoose').Schema;
-var _ = require('lodash');
+var lodash = require('lodash');
 
 var Host = require('../host').Entity;
 var Resource = require('../resource').Entity;
@@ -11,17 +11,38 @@ var Script = require('../script').Entity;
 
 /** Entity properties **/
 var properties = exports.properties = {
-  'name' : { type: String },
-  'description' : { type: String },
-  'script_id' : { type: String },
-  'script_arguments' : { type: Array, 'default': [] },
-  'user_id' : { type: String, 'default': null },
-  'customer_id' : { type: String, 'default': null },
+  name : { type: String },
+  description : { type: String },
+  script_id : { type: String, ref: 'Script' },
+  script_arguments : { type: Array, 'default': [] },
+  script_runas : { type: String, 'default':'' },
+  user_id : { type: String, 'default': null },
+  customer_id : { type: String, 'default': null },
+  public : { type: Boolean, 'default': false }
 };
 
 /** Schema **/
 var EntitySchema = Schema(properties,{ discriminatorKey : '_type' });
 exports.EntitySchema = EntitySchema;
+
+
+// Duplicate the ID field.
+EntitySchema.virtual('id').get(function(){
+  return this._id.toHexString();
+});
+const specs = {
+	getters: true,
+	virtuals: true,
+	transform: function (doc, ret, options) {
+		// remove the _id of every document before returning the result
+		ret.id = ret._id;
+		delete ret._id;
+		delete ret.__v;
+	}
+}
+EntitySchema.set('toJSON', specs);
+EntitySchema.set('toObject', specs);
+
 
 /**
  *
@@ -31,18 +52,10 @@ EntitySchema.methods.publish = function(next)
 {
   var task = this;
 
-  function preparePublish(options)
-  {
+  function preparePublish(options) {
     options = options || {};
 
-    var data = {
-      'id': task._id,
-      'name': task.name,
-      'description': task.description,
-      'script_arguments': task.script_arguments,
-      'public': task.public,
-      'customer_id': task.customer_id,
-    };
+    var data = lodash.assign({},task.toObject());
 
     if(options.host){
       data.host_id = options.host.id;
@@ -68,7 +81,7 @@ EntitySchema.methods.publish = function(next)
     resource : null 
   };
 
-  var doneFn = _.after(3, function(){
+  var doneFn = lodash.after(3, function(){
     preparePublish(options);
   });
 
@@ -140,7 +153,7 @@ EntitySchema.statics.publishAll = function(entities, next){
   if(!entities || entities.length == 0) return next([]);
 
   var published = [];
-  var donePublish = _.after(entities.length, function(){
+  var donePublish = lodash.after(entities.length, function(){
     next(null, published);
   });
 

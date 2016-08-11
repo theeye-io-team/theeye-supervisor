@@ -17,40 +17,12 @@ var EntitySchema = Schema({
   state: { type: String },
   creation_date: { type: Date, default: Date.now },
   last_update: { type: Date, default: Date.now },
-  result: { type: Object, default: {} }
+  result: { type: Object, default: {} },
+  task: { type: Object },
+  script: { type: Object },
 });
 
 var debug = require('../lib/logger')('eye:supervisor:entity:job');
-
-EntitySchema.methods.publish = function(next){
-  var job = this;
-  Script.findById(job.script_id,function(error,script){
-    if(error) throw error;
-
-    var pub = {
-      id: job._id,
-      task_id: job.task_id,
-      host_id: job.host_id,
-      user_id: job.user_id,
-      customer_id: job.customer_id,
-      customer_name: job.customer_name,
-      name: job.name,
-      notify: job.notify,
-      state: job.state,
-      result: job.result,
-      creation_date: job.creation_date
-    };
-
-    if(script) {
-      script.publish((err,data) => {
-        data.arguments = job.script_arguments;
-        pub.script = data;
-        next(pub);
-      });
-    }
-    else next(pub);
-  });
-};
 
 /**
  * create a job from a dynamic task or macro generated from a script
@@ -74,30 +46,6 @@ EntitySchema.statics.createMacro = function(input,next){
   return job ;
 }
 
-/**
-* custom static constructor
-*/
-EntitySchema.statics.create = function(input,done){
-  var task = input.task;
-  done||(done=()=>{});
-  var job = new this();
-  job.user = input.user;
-  job.user_id = input.user._id;
-  job.task_id = task._id ;
-  job.host_id = task.host_id ;
-  job.script_id = task.script_id ;
-  job.script_arguments = task.script_arguments ;
-  job.name = task.name ;
-  job.customer_id = input.customer._id;
-  job.customer_name = input.customer.name;
-  job.state = 'new' ;
-  job.notify = true ;
-  job.save(error => { if (error) throw error });
-
-  done(job);
-  return job;
-}
-
 EntitySchema.statics.createAgentConfigUpdate = function(host_id,next) {
   var job = new this();
   job.host_id = host_id;
@@ -115,6 +63,23 @@ EntitySchema.statics.createAgentConfigUpdate = function(host_id,next) {
   if(next) next(job);
   return job ;
 }
+
+// Duplicate the ID field.
+EntitySchema.virtual('id').get(function(){
+  return this._id.toHexString();
+});
+const specs = {
+	getters: true,
+	virtuals: true,
+	transform: function (doc, ret, options) {
+		// remove the _id of every document before returning the result
+		ret.id = ret._id;
+		delete ret._id;
+		delete ret.__v;
+	}
+}
+EntitySchema.set('toJSON', specs);
+EntitySchema.set('toObject', specs);
 
 var Entity = mongodb.db.model('Job', EntitySchema);
 Entity.ensureIndexes();

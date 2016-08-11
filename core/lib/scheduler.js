@@ -9,7 +9,7 @@ var Task = require("../entity/task").Entity;
 var Script = require("../entity/script").Entity;
 var Customer = require("../entity/customer").Entity;
 var User = require("../entity/user").Entity;
-var Job = require("../entity/job").Entity;
+var JobService = require("../service/job");
 var format = require('util').format;
 
 
@@ -176,16 +176,12 @@ Scheduler.prototype = {
       //ok, let's do it...
       // console.log(data);
 
-      Job.create({
+      JobService.create({
         task: data.task,
         user: data.user,
         customer: data.customer,
         notify: true
-      },function(job) {
-        job.publish(function(published){
-          done();
-        });
-      });
+      },(error,job)=>{});
     });
   }
 };
