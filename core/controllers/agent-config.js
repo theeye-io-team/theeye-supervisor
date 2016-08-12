@@ -84,8 +84,9 @@ function generateAgentConfig(monitors,next) {
               configDone(error);
             } else {
               script.publish(function(err,data){
-                data.arguments = monitor.config.script_arguments||[];
                 config.script = data;
+                config.script.arguments = monitor.config.script_arguments||[];
+                config.script.runas = monitor.config.script_runas||'';
                 configDone(null, config);
               });
             }

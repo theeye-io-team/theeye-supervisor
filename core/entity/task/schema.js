@@ -5,7 +5,6 @@ var Schema = require('mongoose').Schema;
 var lodash = require('lodash');
 
 var Host = require('../host').Entity;
-var Resource = require('../resource').Entity;
 var Script = require('../script').Entity;
 
 
@@ -65,11 +64,6 @@ EntitySchema.methods.publish = function(next)
       data.script_id = options.script.id;
       data.script_name = options.script.description;
     }
-    if(options.resource){
-      data.resource_id = options.resource.id;
-      data.resource_name = options.resource.name;
-      data.resource_type = options.resource.type;
-    }
 
     debug('publish ready');
     next(data);
@@ -78,19 +72,13 @@ EntitySchema.methods.publish = function(next)
   var options = {
     host : null, 
     script : null, 
-    resource : null 
   };
 
-  var doneFn = lodash.after(3, function(){
+  var doneFn = lodash.after(2, function(){
     preparePublish(options);
   });
 
   debug('publishing');
-  if( ! task.resource_id ) doneFn();
-  else Resource.findById(task.resource_id, function(err,resource){
-    if( ! err || resource != null ) options.resource = resource;
-    doneFn();
-  });
 
   if( ! task.host_id ) doneFn();
   else Host.findById(task.host_id, function(err,host){

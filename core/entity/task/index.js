@@ -8,7 +8,6 @@ var logger = require('../../lib/logger')('eye:entity:task');
 /** Entity properties **/
 var properties = {
   host_id : { type: String, 'default': null },
-  resource_id : { type: String, 'default': null },
   creation_date : { type: Date, 'default': Date.now() },
   last_update : { type: Date, 'default': Date.now() },
   template : { type: ObjectId, ref: 'TaskTemplate', 'default': null },
@@ -55,7 +54,6 @@ TaskSchema.statics.FromTemplate = function(
   logger.log('creating task from template %j', template);
 
   var instance = new this(template);
-  instance.resource_id = options.resource?options.resource._id:null;
   instance.host_id = options.host?options.host._id:null;
   instance.template = template._id||template.id;
   instance.id = null;
@@ -76,7 +74,6 @@ TaskSchema.statics.FromTemplate = function(
 TaskSchema.statics.create = function(input,next)
 {
   var instance = new this();
-  instance.resource_id      = input.resource ? input.resource._id : null;
   instance.host_id          = input.host ? input.host._id : null ;
   instance.customer_id      = input.customer._id;
   instance.script_id        = input.script._id;

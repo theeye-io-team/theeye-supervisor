@@ -5,7 +5,6 @@ var json = require(process.env.BASE_PATH + "/lib/jsonresponse");
 var Task = require(process.env.BASE_PATH + '/entity/task').Entity;
 var TaskService = require(process.env.BASE_PATH + '/service/task');
 var Script = require(process.env.BASE_PATH + '/entity/script').Entity;
-var Resource = require(process.env.BASE_PATH + '/entity/resource').Entity;
 var Host = require(process.env.BASE_PATH + '/entity/host').Entity;
 var resolver = require('../router/param-resolver');
 var filter = require('../router/param-filter');
@@ -27,7 +26,6 @@ module.exports = function(server, passport){
     resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'task'}),
     resolver.idToEntity({param:'host'}),
-    resolver.idToEntity({param:'resource'}),
     resolver.idToEntity({param:'script'}),
   ],controller.patch);
 
@@ -161,13 +159,6 @@ var controller = {
     }
     if(req.body.description) input.description = req.body.description;
     if(req.body.name) input.name = req.body.name;
-    if(req.resource) {
-      input.resource_id = req.resource._id;
-    }
-    // if it is set to something that it is not a resource
-    else if(typeof req.body.resource != 'undefined') {
-      input.resource_id = 0;
-    }
 
     var scriptArgs = filter.toArray(req.body.script_arguments);
     if( scriptArgs.length > 0 ) input.script_arguments = scriptArgs;

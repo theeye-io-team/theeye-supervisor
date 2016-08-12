@@ -4,10 +4,10 @@ var Script = require('./script').Entity;
 var ObjectId = Schema.Types.ObjectId;
 
 var EntitySchema = Schema({
-  task_id: { type: String, ref:'Task' },
-  host_id: { type: String, ref:'Host' },
-  script_id: { type: String, ref:'Script' },
-  customer_id: { type:String, ref:'Customer' },
+  task_id: { type: String },
+  script_id: { type: String },
+  host_id: { type: String },
+  customer_id: { type:String },
   user_id: { type: String },
   user: { type: ObjectId, ref:'User' },
   script_arguments: { type: Array, default: [] },
@@ -46,19 +46,16 @@ EntitySchema.statics.createMacro = function(input,next){
   return job ;
 }
 
-EntitySchema.statics.createAgentConfigUpdate = function(host_id,next) {
+EntitySchema.statics.createAgentConfigUpdate = function(host_id,next)
+{
   var job = new this();
   job.host_id = host_id;
-  job.task_id = 'agent:config:update';
   job.name = 'agent:config:update';
-  job.user = 0;
-  job.user_id = 0;
-  job.state = 'new' ;
+  job.state = 'new';
   job.notify = false ;
-  job.script_id = undefined;
-  job.customer_id = undefined;
-  job.customer_name = undefined;
-  job.save();
+  job.save(error => {
+    if(error) debug.error(error);
+  });
 
   if(next) next(job);
   return job ;
