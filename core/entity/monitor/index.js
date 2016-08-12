@@ -146,22 +146,6 @@ MonitorSchema.methods.update = function(input,next) {
   });
 }
 
-MonitorSchema.methods.patch = function(input,next) {
-  next||(next=function(){});
-  //var updates = {};
-  //for(var propName in properties){
-  //  if(input.hasOwnProperty(propName) && input[propName]){
-  //    updates[propName] = input[propName];
-  //  }
-  //}
-  //if(Object.keys(updates).length>0){
-  //  this.update(updates, function(error,result){
-    this.update(input, function(error){
-      next(error);
-    });
-  //} else next();
-}
-
 var Entity = mongodb.model('ResourceMonitor', MonitorSchema);
 Entity.ensureIndexes();
 

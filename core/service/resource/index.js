@@ -414,7 +414,7 @@ Service.update = function(input,next) {
       if(!monitor) return next(new Error('resource monitor not found'), null);
 
       var previous_host = monitor.host_id;
-      monitor.patch(updates,function(error){
+      monitor.update(updates,function(error){
         if(error) return next(error);
 
         registerResourceCRUDOperation(
@@ -654,6 +654,7 @@ Service.setResourceMonitorData = function(input,done) {
       break;
     case 'script':
       data.script_id = input.script_id || errors.required('script_id');
+      data.script_runas = input.script_runas||'';
       var scriptArgs = filter.toArray(input.script_arguments);
       data.script_arguments = scriptArgs;
       break;

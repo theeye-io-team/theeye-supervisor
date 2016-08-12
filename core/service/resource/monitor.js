@@ -71,7 +71,8 @@ function setMonitorForScript(input) {
 		'looptime': input.looptime,
 		'config': {
 			'script_id': input.script_id,
-			'script_arguments': input.script_arguments
+			'script_arguments': input.script_arguments,
+			'script_runas': input.script_runas
 		}
 	};
 }

@@ -103,6 +103,7 @@ EntitySchema.methods.setUpdates = function(input, next) {
     case 'script':
       if(input.script_id) config.script_id = input.script_id;
       if(input.script_arguments) config.script_arguments = input.script_arguments;
+      if(input.script_runas) config.script_runas = input.script_runas;
       break;
     case 'dstat':
       if(
