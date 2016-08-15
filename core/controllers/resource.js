@@ -87,52 +87,6 @@ var controller = {
   /**
    *
    *
-   */
-  create : function(req,res,next) {
-    var customer = req.customer;
-    var hosts = req.body.hosts;
-
-    if( !customer ) return res.send(400, json.error('customer is required'));
-    if( !hosts ) return res.send(400, json.error('hosts are required'));
-    if( !Array.isArray(hosts) ) hosts = [ hosts ];
-
-    var params = ResourceManager.setResourceMonitorData(req.body);
-
-    if( params.errors && params.errors.length > 0 ){
-      return res.send(400, params.errors);
-    }
-
-    var input = params.data;
-    input.user = req.user;
-    input.customer = customer;
-    input.customer_id = customer.id;
-    input.customer_name = customer.name;
-
-    ResourceManager.createResourceOnHosts(hosts,input,function(error,results){
-      if(error) {
-        if(error.errors) {
-          var messages=[];
-          _.each(error.errors,function(e,i){
-            messages.push({field:e.path, type:e.kind});
-          });
-
-          return res.send(400, json.error(
-            error.message, 
-            {errors:messages} 
-          ));
-        } else {
-          debug(error);
-          return res.send(500, json.error('internal error', error));
-        }
-      } else {
-        debug('resources created');
-        return res.send(201, results);
-      }
-    });
-  },
-  /**
-   *
-   *
    *
    */
   remove : function(req,res,next) {
@@ -187,20 +141,62 @@ var controller = {
    *
    *
    */
+  create : function(req,res,next) {
+    var customer = req.customer;
+    var hosts = req.body.hosts;
+
+    if( !customer ) return res.send(400, json.error('customer is required'));
+    if( !hosts ) return res.send(400, json.error('hosts are required'));
+    if( !Array.isArray(hosts) ) hosts = [ hosts ];
+
+    var params = ResourceManager.setResourceMonitorData(req.body);
+    if( params.errors && params.errors.hasErrors() ){
+      return res.send(400, params.errors);
+    }
+
+    var input = params.data;
+    input.user = req.user;
+    input.customer = customer;
+    input.customer_id = customer.id;
+    input.customer_name = customer.name;
+
+    ResourceManager.createResourceOnHosts(hosts,input,function(error,results){
+      if(error) {
+        if(error.errors) {
+          var messages=[];
+          _.each(error.errors,function(e,i){
+            messages.push({field:e.path, type:e.kind});
+          });
+
+          return res.send(400, json.error(
+            error.message, 
+            {errors:messages} 
+          ));
+        } else {
+          debug(error);
+          return res.send(500, json.error('internal error', error));
+        }
+      } else {
+        debug('resources created');
+        return res.send(201, results);
+      }
+    });
+  },
+  /**
+   *
+   *
+   */
   patch : function(req,res,next)
   {
     var resource = req.resource;
+    if(!resource) return res.send(404,json.error('resource not found'));
 
-    if(!resource) {
-      res.send(404,json.error('resource not found'));
-      return next();
+    var params = ResourceManager.setResourceMonitorData(req.body);
+    if( params.errors && params.errors.hasErrors() ){
+      return res.send(400, params.errors);
     }
 
-    var input = _.extend({}, req.body);
-    if(req.body.script_arguments){
-      var args = req.body.script_arguments;
-      input.script_arguments = filter.toArray(args);
-    }
+    var input = params.data;
     if(req.host) input.host = req.host;
 
     ResourceManager.update({
@@ -213,126 +209,3 @@ var controller = {
     });
   }
 };
-
-
-
-
-
-/**
- *
- * resource input validation
- *
- *
- */
-function ResourceValidation (type, input){
-  var data={};
-
-  switch(type) {
-    case 'scraper': data = new Scraper(input); break;
-    case 'process': data = new Process(input); break;
-    case 'script': data = new Script(input); break;
-    case 'dstat': data = new Dstat(input); break;
-    default: 
-      var message = 'invalid resource type "' + type + '" supplied';
-      data.error = [{ 'description' : message }];
-      break;
-  }
-  return data;
-}
-
-
-function Dstat(input){
-  var data = { monitor_type:'dstat' };
-
-  if(typeof input.cpu != 'undefined') data.cpu = input.cpu;
-  if(typeof input.mem != 'undefined') data.mem = input.mem;
-  if(typeof input.cache != 'undefined') data.cache = input.cache;
-  if(typeof input.disk != 'undefined') data.disk = input.disk;
-
-  return data;
-}
-
-//filter and validate the post/put process resource params
-function Process(input)
-{
-  var errors = [];
-  var data = {
-    description: input.description,
-    looptime: input.looptime,
-    pattern: input.pattern,
-    monitor_type: input.monitor_type,
-    name: input.name,
-    enable: input.enable || 'true',
-  };
-
-  // validate
-  if(!data.description) errors.push({param : 'description', description: 'Description is required'});
-  if(!data.looptime) errors.push({param : 'looptime', description: 'Check interval is required'}); 
-  if(!data.pattern) errors.push({param : 'pattern', description: 'Search pattern is required'});
-
-  // filter
-  //if(!data.psargs)       data.psargs = 'aux';
-  if(!data.monitor_type) data.monitor_type = 'process';
-  if(!data.name) data.name = data.description.toLowerCase().replace(/\s+/g, '_');
-
-  if(errors.length > 0) return {error : errors};
-  else return data;
-}
-
-//filter and validate the post/put scraper resource params
-function Scraper(input)
-{
-  var errors = [];
-  var data = {
-    external_host_id: input.external_host_id,
-    description: input.description,
-    looptime: input.looptime,
-    url: input.url,
-    pattern: input.pattern,
-    timeout: input.timeout,
-    monitor_type: input.monitor_type,
-    name: input.name,
-    enable: input.enable || 'true',
-  };
-
-  // validate
-  if(!data.description) errors.push({param : 'description', description: 'Description is required'});
-  if(!data.looptime) errors.push({param : 'looptime', description: 'Check interval is required'}); 
-  if(!data.url) errors.push({param : 'url', description: 'URL is required'});
-  if(!data.pattern) errors.push({param : 'pattern', description: 'Pattern is required'});
-  if(!data.timeout) errors.push({param : 'timeout', description: 'Timeout is required'});
-
-  // filter
-  if(!data.monitor_type) data.monitor_type = 'scraper';    
-  if(!data.name) data.name = data.description.toLowerCase().replace(/\s+/g, '_');
-
-  if(errors.length > 0) return {error : errors};
-  else return data;
-}
-
-//filter and validate the post/put script resource params
-function Script(input)
-{
-  var errors = [];
-  var data = {
-    description: input.description,
-    looptime: input.looptime,
-    script_id: input.script_id,
-    script_arguments: input.script_arguments,
-    monitor_type: input.monitor_type,
-    enable: input.enable || 'false',
-    name: input.name
-  };
-
-  //validate
-  if(!data.description) errors.push({param: 'description', description: 'Description is required'});
-  if(!data.looptime) errors.push({param: 'looptime', description: 'Check interval is required'}); 
-  if(!data.script_id) errors.push({param: 'script_id', description: 'Script required'});
-
-  //filter
-  if(!data.monitor_type) data.monitor_type = 'script';    
-  if(!data.name) data.name = data.description.toLowerCase().replace(/\s+/g, '_');
-
-  if(errors.length > 0) return {error : errors};
-  else return data;
-}

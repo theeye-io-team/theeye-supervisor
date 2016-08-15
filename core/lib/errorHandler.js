@@ -5,9 +5,11 @@ var config = require('config');
 var ErrorHandler = function(){
   var errors = [];
 
-  this.required = function(name){
+  this.required = function(name,value){
     var e = new Error(name + ' is required');
     e.statusCode = 400;
+    e.field = name;
+    e.value = value;
     errors.push( e );
 		return e;
   }
@@ -15,7 +17,8 @@ var ErrorHandler = function(){
   this.invalid = function(name,value){
     var e = new Error(name + ' is invalid');
     e.statusCode = 400;
-    e.extras = value;
+    e.field = name;
+    e.value = value;
     errors.push( e );
 		return e;
   }
@@ -31,26 +34,24 @@ var ErrorHandler = function(){
     for(var i=0; i<errors.length; i++){
       e.push({
         'message': errors[i].message, 
-        'statusCode': errors[i].statusCode, 
-        'extras': errors[i].extras 
+        'status': errors[i].statusCode, 
+        'value': errors[i].value, 
+        'field': errors[i].field, 
       });
     }
     return e;
   }
 
+  this.toJSON = this.toString;
+
   function errorLine(error){
     var message = error.message;
     var statusCode = error.statusCode;
-    var extras = error.extras;
 
     var html = '<h2>Exception</h2>' ;
     html += '<pre>' + error.stack + '</pre>' + "\n" ;
     if(statusCode){
       html += `<p>status code : ${statusCode}</p>`;
-    }
-    if(extras){
-      var str = JSON.stringify(extras);
-      html += `<p>extras : ${str}</p>`;
     }
     return html;
   }

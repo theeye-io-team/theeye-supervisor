@@ -337,34 +337,34 @@ exports.resourceMonitorsToTemplates = function (
     /* create templates from input */
     else {
       logger.log('setting up template data');
-      ResourceService.setResourceMonitorData(value, function(valErr, data) {
-        if(valErr || !data) {
-          let msg = 'invalid resource monitor data';
-          logger.error(msg);
-          let e = new Error(msg);
-          e.statusCode = 400;
-          e.info = valErr;
-          return done(e);
-        }
 
-        data.customer_id = customer_id;
-        data.customer_name = customer_name;
-        data.user_id = user_id;
-        logger.log('creating template from scratch');
-        ResourceTemplateService
-        .createResourceMonitorsTemplates(
-          data, function(err, tpls){
-            if(err) {
-              logger.error(err);
-              return done(err);
-            }
+      var data = ResourceService.setResourceMonitorData(value);
+      if(!data || data.error) {
+        let msg = 'invalid resource monitor data';
+        logger.error(msg);
+        let e = new Error(msg);
+        e.statusCode = 400;
+        e.info = data.error;
+        return done(e);
+      }
 
-            logger.log('templates from scratch created');
-            templates.push( tpls );
-            templatized();
+      data.customer_id = customer_id;
+      data.customer_name = customer_name;
+      data.user_id = user_id;
+      logger.log('creating template from scratch');
+      ResourceTemplateService
+      .createResourceMonitorsTemplates(
+        data, function(err, tpls){
+          if(err) {
+            logger.error(err);
+            return done(err);
           }
-        );
-      });
+
+          logger.log('templates from scratch created');
+          templates.push( tpls );
+          templatized();
+        }
+      );
     }
   }
 }

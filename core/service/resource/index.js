@@ -23,6 +23,7 @@ var resourceNotification = require('./notification');
 var globalconfig = require('config');
 
 var filter = require('../../router/param-filter');
+var validator = require('validator');
 
 const RESOURCE_NORMAL  = 'normal';
 const RESOURCE_FAILURE = 'failure';
@@ -625,16 +626,17 @@ Service.remove = function (input, done) {
  * @return {object ErrorHandler}
  *
  */
-Service.setResourceMonitorData = function(input,done) {
-  var errors = new ErrorHandler;
+Service.setResourceMonitorData = function(input) {
+  var errors = new ErrorHandler();
 
-  if( !input.monitor_type ) errors.required('monitor_type');
-  if( !input.looptime ) errors.required('looptime');
+  if( ! input.monitor_type ) errors.required('monitor_type',input.monitor_type);
+  if( ! input.looptime || ! parseInt(input.looptime) ) errors.required('looptime',input.looptime);
+  if( ! input.description ) errors.required('description',input.description);
 
   var data = {
     'monitor_type': input.monitor_type,
     'name': input.name || input.description,
-    'description': input.description || input.name,
+    'description': input.description,
     'type': input.type || input.monitor_type,
     'looptime': input.looptime
   };
@@ -643,7 +645,11 @@ Service.setResourceMonitorData = function(input,done) {
   switch(input.monitor_type)
   {
     case 'scraper':
-      data.url = input.url || errors.required('url');
+      var url = input.url;
+      if( ! url ) errors.required('url',url);
+      else if( !validator.isURL(url,{require_protocol:true}) ) errors.invalid('url',url);
+      else data.url = url;
+
       data.external_host_id = input.external_host_id;
       data.pattern = input.pattern || errors.required('pattern');
       data.timeout = input.timeout || 10000;
@@ -653,31 +659,27 @@ Service.setResourceMonitorData = function(input,done) {
       data.psargs = input.psargs || 'aux';
       break;
     case 'script':
-      data.script_id = input.script_id || errors.required('script_id');
-      data.script_runas = input.script_runas||'';
       var scriptArgs = filter.toArray(input.script_arguments);
       data.script_arguments = scriptArgs;
+      data.script_id = input.script_id || errors.required('script_id',input.script_id);
+      data.script_runas = input.script_runas || '';
       break;
     case 'dstat':
-      data.cpu = input.cpu;
-      data.mem = input.mem;
-      data.cache = input.cache;
-      data.disk = input.disk;
+      data.cpu = input.cpu || 60;
+      data.mem = input.mem || 60;
+      data.cache = input.cache || 60;
+      data.disk = input.disk || 60;
       break;
     case 'psaux': break;
     default:
-      throw new Error('monitor type not handle');
+      errors.invalid('monitor_type', input.monitor_type);
       break;
   }
 
-  var error = errors.hasErrors() ? errors : null;
-
-  done ? done(error, data) : null;
-
   return {
     data: data,
-    error: error
-  }
+    errors: errors.hasErrors() ? errors : null
+  };
 }
 
 Service.disableResourcesByCustomer = function(customer, doneFn){
