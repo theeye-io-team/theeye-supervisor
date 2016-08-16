@@ -36,6 +36,7 @@ const specs = {
 		// remove the _id of every document before returning the result
 		ret.id = ret._id;
 		delete ret._id;
+		delete ret._type;
 		delete ret.__v;
 	}
 }
@@ -62,7 +63,7 @@ EntitySchema.methods.publish = function(next)
     }
     if(options.script){
       data.script_id = options.script.id;
-      data.script_name = options.script.description;
+      data.script_name = options.script.name;
     }
 
     debug('publish ready');
