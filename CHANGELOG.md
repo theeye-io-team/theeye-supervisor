@@ -1,5 +1,33 @@
 # CHANGELOG
 
+### 0.3.0 - 2016-08-19
+
+> task and script data is registered in the job entity   
+
+> moved script creation from controller to service     
+
+> publish all the task data. use mongoose schema transform to remove _id and _v fields       
+
+> remove job publish and static creation methods. the job populate all the data      
+
+> remove unused baseschema         
+
+> added task and script monitors 'run as'     
+
+> remove custom script runner endpoint. only run scripts via tasks      
+
+> task no longer has a resource property. make corrections on the schema     
+
+> job payload changed. agent was adapted to the new response     
+
+> remove monitor patch method (patch was doing nothing). only full update allowed       
+
+> improve monitors and resources initialization. remove duplicated code     
+
+> add validations in the monitors controller , when create       
+
+> task controller create method improved      
+
 ### 0.2.0 - 2016-08-03
 
 > improve scheduler initialization and code usage.
