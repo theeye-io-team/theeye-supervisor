@@ -18,7 +18,8 @@ module.exports = {
     } else {
       var isString = Object.prototype.toString.call(value) === '[object String]';
       var isNumber = Object.prototype.toString.call(value) === '[object Number]';
-      if (isString || isNumber) return [value];else return []; // invalid or undefined
+      if (isString || isNumber) return [value];
+      else return []; // invalid or undefined
     }
   },
 

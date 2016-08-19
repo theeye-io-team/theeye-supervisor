@@ -8,6 +8,7 @@ var md5 = require('md5');
 var fs = require('fs');
 var config = require('config');
 var elastic = require('../lib/elastic');
+var path = require('path');
 
 var storageMedia = (function getStorageMedia(){
   return config.get("storage").driver == 'local' ?
@@ -94,7 +95,7 @@ var Service = {
     var options = {
       customer    : input.customer,
       user        : input.user,
-      description : input.description || input.script.name,
+      description : input.description||input.script.name,
       filename    : input.script.name,
       keyname     : input.script.keyname,
       mimetype    : input.script.mimetype,

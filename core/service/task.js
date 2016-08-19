@@ -157,13 +157,8 @@ var TaskService = {
       }
     }
 
-    var hosts;
-    if( ! (input.hosts instanceof Array) ) {
-      hosts = [ input.hosts ] ;
-    } else hosts = input.hosts ;
-
+    var hosts = input.hosts ;
     debug('creating task on hosts %j', hosts);
-
     for( var i in hosts ) {
       var hostId = hosts[i];
       var createFn = asyncTaskCreation(hostId);

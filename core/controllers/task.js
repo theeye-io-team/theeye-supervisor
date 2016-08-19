@@ -47,37 +47,33 @@ var controller = {
   /**
    *
    * @method POST
-   * @author Facundo
+   * @author Facugon
    *
    */
-   create (req, res, next) {
-     var input = {
-       'customer': req.customer,
-       'user': req.user,
-       'script': req.script,
-       'description': req.body.description,
-       'name': req.body.name,
-       'hosts': req.body.hosts,
-       'public': false
-     };
+  create (req, res, next) {
+    var input = {
+      'customer': req.customer,
+      'user': req.user,
+      'script': req.script,
+      'name': req.body.name,
+      'description': req.body.description,
+      'hosts': filter.toArray(req.body.hosts),
+      'public': filter.toBoolean(req.body.public),
+      'script_runas': req.body.script_runas||'',
+      'script_arguments': filter.toArray(req.body.script_arguments)
+    };
 
-     if(req.body.public){
-       input.public = filter.toBoolean(req.body.public);
-     }
+    if(!input.script) return res.send(400, json.error('script is required'));
+    if(!input.customer) return res.send(400, json.error('customer is required'));
+    if(input.hosts.length===0) return res.send(400, json.error('a host is required'));
+    if(!input.name) return res.send(400, json.error('name is required'));
 
-     var scriptArgs = filter.toArray(req.body.script_arguments);
-     input.script_arguments = scriptArgs;
-     input.script_runas = req.body.script_runas||'';
-
-     if(!input.script) return res.send(400, json.error('script is required'));
-     if(!input.customer) return res.send(400, json.error('customer is required'));
-     if(!input.hosts) return res.send(400, json.error('hosts are required'));
-
-     TaskService.createManyTasks(input, function(error, tasks) {
-       res.send(200, { tasks: tasks });
-       next();
-     });
-   },
+    TaskService.createManyTasks(input, function(error, tasks) {
+      if(error) return res.send(500, error);
+      res.send(200, { tasks: tasks });
+      next();
+    });
+  },
   /**
    * @author Facundo
    * @method GET

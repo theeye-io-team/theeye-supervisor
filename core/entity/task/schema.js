@@ -63,7 +63,7 @@ EntitySchema.methods.publish = function(next)
     }
     if(options.script){
       data.script_id = options.script.id;
-      data.script_name = options.script.name;
+      data.script_name = options.script.filename;
     }
 
     debug('publish ready');
