@@ -59,7 +59,7 @@ var controller = {
       'description': req.body.description,
       'hosts': filter.toArray(req.body.hosts),
       'public': filter.toBoolean(req.body.public),
-      'script_runas': req.body.script_runas||'',
+      'script_runas': req.body.script_runas,
       'script_arguments': filter.toArray(req.body.script_arguments)
     };
 
@@ -150,15 +150,13 @@ var controller = {
 
     if(req.host) input.host_id = req.host._id;
     if(req.script) input.script_id = req.script._id;
-    if(req.body.public){
-      input.public = filter.toBoolean(req.body.public);
-    }
+    if(req.body.public) input.public = filter.toBoolean(req.body.public);
     if(req.body.description) input.description = req.body.description;
     if(req.body.name) input.name = req.body.name;
+    if(req.body.script_runas) input.script_runas = req.body.script_runas;
 
     var scriptArgs = filter.toArray(req.body.script_arguments);
     if( scriptArgs.length > 0 ) input.script_arguments = scriptArgs;
-    input.script_runas = req.body.script_runas||'';
 
     debug.log('updating task %j', input);
     TaskService.update({

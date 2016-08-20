@@ -127,6 +127,7 @@ EntitySchema.statics.create = function(input,next)
   instance.customer_id      = input.customer._id;
   instance.script_id        = input.script._id;
   instance.script_arguments = input.script_arguments;
+  instance.script_runas     = input.script_runas;
   instance.name             = input.name || null;
   instance.description      = input.description || null;
   instance.save(function(error,entity){
