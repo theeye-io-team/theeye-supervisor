@@ -36,14 +36,17 @@ require("./environment").setenv(
   function() {
     logger.log('initializing server');
     var server = require("./server");
-    server.start();
 
-    if( ! process.env.NO_MONITORING ) {
-      logger.log('initializing monitor');
-      var monitor = require('./service/monitor');
-      monitor.start();
-    }
+    require('./lib/scheduler').initialize( scheduler => {
+      server.start();
 
-    logger.log('supervisor is running');
+      if( ! process.env.NO_MONITORING ) {
+        logger.log('initializing monitor');
+        var monitor = require('./service/monitor');
+        monitor.start();
+      }
+
+      logger.log('supervisor is running');
+    });
   }
 );

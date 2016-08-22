@@ -6,7 +6,7 @@ var JobService = require(process.env.BASE_PATH + "/service/job");
 var Task = require(process.env.BASE_PATH + "/entity/task").Entity;
 var debug = require('../lib/logger')('eye:supervisor:controller:job');
 var paramsResolver = require('../router/param-resolver');
-var Scheduler = require('../lib/scheduler');
+var scheduler = require('../lib/scheduler').scheduler;
 
 module.exports = function(server, passport) {
   server.get('/:customer/job/:job',[
@@ -149,8 +149,7 @@ var controller = {
           jobData.notify = true ;
           jobData.scheduleData = schedule;
 
-          // console.log(jobData);
-          Scheduler.scheduleTask(jobData, function(err){
+          scheduler.scheduler.scheduleTask(jobData, function(err){
             if(err) {
               console.log(err);
               console.log(arguments);

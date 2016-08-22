@@ -3,7 +3,6 @@ var config = require("config");
 var debug = require("debug")("eye:supervisor:lib:scheduler");
 // var db = require('./mongodb').db;
 var async = require('async');
-
 var Host = require("../entity/host").Entity;
 var Task = require("../entity/task").Entity;
 var Script = require("../entity/script").Entity;
@@ -12,14 +11,7 @@ var User = require("../entity/user").Entity;
 var JobService = require("../service/job");
 var format = require('util').format;
 
-
-module.exports = Scheduler;
-
 function Scheduler() {
-  if (!(this instanceof Scheduler)) {
-    return new Scheduler();
-  }
-
   debug('Initialize');
   // var messages = db.get("messages");
   var _this = this;
@@ -89,12 +81,8 @@ function Scheduler() {
     process.on('SIGINT', graceful);
   });
 
-
   this.agenda.start();
-
 }
-
-
 
 Scheduler.prototype = {
   /**
@@ -185,3 +173,14 @@ Scheduler.prototype = {
     });
   }
 };
+
+
+module.exports = {
+  scheduler: null ,
+  initialize: function(callback) {
+    this.scheduler = new Scheduler();
+    callback(this.scheduler);
+  }
+}
+
+
