@@ -174,13 +174,18 @@ Scheduler.prototype = {
   }
 };
 
-
-module.exports = {
-  scheduler: null ,
-  initialize: function(callback) {
-    this.scheduler = new Scheduler();
-    callback(this.scheduler);
-  }
+function Module () {
+  this.scheduler;
 }
 
+Module.prototype.initialize = function(callback) {
+  this.scheduler = new Scheduler();
+  callback(this.scheduler);
+}
 
+Module.prototype.getInstance = function() {
+  return this.scheduler;
+}
+
+var instance = new Module();
+module.exports = instance;
