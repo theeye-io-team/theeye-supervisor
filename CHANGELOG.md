@@ -1,5 +1,15 @@
 # CHANGELOG
 
+### 0.3.1 - 2016-08-22
+
+> task and monitors with tags     
+
+> remove publish and create/parse methods. not necessary anymore and add complexity     
+
+> task script run as when create task     
+
+> update task execution email    
+
 ### 0.3.0 - 2016-08-19
 
 > task and script data is registered in the job entity   
