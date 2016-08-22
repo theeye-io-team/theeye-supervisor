@@ -22,18 +22,30 @@ var properties = exports.properties = {
 var EntitySchema = Schema(properties,{ discriminatorKey : '_type' });
 exports.EntitySchema = EntitySchema;
 
+
+// Duplicate the ID field.
+EntitySchema.virtual('id').get(function(){
+  return this._id.toHexString();
+});
+const specs = {
+	getters: true,
+	virtuals: true,
+	transform: function (doc, ret, options) {
+		// remove the _id of every document before returning the result
+		ret.id = ret._id;
+		delete ret._id;
+		delete ret._type;
+		delete ret.__v;
+	}
+}
+EntitySchema.set('toJSON', specs);
+EntitySchema.set('toObject', specs);
+
+
 EntitySchema.statics.DEFAULT_TYPE = DEFAULT_TYPE ;
 
-EntitySchema.methods.publish = function(next)
-{
-  var resource = this;
-  var data = {
-    'id': resource._id,
-    'name': resource.name,
-    'description': resource.description,
-    'type': resource.type,
-    'alerts': resource.alerts
-  };
-  next ? next(null,data) : null;
+EntitySchema.methods.publish = function(next) {
+  var data = this.toObject();
+  if(next) next(null,data);
   return data;
 }

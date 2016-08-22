@@ -17,7 +17,8 @@ var EntitySchema = Schema({
   last_update: { type: Date, 'default': Date.now },
   description: { type: String, 'default' : '' },
   md5: { type: String, 'default': null },
-  public : { type: Boolean, 'default': false }
+  public : { type: Boolean, 'default': false },
+  tags: { type:Array, 'default':[] }
 });
 
 EntitySchema.methods.getFullPath = function() {
@@ -43,7 +44,8 @@ EntitySchema.methods.publish = function(next) {
     extension : script.extension,
     size : script.size,
     md5 : script.md5,
-    public: script.public
+    public: script.public,
+    tags: script.tags
   };
 
   return next(null, data);

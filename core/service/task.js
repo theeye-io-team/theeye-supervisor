@@ -1,5 +1,6 @@
 var debug = require('debug')('eye:supervisor:service:task');
 
+var Tag = require('../entity/tag').Entity;
 var Host = require('../entity/host').Entity;
 var Task = require('../entity/task').Entity;
 var Script = require('../entity/script').Entity;
@@ -131,6 +132,8 @@ var TaskService = {
           Host.findById(hostId, function(error, host){
             var props = _.extend({}, input, { host: host });
 
+            Tag.create(input.tags,input.customer);
+
             Task.create(props, function(err,task) {
               debug('task created');
 
@@ -165,11 +168,9 @@ var TaskService = {
       create.push( createFn );
     }
 
-    var endFn = function(error, results){
+    async.parallel(create, function endFn (error, results){
       doneFn(null, results);
-    }
-
-    async.parallel(create, endFn);
+    });
   }
 };
 

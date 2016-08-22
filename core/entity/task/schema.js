@@ -9,7 +9,7 @@ var Script = require('../script').Entity;
 
 
 /** Entity properties **/
-var properties = exports.properties = {
+const properties = exports.properties = {
   name : { type: String },
   description : { type: String },
   script_id : { type: String, ref: 'Script' },
@@ -17,7 +17,8 @@ var properties = exports.properties = {
   script_runas : { type: String, 'default':'' },
   user_id : { type: String, 'default': null },
   customer_id : { type: String, 'default': null },
-  public : { type: Boolean, 'default': false }
+  public : { type: Boolean, 'default': false },
+  tags: { type: Array, 'default':[] }
 };
 
 /** Schema **/
@@ -55,7 +56,7 @@ EntitySchema.methods.publish = function(next)
   function preparePublish(options) {
     options = options || {};
 
-    var data = lodash.assign({},task.toObject());
+    var data = task.toObject();
 
     if(options.host){
       data.host_id = options.host.id;
@@ -102,8 +103,9 @@ EntitySchema.methods.publish = function(next)
 EntitySchema.methods.update = function(input,next)
 {
   var task = this ;
+  var data = task.toObject();
   for(var key in input){
-    if( task.toObject().hasOwnProperty(key) ) {
+    if( data.hasOwnProperty(key) ) {
       task[key] = input[key];
     }
   };
@@ -130,6 +132,7 @@ EntitySchema.statics.create = function(input,next)
   instance.script_runas     = input.script_runas;
   instance.name             = input.name || null;
   instance.description      = input.description || null;
+  instance.tags             = input.tags;
   instance.save(function(error,entity){
     next(null, entity);
   });

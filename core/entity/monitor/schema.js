@@ -3,35 +3,46 @@ var debug = require('debug')('eye:entity:monitor');
 var _ = require('lodash');
 
 /** Entity properties **/
-var properties = exports.properties = {
-  'customer_name': { type: String, required: true },
-  'looptime' : { type: Number },
-  'config' : { type: Object, 'default': {} },
-  'name' : { type: String },
-  'type' : { type: String },
+const properties = exports.properties = {
+  customer_name: { type: String, required: true },
+  looptime: { type: Number },
+  config: { type: Object, 'default': {} },
+  name: { type: String },
+  type: { type: String },
+  tags: { type: Array, 'default': [] }
 };
 
 /** Schema **/
 var EntitySchema = Schema(properties,{ discriminatorKey : '_type' });
 exports.EntitySchema = EntitySchema;
 
+// Duplicate the ID field.
+EntitySchema.virtual('id').get(function(){
+  return this._id.toHexString();
+});
+
+const specs = {
+	getters: true,
+	virtuals: true,
+	transform: function (doc, ret, options) {
+		// remove the _id of every document before returning the result
+		ret.id = ret._id;
+		delete ret._id;
+		delete ret._type;
+		delete ret.__v;
+	}
+}
+EntitySchema.set('toJSON', specs);
+EntitySchema.set('toObject', specs);
+
+
 /**
  *
  */
-EntitySchema.methods.publish = function(options, next)
-{
-  next = next || function(){};
-  var monitor = this;
-  var data = {
-    'id': monitor._id,
-    'name': monitor.name,
-    'looptime': monitor.looptime,
-    'type': monitor.type,
-    'enable': monitor.enable,
-    'config': monitor.config
-  };
-
-  next(null, data);
+EntitySchema.methods.publish = function(options, next) {
+  var data = this.toObject();
+  if(next) next(null, data);
+  return data;
 }
 
 
@@ -63,12 +74,10 @@ EntitySchema.methods.setUpdates = function(input, next) {
   debug('updating resource monitor type "%s"', type);
 
   /** set common properties **/
-  if(input.looptime)
-    monitor.looptime = input.looptime ;
-  if(typeof input.enable != 'undefined')
-    monitor.enable = input.enable;
-  if(input.host_id)
-    monitor.host_id = input.host_id;
+  if(input.looptime) monitor.looptime = input.looptime ;
+  if(typeof input.enable == 'boolean') monitor.enable = input.enable;
+  if(input.host_id) monitor.host_id = input.host_id;
+  if(input.tags) monitor.tags = input.tags;
   if(input.name || input.description){
     monitor.name = input.name || input.description;
     monitor.description = input.description || input.name;

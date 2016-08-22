@@ -1,4 +1,6 @@
-You need to add in main.cf:
+Install postfix.
+
+You need to add in `/etc/postfix/main.cf` :
 
 ```
 transport_maps = hash:/etc/postfix/transport

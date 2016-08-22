@@ -7,6 +7,7 @@ var EntitySchema = Schema({
   task_id: { type: String },
   script_id: { type: String },
   host_id: { type: String },
+  host: { type: ObjectId, ref:'Host' },
   customer_id: { type:String },
   user_id: { type: String },
   user: { type: ObjectId, ref:'User' },

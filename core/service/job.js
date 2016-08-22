@@ -44,6 +44,7 @@ var service = {
       job.user = input.user;
       job.user_id = input.user._id;
       job.host_id = task.host_id ;
+      job.host = task.host_id ;
       job.name = task.name;
       job.customer_id = input.customer._id;
       job.customer_name = input.customer.name;
@@ -111,7 +112,7 @@ var service = {
         }
       );
 
-      job.populate('user',error => {
+      job.populate([{path:'user'},{path:'host'}],error => {
         var stdout, stderr, code, result = job.result;
 
         if(result){
@@ -120,15 +121,17 @@ var service = {
           code = result.code||'no code';
         }
 
-        NotificationService.sendEmailNotification({
-          customer_name: job.customer_name,
-          subject: `[Sript] ${job.name}`,
-          content:
-          `<h3>Execution completed.</h3><ul>
+        var html = 
+          `<h3>Task ${job.task.name} execution completed on ${job.host.hostname}.</h3><ul>
           <li>stdout : ${stdout}</li>
           <li>stderr : ${stderr}</li>
           <li>code : ${code}</li>
-          </ul>`,
+          </ul>`;
+
+        NotificationService.sendEmailNotification({
+          customer_name: job.customer_name,
+          subject: `[Task] ${job.task.name} executed on ${job.host.hostname}`,
+          content: html,
           to: job.user.email
         });
       });

@@ -10,18 +10,19 @@ var resolver = require('../router/param-resolver');
 var filter = require('../router/param-filter');
 
 module.exports = function(server, passport){
-  server.get('/task/:task',[
+  server.get('/:customer/task/:task',[
+    resolver.customerNameToEntity({}),
     passport.authenticate('bearer', {session:false}),
     resolver.idToEntity({param:'task'}),
   ],controller.get);
 
-  server.get('/task',[
+  server.get('/:customer/task',[
     passport.authenticate('bearer', {session:false}),
     resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'host'})
   ], controller.fetch);
 
-  server.patch('/task/:task',[
+  server.patch('/:customer/task/:task',[
     passport.authenticate('bearer', {session:false}),
     resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'task'}),
@@ -29,13 +30,13 @@ module.exports = function(server, passport){
     resolver.idToEntity({param:'script'}),
   ],controller.patch);
 
-  server.post('/task',[
+  server.post('/:customer/task',[
     passport.authenticate('bearer', {session:false}),
     resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'script'})
   ],controller.create);
 
-  server.del('/task/:task',[
+  server.del('/:customer/task/:task',[
     passport.authenticate('bearer', {session:false}),
     resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'task'}),
@@ -57,9 +58,10 @@ var controller = {
       'script': req.script,
       'name': req.body.name,
       'description': req.body.description,
-      'hosts': filter.toArray(req.body.hosts),
-      'public': filter.toBoolean(req.body.public),
       'script_runas': req.body.script_runas,
+      'public': filter.toBoolean(req.body.public),
+      'hosts': filter.toArray(req.body.hosts),
+      'tags': filter.toArray(req.body.tags),
       'script_arguments': filter.toArray(req.body.script_arguments)
     };
 
@@ -154,6 +156,7 @@ var controller = {
     if(req.body.description) input.description = req.body.description;
     if(req.body.name) input.name = req.body.name;
     if(req.body.script_runas) input.script_runas = req.body.script_runas;
+    if(req.body.tags) input.tags = filter.toArray(req.body.tags);
 
     var scriptArgs = filter.toArray(req.body.script_arguments);
     if( scriptArgs.length > 0 ) input.script_arguments = scriptArgs;

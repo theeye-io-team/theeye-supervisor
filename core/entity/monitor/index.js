@@ -31,33 +31,18 @@ var MonitorSchema = BaseSchema.EntitySchema.extend(properties);
  */
 MonitorSchema.methods.publish = function(options, next)
 {
-  var publishFn = BaseSchema.EntitySchema.methods.publish;
-  var monitor = this;
   options = options || {};
-
-  publishFn.call(this, options, function(error, data){
-
-    data.host_id = monitor.host_id;
-    data.resource_id = monitor.resource_id;
-
-    if( options.populate ){
-      Entity.populate(
-        monitor,
-        { path:'resource' },
-        function(error, monitor){
-          if(!monitor.resource) {
-            logger.log('monitor.resource is null. could not populate');
-            next(error);
-          } else {
-            monitor.resource.publish(function(error, r){
-              data.resource = r;
-              next(error,data);
-            });
-          }
-        });
-    }
-    else next(null, data);
-  });
+  if( options.populate ){
+    Entity.populate(this, { path:'resource' }, function(error, monitor){
+      if(!monitor.resource) {
+        logger.error('monitor.resource is null. could not populate');
+        next(error);
+      } else {
+        next(error,monitor.toObject());
+      }
+    });
+  }
+  else next(null, this.toObject());
 }
 
 /**

@@ -434,7 +434,8 @@ Service.update = function(input,next) {
           Job.createAgentConfigUpdate(previous_host);
         }
 
-        next();
+        var result = { resource: resource, monitor: monitor };
+        next(null,result);
       });
     });
   });
@@ -473,13 +474,20 @@ Service.fetchBy = function(input,next) {
       }
 
       var pub = [];
-      resources.forEach(function(resource,idx){
+      var fetched = _.after(resources.length,() => next(null,pub));
+
+      resources.forEach(resource => {
         resource.publish(function(error, data){
-          pub.push(data); 
+          MonitorEntity.findOne(
+            { resource_id: resource._id },
+            (error,monitor) => {
+              data.monitor = monitor;
+              pub.push(data); 
+              fetched();
+            }
+          );
         });
       });
-
-      next(null,pub);
     });
 }
 
@@ -638,6 +646,7 @@ Service.setResourceMonitorData = function(input) {
     'name': input.name || input.description,
     'description': input.description,
     'type': input.type || input.monitor_type,
+    'tags': filter.toArray(input.tags),
     'looptime': input.looptime
   };
 
@@ -730,7 +739,6 @@ Service.createResourceOnHosts = function(hosts,input,doneFn)
       logger.log('host resource and monitor created');
       monitors.push( data );
     }
-
     completed();
   }
 

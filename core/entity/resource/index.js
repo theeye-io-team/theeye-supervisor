@@ -35,27 +35,6 @@ var ResourceSchema = BaseSchema.EntitySchema.extend(properties);
 
 ResourceSchema.statics.INITIAL_STATE = INITIAL_STATE ;
 
-ResourceSchema.methods.publish = function(next){
-  var resource = this;
-  var publishFn = BaseSchema.EntitySchema.methods.publish;
-  next||(next=function(){});
-
-  debug('publishing resource');
-  publishFn.call(this, function(error, data){
-    if(error){
-      debug(error);
-      return next(error);
-    }
-    data.state = resource.state;
-    data.enable = resource.enable;
-    data.host_id = resource.host_id;
-    data.hostname = resource.hostname;
-    data.last_update = resource.last_update;
-    next(null,data);
-  });
-}
-
-
 /**
  *
  *

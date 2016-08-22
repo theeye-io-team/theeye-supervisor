@@ -57,7 +57,6 @@ module.exports = function(server, passport) {
 var controller = {
   get : function(req,res,next) {
     var resource = req.resource;
-
     if(!resource) return res.send(404,json.error('not found'));
 
     resource.publish(function(err, pub){
@@ -65,15 +64,9 @@ var controller = {
     });
   },
   fetch : function(req,res,next) {
-    if(!req.customer){
-      return res.send(400,json.error('customer is required'));
-    }
+    if(!req.customer) return res.send(400,json.error('customer is required'));
 
-    var input = {
-      customer: req.customer,
-      host: req.host
-    };
-
+    var input = { customer: req.customer, host: req.host };
     if(req.query.type) input.type = req.query.type;
 
     ResourceManager.fetchBy(input,function(error,resources){
@@ -145,9 +138,9 @@ var controller = {
     var customer = req.customer;
     var hosts = req.body.hosts;
 
-    if( !customer ) return res.send(400, json.error('customer is required'));
-    if( !hosts ) return res.send(400, json.error('hosts are required'));
-    if( !Array.isArray(hosts) ) hosts = [ hosts ];
+    if( ! customer ) return res.send(400, json.error('customer is required'));
+    if( ! hosts ) return res.send(400, json.error('hosts are required'));
+    if( ! Array.isArray(hosts) ) hosts = [ hosts ];
 
     var params = ResourceManager.setResourceMonitorData(req.body);
     if( params.errors && params.errors.hasErrors() ){
@@ -205,7 +198,7 @@ var controller = {
       user:req.user
     },function(error, result){
       if(error) res.send(500,json.error('update error', error.message));
-      else res.send(204);
+      else res.send(200, result);
     });
   }
 };
