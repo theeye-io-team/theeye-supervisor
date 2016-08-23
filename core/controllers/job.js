@@ -141,7 +141,7 @@ var controller = {
           jobData.host_id = task.host_id ;
           jobData.script_id = task.script_id ;
           jobData.script_arguments = task.script_arguments ;
-          jobData.user = user;
+          jobData.user_id = user._id;
           jobData.name = task.name ;
           jobData.customer_id = customer._id;
           jobData.customer_name = customer.name;
@@ -149,8 +149,7 @@ var controller = {
           jobData.notify = true ;
           jobData.scheduleData = schedule;
 
-          // console.log(jobData);
-          Scheduler.scheduleTask(jobData, function(err){
+          Scheduler.getInstance().scheduleTask(jobData, function(err){
             if(err) {
               console.log(err);
               console.log(arguments);

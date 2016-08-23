@@ -3,7 +3,6 @@ var config = require("config");
 var debug = require("debug")("eye:supervisor:lib:scheduler");
 // var db = require('./mongodb').db;
 var async = require('async');
-
 var Host = require("../entity/host").Entity;
 var Task = require("../entity/task").Entity;
 var Script = require("../entity/script").Entity;
@@ -12,14 +11,7 @@ var User = require("../entity/user").Entity;
 var JobService = require("../service/job");
 var format = require('util').format;
 
-
-module.exports = Scheduler;
-
 function Scheduler() {
-  if (!(this instanceof Scheduler)) {
-    return new Scheduler();
-  }
-
   debug('Initialize');
   // var messages = db.get("messages");
   var _this = this;
@@ -89,12 +81,8 @@ function Scheduler() {
     process.on('SIGINT', graceful);
   });
 
-
   this.agenda.start();
-
 }
-
-
 
 Scheduler.prototype = {
   /**
@@ -106,8 +94,9 @@ Scheduler.prototype = {
     debug(taskData);
 
     var date = new Date(taskData.scheduleData.runDate);
+    var frequency = taskData.scheduleData.repeatEvery || false;
 
-    this.schedule(date, "task", taskData, false, done);
+    this.schedule(date, "task", taskData, frequency, done);
   },
   /**
    * Schedules a job for its starting date and parsing its properties
@@ -119,12 +108,25 @@ Scheduler.prototype = {
 
     agendaJob.schedule(starting);
     debug("agendaJob.schedule %s", starting);
-    // if (interval) {
-    //   debug("repeatEvery %s", interval);
-    //   agendaJob.repeatEvery(interval);
-    // }
+    if (interval) {
+      debug("repeatEvery %s", interval);
+      agendaJob.repeatEvery(interval);
+    }
     agendaJob.save(done);
 
+  },
+  getTaskScheduleData: function(oid, callback) {
+    if(!oid) {
+      return callback(new Error('task id must be provided'));
+    }
+    this.agenda.jobs(
+      {
+        $and:[
+          {name: 'task'},
+          {'data.task_id': oid}
+        ]
+      },
+      callback);
   },
   taskProcessor: function(agendaJob, done) {
     debug('////////////////////////////////////////');
@@ -185,3 +187,19 @@ Scheduler.prototype = {
     });
   }
 };
+
+function Module () {
+  this.scheduler;
+}
+
+Module.prototype.initialize = function(callback) {
+  this.scheduler = new Scheduler();
+  callback(this.scheduler);
+};
+
+Module.prototype.getInstance = function() {
+  return this.scheduler;
+};
+
+var instance = new Module();
+module.exports = instance;
