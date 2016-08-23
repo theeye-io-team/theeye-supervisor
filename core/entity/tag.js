@@ -32,6 +32,8 @@ EntitySchema.set('toJSON', specs);
 EntitySchema.set('toObject', specs);
 
 EntitySchema.statics.create = function(tags,customer,next){
+  next||(next=function(){});
+  if(!tags||tags.length===0) return next();
   var data = tags.map(tag => {
     return {
       _id: mongoose.Types.ObjectId(),
@@ -40,7 +42,7 @@ EntitySchema.statics.create = function(tags,customer,next){
     }
   });
   Entity.collection.insert(data,(error,instances)=>{
-    if(next) next(error,instances);
+    next(error,instances);
   });
 }
 
