@@ -9,11 +9,13 @@ var Host = require(process.env.BASE_PATH + '/entity/host').Entity;
 var resolver = require('../router/param-resolver');
 var filter = require('../router/param-filter');
 
+var Scheduler = require('../lib/scheduler').getInstance();
+
 module.exports = function(server, passport){
   server.get('/:customer/task/:task',[
     resolver.customerNameToEntity({}),
     passport.authenticate('bearer', {session:false}),
-    resolver.idToEntity({param:'task'}),
+    resolver.idToEntity({param:'task'})
   ],controller.get);
 
   server.get('/:customer/task',[
@@ -27,7 +29,7 @@ module.exports = function(server, passport){
     resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'task'}),
     resolver.idToEntity({param:'host'}),
-    resolver.idToEntity({param:'script'}),
+    resolver.idToEntity({param:'script'})
   ],controller.patch);
 
   server.post('/:customer/task',[
@@ -39,7 +41,7 @@ module.exports = function(server, passport){
   server.del('/:customer/task/:task',[
     passport.authenticate('bearer', {session:false}),
     resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'task'}),
+    resolver.idToEntity({param:'task'})
   ],controller.remove);
 };
 
@@ -107,8 +109,13 @@ var controller = {
     var task = req.task;
     if(!task) return res.send(404);
 
-    task.publish(function(published) {
-      res.send(200, { task: published });
+    Scheduler.getTaskScheduleData(task._id, function(err, scheduleData){
+      if(err) {
+        console.log(' ------ Scheduler had an error retrieving data for',task._id);
+      }
+      task.publish(function(published) {
+        res.send(200, { task: published, scheduleData: scheduleData });
+      });
     });
   },
   /**
@@ -119,26 +126,26 @@ var controller = {
    * @param {String} :task , mongo ObjectId
    *
    */
-   remove (req,res,next) {
-     var task = req.task;
-     if(!task) return res.send(404);
+  remove (req,res,next) {
+    var task = req.task;
+    if(!task) return res.send(404);
 
-     TaskService.remove({
-       task:task,
-       user:req.user,
-       customer:req.customer,
-       done:function(){
-         res.send(204);
-       },
-       fail:function(error){
-         res.send(500);
-       }
-     });
-   },
+    TaskService.remove({
+      task:task,
+      user:req.user,
+      customer:req.customer,
+      done:function(){
+        res.send(204);
+      },
+      fail:function(error){
+        res.send(500);
+      }
+    });
+  },
   /**
    *
    * @author Facundo
-   * @method PATCH 
+   * @method PATCH
    * @route /task/:task
    * @param {String} :task , mongo ObjectId
    * @param ...

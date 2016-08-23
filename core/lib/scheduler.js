@@ -94,8 +94,9 @@ Scheduler.prototype = {
     debug(taskData);
 
     var date = new Date(taskData.scheduleData.runDate);
+    var frequency = taskData.scheduleData.repeatEvery || false;
 
-    this.schedule(date, "task", taskData, false, done);
+    this.schedule(date, "task", taskData, frequency, done);
   },
   /**
    * Schedules a job for its starting date and parsing its properties
@@ -107,12 +108,25 @@ Scheduler.prototype = {
 
     agendaJob.schedule(starting);
     debug("agendaJob.schedule %s", starting);
-    // if (interval) {
-    //   debug("repeatEvery %s", interval);
-    //   agendaJob.repeatEvery(interval);
-    // }
+    if (interval) {
+      debug("repeatEvery %s", interval);
+      agendaJob.repeatEvery(interval);
+    }
     agendaJob.save(done);
 
+  },
+  getTaskScheduleData: function(oid, callback) {
+    if(!oid) {
+      return callback(new Error('task id must be provided'));
+    }
+    this.agenda.jobs(
+      {
+        $and:[
+          {name: 'task'},
+          {'data.task_id': oid}
+        ]
+      },
+      callback);
   },
   taskProcessor: function(agendaJob, done) {
     debug('////////////////////////////////////////');
@@ -181,11 +195,11 @@ function Module () {
 Module.prototype.initialize = function(callback) {
   this.scheduler = new Scheduler();
   callback(this.scheduler);
-}
+};
 
 Module.prototype.getInstance = function() {
   return this.scheduler;
-}
+};
 
 var instance = new Module();
 module.exports = instance;
