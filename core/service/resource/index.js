@@ -19,6 +19,7 @@ var Host = require('../../entity/host').Entity;
 var Task = require('../../entity/task').Entity;
 var HostStats = require('../../entity/host/stats').Entity;
 var Job = require('../../entity/job').Entity;
+//var Tag = require('../entity/tag').Entity;
 var resourceNotification = require('./notification');
 var globalconfig = require('config');
 
@@ -387,6 +388,7 @@ Service.create = function (input, next) {
             'operation':'create'
           }
         );
+        //Tag.create(input.tags,input.customer);
         Job.createAgentConfigUpdate(monitor.host_id);
         next(null,result);
       });
