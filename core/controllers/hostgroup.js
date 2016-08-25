@@ -103,8 +103,7 @@ var controller = {
   create (req,res,next){
     logger.log('group data received %j', req.params);
 
-    var customer = req.customer;
-    if(!customer) return res.send(400,'customer required');
+    if(!req.customer) return res.send(400,'customer required');
 
     var group = req.params.group;
     if(!group) return res.send(400,'group data required');

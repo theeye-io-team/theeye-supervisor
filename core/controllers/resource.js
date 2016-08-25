@@ -40,6 +40,12 @@ module.exports = function(server, passport) {
     resolver.idToEntity({param:'resource'})
   ], controller.update);
 
+  server.del('/:customer/resource/:resource',[
+    resolver.customerNameToEntity({}),
+    passport.authenticate('bearer', {session:false}),
+    resolver.idToEntity({param:'resource'})
+  ], controller.remove);
+
   server.patch('/:customer/resource/:resource',[
     resolver.customerNameToEntity({}),
     passport.authenticate('bearer', {session:false}),
@@ -47,11 +53,11 @@ module.exports = function(server, passport) {
     resolver.idToEntity({param:'resource'})
   ], controller.patch);
 
-  server.del('/:customer/resource/:resource',[
+  server.patch('/:customer/resource/:resource/alerts',[
     resolver.customerNameToEntity({}),
     passport.authenticate('bearer', {session:false}),
     resolver.idToEntity({param:'resource'})
-  ], controller.remove);
+  ],controller.alerts);
 }
 
 var controller = {
@@ -177,17 +183,18 @@ var controller = {
   },
   /**
    *
+   * this is PUT not PATCH ! but PUT is taken above to update resource status.
+   * will change when resource status is changed via events -
+   *
+   * @author Facugon
    *
    */
-  patch : function(req,res,next)
-  {
+  patch : function(req,res,next) {
     var resource = req.resource;
     if(!resource) return res.send(404,json.error('resource not found'));
 
     var params = ResourceManager.setResourceMonitorData(req.body);
-    if( params.errors && params.errors.hasErrors() ){
-      return res.send(400, params.errors);
-    }
+    if( params.errors && params.errors.hasErrors() ) return res.send(400, params.errors);
 
     var input = params.data;
     if(req.host) input.host = req.host;
@@ -199,6 +206,22 @@ var controller = {
     },function(error, result){
       if(error) res.send(500,json.error('update error', error.message));
       else res.send(200, result);
+    });
+  },
+  /**
+   *
+   * change resource send alerts status.
+   * @author Facugon
+   *
+   */
+  alerts (req, res, next) {
+    if(!req.resource) return res.send(404);
+    if(!req.customer) return res.send(400,'Customer required');
+    var resource = req.resource;
+    resource.alerts = req.params.alerts;
+    resource.save(error => {
+      if(error) res.send(500);
+      else res.send(200, resource);
     });
   }
 };
