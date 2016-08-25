@@ -2,10 +2,10 @@
 
 var debug = require('../lib/logger')('eye:supervisor:controller:task');
 var json = require(process.env.BASE_PATH + "/lib/jsonresponse");
-var Task = require(process.env.BASE_PATH + '/entity/task').Entity;
+// var Task = require(process.env.BASE_PATH + '/entity/task').Entity;
 var TaskService = require(process.env.BASE_PATH + '/service/task');
-var Script = require(process.env.BASE_PATH + '/entity/script').Entity;
-var Host = require(process.env.BASE_PATH + '/entity/host').Entity;
+// var Script = require(process.env.BASE_PATH + '/entity/script').Entity;
+// var Host = require(process.env.BASE_PATH + '/entity/host').Entity;
 var resolver = require('../router/param-resolver');
 var filter = require('../router/param-filter');
 
@@ -17,6 +17,12 @@ module.exports = function(server, passport){
     passport.authenticate('bearer', {session:false}),
     resolver.idToEntity({param:'task'})
   ],controller.get);
+
+  server.get('/:customer/task/:task/schedule',[
+    resolver.customerNameToEntity({}),
+    passport.authenticate('bearer', {session:false}),
+    resolver.idToEntity({param:'task'})
+  ], controller.getSchedule);
 
   server.get('/:customer/task',[
     passport.authenticate('bearer', {session:false}),
@@ -37,6 +43,12 @@ module.exports = function(server, passport){
     resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'script'})
   ],controller.create);
+
+  server.post('/:customer/task/schedule',[
+    passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
+    resolver.idToEntity({param:'task'})
+  ],controller.schedule);
 
   server.del('/:customer/task/:task',[
     passport.authenticate('bearer', {session:false}),
@@ -109,13 +121,28 @@ var controller = {
     var task = req.task;
     if(!task) return res.send(404);
 
+    task.publish(function(published) {
+      res.send(200, { task: published});
+    });
+  },
+  /**
+   * Gets schedule data for a task
+   * @author cg
+   * @method GET
+   * @route /task/:task/schedule
+   * @param {String} :task , mongo ObjectId
+   *
+   */
+  getSchedule (req, res, next) {
+    var task = req.task;
+    if(!task) return res.send(404);
     Scheduler.getTaskScheduleData(task._id, function(err, scheduleData){
       if(err) {
         console.log(' ------ Scheduler had an error retrieving data for',task._id);
+        console.log(err);
+        res.send(500);
       }
-      task.publish(function(published) {
-        res.send(200, { task: published, scheduleData: scheduleData });
-      });
+      res.send(200, { scheduleData: scheduleData });
     });
   },
   /**
@@ -151,6 +178,7 @@ var controller = {
    * @param ...
    *
    */
+
   patch (req, res, next) {
     var task = req.task;
     var input = {};
@@ -181,5 +209,56 @@ var controller = {
         res.send(500);
       }
     });
+  },
+  /**
+   *
+   * @author cg
+   * @method POST
+   * @route /task/:task
+   *
+   */
+  schedule(req, res, next){
+    var task = req.task;
+    var schedule = req.body.scheduleData;
+
+    if(!task) return res.send(400,json.error('task required'));
+
+    if(!schedule || !schedule.runDate) {
+      return res.send(406,json.error('Must have a date'));
+    }
+    var user = req.user ;
+    var customer = req.customer ;
+
+    if(!user) return res.send(400,json.error('user required'));
+    if(!customer) return res.send(400,json.error('customer required'));
+
+    var jobData = {
+      // task: task,
+      // user: user,
+      // customer: customer,
+      // notify: true
+    };
+    jobData.task_id = task._id ;
+    jobData.host_id = task.host_id ;
+    jobData.script_id = task.script_id ;
+    jobData.script_arguments = task.script_arguments ;
+    jobData.user_id = user._id;
+    jobData.name = task.name ;
+    jobData.customer_id = customer._id;
+    jobData.customer_name = customer.name;
+    jobData.state = 'new' ;
+    jobData.notify = true ;
+    jobData.scheduleData = schedule;
+
+    Scheduler.scheduleTask(jobData, function(err){
+      if(err) {
+        console.log(err);
+        console.log(arguments);
+        res.send(500, err);
+      }
+      res.send(200, {nextRun : schedule.runDate});
+    });
+
+
   }
 };

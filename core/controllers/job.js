@@ -3,10 +3,8 @@
 var json = require(process.env.BASE_PATH + "/lib/jsonresponse");
 var Job = require(process.env.BASE_PATH + "/entity/job").Entity;
 var JobService = require(process.env.BASE_PATH + "/service/job");
-var Task = require(process.env.BASE_PATH + "/entity/task").Entity;
 var debug = require('../lib/logger')('eye:supervisor:controller:job');
 var paramsResolver = require('../router/param-resolver');
-var Scheduler = require('../lib/scheduler');
 
 module.exports = function(server, passport) {
   server.get('/:customer/job/:job',[
@@ -32,11 +30,6 @@ module.exports = function(server, passport) {
     paramsResolver.idToEntity({param:'task'}),
     paramsResolver.customerNameToEntity({})
   ],controller.create);
-
-  server.post('/:customer/job/schedule',[
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.customerNameToEntity({})
-  ],controller.schedule);
 };
 
 var controller = {
@@ -99,66 +92,6 @@ var controller = {
       notify: true
     },(error,job) => {
       res.send(200,{job: job});
-    });
-  },
-  schedule(req, res, next){
-    // console.log('CONTROLLER SCHEDULE');
-    // console.log(req.body);
-    // console.log(req.params);
-
-    var task_id = req.body.task_id || req.params.task_id ;
-    var schedule = req.body.scheduleData;
-
-    if(!task_id) return res.send(400,json.error('task required'));
-
-    if(!schedule || !schedule.runDate) {
-      return res.send(406,json.error('Must have a date'));
-    }
-    var user = req.user ;
-    var customer = req.customer ;
-
-    if(!user) return res.send(400,json.error('user required'));
-    if(!customer) return res.send(400,json.error('customer required'));
-
-    Task.findById(task_id,function(error,task){
-      if(error) {
-        debug.error('unable to fetch tasks database');
-        res.send(500, json.error('internal error'));
-      } else {
-        if( task == null ) {
-          res.send(400, json.error('invalid task provided'));
-        } else {
-          // var job = scheduler.scheduleTask();
-          //estaria bueno aca solo guardar para el agendaJob
-          //los ._id de cada uno de estos, y luego que los busque el processor
-          var jobData = {
-            // task: task,
-            // user: user,
-            // customer: customer,
-            // notify: true
-          };
-          jobData.task_id = task._id ;
-          jobData.host_id = task.host_id ;
-          jobData.script_id = task.script_id ;
-          jobData.script_arguments = task.script_arguments ;
-          jobData.user_id = user._id;
-          jobData.name = task.name ;
-          jobData.customer_id = customer._id;
-          jobData.customer_name = customer.name;
-          jobData.state = 'new' ;
-          jobData.notify = true ;
-          jobData.scheduleData = schedule;
-
-          Scheduler.getInstance().scheduleTask(jobData, function(err){
-            if(err) {
-              console.log(err);
-              console.log(arguments);
-              res.send(500, err);
-            }
-            res.send(200, {nextRun : schedule.runDate});
-          });
-        }
-      }
     });
   }
 };
