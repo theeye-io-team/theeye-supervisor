@@ -1,5 +1,13 @@
 # CHANGELOG
 
+### 0.3.[!!!] - 2016-08-24
+
+> removed schedule method from job controller
+
+> added method schedule and getSchedule to task controller
+
+> returned old functionality to task controller get method
+
 ### 0.3.1 - 2016-08-22
 
 > task and monitors with tags     
@@ -57,5 +65,3 @@
 > added CHANGELOG.md
 
 > minor bug fixing (delete of tasks & scripts not working)
-
-
