@@ -475,6 +475,8 @@ Service.fetchBy = function(input,next) {
         return next(error,null);
       }
 
+      if(resources.length===0) return next(null,[]);
+
       var pub = [];
       var fetched = _.after(resources.length,() => next(null,pub));
 
