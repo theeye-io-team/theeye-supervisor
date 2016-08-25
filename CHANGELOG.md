@@ -1,12 +1,14 @@
 # CHANGELOG
 
-### 0.3.[!!!] - 2016-08-24
+### 0.3.2 - 2016-08-24
 
-> removed schedule method from job controller
+> removed schedule method from job controller        
 
-> added method schedule and getSchedule to task controller
+> added method schedule and getSchedule to task controller       
 
-> returned old functionality to task controller get method
+> returned old functionality to task controller get method      
+
+> added remote method to change resource alerts (on/off)      
 
 ### 0.3.1 - 2016-08-22
 
