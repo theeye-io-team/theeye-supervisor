@@ -10,6 +10,7 @@ var Customer = require("../entity/customer").Entity;
 var User = require("../entity/user").Entity;
 var JobService = require("../service/job");
 var format = require('util').format;
+var ObjectID = require('mongodb').ObjectID;
 
 function Scheduler() {
   debug('Initialize');
@@ -124,6 +125,20 @@ Scheduler.prototype = {
         $and:[
           {name: 'task'},
           {'data.task_id': oid}
+        ]
+      },
+      callback);
+  },
+  cancelTaskSchedule: function(taskId, scheduleId, callback) {
+    if(!scheduleId) {
+      return callback(new Error('schedule id must be provided'));
+    }
+    // la verdad es que con el schedule id alcanza
+    this.agenda.cancel(
+      {
+        $and:[
+          {name: 'task'},
+          {_id: new ObjectID(scheduleId)}
         ]
       },
       callback);
