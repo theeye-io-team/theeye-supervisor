@@ -1,6 +1,6 @@
 # CHANGELOG
 
-### 0.3.3 - 2016-08-24
+### 0.3.3 - 2016-08-29
 
 > added route and methods for schedule cancellation
 
