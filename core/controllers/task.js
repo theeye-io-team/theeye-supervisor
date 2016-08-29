@@ -55,6 +55,12 @@ module.exports = function(server, passport){
     resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'task'})
   ],controller.remove);
+
+  server.del('/:customer/task/:task/schedule/:schedule',[
+    passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
+    resolver.idToEntity({param:'task'})
+  ], controller.cancelSchedule);
 };
 
 
@@ -143,6 +149,22 @@ var controller = {
         res.send(500);
       }
       res.send(200, { scheduleData: scheduleData });
+    });
+  },
+  cancelSchedule (req, res, next) {
+    var taskId = req.params.task;
+    var scheduleId = req.params.schedule;
+    if(!taskId || !scheduleId) {
+      res.send(500, 'Parameter missing');
+    }
+
+    Scheduler.cancelTaskSchedule(taskId, scheduleId, function(err, qtyRemoved){
+      if(err) {
+        console.log(' ------ Scheduler had an error canceling schedule', scheduleId);
+        console.log(err);
+        res.send(500, 'Error canceling schedule');
+      }
+      res.send(200,{status:'done'});
     });
   },
   /**

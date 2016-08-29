@@ -1,5 +1,9 @@
 # CHANGELOG
 
+### 0.3.3 - 2016-08-24
+
+> added route and methods for schedule cancellation
+
 ### 0.3.2 - 2016-08-24
 
 > removed schedule method from job controller        
