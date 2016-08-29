@@ -8,6 +8,7 @@ var TaskService = require(process.env.BASE_PATH + '/service/task');
 // var Host = require(process.env.BASE_PATH + '/entity/host').Entity;
 var resolver = require('../router/param-resolver');
 var filter = require('../router/param-filter');
+var extend = require('lodash/assign');
 
 var Scheduler = require('../lib/scheduler').getInstance();
 
@@ -33,9 +34,7 @@ module.exports = function(server, passport){
   server.patch('/:customer/task/:task',[
     passport.authenticate('bearer', {session:false}),
     resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'task'}),
-    resolver.idToEntity({param:'host'}),
-    resolver.idToEntity({param:'script'})
+    resolver.idToEntity({param:'task'})
   ],controller.patch);
 
   server.post('/:customer/task',[
@@ -66,18 +65,11 @@ var controller = {
    *
    */
   create (req, res, next) {
-    var input = {
+    var input = extend({},req.body,{
       'customer': req.customer,
       'user': req.user,
-      'script': req.script,
-      'name': req.body.name,
-      'description': req.body.description,
-      'script_runas': req.body.script_runas,
-      'public': filter.toBoolean(req.body.public),
-      'hosts': filter.toArray(req.body.hosts),
-      'tags': filter.toArray(req.body.tags),
-      'script_arguments': filter.toArray(req.body.script_arguments)
-    };
+      'script': req.script
+    });
 
     if(!input.script) return res.send(400, json.error('script is required'));
     if(!input.customer) return res.send(400, json.error('customer is required'));
@@ -180,32 +172,19 @@ var controller = {
    */
 
   patch (req, res, next) {
-    var task = req.task;
-    var input = {};
-
-    if(!task) return res.send(404);
-
-    if(req.host) input.host_id = req.host._id;
-    if(req.script) input.script_id = req.script._id;
-    if(req.body.public) input.public = filter.toBoolean(req.body.public);
-    if(req.body.description) input.description = req.body.description;
-    if(req.body.name) input.name = req.body.name;
-    if(req.body.script_runas) input.script_runas = req.body.script_runas;
-    if(req.body.tags) input.tags = filter.toArray(req.body.tags);
-
-    var scriptArgs = filter.toArray(req.body.script_arguments);
-    if( scriptArgs.length > 0 ) input.script_arguments = scriptArgs;
+    if(!req.task) return res.send(404);
+    var input = extend({},req.body);
 
     debug.log('updating task %j', input);
     TaskService.update({
-      user:req.user,
-      customer:req.customer,
-      task:task,
-      updates:input,
-      done:function(task){
+      user: req.user,
+      customer: req.customer,
+      task: req.task,
+      updates: input,
+      done: function(task){
         res.send(200,{task:task});
       },
-      fail:function(error){
+      fail: function(error){
         res.send(500);
       }
     });

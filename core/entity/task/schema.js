@@ -125,9 +125,9 @@ EntitySchema.methods.update = function(input,next)
 EntitySchema.statics.create = function(input,next)
 {
   var instance = new this();
-  instance.user_id          = input.user._id;
-  instance.customer_id      = input.customer._id;
-  instance.script_id        = input.script._id;
+  instance.user_id          = input.user_id||input.user._id;
+  instance.customer_id      = input.customer_id||input.customer._id;
+  instance.script_id        = input.script_id||input.script._id;
   instance.script_arguments = input.script_arguments;
   instance.script_runas     = input.script_runas;
   instance.name             = input.name || null;

@@ -270,7 +270,6 @@ TaskService.tasksToTemplates = function(
  * @return null
  */
 function validateTaskTemplateData(input, done){
-  var scriptArgs = filter.toArray(input.script_arguments);
   if(!input.script_id) {
     var e = new Error('script is required');
     e.statusCode = 400;
@@ -285,12 +284,7 @@ function validateTaskTemplateData(input, done){
       return done(e, false);
     }
 
-    done(null, {
-      'name': input.name,
-      'description': input.description,
-      'script': script,
-      'script_arguments': scriptArgs,
-    });
+    done(null,input);
   });
 }
 
