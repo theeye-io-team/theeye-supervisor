@@ -392,6 +392,7 @@ Service.update = function(input,next) {
     updates.host_id = updates.host._id;
     updates.hostname = updates.host.hostname;
   }
+
   resource.patch(updates,function(error){
     if(error) return next(error);
     MonitorEntity.findOne({

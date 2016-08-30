@@ -41,10 +41,13 @@ function setMonitorForScraper(input) {
 				'url': input.url,
 				'timeout': input.timeout,
 				'method': input.method,
-        'body': input.body
+        'body': input.body,
+        'gzip': input.gzip,
+        'json': input.json
 			},
       'response_options': {
         'status_code': input.status_code,
+        'response_parser': input.response_parser,
         'success_pattern': input.response_parser=='success_pattern'?input.success_pattern:null,
         'parser_script': input.response_parser=='parser_script'?input.parser_script:null
       }
