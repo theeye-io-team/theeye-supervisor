@@ -101,14 +101,14 @@ EntitySchema.methods.setUpdates = function(input, next) {
       config.request_options.method = input.method;
       config.request_options.json = (input.json=='true'||input.json===true);
       config.request_options.gzip = (input.gzip=='true'||input.gzip===true);
-      config.response_options.response_parser = input.response_parser;
-      if(input.response_parser=='success_pattern'){
-        config.response_options.success_pattern = input.success_pattern;
-        config.response_options.parser_script = null;
+      config.response_options.parser = input.parser;
+      if(input.parser=='pattern'){
+        config.response_options.pattern = input.pattern;
+        config.response_options.script = null;
       }
-      if(input.response_parser=='parser_script'){
-        config.response_options.success_pattern = null;
-        config.response_options.parser_script = input.parser_script;
+      if(input.parser=='script'){
+        config.response_options.pattern = null;
+        config.response_options.script = input.script;
       }
       break;
     case 'process':

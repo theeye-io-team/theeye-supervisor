@@ -655,14 +655,14 @@ Service.setResourceMonitorData = function(input) {
       data.timeout = input.timeout||10000;
       data.external_host_id = input.external_host_id;
       // identify how to parse api response selected option by user
-      if(!input.status_code&&!input.success_pattern&&!input.parser_script){
-        errors.required('response_parser');
+      if(!input.status_code&&!input.pattern&&!input.script){
+        errors.required('parser');
       } else {
-        if(input.response_parser){
-          if(input.response_parser=='success_pattern' && !input.success_pattern){
-            errors.invalid('success_pattern',input.success_pattern);
-          } else if(input.response_parser=='parser_script' && !input.parser_script){
-            errors.invalid('parser_script',input.parser_script);
+        if(input.parser){
+          if(input.parser=='pattern' && !input.pattern){
+            errors.invalid('pattern',input.pattern);
+          } else if(input.parser=='script' && !input.script){
+            errors.invalid('script',input.script);
           }
         }
       }

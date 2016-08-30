@@ -47,9 +47,9 @@ function setMonitorForScraper(input) {
 			},
       'response_options': {
         'status_code': input.status_code,
-        'response_parser': input.response_parser,
-        'success_pattern': input.response_parser=='success_pattern'?input.success_pattern:null,
-        'parser_script': input.response_parser=='parser_script'?input.parser_script:null
+        'parser': input.parser,
+        'pattern': input.parser=='pattern'?input.pattern:null,
+        'script': input.parser=='script'?input.script:null
       }
 		}
 	};
