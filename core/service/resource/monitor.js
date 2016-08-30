@@ -48,8 +48,8 @@ function setMonitorForScraper(input) {
       'response_options': {
         'status_code': input.status_code,
         'parser': input.parser,
-        'pattern': input.parser=='pattern'?input.pattern:null,
-        'script': input.parser=='script'?input.script:null
+        'pattern': input.parser == 'pattern' ? input.pattern : null,
+        'script': input.parser == 'script' ? input.script : null
       }
 		}
 	};
@@ -139,6 +139,32 @@ function setType(resourceType, monitorType) {
 	return monitorType;
 }
 
+/**
+ *
+ *
+ *
+ *
+ *
+ *
+ *    WARNING WARNING
+ *
+ *   NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE
+ *
+ *
+ * THIS IS JUST FOR THE CREATION PART
+ * UPDATE IS IN THIS FILE
+ *
+ * entity/monitor/schema.js
+ *
+ *
+ * UGLY I KNOW....
+ *
+ *
+ *
+ *
+ *
+ *
+ */
 function setMonitorData(type, input, next){
   var monitor;
 	logger.log('setting up monitor data %j',input);

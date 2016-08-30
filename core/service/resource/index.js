@@ -654,9 +654,14 @@ Service.setResourceMonitorData = function(input) {
 
       data.timeout = input.timeout||10000;
       data.external_host_id = input.external_host_id;
+
+      if(!input.parser) input.parser=null;
+      else if(input.parser != 'script' || input.parser != 'pattern')
+        errors.invalid('parser',input.parser);
+
       // identify how to parse api response selected option by user
       if(!input.status_code&&!input.pattern&&!input.script){
-        errors.required('parser');
+        errors.required('status code or parser');
       } else {
         if(input.parser){
           if(input.parser=='pattern' && !input.pattern){

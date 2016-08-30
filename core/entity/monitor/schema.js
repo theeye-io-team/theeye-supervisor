@@ -66,6 +66,28 @@ EntitySchema.statics.publishAll = function(entities, next){
 /**
  *
  *
+ *
+ *
+ *
+ *
+ *    WARNING WARNING
+ *
+ *   NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE
+ *
+ *
+ * THIS IS JUST FOR THE UPDATE PART
+ * CREATION IS MADE IN THIS FILE
+ *
+ * resource/monitor.js
+ *
+ *
+ * UGLY I KNOW....
+ *
+ *
+ *
+ *
+ *
+ *
  */
 EntitySchema.methods.setUpdates = function(input, next) {
   next=next||function(){};
@@ -105,10 +127,12 @@ EntitySchema.methods.setUpdates = function(input, next) {
       if(input.parser=='pattern'){
         config.response_options.pattern = input.pattern;
         config.response_options.script = null;
-      }
-      if(input.parser=='script'){
+      } else if(input.parser=='script'){
         config.response_options.pattern = null;
         config.response_options.script = input.script;
+      } else {
+        config.response_options.pattern = null;
+        config.response_options.script = null;
       }
       break;
     case 'process':
