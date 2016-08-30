@@ -656,7 +656,7 @@ Service.setResourceMonitorData = function(input) {
       data.external_host_id = input.external_host_id;
 
       if(!input.parser) input.parser=null;
-      else if(input.parser != 'script' || input.parser != 'pattern')
+      else if(input.parser != 'script' && input.parser != 'pattern')
         errors.invalid('parser',input.parser);
 
       // identify how to parse api response selected option by user
