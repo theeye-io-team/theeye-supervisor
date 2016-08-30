@@ -50,13 +50,8 @@ exports.resourceMonitorToTemplate = function (monitor_id, done) {
  *
  */
 exports.createResourceMonitorsTemplates = function (input, done){
-  var resourceType = MonitorService.setType(
-    input.type, 
-    input.monitor_type
-  );
-
   var resource_data = {
-    'type': resourceType,
+    'type': input.type,
     'customer_id' : input.customer_id,
     'customer_name' : input.customer_name,
     'name' : input.name,
@@ -65,7 +60,7 @@ exports.createResourceMonitorsTemplates = function (input, done){
   }
 
   MonitorService.setMonitorData(
-    input.monitor_type,
+    input.type,
     input,
     function(err,monitor_data){
       if(err) throw err;

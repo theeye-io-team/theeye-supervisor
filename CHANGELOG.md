@@ -1,8 +1,30 @@
 # CHANGELOG
 
-### 0.3.3 - 2016-08-29
+### 0.4.0 - 2016-08-28
 
-> added route and methods for schedule cancellation
+> remove extra code an setters on task controller. pass input directly to the entity without filters      
+
+> remove unused filters on routes      
+
+> create resource/constants     
+
+> add tag creation on resource monitors     
+
+> remove duplicated mail handler and use one function with parameters     
+
+> add logic to handle different type of events and send mail alerts      
+
+> parse reported resource state as failure('error','fail','failure') or success('success','ok','normal') or not parsed        
+
+> add to the scraper monitor extra options to create api requests and handle the response        
+
+> remove monitor.setType , only use one type. monitor_type is deprecated      
+
+> do not filter task template input , return all the request inputs, and validate as needed      
+
+> added a simple test to validate resource-email-notifications generation       
+
+> added route and methods for schedule cancellation      
 
 ### 0.3.2 - 2016-08-24
 

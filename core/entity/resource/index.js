@@ -20,10 +20,11 @@ var properties = {
   'fails_count': { type:Number, 'default':0 },
   'state': { type:String, 'default':INITIAL_STATE },
   'enable': { type:Boolean, 'default':true },
-  'last_check': { type:Date, 'default':null },
   'creation_date': { type:Date, 'default':Date.now },
-  'last_update': { type:Date, 'default':Date.now },
   'template': { type: ObjectId, ref: 'ResourceTemplate', 'default': null },
+  'last_check': { type:Date, 'default':null },
+  'last_update': { type:Date, 'default':Date.now },
+  'last_event':{ type: Object, 'default':{} }
 }
 
 /**

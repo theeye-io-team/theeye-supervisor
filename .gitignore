@@ -6,3 +6,4 @@ config/*
 misc/playground/aws/config.json
 supervisor
 misc/mongodb/*
+npm-debug.log*

@@ -95,10 +95,21 @@ EntitySchema.methods.setUpdates = function(input, next) {
 
       monitor.host_id = input.external_host_id || input.host_id;
       config.external = typeof input.external_host_id != 'undefined';
-      if(input.pattern ) config.pattern = input.pattern;
-      if(input.url     ) config.request_options.url = input.url;
-      if(input.timeout ) config.request_options.timeout = input.timeout;
-      if(input.method  ) config.request_options.method = input.method;
+
+      config.request_options.url = input.url;
+      config.request_options.timeout = input.timeout;
+      config.request_options.method = input.method;
+      config.request_options.json = (input.json=='true'||input.json===true);
+      config.request_options.gzip = (input.gzip=='true'||input.gzip===true);
+      config.response_options.parser = input.parser;
+      if(input.parser=='pattern'){
+        config.response_options.pattern = input.pattern;
+        config.response_options.script = null;
+      }
+      if(input.parser=='script'){
+        config.response_options.pattern = null;
+        config.response_options.script = input.script;
+      }
       break;
     case 'process':
       if(

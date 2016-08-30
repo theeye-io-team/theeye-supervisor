@@ -119,11 +119,11 @@ var controller = {
           group,
           (err)=>{}
         );
-        return done(err);
+        return done(err, template);
       });
     }
 
-    TaskService.tasksToTemplates( 
+    TaskService.tasksToTemplates(
       tasks,
       req.customer,
       req.user,
@@ -240,6 +240,12 @@ function removeTaskTemplateInstancesFromHostGroups(template,done)
   });
 }
 
+/**
+ *
+ * create a new instance of the task on every host that belongs to this group
+ * @author Facugon
+ *
+ */
 function addTaskTemplateInstancesToGroupHosts(
   template, group, done
 ){

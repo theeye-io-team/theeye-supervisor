@@ -18,31 +18,30 @@ module.exports = function(server, passport) {
   ], controller.fetch);
 
   server.get('/:customer/resource/:resource',[
-    resolver.customerNameToEntity({}),
     passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'resource'})
   ], controller.get);
 
   server.post('/:customer/resource',[
-    resolver.customerNameToEntity({}),
     passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
   ], controller.create);
 
   server.put('/:customer/resource/:resource',[
-    resolver.customerNameToEntity({}),
     passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'resource'})
   ], controller.update);
 
   server.put('/resource/:resource',[
-    //resolver.customerNameToEntity({}),
     passport.authenticate('bearer', {session:false}),
     resolver.idToEntity({param:'resource'})
   ], controller.update);
 
   server.del('/:customer/resource/:resource',[
-    resolver.customerNameToEntity({}),
     passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'resource'})
   ], controller.remove);
 
@@ -54,8 +53,8 @@ module.exports = function(server, passport) {
   ], controller.patch);
 
   server.patch('/:customer/resource/:resource/alerts',[
-    resolver.customerNameToEntity({}),
     passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'resource'})
   ],controller.alerts);
 }

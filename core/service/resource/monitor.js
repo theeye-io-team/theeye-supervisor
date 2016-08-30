@@ -27,7 +27,7 @@ exports.setType = setType;
  */
 function setMonitorForScraper(input) {
 	var host_id = input.external_host_id ? input.external_host_id : input.host_id;
-	var external = input.external_host_id ? true : false;
+	var external = Boolean(input.external_host_id);
 	return {
     'tags': input.tags,
     'customer_name': input.customer_name,
@@ -37,12 +37,20 @@ function setMonitorForScraper(input) {
 		'looptime': input.looptime,
 		'config': {
 			'external': external,
-			'pattern': input.pattern,
 			'request_options': {
 				'url': input.url,
 				'timeout': input.timeout,
-				'method': 'get'
-			}
+				'method': input.method,
+        'body': input.body,
+        'gzip': input.gzip,
+        'json': input.json
+			},
+      'response_options': {
+        'status_code': input.status_code,
+        'parser': input.parser,
+        'pattern': input.parser=='pattern'?input.pattern:null,
+        'script': input.parser=='script'?input.script:null
+      }
 		}
 	};
 }
@@ -126,6 +134,7 @@ function setMonitorForPsaux(input){
 	};
 }
 
+/** @deprecated **/
 function setType(resourceType, monitorType) {
 	return monitorType;
 }
@@ -320,8 +329,8 @@ exports.resourceMonitorsToTemplates = function (
       return done(e);
     }
 
-    /* create template from existent monitor & resource */
     if( value.hasOwnProperty('id') ){
+      /* create template from existent monitor & resource */
       if( validator.isMongoId(value.id) ){
         logger.log('creating template from existent resource monitors');
         ResourceTemplateService
@@ -339,21 +348,21 @@ exports.resourceMonitorsToTemplates = function (
         e.statusCode = 400;
         return done(e);
       }
-    }
-    /* create templates from input */
-    else {
+    } else {
+      /* create templates from input */
       logger.log('setting up template data');
 
-      var data = ResourceService.setResourceMonitorData(value);
-      if(!data || data.error) {
+      var result = ResourceService.setResourceMonitorData(value);
+      if(!result || result.error) {
         let msg = 'invalid resource monitor data';
         logger.error(msg);
         let e = new Error(msg);
         e.statusCode = 400;
-        e.info = data.error;
+        e.info = result.error;
         return done(e);
       }
 
+      var data = result.data;
       data.customer_id = customer_id;
       data.customer_name = customer_name;
       data.user_id = user_id;
