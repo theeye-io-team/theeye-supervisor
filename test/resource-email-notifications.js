@@ -165,3 +165,27 @@ describe('Fake Monitor/Error',() => {
 });
 
 
+
+describe('Scraper Monitor',() => {
+  var events = [
+    'ERROR',
+    'scraper.request.error',
+    'scraper.status_code.invalid_regexp',
+    'scraper.status_code.not_match',
+    'scraper.pattern.invalid_regexp',
+    'scraper.pattern.match',
+    'scraper.pattern.not_match'
+  ];
+
+  var errorEvent = events[Math.floor(Math.random() * events.length)];
+  describe('#random ERROR event',() => {
+    it('should return an error alert subject/content', () => {
+      notifications(script,errorEvent,{event:errorEvent},(error,specs) => {
+        assert.ifError(error);
+        assert.instanceOf(specs,Object,'specs should be an Object');
+        assert.match(specs.subject,/^\[HIGH\].*error/,'the subject does not match');
+      });
+    });
+  });
+
+});
