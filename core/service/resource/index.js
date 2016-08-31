@@ -19,21 +19,18 @@ var Host = require('../../entity/host').Entity;
 var Task = require('../../entity/task').Entity;
 var HostStats = require('../../entity/host/stats').Entity;
 var Job = require('../../entity/job').Entity;
-//var Tag = require('../entity/tag').Entity;
-var resourceNotification = require('./notification');
+var Tag = require('../../entity/tag').Entity;
+var ResourcesEmailNotifications = require('./email-notifications');
 var globalconfig = require('config');
 
 var filter = require('../../router/param-filter');
 var validator = require('validator');
 
-const RESOURCE_NORMAL  = 'normal';
-const RESOURCE_FAILURE = 'failure';
-const RESOURCE_STOPPED = 'updates_stopped';
-const AGENT_STOPPED    = 'agent_stopped';
-
 var Service = module.exports = function Service(resource) {
   this.resource = resource;
 };
+
+const Constants = require('./constants');
 
 util.inherits(Service, events.EventEmitter);
 
@@ -42,80 +39,6 @@ function getCustomerConfig (customer_id, done) {
     customer_id,
     (error,config) => {
       done(config);
-    }
-  );
-}
-
-function sendResourceFailureAlerts (resource,input)
-{
-  logger.log('preparing to send email alerts');
-  var severity = input.severity;
-  var subject = `[${severity}] ${resource.hostname} failure`;
-
-  resourceNotification(
-    resource,
-    input.event,
-    input.data,
-    (content) => {
-      CustomerService.getAlertEmails(
-        resource.customer_name,
-        (error,emails) => {
-          NotificationService.sendEmailNotification({
-            'to': emails.join(','),
-            'customer_name': resource.customer_name,
-            'subject': subject,
-            'content': content
-          });
-        });
-    }
-  );
-}
-
-function sendResourceRestoredAlerts (resource,input) 
-{
-  if( resource.type=='dstat' || resource.type=='psaux'){
-    if( resource.state == RESOURCE_STOPPED ) return;
-  }
-
-  logger.log('sending resource restored alerts ' + resource.customer_name);
-
-  var severity = input.severity;
-  var subject = `[${severity}] ${resource.hostname} recovered`;
-  var content = `${resource.description} ${resource.type} monitor recovered.`;
-
-  CustomerService.getAlertEmails(
-    resource.customer_name, 
-    (error,emails) => {
-      NotificationService.sendEmailNotification({
-        'to': emails.join(','),
-        'customer_name': resource.customer_name,
-        'subject': subject,
-        'content': content
-      });
-    }
-  );
-}
-
-function sendResourceUpdatesStoppedAlerts (resource,input)
-{
-  if(
-    resource.type == 'dstat' ||
-    resource.type == 'psaux' 
-  ) return;
-
-  var severity = input.severity;
-  var subject = `[${severity}] ${resource.hostname} unreachable`;
-  var content = `${resource.name} ${resource.type} monitor stopped receiving updates`;
-
-  CustomerService.getAlertEmails(
-    resource.customer_name, 
-    (error,emails) => {
-      NotificationService.sendEmailNotification({
-        'to':emails.join(','),
-        'customer_name':resource.customer_name,
-        'subject':subject,
-        'content':content
-      });
     }
   );
 }
@@ -142,12 +65,41 @@ function registerResourceCRUDOperation(customer,data) {
   elastic.submit(customer,key,data);
 }
 
+function sendResourceEmailAlert (resource,input) {
+  ResourcesEmailNotifications(
+    resource,
+    input.event,
+    input.data,
+    (error,emailDetails) => {
+      if(error) {
+        if( /event ignored/.test(error.message) === false )
+          logger.error(error);
+        logger.log('alerts email not send');
+        return;
+      }
+
+      logger.log('sending email alerts');
+      CustomerService.getAlertEmails(
+        resource.customer_name,
+        (error,emails) => {
+          NotificationService.sendEmailNotification({
+            'to': emails.join(','),
+            'customer_name': resource.customer_name,
+            'subject': emailDetails.subject,
+            'content': emailDetails.content
+          });
+        });
+    }
+  );
+}
+
+
 function handleFailureState (resource,input,config)
 {
   var customer_name = resource.customer_name;
   var failure_threshold = config.fails_count_alert;
    
-  var newState = input.state = 'failure';
+  var newState = 'failure';
 
   logger.log('resource "%s" check fails.', resource.name);
 
@@ -167,6 +119,7 @@ function handleFailureState (resource,input,config)
     });
   }
 
+
   resource.fails_count++;
   logger.log(
     'resource %s[%s] failure event count %s/%s', 
@@ -180,17 +133,21 @@ function handleFailureState (resource,input,config)
   if(resource.state != newState) {
     if(resource.fails_count >= failure_threshold) {
       logger.log('resource "%s" state failure', resource.name);
-      resource.state = newState ;
-      resource.failure_severity = input.severity = getEventSeverity(input);
+      var sev = getEventSeverity(input);
+      resource.failure_severity = sev;
+      input.severity = sev;
+
       logStateChange(resource,input);
 
-      if(resource.state != Resource.INITIAL_STATE){
-        if(resource.alerts!==false){
-          sendResourceFailureAlerts(resource,input);
+      if(input.state != Resource.INITIAL_STATE){
+        if(resource.alerts !== false){
+          input.event||(input.event=input.state);
+          sendResourceEmailAlert(resource,input);
         }
+        stateChangeFailureSNS();
       }
-
-      stateChangeFailureSNS();
+      resource.last_event = input;
+      resource.state = newState;
     }
   }
   resource.save();
@@ -199,7 +156,7 @@ function handleFailureState (resource,input,config)
 function handleNormalState (resource,input,config)
 {
   var failure_threshold = config.fails_count_alert;
-  logger.log('resource "%s" normal', resource.name);
+  logger.log('resource "%s" "%s" state is normal', resource.type, resource.name);
 
   function stateChangeNormalSNS () {
     NotificationService.sendSNSNotification({
@@ -215,15 +172,25 @@ function handleNormalState (resource,input,config)
     });
   }
 
+  var isRecoveredFromFailure = Boolean(resource.state == Constants.RESOURCE_FAILURE);
+
   var resource = resource ;
   // failed at least once
   if(resource.fails_count != 0){
     if(resource.fails_count >= failure_threshold){
-      logger.log('resource "%s" restored', resource.name);
+      logger.log('resource "%s" "%s" has been restored', resource.type, resource.name);
       input.severity = getEventSeverity(input);
       logStateChange(resource,input);
       if(resource.alerts!==false){
-        sendResourceRestoredAlerts(resource, input);
+
+        if(isRecoveredFromFailure){
+          input.event||(input.event=input.state);
+        } else {
+          // is recovered from "stop sending updates"
+          input.event = Constants.RESOURCE_RECOVERED;
+        }
+
+        sendResourceEmailAlert(resource,input);
       }
       stateChangeNormalSNS();
     }
@@ -273,7 +240,8 @@ function handleUpdatesStoppedState (resource,input,config)
       logStateChange(resource,input);
 
       if(resource.alerts!==false){
-        sendResourceUpdatesStoppedAlerts(resource,input);
+        input.event||(input.event=input.state); // state = agent or resource stopped
+        sendResourceEmailAlert(resource,input);
       }
 
       stateChangeStoppedSNS();
@@ -282,25 +250,44 @@ function handleUpdatesStoppedState (resource,input,config)
   resource.save();
 }
 
+function filterStateEvent(state){
+  function isSuccess(txt){
+    var successTexts = ['success','ok','normal'];
+    return successTexts.indexOf( txt.toLowerCase() ) != -1 ;
+  }
+
+  function isFailure(txt){
+    var failureTexts = ['error','fail','failure'];
+    return failureTexts.indexOf( txt.toLowerCase() ) != -1 ;
+  }
+
+  if( typeof state == 'string' && isSuccess(state) ) return Constants.RESOURCE_NORMAL;
+  if( typeof state == 'string' && isFailure(state) ) return Constants.RESOURCE_FAILURE;
+  return state;
+}
+
 Service.prototype.handleState = function(input,next) {
   next||(next=function(){});
   var resource = this.resource;
+
+  var state = filterStateEvent(input.state);
+  input.state = state;
+
   getCustomerConfig(
     resource.customer_id,
     (config) => {
       if(!config) throw new Error('config not found');
       switch(input.state) {
-        case RESOURCE_NORMAL :
+        case Constants.RESOURCE_NORMAL :
           input.last_update = Date.now();
           handleNormalState(resource,input,config);
           break;
-        case AGENT_STOPPED :
-        case RESOURCE_STOPPED :
+        case Constants.AGENT_STOPPED :
+        case Constants.RESOURCE_STOPPED :
           handleUpdatesStoppedState(resource,input,config);
           break;
         default:
-          logger.log('resource "%s" unknown state "%s" reported', this.resource.name, input.state);
-        case RESOURCE_FAILURE :
+        case Constants.RESOURCE_FAILURE :
           input.last_update = Date.now();
           handleFailureState(resource,input,config);
           break;
@@ -343,56 +330,53 @@ Service.findHostResources = function(host,options,done)
 /**
  *
  * create entities
+ * @author Facugon
  *
  */
 Service.create = function (input, next) {
   next||(next=function(){});
   logger.log('creating resource for host %j', input);
+  var type = input.type||input.monitor_type;
   var resource_data = {
     'host_id':input.host_id,
     'hostname':input.hostname,
     'customer_id':input.customer_id,
     'customer_name':input.customer_name,
     'name':input.name,
-    'type':ResourceMonitorService.setType(input.type, input.monitor_type),
+    'type':type,
     'description':input.description
   };
 
-  ResourceMonitorService.setMonitorData(
-    input.monitor_type,
-    input,
-    function(error,monitor_data){
-      if(error){
-        return next(error);
-      }
-      else if(!monitor_data) {
-        var e = new Error('invalid resource data');
-        e.statusCode = 400;
-        return next(e);
-      }
+  ResourceMonitorService.setMonitorData( type, input, function(error,monitor_data){
+    if(error) return next(error);
+    if(!monitor_data) {
+      var e = new Error('invalid resource data');
+      e.statusCode = 400;
+      return next(e);
+    }
 
-      createResourceAndMonitor({
-        resource_data: resource_data,
-        monitor_data: monitor_data
-      },function(error,result){
-        var monitor = result.monitor;
-        var resource = result.resource;
-        logger.log('resource & monitor created');
-        registerResourceCRUDOperation(
-          monitor.customer_name,{
-            'name':monitor.name,
-            'type':resource.type,
-            'customer_name':monitor.customer_name,
-            'user_id':input.user.id,
-            'user_email':input.user.email,
-            'operation':'create'
-          }
-        );
-        //Tag.create(input.tags,input.customer);
-        Job.createAgentConfigUpdate(monitor.host_id);
-        next(null,result);
-      });
+    createResourceAndMonitor({
+      resource_data: resource_data,
+      monitor_data: monitor_data
+    },function(error,result){
+      var monitor = result.monitor;
+      var resource = result.resource;
+      logger.log('resource & monitor created');
+      registerResourceCRUDOperation(
+        monitor.customer_name,{
+          'name':monitor.name,
+          'type':resource.type,
+          'customer_name':monitor.customer_name,
+          'user_id':input.user.id,
+          'user_email':input.user.email,
+          'operation':'create'
+        }
+      );
+      Tag.create(input.tags,input.customer);
+      Job.createAgentConfigUpdate(monitor.host_id);
+      next(null,result);
     });
+  });
 };
 
 /**
@@ -408,6 +392,7 @@ Service.update = function(input,next) {
     updates.host_id = updates.host._id;
     updates.hostname = updates.host.hostname;
   }
+
   resource.patch(updates,function(error){
     if(error) return next(error);
     MonitorEntity.findOne({
@@ -436,6 +421,7 @@ Service.update = function(input,next) {
           Job.createAgentConfigUpdate(previous_host);
         }
 
+        Tag.create(updates.tags,{ _id: resource.customer_id });
         var result = { resource: resource, monitor: monitor };
         next(null,result);
       });
@@ -445,11 +431,11 @@ Service.update = function(input,next) {
 
 function getEventSeverity (input) {
   var severity, event = input.event;
-  logger.log('resource event "%s"', event);
+  logger.log('resource event is "%s"', event);
   if( event && /^host:stats:.*$/.test(event) ) {
-    severity = 'Low';
+    severity = 'LOW';
   } else {
-    severity = 'High';
+    severity = 'HIGH';
   }
   return severity;
 }
@@ -640,22 +626,25 @@ Service.remove = function (input, done) {
  */
 Service.setResourceMonitorData = function(input) {
   var errors = new ErrorHandler();
+  var type = input.type||input.monitor_type;
 
-  if( ! input.monitor_type ) errors.required('monitor_type',input.monitor_type);
-  if( ! input.looptime || ! parseInt(input.looptime) ) errors.required('looptime',input.looptime);
-  if( ! input.description ) errors.required('description',input.description);
+  if( ! type ) errors.required('type',type);
+  if( ! input.looptime || ! parseInt(input.looptime) )
+    errors.required('looptime',input.looptime);
+  if( ! input.description )
+    errors.required('description',input.description);
 
-  var data = {
-    'monitor_type': input.monitor_type,
-    'name': input.name || input.description,
-    'description': input.description,
-    'type': input.type || input.monitor_type,
-    'tags': filter.toArray(input.tags),
-    'looptime': input.looptime
-  };
+  var data = _.assign({},input,{
+    'name': input.name||input.description,
+    'type': type,
+    'monitor_type': type,
+    'tags': filter.toArray(input.tags)
+  });
 
   logger.log('setting up resource type & properties');
-  switch(input.monitor_type)
+  logger.log(data);
+
+  switch(type)
   {
     case 'scraper':
       var url = input.url;
@@ -663,9 +652,25 @@ Service.setResourceMonitorData = function(input) {
       else if( !validator.isURL(url,{require_protocol:true}) ) errors.invalid('url',url);
       else data.url = url;
 
+      data.timeout = input.timeout||10000;
       data.external_host_id = input.external_host_id;
-      data.pattern = input.pattern || errors.required('pattern');
-      data.timeout = input.timeout || 10000;
+
+      if(!input.parser) input.parser=null;
+      else if(input.parser != 'script' && input.parser != 'pattern')
+        errors.invalid('parser',input.parser);
+
+      // identify how to parse api response selected option by user
+      if(!input.status_code&&!input.pattern&&!input.script){
+        errors.required('status code or parser');
+      } else {
+        if(input.parser){
+          if(input.parser=='pattern' && !input.pattern){
+            errors.invalid('pattern',input.pattern);
+          } else if(input.parser=='script' && !input.script){
+            errors.invalid('script',input.script);
+          }
+        }
+      }
       break;
     case 'process':
       data.pattern = input.pattern || errors.required('pattern');
@@ -685,7 +690,7 @@ Service.setResourceMonitorData = function(input) {
       break;
     case 'psaux': break;
     default:
-      errors.invalid('monitor_type', input.monitor_type);
+      errors.invalid('type', type);
       break;
   }
 
@@ -718,7 +723,7 @@ Service.disableResourcesByCustomer = function(customer, doneFn){
 /**
  *
  * API to create multiple resource and monitor linked to a host
- * @author Facundo
+ * @author Facugon
  *
  */
 Service.createResourceOnHosts = function(hosts,input,doneFn)
@@ -757,7 +762,7 @@ Service.createResourceOnHosts = function(hosts,input,doneFn)
 /**
  *
  *
- * @author Facundo
+ * @author Facugon
  *
  */
 function handleHostIdAndData(hostId, input, doneFn){

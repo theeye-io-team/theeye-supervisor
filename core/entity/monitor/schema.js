@@ -66,6 +66,28 @@ EntitySchema.statics.publishAll = function(entities, next){
 /**
  *
  *
+ *
+ *
+ *
+ *
+ *    WARNING WARNING
+ *
+ *   NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE
+ *
+ *
+ * THIS IS JUST FOR THE UPDATE PART
+ * CREATION IS MADE IN THIS FILE
+ *
+ * resource/monitor.js
+ *
+ *
+ * UGLY I KNOW....
+ *
+ *
+ *
+ *
+ *
+ *
  */
 EntitySchema.methods.setUpdates = function(input, next) {
   next=next||function(){};
@@ -95,10 +117,23 @@ EntitySchema.methods.setUpdates = function(input, next) {
 
       monitor.host_id = input.external_host_id || input.host_id;
       config.external = typeof input.external_host_id != 'undefined';
-      if(input.pattern ) config.pattern = input.pattern;
-      if(input.url     ) config.request_options.url = input.url;
-      if(input.timeout ) config.request_options.timeout = input.timeout;
-      if(input.method  ) config.request_options.method = input.method;
+
+      config.request_options.url = input.url;
+      config.request_options.timeout = input.timeout;
+      config.request_options.method = input.method;
+      config.request_options.json = (input.json=='true'||input.json===true);
+      config.request_options.gzip = (input.gzip=='true'||input.gzip===true);
+      config.response_options.parser = input.parser;
+      if(input.parser=='pattern'){
+        config.response_options.pattern = input.pattern;
+        config.response_options.script = null;
+      } else if(input.parser=='script'){
+        config.response_options.pattern = null;
+        config.response_options.script = input.script;
+      } else {
+        config.response_options.pattern = null;
+        config.response_options.script = null;
+      }
       break;
     case 'process':
       if(

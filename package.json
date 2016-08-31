@@ -1,5 +1,5 @@
 {
-  "version": "0.3.2",
+  "version": "0.4.0",
   "name": "TheEye-Supervisor",
   "description": "The Eye Dependencies",
   "author": "Facundo S. Gonzalez <facugon@interactar.com>",
@@ -47,6 +47,8 @@
     "node": ">=4.*"
   },
   "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^3.0.2",
     "nodemon": "^1.7.1"
   }
 }

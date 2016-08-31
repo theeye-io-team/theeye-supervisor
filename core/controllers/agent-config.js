@@ -5,6 +5,7 @@ var debug = require('debug')('eye:supervisor:controller:agent-config');
 var async = require('async');
 var paramsResolver = require('../router/param-resolver');
 var ResourceMonitorService = require("../service/resource/monitor");
+var extend = require('util')._extend;
 
 module.exports = function(server, passport) {
   server.get('/:customer/agent/:hostname/config',[
@@ -45,8 +46,7 @@ var controller = {
       if(error) res.send(500);
       generateAgentConfig(monitors, function(config){
         if(!config) return res.send(500);
-
-        res.send(200, { 'config': config });
+        res.send(200,config);
       });
     })
   }
@@ -66,8 +66,7 @@ function generateAgentConfig(monitors,next) {
     (function(configDone){
       switch(monitor.type){
         case 'scraper':
-          config.pattern = monitor.config.pattern;
-          config.request_options = monitor.config.request_options;
+          config = extend(config,monitor.config);
           configDone(null, config);
           break;
         case 'process':
