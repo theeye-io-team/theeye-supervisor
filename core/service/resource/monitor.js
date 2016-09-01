@@ -35,23 +35,19 @@ function setMonitorForScraper(input) {
 		'name': input.name || 'scraper',
 		'type': 'scraper',
 		'looptime': input.looptime,
-		'config': {
-			'external': external,
-			'request_options': {
-				'url': input.url,
-				'timeout': input.timeout,
-				'method': input.method,
-        'body': input.body,
-        'gzip': input.gzip,
-        'json': input.json
-			},
-      'response_options': {
-        'status_code': input.status_code,
-        'parser': input.parser,
-        'pattern': input.parser == 'pattern' ? input.pattern : null,
-        'script': input.parser == 'script' ? input.script : null
-      }
-		}
+    'config': {
+      'external': external,
+      'url': input.url,
+      'timeout': input.timeout,
+      'method': input.method,
+      'body': input.body,
+      'gzip': input.gzip,
+      'json': input.json,
+      'status_code': input.status_code,
+      'parser': input.parser,
+      'pattern': input.parser == 'pattern' ? input.pattern : null,
+      'script': input.parser == 'script' ? input.script : null
+    }
 	};
 }
 
