@@ -38,7 +38,7 @@ module.exports = function(server, passport) {
     resolver.customerNameToEntity({}),
     resolver.idToEntity({ param: 'monitortemplate', entity: 'monitor/template' }),
     resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-  ], controller.replace);
+  ], controller.update);
 
   server.get('/:customer/hostgroup/:group/monitortemplate',[
     passport.authenticate('bearer', {session:false}),
@@ -228,7 +228,7 @@ var controller = {
    * @method PUT
    *
    */
-  replace: function(req,res,next){
+  update: function(req,res,next){
     validateRequest(req,res);
     var monitortemplate = req.monitortemplate;
     var input = req.body.monitor;
@@ -236,8 +236,8 @@ var controller = {
 
     if(!req.group) return res.send(404,'group not found');
     if(!req.monitortemplate) return res.send(404,'monitor not found');
-    if(!req.body.monitor) return res.send(400,'invalid request. body task required');
-    
+    if(!req.body.monitor) return res.send(400,'invalid request. monitor required');
+
     monitortemplate.update(input, function(err,qr){
       monitortemplate.populate(function(err){
         var resourcetemplate = monitortemplate.template_resource;
