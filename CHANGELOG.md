@@ -1,6 +1,7 @@
 # CHANGELOG
 
-### 0.4.0 - 2016-08-28
+
+### 0.4.0 - 2016-09-01
 
 > remove extra code an setters on task controller. pass input directly to the entity without filters      
 
@@ -25,6 +26,15 @@
 > added a simple test to validate resource-email-notifications generation       
 
 > added route and methods for schedule cancellation      
+
+> validate external host id       
+
+> rename scraper config properties names, remove subdocument structure       
+
+> validate description & name in monitor creation      
+
+
+
 
 ### 0.3.2 - 2016-08-24
 

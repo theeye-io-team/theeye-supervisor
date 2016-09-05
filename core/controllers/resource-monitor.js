@@ -56,7 +56,7 @@ var controller = {
     ResourceMonitor
       .find(query)
       .sort({ 'host_id':1, 'type':1 })
-      .exec(function(err, monitors) {
+      .exec(function(err, monitors){
 
         var total = monitors.length;
         if(total==0) return res.send(200, { monitors: [] });

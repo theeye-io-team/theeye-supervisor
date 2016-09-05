@@ -631,11 +631,12 @@ Service.setResourceMonitorData = function(input) {
   if( ! type ) errors.required('type',type);
   if( ! input.looptime || ! parseInt(input.looptime) )
     errors.required('looptime',input.looptime);
-  if( ! input.description )
-    errors.required('description',input.description);
+  if( ! input.description && ! input.name )
+    errors.required('name',input.name);
 
   var data = _.assign({},input,{
     'name': input.name||input.description,
+    'description': input.description||input.name,
     'type': type,
     'monitor_type': type,
     'tags': filter.toArray(input.tags)
@@ -654,6 +655,7 @@ Service.setResourceMonitorData = function(input) {
 
       data.timeout = input.timeout||10000;
       data.external_host_id = input.external_host_id;
+      if( !input.external_host_id ) data.external = false;
 
       if(!input.parser) input.parser=null;
       else if(input.parser != 'script' && input.parser != 'pattern')
