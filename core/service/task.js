@@ -3,6 +3,7 @@ var debug = require('debug')('eye:supervisor:service:task');
 var Tag = require('../entity/tag').Entity;
 var Host = require('../entity/host').Entity;
 var Task = require('../entity/task').Entity;
+var ScraperTask = require('../entity/task/scraper').Entity;
 var Script = require('../entity/script').Entity;
 var TaskTemplate = require('../entity/task/template').Entity;
 var async = require('async');
@@ -134,8 +135,8 @@ var TaskService = {
 
             Tag.create(input.tags,input.customer);
 
-            Task.create(props, function(err,task) {
-              debug('task created');
+            function _created (task) {
+              debug('type "%s" task created %j',task.type, task);
 
               registerTaskCRUDOperation(input.customer.name,{
                 'name':task.name,
@@ -146,10 +147,20 @@ var TaskService = {
               });
 
               task.publish(function(published) {
-                debug('host id %s task created', hostId);
+                debug('host id %s task created', host._id);
                 asyncCb(null, published);
               });
-            });
+            }
+
+            props.host_id = host._id;
+            props.customer_id = input.customer._id;
+            props.user_id = input.user._id;
+            if( input.type == 'scraper' ){
+              var task = new ScraperTask(props);
+            } else {
+              var task = new Task(props);
+            }
+            task.save( err => _created(task) );
 
           });
         } else {

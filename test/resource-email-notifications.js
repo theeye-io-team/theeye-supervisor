@@ -13,9 +13,9 @@ var events = [
   {name:'host:stats:normal',data:undefined},
 ];
 
-describe('Dstat Monitor',() => {
-  describe('#failure event',() => {
-    it('should return an alert subject with LOW tag', () => {
+describe('Dstat Monitor',function() {
+  describe('#failure event',function() {
+    it('should return an alert subject with LOW tag', function() {
       var failure = events[0];
       notifications(dstat,failure.name,failure.data,(error,specs) => {
         assert.ifError(error);
@@ -24,8 +24,8 @@ describe('Dstat Monitor',() => {
     });
   });
 
-  describe('#recover event',() => {
-    it('should return a STATS recovered subject with LOW tag', () => {
+  describe('#recover event',function() {
+    it('should return a STATS recovered subject with LOW tag', function() {
       var recover = events[4];
       notifications(dstat,recover.name,recover.data,(error,specs) => {
         assert.ifError(error);
@@ -34,8 +34,8 @@ describe('Dstat Monitor',() => {
     });
   });
 
-  describe('#null event',() => {
-    it('should return the error: [Error: dstat/null event ignored.]', () => {
+  describe('#null event',function() {
+    it('should return the error: [Error: dstat/null event ignored.]', function() {
       notifications(dstat,null,events[0].data,(error,specs) => {
         assert.instanceOf(error,Error,'error should be an Error');
         assert.equal(error.message,'dstat/null event ignored.','error is not equal');
@@ -43,8 +43,8 @@ describe('Dstat Monitor',() => {
     });
   });
 
-  describe('#generic recover event',() => {
-    it('should return the error: [Error: dstat/null event ignored.]', () => {
+  describe('#generic recover event',function() {
+    it('should return the error: [Error: dstat/null event ignored.]', function() {
       notifications(dstat,null,events[4].data,(error,specs) => {
         assert.instanceOf(error,Error,'error should be an Error');
         assert.equal(error.message,'dstat/null event ignored.','error is not equal');
@@ -53,9 +53,9 @@ describe('Dstat Monitor',() => {
   });
 });
 
-describe('Script Monitor',() => {
-  describe('#failure event',() => {
-    it('should return a failure alert subject/content', () => {
+describe('Script Monitor',function() {
+  describe('#failure event',function() {
+    it('should return a failure alert subject/content', function() {
       notifications(script,Constants.RESOURCE_FAILURE,{},(error,specs) => {
         assert.ifError(error);
         assert.instanceOf(specs,Object,'specs should be an Object');
@@ -64,8 +64,8 @@ describe('Script Monitor',() => {
     });
   });
 
-  describe('#recover from failure event',() => {
-    it('should return a recover alert subject/content', () => {
+  describe('#recover from failure event',function() {
+    it('should return a recover alert subject/content', function() {
       notifications(script,Constants.RESOURCE_NORMAL,{},(error,specs) => {
         assert.ifError(error);
         assert.instanceOf(specs,Object,'specs should be an Object');
@@ -74,8 +74,8 @@ describe('Script Monitor',() => {
     });
   });
 
-  describe('#undefined/null/no event',() => {
-    it('should return an error alert subject/content', () => {
+  describe('#undefined/null/no event',function() {
+    it('should return an error alert subject/content', function() {
       notifications(script,null,{},(error,specs) => {
         assert.ifError(error);
         assert.instanceOf(specs,Object,'specs should be an Object');
@@ -84,8 +84,8 @@ describe('Script Monitor',() => {
     });
   });
 
-  describe('#not handled ERROR event',() => {
-    it('should return an error alert subject/content', () => {
+  describe('#not handled ERROR event',function() {
+    it('should return an error alert subject/content', function() {
       notifications(script,'ERROR',{},(error,specs) => {
         assert.ifError(error);
         assert.instanceOf(specs,Object,'specs should be an Object');
@@ -94,8 +94,8 @@ describe('Script Monitor',() => {
     });
   });
 
-  describe('#stopped event',() => {
-    it('should return an unreachable alert subject/content', () => {
+  describe('#stopped event',function() {
+    it('should return an unreachable alert subject/content', function() {
       notifications(script,Constants.RESOURCE_STOPPED,{},(error,specs) => {
         assert.ifError(error);
         assert.instanceOf(specs,Object,'specs should be an Object');
@@ -104,8 +104,8 @@ describe('Script Monitor',() => {
     });
   });
 
-  describe('#recover from stopped event',() => {
-    it('should return a recover from stopped alert subject/content', () => {
+  describe('#recover from stopped event',function() {
+    it('should return a recover from stopped alert subject/content', function() {
       notifications(script,Constants.RESOURCE_RECOVERED,{},(error,specs) => {
         assert.ifError(error);
         assert.instanceOf(specs,Object,'specs should be an Object');
@@ -115,9 +115,9 @@ describe('Script Monitor',() => {
   });
 });
 
-describe('Host Monitor',() => {
-  describe('#agent stopped event',() => {
-    it('should return a unreachable alert subject/content', () => {
+describe('Host Monitor',function() {
+  describe('#agent stopped event',function() {
+    it('should return a unreachable alert subject/content', function() {
       var resource = {
         'description':'dracolagoon.com',
         'hostname':'dracolagoon.com',
@@ -131,8 +131,8 @@ describe('Host Monitor',() => {
     });
   });
 
-  describe('#host stopped event',() => {
-    it('should return a unreachable alert subject/content', () => {
+  describe('#host stopped event',function() {
+    it('should return a unreachable alert subject/content', function() {
       var resource = {
         'description':'dracolagoon.com',
         'hostname':'dracolagoon.com',
@@ -147,9 +147,9 @@ describe('Host Monitor',() => {
   });
 });
 
-describe('Fake Monitor/Error',() => {
-  describe('#wrog type',() => {
-    it('should return an error and no specs', () => {
+describe('Fake Monitor/Error',function() {
+  describe('#wrog type',function() {
+    it('should return an error and no specs', function() {
       var resource = {
         type:'wrong',
         hostname:'unknown',
@@ -166,7 +166,7 @@ describe('Fake Monitor/Error',() => {
 
 
 
-describe('Scraper Monitor',() => {
+describe('Scraper Monitor',function() {
   var events = [
     'ERROR',
     'scraper.request.error',
@@ -178,8 +178,8 @@ describe('Scraper Monitor',() => {
   ];
 
   var errorEvent = events[Math.floor(Math.random() * events.length)];
-  describe('#random ERROR event',() => {
-    it('should return an error alert subject/content', () => {
+  describe('#random ERROR event',function() {
+    it('should return an error alert subject/content', function() {
       notifications(script,errorEvent,{event:errorEvent},(error,specs) => {
         assert.ifError(error);
         assert.instanceOf(specs,Object,'specs should be an Object');

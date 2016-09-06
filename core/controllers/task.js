@@ -77,14 +77,25 @@ var controller = {
       'script': req.script
     });
 
-    if(!input.script) return res.send(400, json.error('script is required'));
+    if(!input.type) return res.send(400, json.error('type is required'));
     if(!input.customer) return res.send(400, json.error('customer is required'));
-    if(input.hosts.length===0) return res.send(400, json.error('a host is required'));
+    if(!input.hosts) return res.send(400, json.error('a host is required'));
+    if(Array.isArray(input.hosts)){
+      if(input.hosts.length===0){
+        return res.send(400, json.error('a host is required'));
+      }
+    } else {
+      input.hosts = [ input.hosts ];
+    }
     if(!input.name) return res.send(400, json.error('name is required'));
+    if(input.type=='script'){
+      if(!input.script) return res.send(400, json.error('script is required'));
+    } else if(input.type=='scraper'){
+    }
 
     TaskService.createManyTasks(input, function(error, tasks) {
       if(error) return res.send(500, error);
-      res.send(200, { tasks: tasks });
+      res.send(200, tasks);
       next();
     });
   },
@@ -104,7 +115,7 @@ var controller = {
     debug.log('fetching tasks');
     TaskService.fetchBy(input, function(error, tasks) {
       if(error) return res.send(500);
-      res.send(200, { tasks: tasks });
+      res.send(200, tasks);
     });
   },
   /**
@@ -119,8 +130,8 @@ var controller = {
     var task = req.task;
     if(!task) return res.send(404);
 
-    task.publish(function(published) {
-      res.send(200, { task: published});
+    task.publish(function(data) {
+      res.send(200, data);
     });
   },
   /**
@@ -204,7 +215,7 @@ var controller = {
       task: req.task,
       updates: input,
       done: function(task){
-        res.send(200,{task:task});
+        res.send(200,task);
       },
       fail: function(error){
         res.send(500);

@@ -5,7 +5,6 @@ var events = require('events');
 var logger = require('../../lib/logger')('eye:supervisor:service:resource');
 var _ = require('lodash');
 
-var ErrorHandler = require('../../lib/errorHandler');
 var elastic = require('../../lib/elastic');
 var CustomerService = require('../customer');
 var NotificationService = require('../notification');
@@ -617,89 +616,6 @@ Service.remove = function (input, done) {
       done();
     });
   });
-}
-
-/**
- *
- * @return {object ErrorHandler}
- *
- */
-Service.setResourceMonitorData = function(input) {
-  var errors = new ErrorHandler();
-  var type = input.type||input.monitor_type;
-
-  if( ! type ) errors.required('type',type);
-  if( ! input.looptime || ! parseInt(input.looptime) )
-    errors.required('looptime',input.looptime);
-  if( ! input.description && ! input.name )
-    errors.required('name',input.name);
-
-  var data = _.assign({},input,{
-    'name': input.name||input.description,
-    'description': input.description||input.name,
-    'type': type,
-    'monitor_type': type,
-    'tags': filter.toArray(input.tags)
-  });
-
-  logger.log('setting up resource type & properties');
-  logger.log(data);
-
-  switch(type)
-  {
-    case 'scraper':
-      var url = input.url;
-      if( ! url ) errors.required('url',url);
-      else if( !validator.isURL(url,{require_protocol:true}) ) errors.invalid('url',url);
-      else data.url = url;
-
-      data.timeout = input.timeout||10000;
-      data.external_host_id = input.external_host_id;
-      if( !input.external_host_id ) data.external = false;
-
-      if(!input.parser) input.parser=null;
-      else if(input.parser != 'script' && input.parser != 'pattern')
-        errors.invalid('parser',input.parser);
-
-      // identify how to parse api response selected option by user
-      if(!input.status_code&&!input.pattern&&!input.script){
-        errors.required('status code or parser');
-      } else {
-        if(input.parser){
-          if(input.parser=='pattern' && !input.pattern){
-            errors.invalid('pattern',input.pattern);
-          } else if(input.parser=='script' && !input.script){
-            errors.invalid('script',input.script);
-          }
-        }
-      }
-      break;
-    case 'process':
-      data.pattern = input.pattern || errors.required('pattern');
-      data.psargs = input.psargs || 'aux';
-      break;
-    case 'script':
-      var scriptArgs = filter.toArray(input.script_arguments);
-      data.script_arguments = scriptArgs;
-      data.script_id = input.script_id || errors.required('script_id',input.script_id);
-      data.script_runas = input.script_runas || '';
-      break;
-    case 'dstat':
-      data.cpu = input.cpu || 60;
-      data.mem = input.mem || 60;
-      data.cache = input.cache || 60;
-      data.disk = input.disk || 60;
-      break;
-    case 'psaux': break;
-    default:
-      errors.invalid('type', type);
-      break;
-  }
-
-  return {
-    data: data,
-    errors: errors.hasErrors() ? errors : null
-  };
 }
 
 Service.disableResourcesByCustomer = function(customer, doneFn){

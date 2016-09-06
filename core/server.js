@@ -48,7 +48,7 @@ function start() {
   router.loadControllers(server, passport);
 
   server.listen( serverConfig.port, function() {
-    logger.error('server started. "%s" listening at "%s"', server.name, server.url);
+    logger.log('server started. "%s" listening at "%s"', server.name, server.url);
   });
 }
 

@@ -107,20 +107,19 @@ EntitySchema.methods.setUpdates = function(input, next) {
 
   var config = monitor.config;
   if(input.config) _.assign(input, input.config);
-  switch(type)
-  {
+  switch(type) {
     case 'scraper':
-      if( typeof input.config != 'undefined') _.assign(input, input.config);
-
       monitor.host_id = input.external_host_id || input.host_id;
       config.external = Boolean(input.external_host_id);
-
       config.url = input.url;
       config.timeout = input.timeout;
       config.method = input.method;
       config.json = (input.json=='true'||input.json===true);
       config.gzip = (input.gzip=='true'||input.gzip===true);
       config.parser = input.parser;
+      config.status_code = input.status_code;
+      config.body = input.body;
+
       if(input.parser=='pattern'){
         config.pattern = input.pattern;
         config.script = null;
@@ -133,11 +132,7 @@ EntitySchema.methods.setUpdates = function(input, next) {
       }
       break;
     case 'process':
-      if(
-        typeof input.config != 'undefined' && 
-        typeof input.config.ps != 'undefined'
-      ) _.assign(input, input.config.ps);
-
+      if(input.ps) _.assign(input, input.ps);
       if(input.pattern) config.ps.pattern = input.pattern;
       if(input.psargs) config.ps.psargs = input.psargs;
       break;
@@ -147,11 +142,7 @@ EntitySchema.methods.setUpdates = function(input, next) {
       if(input.script_runas) config.script_runas = input.script_runas;
       break;
     case 'dstat':
-      if(
-        typeof input.config != 'undefined' && 
-        typeof input.config.limit != 'undefined'
-      ) _.assign(input, input.config.limit);
-
+      if(input.limit) _.assign(input, input.limit);
       if(input.cpu) config.limit.cpu = input.cpu;
       if(input.mem) config.limit.mem = input.mem;
       if(input.cache) config.limit.cache = input.cache;

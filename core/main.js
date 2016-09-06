@@ -31,9 +31,9 @@ process.on('uncaughtException', function(error){
   handler.sendExceptionAlert(error);
 });
 
-require("./environment").setenv(
-  process.env.NODE_ENV,
-  function() {
+require("./environment").setenv(function(){
+  logger.log('initializing db');
+  require('./lib/mongodb').connect(function(){
     logger.log('initializing server');
     var server = require("./server");
 
@@ -48,5 +48,5 @@ require("./environment").setenv(
 
       logger.log('supervisor is running');
     });
-  }
-);
+  });
+});

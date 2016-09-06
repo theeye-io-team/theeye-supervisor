@@ -2,7 +2,7 @@ var _ = require('underscore');
 var debug = require('debug')('eye:supervisor:controller:resource');
 var json = require('../lib/jsonresponse');
 var ResourceManager = require('../service/resource');
-var StateHandler = require('../service/resource-state-handler');
+var MonitorManager = require('../service/resource/monitor');
 var Resource = require('../entity/resource').Entity;
 var ResourceMonitor = require('../entity/monitor').Entity;
 var Host = require('../entity/host').Entity;
@@ -123,9 +123,6 @@ var controller = {
       return next();
     }
 
-    // NEW EVENT HANDLER STILL NOT IMPLEMENTED
-    //var handler = new StateHandler(resource, state);
-    //handler.handleState(function(error)
     var manager = new ResourceManager(resource);
     manager.handleState(input,function(error){
       if(!error) {
@@ -147,7 +144,7 @@ var controller = {
     if( ! hosts ) return res.send(400, json.error('hosts are required'));
     if( ! Array.isArray(hosts) ) hosts = [ hosts ];
 
-    var params = ResourceManager.setResourceMonitorData(req.body);
+    var params = MonitorManager.validateData(req.body);
     if( params.errors && params.errors.hasErrors() ){
       return res.send(400, params.errors);
     }
@@ -192,7 +189,7 @@ var controller = {
     var resource = req.resource;
     if(!resource) return res.send(404,json.error('resource not found'));
 
-    var params = ResourceManager.setResourceMonitorData(req.body);
+    var params = MonitorManager.validateData(req.body);
     if( params.errors && params.errors.hasErrors() ) return res.send(400, params.errors);
 
     var input = params.data;

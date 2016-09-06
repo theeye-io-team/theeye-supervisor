@@ -18,11 +18,12 @@ const properties = exports.properties = {
   user_id : { type: String, 'default': null },
   customer_id : { type: String, 'default': null },
   public : { type: Boolean, 'default': false },
-  tags: { type: Array, 'default':[] }
+  tags: { type: Array, 'default':[] },
+  type: { type: String }
 };
 
 /** Schema **/
-var EntitySchema = Schema(properties,{ discriminatorKey : '_type' });
+var EntitySchema = new Schema(properties);
 exports.EntitySchema = EntitySchema;
 
 

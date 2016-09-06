@@ -16,7 +16,9 @@ var properties = {
 /**
  * Extended Schema. Includes non template attributes
  */
-var TaskSchema = BaseSchema.EntitySchema.extend(properties);
+var TaskSchema = BaseSchema.EntitySchema.extend(properties,{ collection : 'tasks', discriminatorKey : '_type' });
+
+exports.TaskSchema = TaskSchema;
 
 //exports.properties = properties;
 
@@ -85,8 +87,8 @@ TaskSchema.statics.create = function(input,next)
   instance.template         = input.template_id || null;
   instance.description      = input.description || null;
   instance.tags             = input.tags;
-  instance.save(function(error,entity){
-    next(null, entity);
+  instance.save(function(err,entity){
+    next(err, entity);
   });
 };
 
