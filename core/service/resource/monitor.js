@@ -5,6 +5,8 @@ var logger = require('../../lib/logger')('eye:supervisor:service:resource:monito
 var ResourceMonitorSchema = require('../../entity/monitor');
 var MonitorEntity = ResourceMonitorSchema.Entity;
 var ErrorHandler = require('../../lib/errorHandler');
+var filter = require('../../router/param-filter');
+var validator = require('validator');
 
 var ResourceTemplateService = require('./template');
 var ResourceService = require('./index');

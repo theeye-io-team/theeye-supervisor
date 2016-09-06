@@ -22,8 +22,6 @@ var Tag = require('../../entity/tag').Entity;
 var ResourcesEmailNotifications = require('./email-notifications');
 var globalconfig = require('config');
 
-var filter = require('../../router/param-filter');
-var validator = require('validator');
 
 var Service = module.exports = function Service(resource) {
   this.resource = resource;
