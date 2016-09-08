@@ -1,26 +1,73 @@
 require('mongoose-schema-extend');
+var lodash = require('lodash');
 var mongodb = require('../../lib/mongodb').db;
 var BaseSchema = require('./schema');
 var Template = require('./template').Entity;
 var ObjectId = require('mongoose').Schema.Types.ObjectId;
 var logger = require('../../lib/logger')('eye:entity:task');
+var Script = require('../script').Entity;
+var Host = require('../host').Entity;
 
 /** Entity properties **/
 var properties = {
   host_id : { type: String, 'default': null },
-  creation_date : { type: Date, 'default': Date.now() },
-  last_update : { type: Date, 'default': Date.now() },
   template : { type: ObjectId, ref: 'TaskTemplate', 'default': null },
+  script_id : { type: String, ref: 'Script' },
+  script_arguments : { type: Array, 'default': [] },
+  script_runas : { type: String, 'default':'' },
 };
+
 
 /**
  * Extended Schema. Includes non template attributes
  */
-var TaskSchema = BaseSchema.EntitySchema.extend(properties,{ collection : 'tasks', discriminatorKey : '_type' });
+var TaskSchema = BaseSchema.EntitySchema.extend(properties,{
+  collection : 'tasks', discriminatorKey : '_type' 
+});
 
 exports.TaskSchema = TaskSchema;
 
-//exports.properties = properties;
+/**
+ *
+ *
+ */
+TaskSchema.methods.publish = function(next) {
+  var task = this;
+
+  function preparePublish (options) {
+    options||(options={});
+
+    var data = task.toObject();
+
+    if(options.host){
+      data.host_id = options.host.id;
+      data.hostname = options.host.hostname;
+    }
+    if(options.script){
+      data.script_id = options.script.id;
+      data.script_name = options.script.filename;
+    }
+
+    next(data);
+  }
+
+  var options = { host: null, script: null };
+
+  var doneFn = lodash.after(2, () => preparePublish(options));
+
+  if( ! task.host_id ) doneFn();
+  else Host.findById(task.host_id, function(err,host){
+    if( ! err || host != null ) options.host = host;
+    doneFn();
+  });
+
+  if( ! task.script_id ) doneFn();
+  else Script.findById(task.script_id, function(err,script){
+    if( ! err || script != null ) options.script = script;
+    doneFn();
+  });
+}
+
 
 /**
  *

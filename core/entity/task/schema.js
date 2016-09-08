@@ -4,17 +4,12 @@ var debug = require('debug')('eye:supervisor:entity:task');
 var Schema = require('mongoose').Schema;
 var lodash = require('lodash');
 
-var Host = require('../host').Entity;
-var Script = require('../script').Entity;
-
-
 /** Entity properties **/
 const properties = exports.properties = {
+  creation_date : { type: Date, 'default': Date.now() },
+  last_update : { type: Date, 'default': Date.now() },
   name : { type: String },
   description : { type: String },
-  script_id : { type: String, ref: 'Script' },
-  script_arguments : { type: Array, 'default': [] },
-  script_runas : { type: String, 'default':'' },
   user_id : { type: String, 'default': null },
   customer_id : { type: String, 'default': null },
   public : { type: Boolean, 'default': false },
@@ -25,7 +20,6 @@ const properties = exports.properties = {
 /** Schema **/
 var EntitySchema = new Schema(properties);
 exports.EntitySchema = EntitySchema;
-
 
 // Duplicate the ID field.
 EntitySchema.virtual('id').get(function(){
@@ -44,57 +38,6 @@ const specs = {
 }
 EntitySchema.set('toJSON', specs);
 EntitySchema.set('toObject', specs);
-
-
-/**
- *
- *
- */
-EntitySchema.methods.publish = function(next)
-{
-  var task = this;
-
-  function preparePublish(options) {
-    options = options || {};
-
-    var data = task.toObject();
-
-    if(options.host){
-      data.host_id = options.host.id;
-      data.hostname = options.host.hostname;
-    }
-    if(options.script){
-      data.script_id = options.script.id;
-      data.script_name = options.script.filename;
-    }
-
-    debug('publish ready');
-    next(data);
-  }
-
-  var options = {
-    host : null, 
-    script : null, 
-  };
-
-  var doneFn = lodash.after(2, function(){
-    preparePublish(options);
-  });
-
-  debug('publishing');
-
-  if( ! task.host_id ) doneFn();
-  else Host.findById(task.host_id, function(err,host){
-    if( ! err || host != null ) options.host = host;
-    doneFn();
-  });
-
-  if( ! task.script_id ) doneFn();
-  else Script.findById(task.script_id, function(err,script){
-    if( ! err || script != null ) options.script = script;
-    doneFn();
-  });
-}
 
 /**
  *
@@ -139,12 +82,8 @@ EntitySchema.statics.create = function(input,next)
   });
 }
 
-/**
- *
- *
- */
 EntitySchema.statics.publishAll = function(entities, next){
-  if(!entities || entities.length == 0) return next([]);
+  if(!entities||entities.length==0) return next([]);
 
   var published = [];
   var donePublish = lodash.after(entities.length, function(){

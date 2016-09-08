@@ -1,7 +1,14 @@
 # CHANGELOG
 
+### 0.4.0 - 2016-09-08
 
-### 0.4.0 - 2016-09-01
+> task script, scraper and templated separated schemas logic     
+
+> task schema is generic task (not instanciable yet)      
+
+> job script , scraper and generic created      
+
+> job test      
 
 > remove extra code an setters on task controller. pass input directly to the entity without filters      
 
@@ -33,7 +40,9 @@
 
 > validate description & name in monitor creation      
 
+> added mocha test as dev-dependency     
 
+> event controller removed          
 
 
 ### 0.3.2 - 2016-08-24

@@ -6,7 +6,7 @@ mongodb.connect(function(){
   var ScraperTask = require('../core/entity/task/scraper').Entity;
   var task ;
 
-  describe('Scraper Task Entity',function(){
+  describe('Scraper Task Model',function(){
 
     it('#save()', function(done){
       task = new ScraperTask({

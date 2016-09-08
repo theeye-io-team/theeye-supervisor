@@ -1,7 +1,10 @@
 "use strict";
 
-var Job = require( process.env.BASE_PATH + '/entity/job' ).Entity;
-var Script = require('../entity/script').Entity;
+var Job = require(process.env.BASE_PATH + '/entity/job').Entity;
+var ScriptJob = require(process.env.BASE_PATH + '/entity/job/script').Entity;
+var ScraperJob = require(process.env.BASE_PATH + '/entity/job/scraper').Entity;
+var Script = require(process.env.BASE_PATH + '/entity/script').Entity;
+
 var async = require('async');
 var NotificationService = require('./notification');
 var globalconfig = require('config');
@@ -18,6 +21,72 @@ function registerJobCreation(customer,data){
   elastic.submit(customer,key,data);
 }
 
+function createScriptJob(input, done){
+  var task = input.task;
+  var script_id = task.script_id;
+  Script.findById(script_id).exec(function(error,script){
+    var job = new ScriptJob();
+    job.task = task.toObject(); // >>> add .id 
+    job.script = script.toObject(); // >>> add .id 
+    job.task_id = task._id;
+    job.script_id = script._id;
+    job.user = input.user;
+    job.user_id = input.user._id;
+    job.host_id = task.host_id ;
+    job.host = task.host_id ;
+    job.name = task.name;
+    job.customer_id = input.customer._id;
+    job.customer_name = input.customer.name;
+    job.notify = input.notify;
+    job.state = JOB_STATE_NEW;
+    job.save(error => {
+      if(error) return done(error);
+
+      registerJobCreation(input.customer.name,{
+        'customer_name': input.customer.name,
+        'user_id': input.user.id,
+        'user_email': input.user.email,
+        'task_name': task.name,
+        'task_type': task.type,
+        'script_name': script.filename,
+      });
+
+      debug.log('script job created.');
+      done(null, job);
+    });
+  });
+}
+
+function createScraperJob(input, done){
+  var task = input.task;
+  var job = new ScraperJob();
+  job.task = task.toObject(); // >>> add .id 
+  job.task_id = task._id;
+  job.user = input.user;
+  job.user_id = input.user._id;
+  job.host_id = task.host_id ;
+  job.host = task.host_id ;
+  job.name = task.name;
+  job.customer_id = input.customer._id;
+  job.customer_name = input.customer.name;
+  job.notify = input.notify;
+  job.state = JOB_STATE_NEW;
+  job.save(error => {
+    if(error) return done(error);
+
+    registerJobCreation(input.customer.name,{
+      'customer_name': input.customer.name,
+      'user_id': input.user.id,
+      'user_email': input.user.email,
+      'task_name': task.name,
+      'task_type': task.type
+    });
+
+    debug.log('scraper job created.');
+    done(null, job);
+  });
+}
+
 var service = {
   /**
    * @author Facugon
@@ -30,42 +99,16 @@ var service = {
    * @param {Function(error,job)} done
    */
   create (input,done) {
-    var script_id = input.task.script_id;
     var task = input.task;
+    var type = task.type;
 
-    Script.findById(script_id)
-    .exec(function(error,script){
-
-      var job = new Job();
-      job.task = task.toObject(); // >>> add .id 
-      job.script = script.toObject(); // >>> add .id 
-      job.task_id = task._id;
-      job.script_id = script._id;
-      job.user = input.user;
-      job.user_id = input.user._id;
-      job.host_id = task.host_id ;
-      job.host = task.host_id ;
-      job.name = task.name;
-      job.customer_id = input.customer._id;
-      job.customer_name = input.customer.name;
-      job.notify = input.notify;
-      job.state = JOB_STATE_NEW;
-
-      job.save(error => {
-        if(error) return done(error);
-
-        registerJobCreation(input.customer.name,{
-          'customer_name': input.customer.name,
-          'user_id': input.user.id,
-          'user_email': input.user.email,
-          'task_name': task.name,
-          'script_name': script.filename,
-        });
-
-        debug.log('job created.');
-        done(null,job);
-      });
-    });
+    if( type == 'script' ){
+      createScriptJob(input, done);
+    } else if( type == 'scraper' ){
+      createScraperJob(input, done);
+    } else {
+      throw new Error('invalid or undefined task type ' + task.type);
+    }
   },
   fetchBy(input,next) {
     var query = {};
