@@ -14,7 +14,7 @@ const properties = exports.properties = {
   customer_id : { type: String, 'default': null },
   public : { type: Boolean, 'default': false },
   tags: { type: Array, 'default':[] },
-  type: { type: String }
+  type: { type: String, required: true }
 };
 
 /** Schema **/

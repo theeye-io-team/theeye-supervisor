@@ -16,6 +16,7 @@ var properties = {
   status_code: { type: Number, 'default': null },
   parser: { type: String, 'default': null },
   pattern: { type: String, 'default': null },
+  type: { type: String, 'default': 'scraper' }
 };
 
 

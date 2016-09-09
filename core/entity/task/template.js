@@ -6,6 +6,7 @@ var TemplateSchema = BaseSchema.EntitySchema.extend({
   script_id : { type: String, ref: 'Script' },
   script_arguments : { type: Array, 'default': [] },
   script_runas : { type: String, 'default':'' },
+  type: { type: String, 'default': 'script' }
 });
 
 TemplateSchema.methods.values = function(){
