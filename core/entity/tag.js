@@ -1,16 +1,15 @@
 "use strict";
 
-var mongodb = require("../lib/mongodb");
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
+const mongodb = require("../lib/mongodb");
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
+const lodash = require('lodash');
 
-const properties = {
+var EntitySchema = Schema({
   name: { type: String },
   creation_date: { type: Date, 'default': new Date() },
   customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
-};
-
-var EntitySchema = Schema(properties);
+});
 
 EntitySchema.virtual('id').get(function(){
   return this._id.toHexString();
@@ -36,13 +35,27 @@ EntitySchema.statics.create = function(tags,customer,next){
   if(!tags||tags.length===0) return next();
   var data = tags.map(tag => {
     return {
-      _id: mongoose.Types.ObjectId(),
       name: tag,
       customer: mongoose.Types.ObjectId( customer._id )
     }
   });
-  Entity.collection.insert(data,(error,instances)=>{
-    next(error,instances);
+
+  // find or create
+  var instances = [];
+  var created = lodash.after(data.length, () => next(null, instances) );
+  data.forEach( tag => {
+    Entity.findOne(tag , (err, model) => {
+      if( ! model ) {
+        model = new Entity(tag);
+        model.save( err => {
+          if( ! err ) instances.push( model ); 
+          created();
+        });
+      } else {
+        instances.push( model );
+        created();
+      }
+    });
   });
 }
 

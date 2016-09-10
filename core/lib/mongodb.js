@@ -51,6 +51,11 @@ function Connection () {
   Object.defineProperty(this, 'db', {
     get: function() { return _db; }
   });
+
+  // return this just for the name.
+  Object.defineProperty(this, 'connection', {
+    get: function() { return _db; }
+  });
 }
 
 module.exports = new Connection();

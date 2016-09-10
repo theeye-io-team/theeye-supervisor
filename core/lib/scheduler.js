@@ -1,7 +1,7 @@
 var Agenda = require("agenda");
 var config = require("config");
-var debug = require("debug")("eye:supervisor:lib:scheduler");
-// var db = require('./mongodb').db;
+var logger = require("./logger")("eye:supervisor:lib:scheduler");
+var mongodb = require('./mongodb').connection.db;
 var async = require('async');
 var Host = require("../entity/host").Entity;
 var Task = require("../entity/task").Entity;
@@ -13,41 +13,19 @@ var format = require('util').format;
 var ObjectID = require('mongodb').ObjectID;
 
 function Scheduler() {
-  debug('Initialize');
+  logger.log('Initialize');
   // var messages = db.get("messages");
   var _this = this;
 
-  var mongo = config.get('mongo');
-  var mongoConnectionString;
-  if(mongo.user && mongo.password) {
-    mongoConnectionString = format(
-      'mongodb://%s:%s@%s/%s',
-      mongo.user,
-      mongo.password,
-      mongo.hosts,
-      mongo.database
-    );
-  }else{
-    mongoConnectionString = format(
-      'mongodb://%s/%s',
-      mongo.hosts,
-      mongo.database
-    );
-  }
-
+  // use the default mongodb connection
   this.agenda = new Agenda({
-    db: {
-      address: mongoConnectionString
-    },
+    mongo: mongodb,
     defaultConcurrency: 50,
     maxConcurrency: 200
   });
-  // this.agenda.mongo(db.collection('agendaJobs').conn.db);
-  // this.agenda.mongo();
-
-  // function ignoreErrors() {}
 
   this.agenda.on('ready', function(){
+    logger.log('scheduler is ready');
     // _this.agenda._db.ensureIndex("nextRunAt", ignoreErrors)
     //   .ensureIndex("lockedAt", ignoreErrors)
     //   .ensureIndex("name", ignoreErrors)
@@ -55,25 +33,25 @@ function Scheduler() {
 
     // Define the job
     _this.agenda.define("task", function(job, done) {
-      debug('Called task job');
+      logger.log('Called task job');
       _this.taskProcessor(job, done);
     });
     _this.agenda.on('start', function(job) {
-      debug('EVENT: start');
-      debug("Job %s starting", job.attrs.name);
+      logger.log('EVENT: start');
+      logger.log("Job %s starting", job.attrs.name);
     });
     _this.agenda.on('error', function(err, job) {
-      debug('EVENT: error');
-      debug("Job %s failed with: %j", job.name, err.stack);
+      logger.log('EVENT: error');
+      logger.log("Job %s failed with: %j", job.name, err.stack);
     });
     _this.agenda.on('fail', function(err, job) {
-      debug('EVENT: fail');
-      debug("Job %s failed with: %j", job.name, err.stack);
+      logger.log('EVENT: fail');
+      logger.log("Job %s failed with: %j", job.name, err.stack);
     });
 
     // Unlock agenda events when process finishes
     function graceful() {
-      debug('SIGTERM/SIGINT agenda graceful stop');
+      logger.log('SIGTERM/SIGINT agenda graceful stop');
       _this.agenda.stop(function() {});
       // process.exit(0);
     }
@@ -91,8 +69,8 @@ Scheduler.prototype = {
    * @param {Object} task data.
    */
   scheduleTask: function(taskData, done) {
-    debug('scheduleTask');
-    debug(taskData);
+    logger.log('scheduleTask');
+    logger.log(taskData);
 
     var date = new Date(taskData.scheduleData.runDate);
     var frequency = taskData.scheduleData.repeatEvery || false;
@@ -108,9 +86,9 @@ Scheduler.prototype = {
     var agendaJob = this.agenda.create(jobName, data);
 
     agendaJob.schedule(starting);
-    debug("agendaJob.schedule %s", starting);
+    logger.log("agendaJob.schedule %s", starting);
     if (interval) {
-      debug("repeatEvery %s", interval);
+      logger.log("repeatEvery %s", interval);
       agendaJob.repeatEvery(interval);
     }
     agendaJob.save(done);
@@ -134,21 +112,19 @@ Scheduler.prototype = {
       return callback(new Error('schedule id must be provided'));
     }
     // la verdad es que con el schedule id alcanza
-    this.agenda.cancel(
-      {
-        $and:[
-          {name: 'task'},
-          {_id: new ObjectID(scheduleId)}
-        ]
-      },
-      callback);
+    this.agenda.cancel({
+      $and:[
+        {name: 'task'},
+        {_id: new ObjectID(scheduleId)}
+      ]
+    }, callback);
   },
   taskProcessor: function(agendaJob, done) {
-    debug('////////////////////////////////////////');
-    debug('////////////////////////////////////////');
-    debug('Called agendaJob processor taskProcessor');
-    debug('////////////////////////////////////////');
-    debug('////////////////////////////////////////');
+    logger.log('////////////////////////////////////////');
+    logger.log('////////////////////////////////////////');
+    logger.log('Called agendaJob processor taskProcessor');
+    logger.log('////////////////////////////////////////');
+    logger.log('////////////////////////////////////////');
 
     // console.log(agendaJob.attrs);
     var jobData = agendaJob.attrs.data;
