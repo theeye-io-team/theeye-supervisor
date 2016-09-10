@@ -4,13 +4,13 @@ var appRoot = require('app-root-path');
 var Resource = require(appRoot + '/entity/resource').Entity;
 var Host = require(appRoot + '/entity/host').Entity;
 var Monitor = require(appRoot + '/entity/monitor').Entity;
-var Job = require(appRoot + '/entity/job').Entity;
+var AgentUpdateJob = require(appRoot + '/entity/job/agent-update').Entity;
 var logger = require(appRoot + '/lib/logger')('eye:service:group:monitor');
-var _ = require('lodash');
+var lodash = require('lodash');
 
 exports.addTemplatesToGroup = function(group,templates,done){
   done=done||()=>{};
-  var published = _.after(templates.length,()=>done());
+  var published = lodash.after(templates.length,()=>done());
   templates.forEach(template=>{
     group.addMonitorTemplate(template);
     addMonitorInstancesToGroupHosts(
@@ -55,6 +55,14 @@ exports.removeMonitorTemplateInstancesFromGroupHosts = function(
       return done();
     }
 
+    function removeMonitor(monitor){
+      monitor.remove( err => {
+        if(err) return logger.error(err);
+        // notify monitor host agent
+        AgentUpdateJob.create({ host_id: monitor.host_id });
+      });
+    }
+
     for(var i=0; i<monitors.length; i++){
       var monitor = monitors[i];
       removeMonitor(monitor);
@@ -85,7 +93,7 @@ function addMonitorInstancesToGroupHosts(
     'template':group,
   },(err,resources)=>{
     if(resources.length==0) return done();
-    var created = _.after(resources.length,()=>done());
+    var created = lodash.after(resources.length,()=>done());
     logger.log('creating %s monitors', resources.length);
     for(let i=0;i<resources.length;i++){
       let resource=resources[i];
@@ -95,7 +103,7 @@ function addMonitorInstancesToGroupHosts(
         Monitor.FromTemplate(template,opts,(err)=>{
           logger.log('monitor created');
           created();
-          Job.createAgentConfigUpdate(host._id);
+          AgentUpdateJob.create({ host_id: host._id });
         });
       });
     }
@@ -123,12 +131,3 @@ function removeResourceTemplateInstancesFromGroupHosts(
     done();
   });
 };
-
-function removeMonitor(monitor){
-  monitor.remove(err=>{
-    if(err) return logger.error(err);
-    // notify monitor host agent
-    Job.createAgentConfigUpdate(monitor.host_id);
-  });
-}
-

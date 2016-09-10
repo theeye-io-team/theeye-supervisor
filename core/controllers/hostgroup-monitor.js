@@ -9,7 +9,7 @@ var GroupMonitorService = require('../service/host/group').Monitor;
 var ResourceTemplate = require('../entity/resource/template').Entity;
 var Monitor = require('../entity/monitor').Entity;
 var Resource = require('../entity/resource').Entity;
-var Job = require('../entity/job').Entity;
+var AgentUpdateJob = require('../entity/job/agent-update').Entity;
 var Host = require('../entity/host').Entity;
 var config = require('config');
 var elastic = require('../lib/elastic');
@@ -105,7 +105,7 @@ function updateMonitorInstancesOnHostGroups(template, done)
       monitor.update(updates,(err)=>{
         if(err) return logger.error(err);
         // notify monitor host agent
-        Job.createAgentConfigUpdate(monitor.host_id);
+        AgentUpdateJob.create({ host_id: monitor.host_id });
       });
     };
     done();
@@ -140,10 +140,10 @@ function updateResourceInstancesOnHostGroups(template, done)
     for(var i=0; i<resources.length; i++){
       var resource = resources[i];
       resource.update(template.values(), function(err){
-        if(err)
-          return logger.error(err);
+        if(err) return logger.error(err);
+
         // notify resource host agent
-        Job.createAgentConfigUpdate(resource.host_id)
+        AgentUpdateJob.create({ host_id: resource.host_id });
       })
     };
     done();

@@ -7,8 +7,8 @@ var NotificationService = require("../notification");
 var CustomerService = require("../customer");
 var Handlebars = require("../../lib/handlebars");
 var ResourceService = require("../resource");
-var Job = require('../../entity/job').Entity;
 var HostGroupService = require('./group');
+var AgentUpdateJob = require('../../entity/job/agent-update').Entity;
 var logger = require("../../lib/logger")("eye:supervisor:service:host") ;
 
 var createMonitor = ResourceService.createResourceOnHosts;
@@ -19,10 +19,9 @@ function HostService(host) {
 }
 
 HostService.prototype = {
-  agentUnreachable: function()
-  {
+  agentUnreachable: function() {
     var self = this;
-    var vent = 'agent_unreachable' ;
+    var vent = 'agent_unreachable';
     var host = this.host;
 
     CustomerService.getCustomerConfig(
@@ -112,9 +111,9 @@ function sendEventNotification (host,vent)
 */
 function createBaseMonitors (input, doneFn){
   logger.log('creating base monitors');
-  doneFn=doneFn||()=>{};
-  let dstat = Object.assign({},input,{'monitor_type':'dstat'});
-  let psaux = Object.assign({},input,{'monitor_type':'psaux'});
+  doneFn||(doneFn = ()=>{});
+  let dstat = Object.assign({},input,{'type':'dstat'});
+  let psaux = Object.assign({},input,{'type':'psaux'});
   createMonitor([input.host],dstat);
   createMonitor([input.host],psaux);
 }
@@ -180,17 +179,14 @@ HostService.register = function(input,next) {
 
         data.host = host;
         data.resource = resource;
-        HostGroupService.searchAndRegisterHostIntoGroup(
-          host,
-          (err,group)=>{
-            if(err) return logger.error(err);
-            if(!group) return createBaseMonitors(data);
+        HostGroupService.searchAndRegisterHostIntoGroup(host, (err,group)=>{
+          if(err) return logger.error(err);
+          if(!group) return createBaseMonitors(data);
 
-            resource.template = group;
-            resource.save();
-            Job.createAgentConfigUpdate(host._id);
-          }
-        );
+          resource.template = group;
+          resource.save();
+          AgentUpdateJob.create({ host_id: host._id });
+        });
       });
     }
   );

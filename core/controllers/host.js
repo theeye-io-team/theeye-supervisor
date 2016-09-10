@@ -123,6 +123,7 @@ function registerHostname (input, doneFn) {
         var key = config.elasticsearch.keys.agent.version;
         elastic.submit(customer.name,key,data);
       }
+
       //if( host.agent_version != properties.agent_version ) {
       updateAgentVersion();
 

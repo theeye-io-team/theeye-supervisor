@@ -1,8 +1,8 @@
 "use strict";
 
 var appRoot = require('app-root-path');
-var Schema = require('mongoose').Schema;
-var _ = require('lodash');
+var lodash = require('lodash');
+var config = require('config');
 var logger = require(appRoot + '/lib/logger')('eye:service:host:group');
 
 var HostGroup = require(appRoot + '/entity/host/group').Entity;
@@ -14,9 +14,7 @@ var TaskTemplate = require(appRoot + '/entity/task/template').Entity;
 var Resource = require(appRoot + '/entity/resource').Entity;
 var Monitor = require(appRoot + '/entity/monitor').Entity;
 var Task = require(appRoot + '/entity/task').Entity;
-var Job = require(appRoot + '/entity/job').Entity;
-var config = require('config');
-
+var AgentUpdateJob = require(appRoot + '/entity/job/agent-update').Entity;
 var elastic = require(appRoot + '/lib/elastic');
 
 exports.Monitor = require('./monitor');
@@ -144,7 +142,7 @@ exports.searchAndRegisterHostIntoGroup = function(host, next)
  * @param {Function} doneFn
  *
  */
-function hostProvisioning( host, group, doneFn )
+function hostProvisioning(host, group, doneFn)
 {
   group.publish({}, function(err,data){
     logger.log('creating resource for host %s', host.hostname);
@@ -158,8 +156,8 @@ function hostProvisioning( host, group, doneFn )
       return doneFn();
     }
 
-    var completed = _.after(operations,function(){
-      Job.createAgentConfigUpdate(host._id);
+    var completed = lodash.after(operations,function(){
+      AgentUpdateJob.create({ host_id: host._id });
       doneFn();
     });
 

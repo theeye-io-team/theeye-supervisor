@@ -1,4 +1,5 @@
 var Schema = require('mongoose').Schema;
+require('mongoose-schema-extend');
 var ObjectId = Schema.Types.ObjectId;
 var mongodb = require('../../lib/mongodb').db;
 var debug = require('../../lib/logger')('eye:supervisor:entity:job');
@@ -24,23 +25,6 @@ var JobSchema = Schema({
 });
 
 exports.EntitySchema = JobSchema;
-
-/**
- * create a job from a dynamic task or macro generated from a script
- */
-JobSchema.statics.createAgentConfigUpdate = function(host_id,next) {
-  var job = new this();
-  job.host_id = host_id;
-  job.name = 'agent:config:update';
-  job.state = 'new';
-  job.notify = false ;
-  job.save(error => {
-    if(error) debug.error(error);
-  });
-
-  if(next) next(job);
-  return job ;
-}
 
 // Duplicate the ID field.
 JobSchema.virtual('id').get(function(){

@@ -10,6 +10,7 @@ var Host = require('../entity/host').Entity;
 var Job = require('../entity/job').Entity;
 var config = require('config');
 var elastic = require('../lib/elastic');
+var AgentUpdateJob = require('../entity/job/agent-update').Entity;
 
 function registerCRUDOperation (customer,data){
   var key = config.elasticsearch.keys.template.task.crud;
@@ -233,7 +234,7 @@ function removeTaskTemplateInstancesFromHostGroups(template,done)
       task.remove(err=>{
         if(err) return logger.error(err);
         // notify monitor host agent
-        Job.createAgentConfigUpdate(task.host_id);
+        AgentUpdateJob.create({ host_id: task.host_id });
       });
     }
     done();
@@ -260,7 +261,7 @@ function addTaskTemplateInstancesToGroupHosts(
         // ... and attach the new task to the host
         let options = { 'host': host };
         Task.FromTemplate(template,options,(err)=>{
-          Job.createAgentConfigUpdate(host._id);
+          AgentUpdateJob.create({ host_id: host._id });
         });
       });
     }
@@ -281,7 +282,7 @@ function updateTaskInstancesOnHostGroups(template, done)
       var task = tasks[i];
       task.update(template.values(),err=>{
         if(err) return logger.error(err);
-        Job.createAgentConfigUpdate(task.host_id);
+        AgentUpdateJob.create({ host_id: task.host_id });
       });
     };
     done();

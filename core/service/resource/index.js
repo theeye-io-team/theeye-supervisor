@@ -17,6 +17,7 @@ var ResourceMonitorService = require('./monitor');
 var Host = require('../../entity/host').Entity;
 var Task = require('../../entity/task').Entity;
 var HostStats = require('../../entity/host/stats').Entity;
+var AgentUpdateJob = require('../../entity/job/agent-update').Entity;
 var Job = require('../../entity/job').Entity;
 var Tag = require('../../entity/tag').Entity;
 var ResourcesEmailNotifications = require('./email-notifications');
@@ -370,7 +371,7 @@ Service.create = function (input, next) {
         }
       );
       Tag.create(input.tags,input.customer);
-      Job.createAgentConfigUpdate(monitor.host_id);
+      AgentUpdateJob.create({ host_id: monitor.host_id });
       next(null,result);
     });
   });
@@ -390,6 +391,7 @@ Service.update = function(input,next) {
     updates.hostname = updates.host.hostname;
   }
 
+  logger.log('updating monitor %j',updates);
   resource.patch(updates,function(error){
     if(error) return next(error);
     MonitorEntity.findOne({
@@ -398,7 +400,7 @@ Service.update = function(input,next) {
       if(error) return next(error);
       if(!monitor) return next(new Error('resource monitor not found'), null);
 
-      var previous_host = monitor.host_id;
+      var previous_host_id = monitor.host_id;
       monitor.update(updates,function(error){
         if(error) return next(error);
 
@@ -412,10 +414,11 @@ Service.update = function(input,next) {
             'operation':'update'
           }
         );
-        Job.createAgentConfigUpdate(updates.host_id);
+
+        AgentUpdateJob.create({ host_id: updates.host_id });
         // if monitor host changes, the new and the old agents should be notified
-        if(previous_host != updates.host_id){
-          Job.createAgentConfigUpdate(previous_host);
+        if(previous_host_id != updates.host_id){
+          AgentUpdateJob.create({ host_id: previous_host_id });
         }
 
         Tag.create(updates.tags,{ _id: resource.customer_id });
@@ -592,7 +595,7 @@ Service.remove = function (input, done) {
 
         logger.log('monitor %s removed', monitor.name);
         if(notifyAgents) {
-          Job.createAgentConfigUpdate(monitor.host_id);
+          AgentUpdateJob.create({ host_id: monitor.host_id });
         }
       });
     } else logger.error('monitor not found.');
@@ -784,7 +787,7 @@ function detachMonitorScript (monitor, done)
       if(error) return logger.error(error);
       logger.log('monitor changes saved');
       logger.log('notifying "%s"', monitor.host_id);
-      Job.createAgentConfigUpdate(monitor.host_id);
+      AgentUpdateJob.create({ host_id: monitor.host_id });
     });
   });
 }
@@ -821,7 +824,7 @@ function notifyScriptMonitorsUpdate (script) {
     for(var i=0;i<hosts.length;i++){
       var host = hosts[i];
       logger.log('notifying host "%s"', host);
-      Job.createAgentConfigUpdate(host);
+      AgentUpdateJob.create({ host_id: host });
     }
   });
 }
