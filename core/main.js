@@ -31,16 +31,20 @@ process.on('uncaughtException', function(error){
   handler.sendExceptionAlert(error);
 });
 
+logger.log('setting environment');
 require("./environment").setenv(function(){
-  logger.log('initializing db');
-  require('./lib/mongodb').connect(function(){
-    logger.log('initializing server');
-    var server = require("./server");
 
-    require('./lib/scheduler').initialize( scheduler => {
+  logger.log('connecting mongo db');
+  require('./lib/mongodb').connect(function(){
+
+    logger.log('initializing scheduler');
+    require('./lib/scheduler').initialize(function(){
+
+      logger.log('initializing server');
+      var server = require("./server");
       server.start();
 
-      if( ! process.env.NO_MONITORING ) {
+      if( ! process.env.NO_MONITORING ){
         logger.log('initializing monitor');
         var monitor = require('./service/monitor');
         monitor.start();

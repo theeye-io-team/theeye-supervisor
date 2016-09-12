@@ -1,9 +1,10 @@
-require('mongoose-schema-extend');
+"use strict";
+
+var ObjectId = require('mongoose').Schema.Types.ObjectId;
 var lodash = require('lodash');
 var mongodb = require('../../lib/mongodb').db;
 var BaseSchema = require('./schema');
 var Template = require('./template').Entity;
-var ObjectId = require('mongoose').Schema.Types.ObjectId;
 var logger = require('../../lib/logger')('eye:entity:task');
 var Script = require('../script').Entity;
 var Host = require('../host').Entity;

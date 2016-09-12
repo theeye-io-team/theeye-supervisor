@@ -10,7 +10,7 @@ var resolver = require('../router/param-resolver');
 var filter = require('../router/param-filter');
 var extend = require('lodash/assign');
 
-var Scheduler = require('../lib/scheduler').getInstance();
+var Scheduler = require('../lib/scheduler');
 
 module.exports = function(server, passport){
   server.get('/:customer/task/:task',[

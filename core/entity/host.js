@@ -1,6 +1,6 @@
 var mongodb = require("../lib/mongodb");
-var Schema = require('mongoose').Schema;
-var ObjectID = require('mongodb').ObjectID;
+var mongoose = require('mongoose');
+var Schema = mongoose.Schema;
 
 var properties = {
   customer_name : { type:String, index:true },
