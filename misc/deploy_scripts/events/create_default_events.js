@@ -1,6 +1,6 @@
 "use strict";
 
-var appRoot = __dirname + '/../../core';
+var appRoot = __dirname + '/../../../core';
 var lodash = require('lodash');
 var debug = require('debug')('eye:deploy');
 

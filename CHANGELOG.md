@@ -1,5 +1,18 @@
 # CHANGELOG
 
+### next release
+
+> new schemas for event default, task , monitor & webhook      
+
+> create default events 'success' & 'failure' for task & monitor entities       
+
+> remove events when task & monitor are removed       
+
+> created event remote method to retrieve available events       
+
+> created trigger remote method , to emit events          
+
+
 ### 0.4.0 - 2016-09-08
 
 > task script, scraper and templated separated schemas logic     

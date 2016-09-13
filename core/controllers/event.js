@@ -20,10 +20,12 @@ module.exports = function (server, passport) {
 var controller = {
   get (req, res, next) {
     if( ! req.event ) req.send(404);
-    req.send(200, req.event );
+    req.send(200, req.event);
   },
   fetch (req, res, next) {
-    Event.find().exec(function(err, events){
+    Event.find({
+      customer: req.customer
+    }).exec(function(err, events){
       if(err) res.send(500);
       res.send(200, events);
     });
