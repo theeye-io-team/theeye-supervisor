@@ -1,0 +1,14 @@
+{
+  "name": "deploy-events",
+  "version": "1.0.0",
+  "description": "",
+  "main": "create_default_events.js",
+  "scripts": {
+    "start": "DEBUG=eye:* NODE_ENV=localdev nodejs --harmony_proxies create_default_events.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "lodash": "~4.15.0"
+  }
+}

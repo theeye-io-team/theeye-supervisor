@@ -1,9 +1,8 @@
 "use strict";
 
 var appRoot = require('app-root-path');
-
 var resolver = require('../router/param-resolver');
-var EventModel = require('../entity/event').Event;
+var Event = require('../entity/event').Event;
 
 module.exports = function (server, passport) {
   server.get('/:customer/event/:event',[
@@ -24,7 +23,7 @@ var controller = {
     req.send(200, req.event );
   },
   fetch (req, res, next) {
-    EventModel.find().exec(function(err, events){
+    Event.find().exec(function(err, events){
       if(err) res.send(500);
       res.send(200, events);
     });

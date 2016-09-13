@@ -20,15 +20,16 @@ var HostStats = require('../../entity/host/stats').Entity;
 var AgentUpdateJob = require('../../entity/job/agent-update').Entity;
 var Job = require('../../entity/job').Entity;
 var Tag = require('../../entity/tag').Entity;
+var MonitorEvent = require('../../entity/event').MonitorEvent;
 var ResourcesEmailNotifications = require('./email-notifications');
 var globalconfig = require('config');
+
+const Constants = require('./constants');
 
 
 var Service = module.exports = function Service(resource) {
   this.resource = resource;
 };
-
-const Constants = require('./constants');
 
 util.inherits(Service, events.EventEmitter);
 
@@ -345,7 +346,7 @@ Service.create = function (input, next) {
     'description':input.description
   };
 
-  ResourceMonitorService.setMonitorData( type, input, function(error,monitor_data){
+  ResourceMonitorService.setMonitorData(type, input, function(error,monitor_data){
     if(error) return next(error);
     if(!monitor_data) {
       var e = new Error('invalid resource data');
@@ -370,6 +371,22 @@ Service.create = function (input, next) {
           'operation':'create'
         }
       );
+
+      /**
+       * create default event
+       */
+      MonitorEvent.create({
+        name:'failure',
+        customer: input.customer,
+        emitter: monitor
+      },{
+        name:'success',
+        customer: input.customer,
+        emitter: monitor
+      }, err => {
+        logger.error(err);
+      });
+
       Tag.create(input.tags,input.customer);
       AgentUpdateJob.create({ host_id: monitor.host_id });
       next(null,result);
@@ -570,10 +587,6 @@ Service.removeHostResource = function (input,done) {
 
 /**
  *
- *
- */
-/**
- *
  * @author Facundo
  *
  */
@@ -592,6 +605,10 @@ Service.remove = function (input, done) {
       var monitor = monitors[0];
       monitor.remove(function(err){
         if(err) return logger.error(err);
+
+        MonitorEvent.remove({
+          emitter: monitor._id
+        }, err => logger.error(err));
 
         logger.log('monitor %s removed', monitor.name);
         if(notifyAgents) {

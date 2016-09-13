@@ -1,0 +1,8 @@
+{
+  "mongo": {
+    "user": "",
+    "password": "",
+    "hosts": "localhost:27017",
+    "database": "theeye"
+  }
+}

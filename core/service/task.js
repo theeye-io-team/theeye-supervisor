@@ -6,6 +6,7 @@ var Task = require('../entity/task').Entity;
 var ScraperTask = require('../entity/task/scraper').Entity;
 var Script = require('../entity/script').Entity;
 var TaskTemplate = require('../entity/task/template').Entity;
+var TaskEvent = require('../entity/event').TaskEvent;
 var async = require('async');
 var _ = require('lodash');
 
@@ -21,11 +22,13 @@ function registerTaskCRUDOperation(customer,data) {
 
 var TaskService = {
   remove:function(options){
-    var filter = {_id:options.task._id};
-    Task.remove(filter,function(error){
-      if(error) {
-        return options.fail(error);
-      } else {
+    var task = options.task;
+    Task.remove({ _id: task._id }, err => {
+      if(err) return options.fail(err);
+
+      TaskEvent.remove({ emitter: task._id }, err => {
+        if(err) return options.fail(err);
+
         registerTaskCRUDOperation(
           options.customer.name,{
             'name':options.task.name,
@@ -35,8 +38,8 @@ var TaskService = {
             'operation':'delete'
           }
         );
-        options.done();
-      }
+      });
+      options.done();
     });
   },
   update:function(options){
@@ -102,6 +105,7 @@ var TaskService = {
       }
     });
   },
+  /**
   createResourceTask : function (input, doneFn){
     var hostId = input.resource.host_id;
     Host.findById(hostId, function(error, host){
@@ -123,35 +127,38 @@ var TaskService = {
       });
     });
   },
-  createManyTasks : function (input, doneFn) {
+  */
+  createManyTasks (input, doneFn) {
     var create = [];
     debug('creating tasks');
-    var asyncTaskCreation = function(hostId) {
-      return function(asyncCb) {
-        debug('creating task with host id %s', hostId);
-        if( hostId.match(/^[a-fA-F0-9]{24}$/) ) {
-          Host.findById(hostId, function(error, host){
-            var props = _.extend({}, input, { host: host });
 
+    function asyncTaskCreation (hostId) {
+
+      return function(asyncCb) {
+
+        function _created (task) {
+          debug('type "%s" task created %j',task.type, task);
+          registerTaskCRUDOperation(input.customer.name,{
+            'name':task.name,
+            'customer_name':input.customer.name,
+            'user_id':input.user.id,
+            'user_email':input.user.email,
+            'operation':'create'
+          });
+          task.publish(function(published) {
+            debug('host id %s task created', hostId);
+            asyncCb(null, published);
+          });
+        }
+
+        debug('creating task with host id %s', hostId);
+
+        if( hostId.match(/^[a-fA-F0-9]{24}$/) ) {
+
+          Host.findById(hostId, function(error, host){
             Tag.create(input.tags,input.customer);
 
-            function _created (task) {
-              debug('type "%s" task created %j',task.type, task);
-
-              registerTaskCRUDOperation(input.customer.name,{
-                'name':task.name,
-                'customer_name':input.customer.name,
-                'user_id':input.user.id,
-                'user_email':input.user.email,
-                'operation':'create'
-              });
-
-              task.publish(function(published) {
-                debug('host id %s task created', host._id);
-                asyncCb(null, published);
-              });
-            }
-
+            var props = _.extend({}, input, { host: host });
             props.host_id = host._id;
             props.customer_id = input.customer._id;
             props.user_id = input.user._id;
@@ -160,9 +167,24 @@ var TaskService = {
             } else {
               var task = new Task(props);
             }
-            task.save( err => _created(task) );
 
+            task.save( err => {
+              _created(task);
+
+              TaskEvent.create({
+                name:'success',
+                customer: input.customer,
+                emitter: task
+              },{
+                name:'failure',
+                customer: input.customer,
+                emitter: task
+              }, err => {
+                debug(err);
+              });
+            });
           });
+
         } else {
           debug('host id %s invalid', hostId);
           var error = new Error('invalid host id ' + hostId);
@@ -170,6 +192,7 @@ var TaskService = {
         }
       }
     }
+
 
     var hosts = input.hosts ;
     debug('creating task on hosts %j', hosts);
