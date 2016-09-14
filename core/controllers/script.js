@@ -10,6 +10,7 @@ var filter = require('../router/param-filter');
 var ScriptService = require('../service/script');
 var ResourceService = require('../service/resource');
 var Script = require('../entity/script').Entity;
+var extend = require('util')._extend;
 
 module.exports = function(server, passport) {
   server.get('/:customer/script', [
@@ -32,7 +33,7 @@ module.exports = function(server, passport) {
     resolve.customerNameToEntity({}),
     passport.authenticate('bearer', {session:false}),
     resolve.idToEntity({param:'script'}),
-  ], controller.patch);
+  ], controller.update);
 
   server.del('/:customer/script/:script', [
     resolve.customerNameToEntity({}),
@@ -144,25 +145,22 @@ var controller = {
    *
    *
    */
-  patch: function(req, res, next) {
+  update: function(req, res, next) {
     var script = req.script;
     var file = req.files.script;
-    var description = req.body.description;
-    var name = req.body.name;
+    var params = req.body;
 
-    if(!script) return res.send(404,json.error('script not found'));
-    if(!file && !description && !name)
-      return res.send(400, json.error('nothing to update'));
+    if(!script) return res.send(404);
+    if(!file) return res.send(400,'script file is required');
 
-    ScriptService.update({
+    var input = extend(params,{
       customer: req.customer,
       user: req.user,
       script: script,
-      description: description,
-      name: name,
-      public: req.body.public||false,
       file: file
-    },function(error, script){
+    });
+
+    ScriptService.update(input,(error, script) => {
       if(error) return res.send(500);
 
       ResourceService.onScriptUpdated(script);

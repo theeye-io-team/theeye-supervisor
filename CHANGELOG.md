@@ -12,6 +12,12 @@
 
 > created trigger remote method , to emit events          
 
+> improve script entity update     
+
+> all input is passed directly to the entity        
+
+> update filename with name        
+
 
 ### 0.4.0 - 2016-09-08
 
