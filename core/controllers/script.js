@@ -112,7 +112,7 @@ var controller = {
         }) );
       } else {
         script.publish(function(error, data){
-          res.send( 200, { 'script': data });
+          res.send( 200, data );
         });
       }
     });
