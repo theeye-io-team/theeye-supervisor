@@ -462,40 +462,35 @@ function getEventSeverity (input) {
  * static methods
  *
  */
-Service.fetchBy = function(input,next) {
-  var query = { };
-  query.enable = true;
-  query.customer_id = input.customer._id;
-  if( input.host ) query.host_id = input.host._id;
-  if( input.type ) query.type = input.type;
+Service.fetchBy = function(filter,next) {
+  var query = Resource.find( filter.where );
+  if( filter.sort ) query.sort( filter.sort );
+  if( filter.limit ) query.limit( filter.limit );
+  query.exec(function(error,resources){
+    if(error) {
+      logger.error('unable to fetch resources from database');
+      logger.error(error);
+      return next(error,null);
+    }
 
-  Resource
-    .find(query)
-    .sort({'fails_count':-1,'type':1})
-    .exec(function(error,resources){
-      if(error) {
-        logger.log('unable to fetch resources from database');
-        return next(error,null);
-      }
+    if(resources.length===0) return next(null,[]);
 
-      if(resources.length===0) return next(null,[]);
+    var pub = [];
+    var fetched = _.after(resources.length,() => next(null,pub));
 
-      var pub = [];
-      var fetched = _.after(resources.length,() => next(null,pub));
-
-      resources.forEach(resource => {
-        resource.publish(function(error, data){
-          MonitorEntity.findOne(
-            { resource_id: resource._id },
-            (error,monitor) => {
-              data.monitor = monitor;
-              pub.push(data); 
-              fetched();
-            }
-          );
-        });
+    resources.forEach(resource => {
+      resource.publish(function(error, data){
+        MonitorEntity.findOne(
+          { resource_id: resource._id },
+          (error,monitor) => {
+            data.monitor = monitor;
+            pub.push(data); 
+            fetched();
+          }
+        );
       });
     });
+  });
 }
 
 /**

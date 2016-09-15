@@ -18,6 +18,10 @@
 
 > update filename with name        
 
+> resources fetch return an array of resources , removed keyword "resources" from response           
+
+> added query method strategy when fetch resources            
+
 
 ### 0.4.0 - 2016-09-08
 

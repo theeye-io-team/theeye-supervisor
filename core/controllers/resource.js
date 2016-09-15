@@ -1,4 +1,3 @@
-var _ = require('underscore');
 var debug = require('debug')('eye:supervisor:controller:resource');
 var json = require('../lib/jsonresponse');
 var ResourceManager = require('../service/resource');
@@ -8,13 +7,13 @@ var ResourceMonitor = require('../entity/monitor').Entity;
 var Host = require('../entity/host').Entity;
 var Job = require('../entity/job').Entity;
 var resolver = require('../router/param-resolver');
-var filter = require('../router/param-filter');
+
+var DbQuery = require('../lib/db-filter');
 
 module.exports = function(server, passport) {
   server.get('/:customer/resource',[
     passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'host'})
+    resolver.customerNameToEntity({})
   ], controller.fetch);
 
   server.get('/:customer/resource/:resource',[
@@ -69,16 +68,24 @@ var controller = {
     });
   },
   fetch : function(req,res,next) {
-    if(!req.customer) return res.send(400,json.error('customer is required'));
+    if(!req.customer){
+      return res.send(403,json.error('specify an organization'));
+    }
 
-    var input = { customer: req.customer, host: req.host };
-    if(req.query.type) input.type = req.query.type;
+    var filter = DbQuery(req.query,{
+      sort: {
+        fails_count: -1,
+        type: 1 
+      }
+    });
 
-    ResourceManager.fetchBy(input,function(error,resources){
+    filter.where.customer_id = req.customer._id;
+
+    ResourceManager.fetchBy(filter,function(error,resources){
       if(error||!resources) {
         res.send(500);
       } else {
-        res.send(200,{ resources : resources });
+        res.send(200, resources);
       }
     });
   },
@@ -159,13 +166,17 @@ var controller = {
       if(error) {
         if(error.errors) {
           var messages=[];
-          _.each(error.errors,function(e,i){
-            messages.push({field:e.path, type:e.kind});
-          });
+          for(var err in error.errors){
+            var e = errors[err];
+            messages.push({
+              field: e.path,
+              type: e.kind
+            });
+          }
 
           return res.send(400, json.error(
-            error.message, 
-            {errors:messages} 
+            error.message,
+            { errors: messages }
           ));
         } else {
           debug(error);
