@@ -33,7 +33,7 @@ const specs = {
 		// remove the _id of every document before returning the result
 		ret.id = ret._id;
 		delete ret._id;
-		delete ret._type;
+		//delete ret._type;
 		delete ret.__v;
 	}
 }

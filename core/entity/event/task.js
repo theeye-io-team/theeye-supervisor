@@ -1,13 +1,15 @@
 "use strict";
-var Schema = require('mongoose').Schema;
-var mongodb = require('../../lib/mongodb').db;
-var EventSchema = require('./schema').EntitySchema;
 
-var TaskSchema = EventSchema.extend({
-  emitter: { type: Schema.Types.ObjectId, ref: 'Task' },
+const Schema = require('mongoose').Schema;
+const mongodb = require('../../lib/mongodb').db;
+const BaseSchema = require('./schema');
+
+var EventSchema = new BaseSchema({
+  emitter: {
+    type: Schema.Types.ObjectId,
+    ref: 'Task',
+    default: null
+  },
 });
 
-var Entity = mongodb.model('TaskEvent', TaskSchema);
-Entity.ensureIndexes();
-
-exports.Entity = Entity;
+module.exports = EventSchema;

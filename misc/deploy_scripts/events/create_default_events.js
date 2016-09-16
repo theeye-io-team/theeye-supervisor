@@ -32,13 +32,23 @@ var mongodb = require( appRoot + '/lib/mongodb' ).connect(() => {
 
       var event = new Event.MonitorEvent({
         customer: m.resource.customer_id,
-        emitter: m
+        emitter: m,
+        name:'success'
       });
-
       event.save( err => {
         if(err) debug(err);
         else debug('CREATED monitor event %s/%s', m._id, m.name);
-        next();
+
+        var event = new Event.MonitorEvent({
+          customer: m.resource.customer_id,
+          emitter: m,
+          name:'failure'
+        });
+        event.save( err => {
+          if(err) debug(err);
+          else debug('CREATED monitor event %s/%s', m._id, m.name);
+          next();
+        });
       });
     });
   });
@@ -56,13 +66,24 @@ var mongodb = require( appRoot + '/lib/mongodb' ).connect(() => {
 
       var event = new Event.TaskEvent({
         customer: t.customer_id,
-        emitter: t
+        emitter: t,
+        name:'success'
       });
-
       event.save( err => {
         if(err) debug(err);
         else debug('CREATED task event %s/%s', t._id, t.name);
-        next();
+
+        var event = new Event.TaskEvent({
+          customer: t.customer_id,
+          emitter: t,
+          name:'failure'
+        });
+        event.save( err => {
+          if(err) debug(err);
+          else debug('CREATED task event %s/%s', t._id, t.name);
+
+          next();
+        });
       });
     });
   });

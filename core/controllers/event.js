@@ -23,9 +23,10 @@ var controller = {
     req.send(200, req.event);
   },
   fetch (req, res, next) {
-    Event.find({
-      customer: req.customer
-    }).exec(function(err, events){
+    Event
+    .find({ customer: req.customer })
+    .populate('emitter')
+    .exec(function(err, events){
       if(err) res.send(500);
       res.send(200, events);
     });
