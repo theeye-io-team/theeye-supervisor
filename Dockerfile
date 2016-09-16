@@ -1,4 +1,5 @@
-FROM node:4.3.2
+FROM interactar/theeye-supervisor:15_09_16
+#FROM node:4.3.2
 MAINTAINER Javier Ailbirt <jailbirt@interactar.com>
 ENV destDir /src/theeye/supervisor
 # Create app directory
