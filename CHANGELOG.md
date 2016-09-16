@@ -22,6 +22,8 @@
 
 > added query method strategy when fetch resources            
 
+> change Event schema definition, base schema class created. use native mongoose without mongoose-schema-extend module        
+
 
 ### 0.4.0 - 2016-09-08
 
