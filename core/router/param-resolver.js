@@ -31,7 +31,9 @@ function idToEntity (options) {
       req[paramName] = null;
       next();
     } else {
-      var Entity = require('../entity/' + entityName).Entity;
+      var entityModule = require('../entity/' + entityName);
+      var Entity = (entityModule.Entity||entityModule);
+
       Entity.findById(_id, function(queryError, resource){
         if(queryError) {
           debug(queryError);

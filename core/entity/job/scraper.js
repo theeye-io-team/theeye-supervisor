@@ -1,11 +1,9 @@
-var JobSchema = require('./index').EntitySchema;
-var mongodb = require('../../lib/mongodb').db;
+"use strict";
 
-var ScraperJobSchema = JobSchema.extend({
-});
+const BaseSchema = require('./schema');
+const Job = require('./index');
 
+var ScraperJob = Job.discriminator('ScraperJob', new BaseSchema());
+ScraperJob.ensureIndexes();
 
-var Job = mongodb.model('ScraperJob', ScraperJobSchema);
-Job.ensureIndexes();
-
-exports.Entity = Job;
+module.exports = ScraperJob;

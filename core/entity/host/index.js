@@ -4,17 +4,17 @@ var mongodb = require("../../lib/mongodb");
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
-const properties = {
-  customer_name : { type : String },
-  customer_id   : { type : String, index : true },
-  ip            : { type : String },
-  hostname      : { type : String, index : true, unique : true, required : true, dropDups: true },
-  os_name       : { type : String },
-  os_version    : { type : String },
-  agent_version : { type : String },
-  creation_date : { type : Date, 'default' : Date.now },
-  last_update   : { type : Date, 'default' : null },
-  enable        : { type : Boolean, 'default' : true }
+var properties = {
+  customer_name : { type:String, index:true },
+  hostname      : { type:String, index:true, required:true },
+  customer_id   : { type:String },
+  ip            : { type:String },
+  os_name       : { type:String },
+  os_version    : { type:String },
+  agent_version : { type:String },
+  creation_date : { type:Date, 'default':Date.now },
+  last_update   : { type:Date, 'default':null },
+  enable        : { type:Boolean, 'default':true }
 };
 
 var EntitySchema = Schema(properties);

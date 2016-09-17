@@ -1,9 +1,9 @@
 "use strict";
 
-var Job = require(process.env.BASE_PATH + '/entity/job').Entity;
-var ScriptJob = require(process.env.BASE_PATH + '/entity/job/script').Entity;
-var ScraperJob = require(process.env.BASE_PATH + '/entity/job/scraper').Entity;
-var Script = require(process.env.BASE_PATH + '/entity/script').Entity;
+var Job = require('../entity/job');
+var ScriptJob = require('../entity/job/script');
+var ScraperJob = require('../entity/job/scraper');
+var Script = require('../entity/script').Entity;
 
 var async = require('async');
 var NotificationService = require('./notification');

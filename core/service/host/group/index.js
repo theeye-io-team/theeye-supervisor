@@ -14,7 +14,7 @@ var TaskTemplate = require(appRoot + '/entity/task/template').Entity;
 var Resource = require(appRoot + '/entity/resource').Entity;
 var Monitor = require(appRoot + '/entity/monitor').Entity;
 var Task = require(appRoot + '/entity/task').Entity;
-var AgentUpdateJob = require(appRoot + '/entity/job/agent-update').Entity;
+var AgentUpdateJob = require(appRoot + '/entity/job/agent-update');
 var elastic = require(appRoot + '/lib/elastic');
 
 exports.Monitor = require('./monitor');

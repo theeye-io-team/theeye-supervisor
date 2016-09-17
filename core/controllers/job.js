@@ -1,8 +1,8 @@
-"use strict";
+'use strict';
 
-var json = require(process.env.BASE_PATH + "/lib/jsonresponse");
-var Job = require(process.env.BASE_PATH + "/entity/job").Entity;
-var JobService = require(process.env.BASE_PATH + "/service/job");
+var json = require('../lib/jsonresponse');
+var Job = require('../entity/job');
+var JobService = require('../service/job');
 var debug = require('../lib/logger')('eye:supervisor:controller:job');
 var paramsResolver = require('../router/param-resolver');
 

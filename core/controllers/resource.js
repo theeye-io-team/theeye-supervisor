@@ -5,7 +5,7 @@ var MonitorManager = require('../service/resource/monitor');
 var Resource = require('../entity/resource').Entity;
 var ResourceMonitor = require('../entity/monitor').Entity;
 var Host = require('../entity/host').Entity;
-var Job = require('../entity/job').Entity;
+var Job = require('../entity/job');
 var resolver = require('../router/param-resolver');
 
 var DbQuery = require('../lib/db-filter');

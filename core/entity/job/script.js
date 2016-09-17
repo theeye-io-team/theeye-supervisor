@@ -1,13 +1,16 @@
-var JobSchema = require('./index').EntitySchema;
-var mongodb = require('../../lib/mongodb').db;
+"use strict";
 
-var ScriptJobSchema = JobSchema.extend({
+const BaseSchema = require('./schema');
+const Job = require('./index');
+
+var ScriptSchema = new BaseSchema({
   script_id: { type: String },
   script_arguments: { type: Array, 'default': [] },
   script: { type: Object }, // embedded
 });
 
-ScriptJobSchema.statics.createMacro = function(input,next){
+/*
+ScriptSchema.statics.createMacro = function(input,next){
   var job = new this();
   job.task_id = null ;
   job.host_id = input.host._id ;
@@ -25,8 +28,10 @@ ScriptJobSchema.statics.createMacro = function(input,next){
   if(next) next(job);
   return job ;
 }
+*/
 
-var Job = mongodb.model('ScriptJob', ScriptJobSchema);
-Job.ensureIndexes();
+var ScriptJob = Job.discriminator('ScriptJob', ScriptSchema);
 
-exports.Entity = Job;
+ScriptJob.ensureIndexes();
+
+module.exports = ScriptJob;

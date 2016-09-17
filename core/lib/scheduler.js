@@ -1,19 +1,19 @@
-var Agenda = require("agenda");
-var config = require("config");
+var Agenda = require('agenda');
+var config = require('config');
 var async = require('async');
 var format = require('util').format;
 var ObjectId = require('mongoose').Types.ObjectId;
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 
-var logger = require("./logger")("eye:supervisor:lib:scheduler");
+var logger = require('./logger')('eye:supervisor:lib:scheduler');
 var mongodb = require('./mongodb').connection.db;
-var Host = require("../entity/host").Entity;
-var Task = require("../entity/task").Entity;
-var Script = require("../entity/script").Entity;
-var Customer = require("../entity/customer").Entity;
-var User = require("../entity/user").Entity;
-var JobService = require("../service/job");
+var Host = require('../entity/host').Entity;
+var Task = require('../entity/task').Entity;
+var Script = require('../entity/script').Entity;
+var Customer = require('../entity/customer').Entity;
+var User = require('../entity/user').Entity;
+var JobService = require('../service/job');
 
 function Scheduler() {
 

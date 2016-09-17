@@ -7,10 +7,11 @@ var TaskService = require('../service/task');
 var Task = require('../entity/task').Entity;
 var Resource = require('../entity/resource').Entity;
 var Host = require('../entity/host').Entity;
-var Job = require('../entity/job').Entity;
 var config = require('config');
 var elastic = require('../lib/elastic');
-var AgentUpdateJob = require('../entity/job/agent-update').Entity;
+
+var Job = require('../entity/job');
+var AgentUpdateJob = require('../entity/job/agent-update');
 
 function registerCRUDOperation (customer,data){
   var key = config.elasticsearch.keys.template.task.crud;
