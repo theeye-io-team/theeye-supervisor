@@ -10,8 +10,8 @@ var Host = require('../entity/host').Entity;
 var config = require('config');
 var elastic = require('../lib/elastic');
 
-var Job = require('../entity/job');
-var AgentUpdateJob = require('../entity/job/agent-update');
+var Job = require('../entity/job').Job;
+var AgentUpdateJob = require('../entity/job').AgentUpdate;
 
 function registerCRUDOperation (customer,data){
   var key = config.elasticsearch.keys.template.task.crud;

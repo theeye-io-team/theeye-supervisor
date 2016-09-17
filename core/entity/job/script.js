@@ -30,8 +30,4 @@ ScriptSchema.statics.createMacro = function(input,next){
 }
 */
 
-var ScriptJob = Job.discriminator('ScriptJob', ScriptSchema);
-
-ScriptJob.ensureIndexes();
-
-module.exports = ScriptJob;
+module.exports = ScriptSchema;

@@ -4,7 +4,7 @@ var appRoot = require('app-root-path');
 var Resource = require(appRoot + '/entity/resource').Entity;
 var Host = require(appRoot + '/entity/host').Entity;
 var Monitor = require(appRoot + '/entity/monitor').Entity;
-var AgentUpdateJob = require(appRoot + '/entity/job/agent-update');
+var AgentUpdateJob = require(appRoot + '/entity/job').AgentUpdate;
 var logger = require(appRoot + '/lib/logger')('eye:service:group:monitor');
 var lodash = require('lodash');
 

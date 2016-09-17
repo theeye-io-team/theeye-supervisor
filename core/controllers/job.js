@@ -1,7 +1,7 @@
 'use strict';
 
 var json = require('../lib/jsonresponse');
-var Job = require('../entity/job');
+var Job = require('../entity/job').Job;
 var JobService = require('../service/job');
 var debug = require('../lib/logger')('eye:supervisor:controller:job');
 var paramsResolver = require('../router/param-resolver');

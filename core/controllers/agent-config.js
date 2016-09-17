@@ -39,9 +39,9 @@ var controller = {
     if(!user) return res.send(400,'authentication required');
 
     ResourceMonitorService.findBy({
-      'enable': true,
-      'host_id': host._id,
-      'customer_id': customer._id
+      enable: true,
+      host_id: host._id,
+      customer_id: customer._id
     }, function(error, monitors){
       if(error) res.send(500);
       generateAgentConfig(monitors, function(config){

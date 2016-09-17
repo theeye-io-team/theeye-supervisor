@@ -9,7 +9,6 @@ var AgentUpdateJobSchema = new BaseSchema({
   notify: { type: Boolean, 'default': false },
 });
 
-
 /**
  * create a job from a dynamic task or macro generated from a script
  */
@@ -34,8 +33,4 @@ AgentUpdateJobSchema.statics.create = function(specs,next) {
   });
 }
 
-
-var AgentUpdateJob = Job.discriminator('AgentUpdateJob', AgentUpdateJobSchema);
-AgentUpdateJob.ensureIndexes();
-
-module.exports = AgentUpdateJob;
+module.exports = AgentUpdateJobSchema;

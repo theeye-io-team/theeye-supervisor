@@ -10,7 +10,7 @@ var validator = require('validator');
 
 var ResourceTemplateService = require('./template');
 var ResourceService = require('./index');
-var Job = require('../../entity/job');
+var Job = require('../../entity/job').Job;
 
 
 /**
