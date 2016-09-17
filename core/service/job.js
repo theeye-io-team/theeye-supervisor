@@ -1,8 +1,9 @@
 "use strict";
 
-var Job = require('../entity/job').Job;
-var ScriptJob = require('../entity/job').Script;
-var ScraperJob = require('../entity/job').Scraper;
+var JobModels = require('../entity/job');
+var Job = JobModels.Job;
+var ScriptJob = JobModels.Script;
+var ScraperJob = JobModels.Scraper;
 var Script = require('../entity/script').Entity;
 
 var async = require('async');
