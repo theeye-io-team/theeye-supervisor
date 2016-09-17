@@ -6,13 +6,7 @@ const Schema = require('mongoose').Schema;
 function BaseSchema (specs) {
 
   // Schema constructor
-  Schema.call(this,specs,{
-    collection: 'jobs',
-    discriminatorKey: '_type'
-  });
-
-  // Add default properties
-  this.add({
+  Schema.call(this, util._extend({
     task_id: { type: String, 'default':null },
     task: { type: Object, 'default':null }, // embedded
     host_id: { type: String, 'default':null },
@@ -27,8 +21,10 @@ function BaseSchema (specs) {
     result: { type: Object, 'default': {} },
     creation_date: { type: Date, 'default': Date.now },
     last_update: { type: Date, 'default': Date.now },
+  }, specs),{
+    collection: 'jobs',
+    discriminatorKey: '_type'
   });
-
 
   // Duplicate the ID field.
   this.virtual('id').get(function(){
