@@ -15,7 +15,7 @@ WORKDIR ${destDir}
 # Bundle app source
 COPY . ${destDir}
 # Move packages
-mv /tmp/node_modules ${destDir}
+RUN mv /tmp/node_modules ${destDir}
 # Install app dependencies
 RUN cd ${destDir}; npm install
 #Export and run.
