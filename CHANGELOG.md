@@ -1,6 +1,6 @@
 # CHANGELOG
 
-### next release
+### 0.5.0 - 2016-09-19
 
 > add a ref to Host in tasks and monitors schemas        
 
