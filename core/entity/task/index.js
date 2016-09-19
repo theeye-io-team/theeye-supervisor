@@ -11,11 +11,12 @@ var Host = require('../host').Entity;
 
 /** Entity properties **/
 var properties = {
-  host_id : { type: String, 'default': null },
-  template : { type: ObjectId, ref: 'TaskTemplate', 'default': null },
-  script_id : { type: String, ref: 'Script' },
-  script_arguments : { type: Array, 'default': [] },
-  script_runas : { type: String, 'default':'' },
+  host_id: { type: String, 'default': null },
+  host: { type: ObjectId, ref: 'Host' },
+  template: { type: ObjectId, ref: 'TaskTemplate', 'default': null },
+  script_id: { type: String, ref: 'Script' },
+  script_arguments: { type: Array, 'default': [] },
+  script_runas: { type: String, 'default':'' },
   type: { type: String, 'default': 'script' }
 };
 
@@ -24,7 +25,8 @@ var properties = {
  * Extended Schema. Includes non template attributes
  */
 var TaskSchema = BaseSchema.EntitySchema.extend(properties,{
-  collection : 'tasks', discriminatorKey : '_type' 
+  collection: 'tasks',
+  discriminatorKey: '_type' 
 });
 
 exports.TaskSchema = TaskSchema;
@@ -122,8 +124,7 @@ TaskSchema.statics.FromTemplate = function(
  *
  *
  */
-TaskSchema.statics.create = function(input,next)
-{
+TaskSchema.statics.create = function(input,next) {
   var instance = new this();
   instance.host_id          = input.host ? input.host._id : null ;
   instance.customer_id      = input.customer._id;

@@ -25,7 +25,13 @@ var controller = {
   fetch (req, res, next) {
     Event
     .find({ customer: req.customer })
-    .populate('emitter')
+    .populate({
+      path: 'emitter',
+      populate: {
+        path: 'host',
+        model: 'Host'
+      }
+    })
     .exec(function(err, events){
       if(err) res.send(500);
       res.send(200, events);

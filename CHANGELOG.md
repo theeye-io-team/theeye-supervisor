@@ -2,6 +2,10 @@
 
 ### next release
 
+> add a ref to Host in tasks and monitors schemas        
+
+> events can now be attached to tasks        
+
 > new schemas for event default, task , monitor & webhook      
 
 > create default events 'success' & 'failure' for task & monitor entities       

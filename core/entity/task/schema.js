@@ -15,7 +15,9 @@ const properties = exports.properties = {
   customer_id : { type: String, 'default': null },
   public : { type: Boolean, 'default': false },
   tags: { type: Array, 'default':[] },
-  type: { type: String, required: true }
+  type: { type: String, required: true },
+  triggers: [{ type: Schema.Types.ObjectId, ref: 'Event', 'default':function(){return [];} }],
+  grace_time: { type: Number, 'default': 0 }
 };
 
 /** Schema **/
@@ -70,14 +72,14 @@ EntitySchema.methods.update = function(input,next)
 EntitySchema.statics.create = function(input,next)
 {
   var instance = new this();
-  instance.user_id          = input.user_id||input.user._id;
-  instance.customer_id      = input.customer_id||input.customer._id;
-  instance.script_id        = input.script_id||input.script._id;
+  instance.user_id = input.user_id||input.user._id;
+  instance.customer_id = input.customer_id||input.customer._id;
+  instance.script_id = input.script_id||input.script._id;
   instance.script_arguments = input.script_arguments;
-  instance.script_runas     = input.script_runas;
-  instance.name             = input.name || null;
-  instance.description      = input.description || null;
-  instance.tags             = input.tags;
+  instance.script_runas = input.script_runas;
+  instance.name = input.name || null;
+  instance.description = input.description || null;
+  instance.tags = input.tags;
   instance.save(function(error,entity){
     next(null, entity);
   });

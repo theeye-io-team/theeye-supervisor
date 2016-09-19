@@ -1,11 +1,12 @@
 "use strict";
-var Script = require("../entity/script").Entity;
-var json = require("../lib/jsonresponse");
+
+var extend = require('util')._extend;
 var debug = require('debug')('eye:supervisor:controller:agent-config');
 var async = require('async');
+var Script = require("../entity/script").Entity;
+var json = require("../lib/jsonresponse");
 var paramsResolver = require('../router/param-resolver');
 var ResourceMonitorService = require("../service/resource/monitor");
-var extend = require('util')._extend;
 
 module.exports = function(server, passport) {
   server.get('/:customer/agent/:hostname/config',[
