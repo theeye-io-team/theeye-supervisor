@@ -108,6 +108,7 @@ var controller = {
     if(!req.group) return res.send(404,'group not found');
     if(!req.body.task) return res.send(400,'tasks required');
     var group = req.group;
+    var customer = req.customer;
     var tasks = [ req.body.task ];
 
     function addTemplateToGroup(group,template,done){
@@ -118,6 +119,7 @@ var controller = {
         logger.log('task added to group');
         addTaskTemplateInstancesToGroupHosts(
           template,
+          customer,
           group,
           (err)=>{}
         );
@@ -249,7 +251,7 @@ function removeTaskTemplateInstancesFromHostGroups(template,done)
  *
  */
 function addTaskTemplateInstancesToGroupHosts(
-  template, group, done
+  template, customer, group, done
 ){
   Resource.find({
     'type':'host',
@@ -260,9 +262,13 @@ function addTaskTemplateInstancesToGroupHosts(
       let resource=resources[i];
       Host.findById(resource.host_id,(err,host)=>{
         // ... and attach the new task to the host
-        let options = { 'host': host };
-        Task.FromTemplate(template,options,(err)=>{
-          AgentUpdateJob.create({ host_id: host._id });
+        TaskService.createFromTemplate({
+          customer: customer,
+          templateData: template.toObject(),
+          host: host,
+          done: (err, task) => {
+            AgentUpdateJob.create({ host_id: host._id });
+          }
         });
       });
     }

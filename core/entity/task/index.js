@@ -9,22 +9,20 @@ var logger = require('../../lib/logger')('eye:entity:task');
 var Script = require('../script').Entity;
 var Host = require('../host').Entity;
 
-/** Entity properties **/
-var properties = {
-  host_id: { type: String, 'default': null },
-  host: { type: ObjectId, ref: 'Host' },
-  template: { type: ObjectId, ref: 'TaskTemplate', 'default': null },
-  script_id: { type: String, ref: 'Script' },
-  script_arguments: { type: Array, 'default': [] },
-  script_runas: { type: String, 'default':'' },
-  type: { type: String, 'default': 'script' }
-};
 
 
 /**
  * Extended Schema. Includes non template attributes
  */
-var TaskSchema = BaseSchema.EntitySchema.extend(properties,{
+var TaskSchema = BaseSchema.EntitySchema.extend({
+  host_id: { type: String, 'default': null },
+  host: { type: ObjectId, ref: 'Host', 'default': null },
+  template: { type: ObjectId, ref: 'TaskTemplate', 'default': null },
+  script_arguments: { type: Array, 'default': [] },
+  script_runas: { type: String, 'default':'' },
+  type: { type: String, 'default':'script' },
+  script_id: { type: String, ref: 'Script' },
+},{
   collection: 'tasks',
   discriminatorKey: '_type' 
 });
@@ -90,32 +88,6 @@ TaskSchema.methods.toTemplate = function(doneFn) {
   var template = new Template(values);
   template.save(function(error){
     doneFn(error, template);
-  });
-};
-
-/**
- *
- * @author Facundo
- * @param {Object} template, published task template - flattened object
- *
- */
-TaskSchema.statics.FromTemplate = function(
-  template,
-  options,
-  doneFn
-) {
-  logger.log('creating task from template %j', template);
-
-  var instance = new this(template);
-  instance.host_id = options.host?options.host._id:null;
-  instance.template = template._id||template.id;
-  instance.id = null;
-  instance.user_id = null;
-  instance._id = null;
-  instance._type = 'Task';
-  instance.save(function(err,task){
-    if(err) logger.error(err);
-    doneFn(err,task);
   });
 };
 

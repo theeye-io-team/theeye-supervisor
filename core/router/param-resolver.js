@@ -18,7 +18,7 @@ function idToEntity (options) {
   if(!options.param) throw new Error('param name is required!');
 
   var paramName = options.param;
-  var entityName = options.model || options.param;
+  var entityName = options.entity || options.param;
 
   return function(req, res, next) {
     var _id = req.params[paramName] || req.body[paramName] || req.query[paramName];

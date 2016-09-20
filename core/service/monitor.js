@@ -11,6 +11,8 @@ var config = require('config');
 var MonitorChecker = require('../entity/monitor/checker').Entity;
 var _ = require('lodash');
 
+const Constants = require('../constants/monitors');
+
 module.exports = {
   start: function() {
     var interval = config
@@ -166,7 +168,7 @@ function checkResourceMonitorStatus(resource,cconfig,done)
       if(!valid){
         var manager = new ResourceService(resource);
         manager.handleState({
-          'state':'updates_stopped',
+          'state':Constants.RESOURCE_STOPPED,
           'last_check':Date.now()
         });
       }
@@ -189,7 +191,7 @@ function checkHostResourceStatus(resource,done)
     if(!valid){
       var manager = new ResourceService(resource);
       manager.handleState({
-        'state':'updates_stopped',
+        'state':Constants.RESOURCE_STOPPED,
         'last_check':Date.now()
       });
     }

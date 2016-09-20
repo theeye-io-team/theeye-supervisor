@@ -1,19 +1,16 @@
 "use strict";
 
-var util = require('util');
-var events = require('events');
 var logger = require('../../lib/logger')('eye:supervisor:service:resource');
 var _ = require('lodash');
 
 var elastic = require('../../lib/elastic');
 var CustomerService = require('../customer');
 var NotificationService = require('../notification');
-var ResourceSchema = require('../../entity/resource');
-var Resource = ResourceSchema.Entity;
-var ResourceStats = require('../../entity/resource/stats').Entity;
-var ResourceMonitorSchema = require('../../entity/monitor');
-var MonitorEntity = ResourceMonitorSchema.Entity;
 var ResourceMonitorService = require('./monitor');
+var EventDispatcher = require('../dispatcher');
+
+var Resource = require('../../entity/resource').Entity;
+var MonitorEntity = require('../../entity/monitor').Entity;
 var Host = require('../../entity/host').Entity;
 var Task = require('../../entity/task').Entity;
 var HostStats = require('../../entity/host/stats').Entity;
@@ -24,164 +21,130 @@ var MonitorEvent = require('../../entity/event').MonitorEvent;
 var ResourcesEmailNotifications = require('./email-notifications');
 var globalconfig = require('config');
 
-const Constants = require('./constants');
+const Constants = require('../../constants/monitors');
 
+function Service(resource) {
+  var _resource = resource;
 
-var Service = module.exports = function Service(resource) {
-  this.resource = resource;
-};
-
-util.inherits(Service, events.EventEmitter);
-
-function getCustomerConfig (customer_id, done) {
-  CustomerService.getCustomerConfig(
-    customer_id,
-    (error,config) => {
-      done(config);
-    }
-  );
-}
-
-function logStateChange (resource,input) {
-  var data = {
-    'date': (new Date()).toISOString(),
-    'timestamp': (new Date()).getTime(),
-    'state': input.state,
-    'hostname': resource.hostname,
-    'customer_name': resource.customer_name,
-    'resource_id': resource._id,
-    'resource_name': resource.name,
-    'resource_type': resource.type,
-    'type': 'resource-stats'
-  };
-
-  var key = globalconfig.elasticsearch.keys.resource.stats;
-  elastic.submit(resource.customer_name,key,data);
-}
-
-function registerResourceCRUDOperation(customer,data) {
-  var key = globalconfig.elasticsearch.keys.monitor.crud;
-  elastic.submit(customer,key,data);
-}
-
-function sendResourceEmailAlert (resource,input) {
-  ResourcesEmailNotifications(
-    resource,
-    input.event,
-    input.data,
-    (error,emailDetails) => {
-      if(error) {
-        if( /event ignored/.test(error.message) === false )
-          logger.error(error);
-        logger.log('alerts email not send');
-        return;
+  function getCustomerConfig (customer_id, done) {
+    CustomerService.getCustomerConfig(
+      customer_id,
+      (error,config) => {
+        done(config);
       }
-
-      logger.log('sending email alerts');
-      CustomerService.getAlertEmails(
-        resource.customer_name,
-        (error,emails) => {
-          NotificationService.sendEmailNotification({
-            'to': emails.join(','),
-            'customer_name': resource.customer_name,
-            'subject': emailDetails.subject,
-            'content': emailDetails.content
-          });
-        });
-    }
-  );
-}
-
-
-function handleFailureState (resource,input,config)
-{
-  var customer_name = resource.customer_name;
-  var failure_threshold = config.fails_count_alert;
-   
-  var newState = 'failure';
-
-  logger.log('resource "%s" check fails.', resource.name);
-
-  function stateChangeFailureSNS () {
-    NotificationService.sendSNSNotification({
-      'state':'failure',
-      'data':input,
-      'message':'resource failure',
-      'customer_name':resource.customer_name,
-      'resource':resource.name,
-      'id':resource.id,
-      'hostname':resource.hostname,
-      'type':'resource'
-    },{
-      'topic':'events',
-      'subject':'resource_update'
-    });
+    );
   }
 
+  function logStateChange (resource,input) {
+    var data = {
+      'date': (new Date()).toISOString(),
+      'timestamp': (new Date()).getTime(),
+      'state': input.state,
+      'hostname': resource.hostname,
+      'customer_name': resource.customer_name,
+      'resource_id': resource._id,
+      'resource_name': resource.name,
+      'resource_type': resource.type,
+      'type': 'resource-stats'
+    };
 
-  resource.fails_count++;
-  logger.log(
-    'resource %s[%s] failure event count %s/%s', 
-    resource.description, 
-    resource._id,
-    resource.fails_count,
-    failure_threshold
-  );
+    var key = globalconfig.elasticsearch.keys.resource.stats;
+    elastic.submit(resource.customer_name,key,data);
+  }
 
-  // current resource state
-  if(resource.state != newState) {
-    if(resource.fails_count >= failure_threshold) {
-      logger.log('resource "%s" state failure', resource.name);
-      var sev = getEventSeverity(input);
-      resource.failure_severity = sev;
-      input.severity = sev;
+  function sendResourceEmailAlert (resource,input) {
+    if(resource.alerts===false) return;
 
-      logStateChange(resource,input);
-
-      if(input.state != Resource.INITIAL_STATE){
-        if(resource.alerts !== false){
-          input.event||(input.event=input.state);
-          sendResourceEmailAlert(resource,input);
+    ResourcesEmailNotifications(
+      resource,
+      input.event,
+      input.data,
+      (error,emailDetails) => {
+        if(error) {
+          if( /event ignored/.test(error.message) === false )
+            logger.error(error);
+          logger.log('alerts email not send');
+          return;
         }
-        stateChangeFailureSNS();
+
+        logger.log('sending email alerts');
+        CustomerService.getAlertEmails(
+          resource.customer_name,
+          (error,emails) => {
+            NotificationService.sendEmailNotification({
+              'to': emails.join(','),
+              'customer_name': resource.customer_name,
+              'subject': emailDetails.subject,
+              'content': emailDetails.content
+            });
+          });
       }
-      resource.last_event = input;
-      resource.state = newState;
-    }
+    );
   }
-  resource.save();
-}
 
-function handleNormalState (resource,input,config)
-{
-  var failure_threshold = config.fails_count_alert;
-  logger.log('resource "%s" "%s" state is normal', resource.type, resource.name);
-
-  function stateChangeNormalSNS () {
-    NotificationService.sendSNSNotification({
-      'state':input.state,
-      'message':input.message||'resource normal',
-      'customer_name':resource.customer_name,
-      'resource':resource.name,
-      'id':resource.id,
-      'hostname':resource.hostname
-    },{
-      'topic':'events',
-      'subject':'resource_update'
+  function dispatchResourceEvent (resource,eventName){
+    MonitorEvent.findOne({
+      emitter: resource,
+      enable: true,
+      name: eventName
+    },function(err, event){
+      if(err) return logger.error(err);
+      else if(!event) return;
+      EventDispatcher.dispatch(event);
     });
   }
 
-  var isRecoveredFromFailure = Boolean(resource.state == Constants.RESOURCE_FAILURE);
 
-  var resource = resource ;
-  // failed at least once
-  if(resource.fails_count != 0){
-    if(resource.fails_count >= failure_threshold){
-      logger.log('resource "%s" "%s" has been restored', resource.type, resource.name);
-      input.severity = getEventSeverity(input);
-      logStateChange(resource,input);
-      if(resource.alerts!==false){
+  function handleFailureState (resource,input,config) {
+    var newState = 'failure';
+    var failure_threshold = config.fails_count_alert;
+    logger.log('resource "%s" check fails.', resource.name);
 
+    resource.fails_count++;
+    logger.log(
+      'resource %s[%s] failure event count %s/%s', 
+      resource.description, 
+      resource._id,
+      resource.fails_count,
+      failure_threshold
+    );
+
+    // current resource state
+    if(resource.state != newState) {
+      if(resource.fails_count >= failure_threshold) {
+        logger.log('resource "%s" state failure', resource.name);
+
+        var sev = getEventSeverity(input);
+        input.severity = sev;
+        input.event||(input.event=input.state);
+
+        resource.failure_severity = sev;
+        resource.last_event = input;
+        resource.state = newState;
+
+        sendResourceEmailAlert(resource,input);
+        logStateChange(resource,input);
+        dispatchResourceEvent(resource,newState);
+        dispatchStateChangeSNS(resource,{
+          message:'monitor failure',
+          data:input
+        });
+      }
+    }
+    resource.save();
+  }
+
+  function handleNormalState (resource,input,config) {
+    logger.log('resource "%s" "%s" state is normal', resource.type, resource.name);
+
+    var failure_threshold = config.fails_count_alert;
+    var isRecoveredFromFailure = Boolean(resource.state == Constants.RESOURCE_FAILURE);
+
+    // failed at least once
+    if(resource.fails_count != 0){
+      if(resource.fails_count >= failure_threshold){
+        logger.log('resource "%s" "%s" has been restored', resource.type, resource.name);
+        input.severity = getEventSeverity(input);
         if(isRecoveredFromFailure){
           input.event||(input.event=input.state);
         } else {
@@ -190,117 +153,136 @@ function handleNormalState (resource,input,config)
         }
 
         sendResourceEmailAlert(resource,input);
+        logStateChange(resource,input);
+        dispatchResourceEvent(resource,Constants.RESOURCE_RECOVERED);
+        dispatchStateChangeSNS(resource,{
+          message:input.message||'monitor normal',
+          data:input
+        });
       }
-      stateChangeNormalSNS();
+      resource.failure_severity = null;
+      resource.state = Constants.RESOURCE_NORMAL;
+      resource.fails_count = 0;
+      resource.save();
     }
-    resource.failure_severity = null;
-    resource.state = input.state;
-    resource.fails_count = 0;
+  }
+
+  function handleUpdatesStoppedState (resource,input,config) {
+    var newState = input.state;
+    var failure_threshold = config.fails_count_alert;
+
+    resource.fails_count++;
+    logger.log(
+      'resource %s[%s] notifications stopped count %s/%s',
+      resource.description,
+      resource._id,
+      resource.fails_count,
+      failure_threshold
+    );
+
+
+    // current resource state
+    if( resource.state != newState ) {
+      if( resource.fails_count >= failure_threshold ) {
+        logger.log('resource "%s" notifications stopped', resource.name);
+
+        var sev = getEventSeverity(input);
+        input.event||(input.event=input.state); // state = agent or resource stopped
+        input.severity = sev;
+
+        resource.state = newState;
+        resource.failure_severity = sev;
+
+        sendResourceEmailAlert(resource,input);
+        logStateChange(resource,input);
+        dispatchResourceEvent(resource,newState);
+        dispatchStateChangeSNS(resource,{
+          message:'updates stopped',
+          data:input
+        });
+      }
+    }
     resource.save();
   }
-}
 
-function handleUpdatesStoppedState (resource,input,config)
-{
-  var newState = input.state;
-  var failure_threshold = config.fails_count_alert;
-
-  function stateChangeStoppedSNS () {
+  function dispatchStateChangeSNS (resource, options) {
     NotificationService.sendSNSNotification({
-      'state': newState,
-      'message': 'updates stopped',
+      'state': resource.state,
       'customer_name': resource.customer_name,
       'resource': resource.name,
       'id': resource.id,
       'hostname': resource.hostname,
-      'type': 'resource'
+      'type': 'resource',
+      'message': options.message,
+      'data': options.data
     },{
       'topic': 'events',
       'subject': 'resource_update'
     });
   }
 
-  resource.fails_count++;
-  logger.log(
-    'resource %s[%s] notifications stopped count %s/%s',
-    resource.description,
-    resource._id,
-    resource.fails_count,
-    failure_threshold
-  );
-
-
-  // current resource state
-  if( resource.state != newState ) {
-    if( resource.fails_count >= failure_threshold ) {
-      logger.log('resource "%s" notifications stopped', resource.name);
-      resource.state = newState ;
-      resource.failure_severity = input.severity = getEventSeverity(input);
-      logStateChange(resource,input);
-
-      if(resource.alerts!==false){
-        input.event||(input.event=input.state); // state = agent or resource stopped
-        sendResourceEmailAlert(resource,input);
-      }
-
-      stateChangeStoppedSNS();
+  function filterStateEvent(state){
+    function isSuccess(txt){
+      var successTexts = ['success','ok','normal'];
+      return successTexts.indexOf( txt.toLowerCase() ) != -1 ;
     }
-  }
-  resource.save();
-}
 
-function filterStateEvent(state){
-  function isSuccess(txt){
-    var successTexts = ['success','ok','normal'];
-    return successTexts.indexOf( txt.toLowerCase() ) != -1 ;
-  }
-
-  function isFailure(txt){
-    var failureTexts = ['error','fail','failure'];
-    return failureTexts.indexOf( txt.toLowerCase() ) != -1 ;
-  }
-
-  if( typeof state == 'string' && isSuccess(state) ) return Constants.RESOURCE_NORMAL;
-  if( typeof state == 'string' && isFailure(state) ) return Constants.RESOURCE_FAILURE;
-  return state;
-}
-
-Service.prototype.handleState = function(input,next) {
-  next||(next=function(){});
-  var resource = this.resource;
-
-  var state = filterStateEvent(input.state);
-  input.state = state;
-
-  getCustomerConfig(
-    resource.customer_id,
-    (config) => {
-      if(!config) throw new Error('config not found');
-      switch(input.state) {
-        case Constants.RESOURCE_NORMAL :
-          input.last_update = Date.now();
-          handleNormalState(resource,input,config);
-          break;
-        case Constants.AGENT_STOPPED :
-        case Constants.RESOURCE_STOPPED :
-          handleUpdatesStoppedState(resource,input,config);
-          break;
-        default:
-        case Constants.RESOURCE_FAILURE :
-          input.last_update = Date.now();
-          handleFailureState(resource,input,config);
-          break;
-      }
-
-      if(input.last_update)
-        resource.last_update = input.last_update;
-      if(input.last_check)
-        resource.last_check = input.last_check;
-      resource.save();
-      next();
+    function isFailure(txt){
+      var failureTexts = ['error','fail','failure'];
+      return failureTexts.indexOf( txt.toLowerCase() ) != -1 ;
     }
-  );
+
+    if( typeof state == 'string' && isSuccess(state) ) return Constants.RESOURCE_NORMAL;
+    if( typeof state == 'string' && isFailure(state) ) return Constants.RESOURCE_FAILURE;
+    return state;
+  }
+
+
+  this.handleState = function(input,next) {
+    next||(next=function(){});
+    var resource = _resource;
+
+    var state = filterStateEvent(input.state);
+    input.state = state;
+
+    getCustomerConfig(
+      resource.customer_id,
+      (config) => {
+        if(!config) throw new Error('config not found');
+        switch(input.state) {
+          case Constants.RESOURCE_NORMAL :
+            input.last_update = Date.now();
+            handleNormalState(resource,input,config);
+            break;
+          case Constants.AGENT_STOPPED :
+          case Constants.RESOURCE_STOPPED :
+            handleUpdatesStoppedState(resource,input,config);
+            break;
+          default:
+          case Constants.RESOURCE_FAILURE :
+            input.last_update = Date.now();
+            handleFailureState(resource,input,config);
+            break;
+        }
+
+        if(input.last_update) resource.last_update = input.last_update;
+        if(input.last_check) resource.last_check = input.last_check;
+        resource.save();
+        next();
+      }
+    );
+  }
 }
+
+
+module.exports = Service;
+
+
+function registerResourceCRUDOperation(customer,data) {
+  var key = globalconfig.elasticsearch.keys.monitor.crud;
+  elastic.submit(customer,key,data);
+}
+
 
 Service.findHostResources = function(host,options,done)
 {
@@ -372,27 +354,27 @@ Service.create = function (input, next) {
         }
       );
 
-      /**
-       * create default event
-       */
-      MonitorEvent.create({
-        name:'failure',
-        customer: input.customer,
-        emitter: monitor
-      },{
-        name:'success',
-        customer: input.customer,
-        emitter: monitor
-      }, err => {
-        logger.error(err);
-      });
-
+      Service.createDefaultEvents(monitor,input.customer);
       Tag.create(input.tags,input.customer);
       AgentUpdateJob.create({ host_id: monitor.host_id });
       next(null,result);
     });
   });
 };
+
+Service.createDefaultEvents = function(monitor,customer,done){
+  // CREATE DEFAULT EVENT
+  MonitorEvent.create(
+    { customer: customer, emitter: monitor, name: Constants.RESOURCE_RECOVERED } ,
+    { customer: customer, emitter: monitor, name: Constants.RESOURCE_STOPPED } ,
+    { customer: customer, emitter: monitor, name: Constants.RESOURCE_NORMAL } ,
+    { customer: customer, emitter: monitor, name: Constants.RESOURCE_FAILURE } ,
+    (err, result) => {
+      if(err) logger.error(err);
+      if(done) done(err, result);
+    }
+  );
+}
 
 /**
  *
@@ -601,9 +583,7 @@ Service.remove = function (input, done) {
       monitor.remove(function(err){
         if(err) return logger.error(err);
 
-        MonitorEvent.remove({
-          emitter: monitor._id
-        }, err => logger.error(err));
+        MonitorEvent.remove({ emitter: monitor._id }, err => logger.error(err));
 
         logger.log('monitor %s removed', monitor.name);
         if(notifyAgents) {

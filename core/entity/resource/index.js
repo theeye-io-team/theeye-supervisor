@@ -12,9 +12,9 @@ var _ = require('lodash');
 var INITIAL_STATE = 'normal' ;
 
 /**
- * Exports all my properties
+ * Extended Schema. Includes non template attributes
  */
-var properties = {
+var ResourceSchema = BaseSchema.EntitySchema.extend({
   'host_id': { type:String },
   'hostname': { type:String },
   'fails_count': { type:Number, 'default':0 },
@@ -24,32 +24,15 @@ var properties = {
   'template': { type: ObjectId, ref: 'ResourceTemplate', 'default': null },
   'last_check': { type:Date, 'default':null },
   'last_update': { type:Date, 'default':Date.now },
-  'last_event':{ type: Object, 'default':{} }
-}
-
-/**
- * Extended Schema. Includes non template attributes
- */
-var ResourceSchema = BaseSchema.EntitySchema.extend(properties);
-
-//exports.properties = _.extend({}, BaseSchema.properties, properties);
+  'last_event': { type: Object, 'default':{} }
+});
 
 ResourceSchema.statics.INITIAL_STATE = INITIAL_STATE ;
 
-/**
- *
- *
- */
 ResourceSchema.statics.create = function(input, next){
   var data = {};
   next||(next=function(){});
 
-  //for(var propname in properties){
-  //  if(input[propname]){
-  //    data[propname] = input[propname];
-  //  }
-  //}
-  //var entity = new Entity(data);
   var entity = new Entity(input);
   entity.host_id = input.host_id;
   entity.hostname = input.hostname;
@@ -67,18 +50,9 @@ ResourceSchema.statics.create = function(input, next){
  */
 ResourceSchema.methods.patch = function(input, next){
   next||(next=function(){});
-  //var updates = {};
-  //for(let propName in properties){
-  //  if(input.hasOwnProperty(propName) && input[propName]){
-  //    updates[propName] = input[propName];
-  //  }
-  //}
-  //if(Object.keys(updates).length>0){
-  //  this.update(updates, function(error,result){
-    this.update(input, function(error,result){
-      next(error,result);
-    });
-  //} else next();
+  this.update(input, function(error,result){
+    next(error,result);
+  });
 }
 
 /**

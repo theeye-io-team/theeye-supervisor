@@ -1,3 +1,4 @@
+"use strict";
 
 var mongodb = require('../core/lib/mongodb');
 var assert = require('chai').assert;
@@ -5,7 +6,7 @@ var mongoose = require('mongoose');
 
 mongodb.connect(function(){
 
-  var DefaultEvent = require('../core/entity/event').Event;
+  var Event = require('../core/entity/event').Event;
   var TaskEvent = require('../core/entity/event').TaskEvent;
   var MonitorEvent = require('../core/entity/event').MonitorEvent;
   //var WebhookEvent = require('../core/entity/event').WebhookEvent;
@@ -13,7 +14,7 @@ mongodb.connect(function(){
   describe('Event Models Discriminator',function(){
 
     it('create Generic Event', function(done){
-      var event = new DefaultEvent({ });
+      var event = new Event({ });
       event.save( err => {
         assert.ifError(err);
         assert.ok(!event._type,'Event','Generic event should not have a _type');

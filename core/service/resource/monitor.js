@@ -2,8 +2,7 @@
 
 var _ = require('lodash');
 var logger = require('../../lib/logger')('eye:supervisor:service:resource:monitor');
-var ResourceMonitorSchema = require('../../entity/monitor');
-var MonitorEntity = ResourceMonitorSchema.Entity;
+var MonitorEntity = require('../../entity/monitor').Entity;
 var ErrorHandler = require('../../lib/errorHandler');
 var filter = require('../../router/param-filter');
 var validator = require('validator');

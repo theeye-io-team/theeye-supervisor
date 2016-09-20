@@ -28,6 +28,8 @@
 
 > change Event schema definition, base schema class created. use native mongoose without mongoose-schema-extend module        
 
+> use same process to create task from user input and from template         
+
 
 ### 0.4.0 - 2016-09-08
 

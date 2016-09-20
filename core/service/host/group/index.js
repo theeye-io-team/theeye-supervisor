@@ -17,6 +17,8 @@ var Task = require(appRoot + '/entity/task').Entity;
 var AgentUpdateJob = require(appRoot + '/entity/job').AgentUpdate;
 var elastic = require(appRoot + '/lib/elastic');
 
+var TaskService = require(appRoot + '/service/task');
+
 exports.Monitor = require('./monitor');
 
 var registerGroupCRUDOperation = function(customer,data){
@@ -113,15 +115,16 @@ exports.create = function(input, done){
 exports.searchAndRegisterHostIntoGroup = function(host, next)
 {
   logger.log('searching group for host %s', host.hostname);
-  HostGroup.find({
-    'customer': host.customer_id
-  }).exec(function(err, groups){
+  HostGroup
+  .find({ 'customer': host.customer_id })
+  .populate('customer')
+  .exec(function(err, groups){
     for(var i=0; i<groups.length; i++){
       var group = groups[i];
       logger.log('trying group %s', group.hostname_regex);
       if( new RegExp( group.hostname_regex ).test( host.hostname ) === true ){
         logger.log('group found : %s', group.hostname_regex);
-        hostProvisioning(host, group, function(err){
+        hostProvisioning(host, group, group.customer, function(err){
           logger.log('provisioning completed');
           if(err) return next(err);
           next(null,group);
@@ -139,10 +142,11 @@ exports.searchAndRegisterHostIntoGroup = function(host, next)
  * @author Facundo
  * @param {object Host} host
  * @param {object Group} group
+ * @param {object Customer} customer
  * @param {Function} doneFn
  *
  */
-function hostProvisioning(host, group, doneFn)
+function hostProvisioning(host, group, customer, doneFn)
 {
   group.publish({}, function(err,data){
     logger.log('creating resource for host %s', host.hostname);
@@ -163,9 +167,11 @@ function hostProvisioning(host, group, doneFn)
 
     for(var i=0; i<taskTpls.length; i++){
       var tpl = taskTpls[i];
-      logger.log('creating task %s', tpl.name);
-      Task.FromTemplate(tpl,{'host':host},(err)=>{
-        completed();
+      TaskService.createFromTemplate({
+        customer: customer,
+        templateData: tpl,
+        host: host,
+        done: completed
       });
     }
 

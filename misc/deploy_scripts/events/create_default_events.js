@@ -9,6 +9,7 @@ var mongodb = require( appRoot + '/lib/mongodb' ).connect(() => {
   var Event = require( appRoot + '/entity/event' );
   var Monitor = require( appRoot + '/entity/monitor' ).Entity;
   var Task = require( appRoot + '/entity/task' ).Entity;
+  var MonitorService = require( appRoot + '/service/resource');
   require( appRoot + '/entity/task' );
   require( appRoot + '/entity/task/scraper' );
 
@@ -30,26 +31,11 @@ var mongodb = require( appRoot + '/lib/mongodb' ).connect(() => {
         return next();
       }
 
-      var event = new Event.MonitorEvent({
-        customer: m.resource.customer_id,
-        emitter: m,
-        name:'success'
-      });
-      event.save( err => {
-        if(err) debug(err);
-        else debug('CREATED monitor event %s/%s', m._id, m.name);
-
-        var event = new Event.MonitorEvent({
-          customer: m.resource.customer_id,
-          emitter: m,
-          name:'failure'
-        });
-        event.save( err => {
-          if(err) debug(err);
-          else debug('CREATED monitor event %s/%s', m._id, m.name);
-          next();
-        });
-      });
+      MonitorService.createDefaultEvents(
+        m,
+        m.resource.customer_id,
+        err => next()
+      );
     });
   });
 

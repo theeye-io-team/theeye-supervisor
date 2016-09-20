@@ -145,4 +145,6 @@ module.exports = {
     "port": process.env.PORT || 60080,
     "auth_strategy": "bearer",
   },
+  "dispatcher": {
+  }
 }

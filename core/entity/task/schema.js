@@ -9,14 +9,18 @@ var lodash = require('lodash');
 const properties = exports.properties = {
   creation_date : { type: Date, 'default': Date.now() },
   last_update : { type: Date, 'default': Date.now() },
-  name : { type: String },
-  description : { type: String },
   user_id : { type: String, 'default': null },
   customer_id : { type: String, 'default': null },
   public : { type: Boolean, 'default': false },
   tags: { type: Array, 'default':[] },
   type: { type: String, required: true },
-  triggers: [{ type: Schema.Types.ObjectId, ref: 'Event', 'default':function(){return [];} }],
+  name : { type: String },
+  description : { type: String },
+  triggers: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Event',
+    'default':function(){return [];}
+  }],
   grace_time: { type: Number, 'default': 0 }
 };
 
@@ -37,6 +41,7 @@ const specs = {
 		delete ret._id;
 		//delete ret._type;
 		delete ret.__v;
+		delete ret.__t;
 	}
 }
 EntitySchema.set('toJSON', specs);
