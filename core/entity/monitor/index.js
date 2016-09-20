@@ -65,64 +65,6 @@ MonitorSchema.methods.toTemplate = function(doneFn)
   });
 }
 
-/**
- *
- * @author Facundo
- * @param {object MonitorTemplate} template
- * @param {Object} options
- * @param {Function} doneFn
- *
- */
-MonitorSchema.statics.FromTemplate = function(template, options, doneFn)
-{
-  doneFn=doneFn||()=>{};
-  var host = options.host;
-  Template.populate(template,{
-    path: 'template_resource' 
-  },function(err,monitorTemplate){
-    var resourceTemplate = monitorTemplate.template_resource;
-    var options = { 'host': host };
-    Resource.FromTemplate(
-      resourceTemplate,
-      options,
-      function(err,resource){
-        if(err) {
-          logger.error('Resorce creation error %s', err.message);
-          return doneFn(err);
-        }
-
-        var input = {};
-        input.host_id = options.host._id;
-        input.resource = input.resource_id = resource._id;
-        input.template = monitorTemplate._id || monitorTemplate.id;
-        input.customer_name = options.host.customer_name;
-        input._type = 'ResourceMonitor';
-        // take shared properties from template
-        for(var propname in BaseSchema.properties){
-          if(template[propname]){
-            input[propname] = template[propname];
-          }
-        }
-
-        logger.log('creating monitor from template %j', input);
-        var monitor = new Entity(input);
-        monitor.save(function(err, instance){
-          if(err) {
-            logger.error('ERROR with %j', input);
-            logger.error(err.message);
-            return doneFn(err);
-          }
-
-          doneFn(null,{
-            'monitor': instance,
-            'resource': resource
-          });
-        });
-      }
-    );
-  });
-}
-
 MonitorSchema.methods.update = function(input,next) {
   var monitor = this;
   monitor.setUpdates(input, function(err,updates){

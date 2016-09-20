@@ -319,6 +319,7 @@ Service.create = function (input, next) {
   logger.log('creating resource for host %j', input);
   var type = input.type||input.monitor_type;
   var resource_data = {
+    'host':input.host,
     'host_id':input.host_id,
     'hostname':input.hostname,
     'customer_id':input.customer_id,

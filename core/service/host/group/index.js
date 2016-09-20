@@ -18,6 +18,7 @@ var AgentUpdateJob = require(appRoot + '/entity/job').AgentUpdate;
 var elastic = require(appRoot + '/lib/elastic');
 
 var TaskService = require(appRoot + '/service/task');
+var ResourceTemplateService = require(appRoot + '/service/resource/template');
 
 exports.Monitor = require('./monitor');
 
@@ -178,8 +179,10 @@ function hostProvisioning(host, group, customer, doneFn)
     for(var i=0; i<monitorTpls.length; i++){
       var tpl = monitorTpls[i];
       logger.log('creating monitor %s', tpl.name);
-      Monitor.FromTemplate(tpl,{'host':host},(err)=>{
-        completed();
+      ResourceTemplateService.createMonitorFromTemplate({
+        template: tpl,
+        host: host,
+        done: completed
       });
     }
   });

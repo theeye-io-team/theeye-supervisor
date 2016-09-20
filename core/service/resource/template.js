@@ -1,5 +1,6 @@
 var debug = require('debug')('eye:supervisor:service:resource:template');
 var MonitorService = require('./monitor');
+var ResourceService = require('./index');
 var ResourceTemplate = require('../../entity/resource/template').Entity;
 var MonitorTemplate = require('../../entity/monitor/template').Entity;
 var ResourceMonitor = require('../../entity/monitor').Entity;
@@ -87,3 +88,63 @@ exports.createResourceMonitorsTemplates = function (input, done){
     }
   );
 }
+
+/**
+ *
+ * @author Facundo
+ * @param {object MonitorTemplate} template
+ * @param {Object} options
+ * @param {Function} doneFn
+ *
+ */
+exports.createMonitorFromTemplate = function(options) {
+
+  var doneFn = (options.done||()=>{}),
+    template = options.template,
+    host = options.host;
+
+  MonitorTemplate.populate(template,{
+    path: 'template_resource' 
+  },function(err,monitorTemplate){
+    var resourceTemplate = monitorTemplate.template_resource;
+    var options = { 'host': host };
+    Resource.FromTemplate(
+      resourceTemplate,
+      options,
+      function(err,resource){
+        if(err) {
+          debug('Resorce creation error %s', err.message);
+          return doneFn(err);
+        }
+
+        var props = _.extend( template, {
+          host: options.host,
+          host_id: options.host._id,
+          resource: resource._id,
+          resource_id: resource._id,
+          template: monitorTemplate.id,
+          id: null,
+          customer_name: resource.customer_name,
+          _type: 'ResourceMonitor'
+        });
+
+        debug('creating monitor from template %j', props);
+        var monitor = new ResourceMonitor(props);
+        monitor.save(function(err, instance){
+          if(err) {
+            debug(err.message);
+            return doneFn(err);
+          }
+
+          ResourceService.createDefaultEvents(monitor,resource.customer_id)
+
+          doneFn(null,{
+            'monitor': instance,
+            'resource': resource
+          });
+        });
+      }
+    );
+  });
+}
+

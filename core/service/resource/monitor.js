@@ -34,6 +34,7 @@ function setMonitorForScraper(input) {
 	return {
     'tags': input.tags,
     'customer_name': input.customer_name,
+		'host': host_id,
 		'host_id': host_id,
 		'name': input.name || 'scraper',
 		'type': 'scraper',
@@ -59,6 +60,7 @@ function setMonitorForProcess(input) {
     'tags': input.tags,
     'customer_name': input.customer_name,
 		'host_id': input.host_id,
+		'host': input.host_id,
 		'name': input.name || 'process',
 		'type': 'process',
 		'looptime': input.looptime,
@@ -75,6 +77,7 @@ function setMonitorForScript(input) {
 	return {
     'tags': input.tags,
     'customer_name': input.customer_name,
+		'host': input.host_id,
 		'host_id': input.host_id,
 		'name': input.name || 'script',
 		'type': 'script',
@@ -92,6 +95,7 @@ function setMonitorForHost(input){
 	return {
     'tags': input.tags,
     'customer_name':input.customer_name,
+		'host': input.host_id,
 		'host_id':input.host_id,
 		'type':'host',
 		'name': input.name || 'host',
@@ -105,6 +109,7 @@ function setMonitorForDstat(input){
 	return {
     'tags': input.tags,
     'customer_name': input.customer_name,
+		'host': input.host_id,
 		'host_id': input.host_id,
 		'type': 'dstat',
 		'name': input.name || 'dstat',
@@ -125,6 +130,7 @@ function setMonitorForPsaux(input){
 	return {
     'tags': input.tags,
     'customer_name': input.customer_name,
+		'host': input.host_id,
 		'host_id': input.host_id,
 		'name': input.name || 'psaux',
 		'type': 'psaux',
