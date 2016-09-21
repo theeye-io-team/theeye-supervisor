@@ -9,7 +9,6 @@ var properties = exports.properties = {
   'name' : { type:String, required:true },
   'user_id' : { type: String, 'default': null },
   'type' : { type:String, 'default':DEFAULT_TYPE },
-  'attend_failure' : { type:Boolean, 'default':false },
   'failure_severity' : { type:String, 'default':null },
   'alerts': {type:Boolean, 'default':true}
 };

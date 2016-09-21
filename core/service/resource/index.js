@@ -7,7 +7,7 @@ var elastic = require('../../lib/elastic');
 var CustomerService = require('../customer');
 var NotificationService = require('../notification');
 var ResourceMonitorService = require('./monitor');
-var EventDispatcher = require('../dispatcher');
+var EventDispatcher = require('../events');
 
 var Resource = require('../../entity/resource').Entity;
 var MonitorEntity = require('../../entity/monitor').Entity;
@@ -83,14 +83,26 @@ function Service(resource) {
   }
 
   function dispatchResourceEvent (resource,eventName){
-    MonitorEvent.findOne({
-      emitter: resource,
-      enable: true,
-      name: eventName
-    },function(err, event){
-      if(err) return logger.error(err);
-      else if(!event) return;
-      EventDispatcher.dispatch(event);
+    MonitorEntity.findOne({
+      resource_id: resource._id
+    },function(err,monitor){
+      if(!monitor){
+        logger.error('resource monitor not found %j', resource);
+        return;
+      }
+
+      logger.log('searching monitor %s event %s ', monitor.name, eventName);
+
+      MonitorEvent.findOne({
+        emitter: monitor._id,
+        enable: true,
+        name: eventName
+      },function(err, event){
+        if(err) return logger.error(err);
+        else if(!event) return;
+
+        EventDispatcher.dispatch(event);
+      });
     });
   }
 
@@ -152,6 +164,11 @@ function Service(resource) {
           input.event = Constants.RESOURCE_RECOVERED;
         }
 
+        resource.failure_severity = null;
+        resource.state = Constants.RESOURCE_NORMAL;
+        resource.fails_count = 0;
+        resource.last_event = input;
+
         sendResourceEmailAlert(resource,input);
         logStateChange(resource,input);
         dispatchResourceEvent(resource,Constants.RESOURCE_RECOVERED);
@@ -160,9 +177,6 @@ function Service(resource) {
           data:input
         });
       }
-      resource.failure_severity = null;
-      resource.state = Constants.RESOURCE_NORMAL;
-      resource.fails_count = 0;
       resource.save();
     }
   }
@@ -206,18 +220,19 @@ function Service(resource) {
   }
 
   function dispatchStateChangeSNS (resource, options) {
-    NotificationService.sendSNSNotification({
-      'state': resource.state,
-      'customer_name': resource.customer_name,
-      'resource': resource.name,
-      'id': resource.id,
-      'hostname': resource.hostname,
-      'type': 'resource',
-      'message': options.message,
-      'data': options.data
-    },{
-      'topic': 'events',
-      'subject': 'resource_update'
+    var Message = {
+      state: resource.state,
+      customer_name: resource.customer_name,
+      resource: resource.name,
+      id: resource.id,
+      hostname: resource.hostname,
+      type: 'resource',
+      message: options.message,
+      data: options.data
+    };
+    NotificationService.sendSNSNotification(Message,{
+      topic:'events',
+      subject:'resource_update'
     });
   }
 

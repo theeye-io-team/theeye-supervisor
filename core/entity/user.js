@@ -12,6 +12,7 @@ var EntitySchema = Schema({
     _id : String,
     name : String
   }],
+  username: { type : String, required: false },
   credential : { type : String , 'default' : null },
   enabled : { type : Boolean, 'default' : false },
   last_update : { type : Date, 'default' : new Date() },

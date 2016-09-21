@@ -10,7 +10,7 @@ const properties = exports.properties = {
   creation_date : { type: Date, 'default': Date.now() },
   last_update : { type: Date, 'default': Date.now() },
   user_id : { type: String, 'default': null },
-  customer_id : { type: String, 'default': null },
+  customer_id : { type: String, ref: 'Customer' },
   public : { type: Boolean, 'default': false },
   tags: { type: Array, 'default':[] },
   type: { type: String, required: true },

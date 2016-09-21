@@ -23,7 +23,6 @@ TemplateSchema.methods.values = function(){
     'name': template.name,
     'type': template.type,
     'description': template.description,
-    'attend_failure' : template.attend_failure,
     'failure_severity' : template.failure_severity,
   }
 }

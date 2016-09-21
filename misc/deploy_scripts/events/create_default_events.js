@@ -25,12 +25,12 @@ var mongodb = require( appRoot + '/lib/mongodb' ).connect(() => {
     var next = lodash.after(monitors.length, () => completed());
 
     monitors.forEach( m => {
-      debug('creating monitor event %s/%s', m._id, m.name);
       if( ! m.resource ){
         debug('ERROR monitor resource cannot be found');
         return next();
       }
 
+      debug('creating monitor event %s/%s', m._id, m.name);
       MonitorService.createDefaultEvents(
         m,
         m.resource.customer_id,

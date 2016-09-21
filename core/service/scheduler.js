@@ -6,14 +6,14 @@ var ObjectId = require('mongoose').Types.ObjectId;
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 
-var logger = require('./logger')('eye:supervisor:lib:scheduler');
-var mongodb = require('./mongodb').connection.db;
+var logger = require('../lib/logger')('eye:supervisor:lib:scheduler');
+var mongodb = require('../lib/mongodb').connection.db;
 var Host = require('../entity/host').Entity;
 var Task = require('../entity/task').Entity;
 var Script = require('../entity/script').Entity;
 var Customer = require('../entity/customer').Entity;
 var User = require('../entity/user').Entity;
-var JobService = require('../service/job');
+var JobDispatcher = require('./job');
 
 function Scheduler() {
 
@@ -179,7 +179,7 @@ Scheduler.prototype = {
 
       if(failed) return done();
 
-      JobService.create({
+      JobDispatcher.create({
         task: data.task,
         user: data.user,
         customer: data.customer,

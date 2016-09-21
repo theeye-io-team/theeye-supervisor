@@ -2,7 +2,7 @@
 
 var json = require('../lib/jsonresponse');
 var Job = require('../entity/job').Job;
-var JobService = require('../service/job');
+var JobDispatcher = require('../service/job');
 var debug = require('../lib/logger')('eye:supervisor:controller:job');
 var paramsResolver = require('../router/param-resolver');
 
@@ -48,7 +48,7 @@ var controller = {
     var input = { host: req.host };
 
     if( req.params.process_next ) {
-      JobService.getNextPendingJob(input,function(error,job){
+      JobDispatcher.getNextPendingJob(input,function(error,job){
         var jobs = [];
         if( job != null ) jobs.push(job);
         res.send(200, { jobs : jobs });
@@ -68,7 +68,7 @@ var controller = {
     if(!job) return res.send(404, json.error('not found'));
     if(!input) return res.send(400, json.error('result data is required'));
 
-    JobService.updateResult(job,input,error=>{
+    JobDispatcher.updateResult(job,input,error=>{
       res.send(200,job);
     });
   },
@@ -85,7 +85,7 @@ var controller = {
     if(!user) return res.send(400,json.error('user required'));
     if(!customer) return res.send(400,json.error('customer required'));
 
-    JobService.create({
+    JobDispatcher.create({
       task: task,
       user: user,
       customer: customer,
