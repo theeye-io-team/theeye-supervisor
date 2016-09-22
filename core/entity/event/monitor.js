@@ -8,7 +8,7 @@ var EventSchema = new BaseSchema({
   emitter: {
     type: Schema.Types.ObjectId,
     ref: 'ResourceMonitor',
-    default: null
+    'default': null
   }
 });
 

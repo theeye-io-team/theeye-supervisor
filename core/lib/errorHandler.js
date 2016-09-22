@@ -1,6 +1,5 @@
-var appRoot = require('app-root-path');
-var notification = require(appRoot + '/service/notification');
 var config = require('config');
+var notification = require('../service/notification');
 
 var ErrorHandler = function(){
   var errors = [];

@@ -5,12 +5,9 @@ var util = require('util');
 var Schema = require('mongoose').Schema;
 
 function BaseSchema (specs) {
-  Schema.call(this,specs,{
-    collection: 'events',
-    discriminatorKey: '_type'
-  });
 
-  this.add({
+  // Schema constructor
+  Schema.call(this, util._extend({
     name: { type: String, 'default': '' },
     creation_date: { type: Date, 'default': Date.now },
     last_update: { type: Date, 'default': null },
@@ -18,11 +15,15 @@ function BaseSchema (specs) {
     customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
     secret: { type: String, 'default': function(){
       // one way hash
-      return crypto.createHmac('sha256','THEEYE')
+      return crypto.createHmac('sha256','THEEYE' + Math.random())
       .update( new Date().toISOString() )
       .digest('hex');
     }}
+  }, specs),{
+    collection: 'events',
+    discriminatorKey: '_type'
   });
+
 
   // Duplicate the ID field.
   this.virtual('id').get(function(){

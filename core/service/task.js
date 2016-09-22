@@ -129,81 +129,118 @@ var TaskService = {
   },
   */
   createManyTasks (input, doneFn) {
+    var self = this;
     var create = [];
     debug('creating tasks');
 
     function asyncTaskCreation (hostId) {
-
-      return function(asyncCb) {
-
-        function _created (task) {
-          debug('type "%s" task created %j',task.type, task);
-          registerTaskCRUDOperation(input.customer.name,{
-            'name':task.name,
-            'customer_name':input.customer.name,
-            'user_id':input.user.id,
-            'user_email':input.user.email,
-            'operation':'create'
-          });
-          task.publish(function(published) {
-            debug('host id %s task created', hostId);
-            asyncCb(null, published);
-          });
-        }
-
-        debug('creating task with host id %s', hostId);
-
+      return (function(asyncCb){
         if( hostId.match(/^[a-fA-F0-9]{24}$/) ) {
-
           Host.findById(hostId, function(error, host){
-            Tag.create(input.tags,input.customer);
-
-            var props = _.extend({}, input, { host: host });
-            props.host_id = host._id;
-            props.customer_id = input.customer._id;
-            props.user_id = input.user._id;
-            if( input.type == 'scraper' ){
-              var task = new ScraperTask(props);
-            } else {
-              var task = new Task(props);
-            }
-
-            task.save( err => {
-              _created(task);
-
-              TaskEvent.create({
-                name:'success',
-                customer: input.customer,
-                emitter: task
-              },{
-                name:'failure',
-                customer: input.customer,
-                emitter: task
-              }, err => {
-                debug(err);
-              });
-            });
+            if(error) return asyncCb(error);
+            if(!host) return asyncCb(new Error('not found host id ' + hostId));
+            self.create( _.extend({}, input, {
+              host: host,
+              host_id: host._id,
+              customer_id: input.customer._id,
+              user_id: input.user._id
+            }), asyncCb );
           });
-
         } else {
-          debug('host id %s invalid', hostId);
-          var error = new Error('invalid host id ' + hostId);
-          asyncCb(error, null);
+          asyncCb(new Error('invalid host id ' + hostId), null);
         }
-      }
+      })
     }
-
 
     var hosts = input.hosts ;
     debug('creating task on hosts %j', hosts);
     for( var i in hosts ) {
       var hostId = hosts[i];
-      var createFn = asyncTaskCreation(hostId);
-      create.push( createFn );
+      create.push( asyncTaskCreation(hostId) );
     }
 
-    async.parallel(create, function endFn (error, results){
-      doneFn(null, results);
+    async.parallel(create, doneFn);
+  },
+  /**
+   *
+   * @author Facundo
+   * @param {Object} options
+   *
+   */
+  createFromTemplate (options) {
+    var template = options.templateData, // plain object
+    host = options.host,
+    customer = options.customer,
+    doneFn = options.done;
+
+    debug('creating task from template %j', template);
+
+    var tplId = (template._id||template.id);
+
+    this.create( _.extend(template,{
+      customer : customer,
+      host : host||null,
+      host_id : (host&&host._id)||null,
+      template : tplId,
+      id: null,
+      user_id : null,
+      _type : 'Task'
+    }), (err, task) => {
+      if(err) debug(err);
+      doneFn(err, task);
+    });
+  },
+  /**
+   *
+   * Create a task
+   *
+   * @author Facundo
+   * @param {Object} options
+   * @param {Object} options
+   *
+   */
+  create (input, done) {
+    function _created (task) {
+      debug('task type "%s" created %j',task.type, task);
+      registerTaskCRUDOperation(input.customer.name,{
+        'name':task.name,
+        'customer_name':input.customer.name,
+        'user_id':(input.user&&input.user.id)||null,
+        'user_email':(input.user&&input.user.email)||null,
+        'operation':'create'
+      });
+      task.publish(data => {
+        done(null,data);
+      });
+    }
+
+    debug('creating task with host id %s', input.host_id);
+    if( input.type == 'scraper' ){
+      var task = new ScraperTask(input);
+    } else {
+      var task = new Task(input);
+    }
+
+    task.save(err => {
+      if(err) {
+        debug(err);
+        return done(err);
+      }
+      _created(task);
+
+      if( input.tags && Array.isArray(input.tags) )
+        Tag.create(input.tags, input.customer);
+
+      TaskEvent.create({
+        name:'success',
+        customer: input.customer,
+        emitter: task
+      },{
+        name:'failure',
+        customer: input.customer,
+        emitter: task
+      },
+      err => debug(err));
     });
   }
 };

@@ -38,19 +38,23 @@ require("./environment").setenv(function(){
   require('./lib/mongodb').connect(function(){
 
     logger.log('initializing scheduler');
-    require('./lib/scheduler').initialize(function(){
+    require('./service/scheduler').initialize(function(){
 
-      logger.log('initializing server');
-      var server = require("./server");
-      server.start();
+      logger.log('initializing events dispatcher');
+      require('./service/events').initialize(function(){
 
-      if( ! process.env.NO_MONITORING ){
-        logger.log('initializing monitor');
-        var monitor = require('./service/monitor');
-        monitor.start();
-      }
+        logger.log('initializing server');
+        var server = require("./server");
+        server.start();
 
-      logger.log('supervisor is running');
+        if( ! process.env.NO_MONITORING ){
+          logger.log('initializing monitor');
+          var monitor = require('./service/monitor');
+          monitor.start();
+        }
+
+        logger.log('supervisor is running');
+      });
     });
   });
 });

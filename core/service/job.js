@@ -1,9 +1,10 @@
 "use strict";
 
-var Job = require(process.env.BASE_PATH + '/entity/job').Entity;
-var ScriptJob = require(process.env.BASE_PATH + '/entity/job/script').Entity;
-var ScraperJob = require(process.env.BASE_PATH + '/entity/job/scraper').Entity;
-var Script = require(process.env.BASE_PATH + '/entity/script').Entity;
+var JobModels = require('../entity/job');
+var Job = JobModels.Job;
+var ScriptJob = JobModels.Script;
+var ScraperJob = JobModels.Scraper;
+var Script = require('../entity/script').Entity;
 
 var async = require('async');
 var NotificationService = require('./notification');
@@ -110,7 +111,7 @@ var service = {
       throw new Error('invalid or undefined task type ' + task.type);
     }
   },
-  fetchBy(input,next) {
+  fetchBy (input,next) {
     var query = {};
 
     if( input.host ) query.host_id = input.host._id ;
@@ -173,7 +174,7 @@ var service = {
 
         NotificationService.sendEmailNotification({
           customer_name: job.customer_name,
-          subject: `[Task] ${job.task.name} executed on ${job.host.hostname}`,
+          subject: `[TASK] ${job.task.name} executed on ${job.host.hostname}`,
           content: html,
           to: job.user.email
         });

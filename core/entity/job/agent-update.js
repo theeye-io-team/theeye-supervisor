@@ -1,7 +1,9 @@
-var JobSchema = require('./index').EntitySchema;
-var mongodb = require('../../lib/mongodb').db;
+"use strict";
 
-var AgentUpdateJobSchema = JobSchema.extend({
+const BaseSchema = require('./schema');
+const Job = require('./index');
+
+var AgentUpdateJobSchema = new BaseSchema({
   name: { type: String, 'default': 'agent:config:update' },
   state: { type: String, 'default': 'new' },
   notify: { type: Boolean, 'default': false },
@@ -31,8 +33,4 @@ AgentUpdateJobSchema.statics.create = function(specs,next) {
   });
 }
 
-
-var Job = mongodb.model('AgentUpdateJob', AgentUpdateJobSchema);
-Job.ensureIndexes();
-
-exports.Entity = Job;
+module.exports = AgentUpdateJobSchema;

@@ -9,13 +9,19 @@ var lodash = require('lodash');
 const properties = exports.properties = {
   creation_date : { type: Date, 'default': Date.now() },
   last_update : { type: Date, 'default': Date.now() },
-  name : { type: String },
-  description : { type: String },
   user_id : { type: String, 'default': null },
-  customer_id : { type: String, 'default': null },
+  customer_id : { type: String, ref: 'Customer' },
   public : { type: Boolean, 'default': false },
   tags: { type: Array, 'default':[] },
-  type: { type: String, required: true }
+  type: { type: String, required: true },
+  name : { type: String },
+  description : { type: String },
+  triggers: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Event',
+    'default':function(){return [];}
+  }],
+  grace_time: { type: Number, 'default': 0 }
 };
 
 /** Schema **/
@@ -33,8 +39,8 @@ const specs = {
 		// remove the _id of every document before returning the result
 		ret.id = ret._id;
 		delete ret._id;
-		//delete ret._type;
 		delete ret.__v;
+		delete ret.__t;
 	}
 }
 EntitySchema.set('toJSON', specs);
@@ -70,14 +76,14 @@ EntitySchema.methods.update = function(input,next)
 EntitySchema.statics.create = function(input,next)
 {
   var instance = new this();
-  instance.user_id          = input.user_id||input.user._id;
-  instance.customer_id      = input.customer_id||input.customer._id;
-  instance.script_id        = input.script_id||input.script._id;
+  instance.user_id = input.user_id||input.user._id;
+  instance.customer_id = input.customer_id||input.customer._id;
+  instance.script_id = input.script_id||input.script._id;
   instance.script_arguments = input.script_arguments;
-  instance.script_runas     = input.script_runas;
-  instance.name             = input.name || null;
-  instance.description      = input.description || null;
-  instance.tags             = input.tags;
+  instance.script_runas = input.script_runas;
+  instance.name = input.name || null;
+  instance.description = input.description || null;
+  instance.tags = input.tags;
   instance.save(function(error,entity){
     next(null, entity);
   });

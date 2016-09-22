@@ -9,6 +9,10 @@ module.exports = {
   'customerNameToEntity': customerNameToEntity
 };
 
+function firstToUpper(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
 function idToEntity (options) {
 
   if(!options.param) throw new Error('param name is required!');
@@ -31,7 +35,13 @@ function idToEntity (options) {
       req[paramName] = null;
       next();
     } else {
-      var Entity = require('../entity/' + entityName).Entity;
+      var entityModule = require('../entity/' + entityName);
+      var Entity = (
+        entityModule.Entity || 
+        entityModule[ firstToUpper(entityName) ] || 
+        entityModule
+      );
+
       Entity.findById(_id, function(queryError, resource){
         if(queryError) {
           debug(queryError);

@@ -10,7 +10,7 @@ var resolver = require('../router/param-resolver');
 var filter = require('../router/param-filter');
 var extend = require('lodash/assign');
 
-var Scheduler = require('../lib/scheduler');
+var Scheduler = require('../service/scheduler');
 
 module.exports = function(server, passport){
   server.get('/:customer/task/:task',[
@@ -94,7 +94,10 @@ var controller = {
     }
 
     TaskService.createManyTasks(input, function(error, tasks) {
-      if(error) return res.send(500, error);
+      if(error) {
+        debug.error(error);
+        return res.send(500, error);
+      }
       res.send(200, tasks);
       next();
     });
@@ -218,6 +221,7 @@ var controller = {
         res.send(200,task);
       },
       fail: function(error){
+        debug.error(error);
         res.send(500);
       }
     });

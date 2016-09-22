@@ -9,6 +9,7 @@ var mongodb = require( appRoot + '/lib/mongodb' ).connect(() => {
   var Event = require( appRoot + '/entity/event' );
   var Monitor = require( appRoot + '/entity/monitor' ).Entity;
   var Task = require( appRoot + '/entity/task' ).Entity;
+  var MonitorService = require( appRoot + '/service/resource');
   require( appRoot + '/entity/task' );
   require( appRoot + '/entity/task/scraper' );
 
@@ -24,32 +25,17 @@ var mongodb = require( appRoot + '/lib/mongodb' ).connect(() => {
     var next = lodash.after(monitors.length, () => completed());
 
     monitors.forEach( m => {
-      debug('creating monitor event %s/%s', m._id, m.name);
       if( ! m.resource ){
         debug('ERROR monitor resource cannot be found');
         return next();
       }
 
-      var event = new Event.MonitorEvent({
-        customer: m.resource.customer_id,
-        emitter: m,
-        name:'success'
-      });
-      event.save( err => {
-        if(err) debug(err);
-        else debug('CREATED monitor event %s/%s', m._id, m.name);
-
-        var event = new Event.MonitorEvent({
-          customer: m.resource.customer_id,
-          emitter: m,
-          name:'failure'
-        });
-        event.save( err => {
-          if(err) debug(err);
-          else debug('CREATED monitor event %s/%s', m._id, m.name);
-          next();
-        });
-      });
+      debug('creating monitor event %s/%s', m._id, m.name);
+      MonitorService.createDefaultEvents(
+        m,
+        m.resource.customer_id,
+        err => next()
+      );
     });
   });
 

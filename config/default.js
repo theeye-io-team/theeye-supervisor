@@ -145,4 +145,14 @@ module.exports = {
     "port": process.env.PORT || 60080,
     "auth_strategy": "bearer",
   },
+  "events": {
+    "user": {
+      "email" : "support@theeye.io",
+      "username" : "theeye",
+      "enabled" : true,
+      "client_id":null,
+      "client_secret":null,
+      "token":null
+    }
+  }
 }

@@ -1,6 +1,10 @@
 # CHANGELOG
 
-### next release
+### 0.5.0 - 2016-09-21
+
+> add a ref to Host in tasks and monitors schemas        
+
+> events can now be attached to tasks        
 
 > new schemas for event default, task , monitor & webhook      
 
@@ -23,6 +27,15 @@
 > added query method strategy when fetch resources            
 
 > change Event schema definition, base schema class created. use native mongoose without mongoose-schema-extend module        
+
+> use same process to create task from user input and from template         
+
+> added events dispatcher service (event > task)     
+
+> moved lib/scheduler to service/scheduler            
+
+> dispatcher initialize on supervisor startup        
+
 
 
 ### 0.4.0 - 2016-09-08
