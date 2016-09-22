@@ -177,6 +177,16 @@ var service = {
           content: html,
           to: job.user.email
         });
+
+        registerJobCreation(input.customer.name,{
+          'customer_name': input.customer.name,
+          'user_id': input.user.id,
+          'user_email': input.user.email,
+          'task_name': task.name,
+          'task_type': task.type,
+          'script_name': script.filename,
+        });
+
       });
     }
   }
