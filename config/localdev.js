@@ -27,7 +27,7 @@ module.exports = {
   },
   "elasticsearch": {
     "enabled":true,
-    "url":"http://localhost:9200",
+    "url":"http://localhost:9200", // via ssh tunnel
     "db":"theeye_allcustomers",
   },
   "mailer": {
@@ -39,5 +39,8 @@ module.exports = {
     "transport": {
       "type":"sendmail"
     }
+  },
+  "server": {
+    "url": "http://localhost:60080"
   }
 }

@@ -3,22 +3,28 @@
 const EventEmitter = require('events').EventEmitter;
 const util = require('util');
 const config = require('config').events ;
-const logger = require('../../lib/logger')('eye:events');
+const logger = require('../../lib/logger')('eye::events');
 
 const User = require('../../entity/user').Entity;
 const Task = require('../../entity/task').Entity;
 const JobDispatcher = require('../job');
 const Scheduler = require('../scheduler');
 const ObjectId = require('mongoose').Types.ObjectId;
+const CustomerService = require('../customer');
 
 class EventDispatcher extends EventEmitter {
+
   constructor ( options ) {
-    super();
+    super ();
     // theeye user , used to automatic jobs
     this.user = null;
   }
 
-  initialize (next) {
+  initialize (done) {
+    function next(){
+      logger.log('started');
+      done();
+    }
     if( this.user ){
       next(null,user);
     } else {
@@ -50,13 +56,13 @@ class EventDispatcher extends EventEmitter {
       if( err ) return logger.error( err );
       if( tasks.length == 0 ) return;
 
-      tasks.forEach( task => this.prepareTask(task) );
+      tasks.forEach( task => this.createJob(task, event) );
     });
 
     return this;
   }
 
-  prepareTask ( task ) {
+  createJob ( task, event ) {
     logger.log('preparing to run task');
     task.populate('customer_id', err => {
       if(err){
@@ -70,22 +76,53 @@ class EventDispatcher extends EventEmitter {
         );
       }
 
+      var runDateMilliseconds =  Date.now() + task.grace_time * 1000 ;
+
       if( task.grace_time > 0 ){
         // schedule the task
+        Scheduler.scheduleTask({
+          event: event,
+          task: task,
+          user: this.user,
+          customer: customer,
+          schedule: {
+            runDate: runDateMilliseconds,
+          },
+          notify: true
+        },(err, agenda) => {
+          if(err) logger.error(err);
+
+          task.populate('host', (err) => {
+            CustomerService.getAlertEmails(customer.name,(err, emails)=>{
+              JobDispatcher.sendJobCancelationEmail({
+                task_id: task.id,
+                schedule_id: agenda.attrs._id,
+                task_name: task.name,
+                hostname: task.host.hostname,
+                date: new Date(runDateMilliseconds).toISOString(),
+                grace_time_mins: task.grace_time / 60,
+                customer_name: customer.name,
+                to: emails.join(',')
+              });
+            });
+          });
+        });
       } else {
         JobDispatcher.create({
+          event: event,
           task: task,
           user: this.user,
           customer: customer,
           notify: true
         }, (err, job) => {
-          if(err) logger.error(err);
+          if(err) return logger.error(err);
           // job created
-          else logger.log('automatic job created by event');
+          logger.log('automatic job created by event');
         });
       }
     })
   }
+
 }
 
 module.exports = new EventDispatcher();

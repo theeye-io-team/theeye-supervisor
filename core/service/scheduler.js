@@ -6,7 +6,7 @@ var ObjectId = require('mongoose').Types.ObjectId;
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 
-var logger = require('../lib/logger')('eye:supervisor:lib:scheduler');
+var logger = require('../lib/logger')('eye::scheduler');
 var mongodb = require('../lib/mongodb').connection.db;
 var Host = require('../entity/host').Entity;
 var Task = require('../entity/task').Entity;
@@ -46,14 +46,17 @@ Scheduler.prototype = {
       logger.log('Called task job');
       self.taskProcessor(job, done);
     });
+
     agenda.on('start', function(job) {
       logger.log('EVENT: start');
       logger.log("Job %s starting", job.attrs.name);
     });
+
     agenda.on('error', function(err, job) {
       logger.log('EVENT: error');
       logger.log("Job %s failed with: %j", job.name, err.stack);
     });
+
     agenda.on('fail', function(err, job) {
       logger.log('EVENT: fail');
       logger.log("Job %s failed with: %j", job.name, err.stack);
@@ -82,21 +85,36 @@ Scheduler.prototype = {
    * schedules a task
    * @param {Object} task data.
    */
-  scheduleTask: function(taskData, done) {
-    logger.log('scheduleTask');
-    logger.log(taskData);
+  scheduleTask: function(input, done) {
+    var task = input.task,
+      customer = input.customer,
+      user = input.user,
+      schedule = input.schedule;
 
-    var date = new Date(taskData.scheduleData.runDate);
-    var frequency = taskData.scheduleData.repeatEvery || false;
+    var data = {
+      task_id : task._id ,
+      host_id : task.host_id ,
+      script_id : task.script_id ,
+      script_arguments : task.script_arguments ,
+      name : task.name ,
+      user_id : user._id ,
+      customer_id : customer._id ,
+      customer_name : customer.name ,
+      state : 'new' ,
+      notify : input.notify ,
+      scheduleData : schedule ,
+    };
 
-    this.schedule(date, "task", taskData, frequency, done);
+    // runDate is milliseconds
+    var date = new Date(schedule.runDate);
+    var frequency = schedule.repeatEvery || false;
+    this.schedule(date,"task",data,frequency,done);
   },
   /**
    * Schedules a job for its starting date and parsing its properties
    */
   schedule: function(starting, jobName, data, interval, done) {
     // var self = this;
-
     var agendaJob = this.agenda.create(jobName, data);
 
     agendaJob.schedule(starting);
@@ -106,7 +124,6 @@ Scheduler.prototype = {
       agendaJob.repeatEvery(interval);
     }
     agendaJob.save(done);
-
   },
   getTaskScheduleData: function(oid, callback) {
     if(!oid) {
@@ -143,28 +160,21 @@ Scheduler.prototype = {
     // console.log(agendaJob.attrs);
     var jobData = agendaJob.attrs.data;
 
+    function JobError (err){
+      agendaJob.fail(err);
+      agendaJob.save();
+      done(err);
+    }
+
     async.parallel({
-      task: function(callback) {
-        Task.findById(jobData.task_id, callback);
-      },
-      host: function(callback) {
-        Host.findById(jobData.host_id, callback);
-      },
-      customer: function(callback) {
-        Customer.findById(jobData.customer_id, callback);
-      },
-      user: function(callback) {
-        User.findById(jobData.user_id, callback);
-      },
-      script: function(callback) {
-        Script.findById(jobData.script_id, callback);
-      }
+      customer: (callback) => Customer.findById(jobData.customer_id, callback) ,
+      task: (callback) => Task.findById(jobData.task_id, callback) ,
+      host: (callback) => Host.findById(jobData.host_id, callback) ,
+      user: (callback) => User.findById(jobData.user_id, callback) ,
+      script: (callback) => Script.findById(jobData.script_id, callback)
     }, function(err, data) {
-      if(err) {
-        agendaJob.fail(err);
-        agendaJob.save();
-        return false;
-      }
+      if(err) return new JobError(err);
+
       var failed = false;
       Object.keys(data).every(function(k,i){
         //if any member isn't here: fail and done.
@@ -184,7 +194,10 @@ Scheduler.prototype = {
         user: data.user,
         customer: data.customer,
         notify: true
-      },(error,job)=>{});
+      },(err,job)=>{
+        if(err) return new JobError(err);
+        done();
+      });
     });
   }
 };

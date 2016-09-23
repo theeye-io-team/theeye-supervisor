@@ -6,12 +6,21 @@ var mongoose = require('mongoose');
 
 mongodb.connect(function(){
 
-var Dispatcher = require('../core/service/dispatcher');
-var Event = require('../core/entity/event').Event;
+  var Dispatcher = require('../core/service/events');
+  var Event = require('../core/entity/event').Event;
 
   describe('Event Dispatcher',function(){
-    it('fetch events', function(done){
+    it('dispatch an event', function(done){
 
+      Event
+        .findById({ _id: '57e3014b045b584d4ff1ede1'  })
+        .exec( (err,event) => {
+
+          Dispatcher.initialize( () => {
+            dispatch( event );
+          })
+
+        });
 
     });
   });

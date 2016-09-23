@@ -29,5 +29,8 @@ module.exports = {
     "support": [
       "support@theeye.io"
     ]
+  },
+  "server": {
+    "url": "http://localhost:60080"
   }
 }

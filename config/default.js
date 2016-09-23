@@ -46,7 +46,7 @@ module.exports = {
   },
   "mailer": {
     "from": "The Eye %customer% <%customer%@theeye.io>",
-    "reply_to": "Support <support@theeye.io>",
+    "reply_to": "Info <info@theeye.io>",
     "only_support": false,
     "include_support_bcc": false,
     "support": [],
@@ -144,15 +144,16 @@ module.exports = {
     "version": process.env.VERSION || "0.0.0",
     "port": process.env.PORT || 60080,
     "auth_strategy": "bearer",
+    "url": null
   },
   "events": {
     "user": {
-      "email" : "support@theeye.io",
-      "username" : "theeye",
-      "enabled" : true,
-      "client_id":null,
-      "client_secret":null,
-      "token":null
+      "email": "info@theeye.io",
+      "username": "theeye",
+      "enabled": true,
+      "client_id": null,
+      "client_secret": null,
+      "token": null
     }
   }
 }

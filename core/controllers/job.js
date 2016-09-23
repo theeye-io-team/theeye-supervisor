@@ -91,6 +91,10 @@ var controller = {
       customer: customer,
       notify: true
     },(error,job) => {
+      if(error){
+        debug.log(error);
+        return res.send(500);
+      }
       res.send(200,{job: job});
     });
   }

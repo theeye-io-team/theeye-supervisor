@@ -2,6 +2,7 @@
 
 const util = require('util');
 const Schema = require('mongoose').Schema;
+const ObjectId = Schema.Types.ObjectId;
 
 function BaseSchema (specs) {
 
@@ -10,9 +11,9 @@ function BaseSchema (specs) {
     task_id: { type: String, 'default':null },
     task: { type: Object, 'default':null }, // embedded
     host_id: { type: String, 'default':null },
-    host: { type: Schema.Types.ObjectId, ref:'Host', 'default':null },
+    host: { type: ObjectId, ref:'Host', 'default':null },
     user_id: { type: String, 'default':null },
-    user: { type: Schema.Types.ObjectId, ref:'User', 'default':null },
+    user: { type: ObjectId, ref:'User', 'default':null },
     customer_id: { type:String, 'default':null },
     customer_name: { type : String, 'default':null },
     name: { type: String, 'default':null },
@@ -21,6 +22,7 @@ function BaseSchema (specs) {
     result: { type: Object, 'default': {} },
     creation_date: { type: Date, 'default': Date.now },
     last_update: { type: Date, 'default': Date.now },
+    event: { type: ObjectId, ref: 'Event', 'default': null }
   }, specs),{
     collection: 'jobs',
     discriminatorKey: '_type'

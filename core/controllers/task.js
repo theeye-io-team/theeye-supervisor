@@ -1,6 +1,6 @@
 "use strict";
 
-var debug = require('../lib/logger')('eye:supervisor:controller:task');
+var logger = require('../lib/logger')('eye:supervisor:controller:task');
 var json = require(process.env.BASE_PATH + "/lib/jsonresponse");
 // var Task = require(process.env.BASE_PATH + '/entity/task').Entity;
 var TaskService = require(process.env.BASE_PATH + '/service/task');
@@ -60,6 +60,12 @@ module.exports = function(server, passport){
     resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'task'})
   ], controller.cancelSchedule);
+
+  // this is for the email cancelation
+  server.get('/:customer/task/:task/schedule/:schedule',[
+    resolver.customerNameToEntity({}),
+    resolver.idToEntity({param:'task'})
+  ], controller.cancelSchedule);
 };
 
 
@@ -95,7 +101,7 @@ var controller = {
 
     TaskService.createManyTasks(input, function(error, tasks) {
       if(error) {
-        debug.error(error);
+        logger.error(error);
         return res.send(500, error);
       }
       res.send(200, tasks);
@@ -115,7 +121,7 @@ var controller = {
     if(customer) input.customer_id = customer._id;
     if(host) input.host_id = host._id;
 
-    debug.log('fetching tasks');
+    logger.log('fetching tasks');
     TaskService.fetchBy(input, function(error, tasks) {
       if(error) return res.send(500);
       res.send(200, tasks);
@@ -147,30 +153,30 @@ var controller = {
    */
   getSchedule (req, res, next) {
     var task = req.task;
-    if(!task) return res.send(404);
+    if(!task) return res.send(404,'task not found');
     Scheduler.getTaskScheduleData(task._id, function(err, scheduleData){
       if(err) {
-        console.log(' ------ Scheduler had an error retrieving data for',task._id);
-        console.log(err);
-        res.send(500);
+        logger.error('Scheduler had an error retrieving data for %s',task._id);
+        logger.error(err);
+        return res.send(500);
       }
-      res.send(200, { scheduleData: scheduleData });
+      else res.send(200, { scheduleData: scheduleData });
     });
   },
   cancelSchedule (req, res, next) {
-    var taskId = req.params.task;
+    var task = req.task;
     var scheduleId = req.params.schedule;
-    if(!taskId || !scheduleId) {
-      res.send(500, 'Parameter missing');
-    }
+    if(!req.params.task) return res.send(400,'task id required');
+    if(!task) return res.send(404,'task not found');
+    if(!scheduleId) res.send(400,'schedule id required');
 
-    Scheduler.cancelTaskSchedule(taskId, scheduleId, function(err, qtyRemoved){
+    Scheduler.cancelTaskSchedule(task.id, scheduleId, function(err, qtyRemoved){
       if(err) {
-        console.log(' ------ Scheduler had an error canceling schedule', scheduleId);
-        console.log(err);
-        res.send(500, 'Error canceling schedule');
+        logger.error('Scheduler had an error canceling schedule %s',scheduleId);
+        logger.error(err);
+        return res.send(500);
       }
-      res.send(200,{status:'done'});
+      else res.send(200,{status:'done'});
     });
   },
   /**
@@ -211,7 +217,7 @@ var controller = {
     if(!req.task) return res.send(404);
     var input = extend({},req.body);
 
-    debug.log('updating task %j', input);
+    logger.log('updating task %j', input);
     TaskService.update({
       user: req.user,
       customer: req.customer,
@@ -221,7 +227,7 @@ var controller = {
         res.send(200,task);
       },
       fail: function(error){
-        debug.error(error);
+        logger.error(error);
         res.send(500);
       }
     });
@@ -248,33 +254,18 @@ var controller = {
     if(!user) return res.send(400,json.error('user required'));
     if(!customer) return res.send(400,json.error('customer required'));
 
-    var jobData = {
-      // task: task,
-      // user: user,
-      // customer: customer,
-      // notify: true
-    };
-    jobData.task_id = task._id ;
-    jobData.host_id = task.host_id ;
-    jobData.script_id = task.script_id ;
-    jobData.script_arguments = task.script_arguments ;
-    jobData.user_id = user._id;
-    jobData.name = task.name ;
-    jobData.customer_id = customer._id;
-    jobData.customer_name = customer.name;
-    jobData.state = 'new' ;
-    jobData.notify = true ;
-    jobData.scheduleData = schedule;
-
-    Scheduler.scheduleTask(jobData, function(err){
+    Scheduler.scheduleTask({
+      task: task,
+      customer: customer,
+      user: user,
+      schedule: schedule
+    }, function(err) {
       if(err) {
-        console.log(err);
-        console.log(arguments);
-        res.send(500, err);
+        logger.error(err);
+        return res.send(500, err);
       }
+
       res.send(200, {nextRun : schedule.runDate});
     });
-
-
   }
 };
