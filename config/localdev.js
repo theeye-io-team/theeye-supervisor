@@ -28,14 +28,14 @@ module.exports = {
   "elasticsearch": {
     "enabled":true,
     "url":"http://localhost:9200", // via ssh tunnel
-    "db":"theeye_allcustomers",
+    "db":"theeye_allcustomers"
   },
   "mailer": {
     "from": "The Eye Development %customer% <%customer%@theeye.io>",
     "reply_to": "Support <support@theeye.io>",
     "only_support": false,
     "include_support_bcc": false,
-    "support": [ "support@theeye.io" ],
+    "support": [],
     "transport": {
       "type":"sendmail"
     }

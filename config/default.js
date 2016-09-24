@@ -15,6 +15,9 @@ module.exports = {
   "storage": {
     "driver": "s3" // local or s3
   },
+  "s3": {
+    "bucket":"theeye.scripts"
+  },
   "monitor": {
     /* cantidad de fallas antes de emitir alertas */
     "fails_count_alert": 3,
@@ -38,17 +41,7 @@ module.exports = {
     "username":"",
     "accessKeyId": "",
     "secretAccessKey": "",
-    "region": "",
-  },
-  "s3": {
-    "bucket":"theeye.scripts"
-  },
-  "sns": {
-    "topicArn": {
-      "events": "",
-      "host-stats": "",
-      "jobs": ""
-    }
+    "region": ""
   },
   "mailer": {
     "from": "The Eye %customer% <%customer%@theeye.io>",
@@ -100,6 +93,13 @@ module.exports = {
        *   "tls":"",
        * }
        */
+    }
+  },
+  "sns": {
+    "topicArn": {
+      "events": "",
+      "host-stats": "",
+      "jobs": ""
     }
   },
   // development no AWS-SNS endpoints
