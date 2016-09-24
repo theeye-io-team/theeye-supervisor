@@ -36,30 +36,22 @@ Scheduler.prototype = {
   setupAgenda: function(){
     var self = this;
     var agenda = this.agenda;
-    // self.agenda._db.ensureIndex("nextRunAt", ignoreErrors)
-    //   .ensureIndex("lockedAt", ignoreErrors)
-    //   .ensureIndex("name", ignoreErrors)
-    //   .ensureIndex("priority", ignoreErrors);
 
-    // Define the job
-    agenda.define("task", function(job, done) {
+    agenda.define('task', function(job, done) {
       logger.log('Called task job');
       self.taskProcessor(job, done);
     });
 
     agenda.on('start', function(job) {
-      logger.log('EVENT: start');
-      logger.log("Job %s starting", job.attrs.name);
+      logger.log('job %s started', job.attrs.name);
     });
 
     agenda.on('error', function(err, job) {
-      logger.log('EVENT: error');
-      logger.log("Job %s failed with: %j", job.name, err.stack);
+      logger.log('job %s error %j', job.name, err.stack);
     });
 
     agenda.on('fail', function(err, job) {
-      logger.log('EVENT: fail');
-      logger.log("Job %s failed with: %j", job.name, err.stack);
+      logger.log('job %s failed %j', job.name, err.stack);
     });
 
     // Unlock agenda events when process finishes

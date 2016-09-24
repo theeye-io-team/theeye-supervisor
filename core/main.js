@@ -43,15 +43,15 @@ require("./environment").setenv(function(){
       logger.log('initializing events dispatcher');
       require('./service/events').initialize(function(){
 
-        logger.log('initializing server');
-        var server = require("./server");
-        server.start();
-
         if( ! process.env.NO_MONITORING ){
           logger.log('initializing monitor');
           var monitor = require('./service/monitor');
           monitor.start();
         }
+
+        logger.log('initializing server');
+        var server = require("./server");
+        server.start();
 
         logger.log('supervisor is running');
       });

@@ -5,6 +5,11 @@
 var join = require('path').join;
 module.exports = {
   "is_dev": true,
+  "system": {
+    "base_url": "http://localhost:60080",
+    "web_url": "http://localhost:6080",
+    "file_upload_folder" : join(__dirname , '..', 'uploads')
+  },
   "storage": {
     "driver": "local"
   },
@@ -13,11 +18,6 @@ module.exports = {
     "agents_check_disconnected_interval_milliseconds": 20000,
     "resources_check_failure_interval_milliseconds": 10000,
     "resources_alert_failure_threshold_milliseconds": 30000
-  },
-  "system": {
-    "base_url": "http://localhost:60080",
-    "web_url": "http://localhost:6080",
-    "file_upload_folder" : join(__dirname , '..', 'uploads')
   },
   "mongo": {
     "user": "",
@@ -39,8 +39,5 @@ module.exports = {
     "transport": {
       "type":"sendmail"
     }
-  },
-  "server": {
-    "url": "http://localhost:60080"
   }
 }

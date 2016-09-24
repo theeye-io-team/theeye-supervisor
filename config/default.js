@@ -1,13 +1,19 @@
 module.exports = {
   "is_dev": false ,
-  "storage": {
-    "driver": "s3" // local or s3
+  "server": {
+    "name": "TheEye",
+    "version": process.env.VERSION || "0.0.0",
+    "port": process.env.PORT || 60080,
+    "auth_strategy": "bearer"
   },
   "system": {
     "base_url": "",
     "web_url": "",
     "view_teamplates_path": __dirname + "/../core/view/template",
     "file_upload_folder": "/tmp"
+  },
+  "storage": {
+    "driver": "s3" // local or s3
   },
   "monitor": {
     /* cantidad de fallas antes de emitir alertas */
@@ -136,15 +142,9 @@ module.exports = {
       "task":{
         "crud":"crud-task",
         "execution":"task-execution",
+        "result":"task-result"
       }
     }
-  },
-  "server": {
-    "name": "TheEye",
-    "version": process.env.VERSION || "0.0.0",
-    "port": process.env.PORT || 60080,
-    "auth_strategy": "bearer",
-    "url": null
   },
   "events": {
     "user": {

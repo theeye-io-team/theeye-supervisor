@@ -17,11 +17,6 @@ const STATUS_AGENT_UPDATED = 'agent-updated';
 const STATUS_JOB_COMPLETED = 'job-completed';
 const JOB_STATE_NEW = 'new';
 
-if( ! globalconfig.server.url ) {
-  throw new Error("key config.server.url not defined in config file config/" + process.env.NODE_ENV + ".js");
-} else {
-  var cancelUrl = globalconfig.server.url + '/:customer/task/:task/schedule/:schedule';
-}
 
 var service = {
   fetchBy (input,next) {
@@ -90,6 +85,9 @@ var service = {
           job, { topic: "jobs", subject: "job_update" }
         );
 
+        var key = globalconfig.elasticsearch.keys.task.result;
+        registerJobOperation(key, job);
+
         this.sendJobExecutionResultNotifications(job);
       }
     });
@@ -100,6 +98,9 @@ var service = {
   },
   // automatic job scheduled . send cancelation
   sendJobCancelationEmail (input) {
+    var cancelUrl = globalconfig.system.base_url +
+      '/:customer/task/:task/schedule/:schedule';
+
     var url = cancelUrl
       .replace(':customer',input.customer_name)
       .replace(':task',input.task_id)
@@ -121,12 +122,8 @@ var service = {
   },
   // send job canceled email
   sendJobCanceledEmail (input) {
-    var url = cancelUrl
-      .replace(':customer',input.customer_name)
-      .replace(':task',input.task_id)
-      .replace(':schedule',input.schedule_id);
-
-    var html = `<h3>Task execution on ${input.hostname} canceled</h3> The task ${input.task_name} on host ${input.hostname} at ${input.date} has been canceled.<br/>`;
+    var html = `<h3>Task execution on ${input.hostname} canceled</h3>
+    The task ${input.task_name} on host ${input.hostname} at ${input.date} has been canceled.<br/>`;
 
     NotificationService.sendEmailNotification({
       customer_name: input.customer_name,
@@ -138,9 +135,44 @@ var service = {
 };
 
 
-function registerJobCreation(customer,data){
-  var key = globalconfig.elasticsearch.keys.task.execution;
-  elastic.submit(customer,key,data);
+/**
+ *
+ * register job operation in elastic search.
+ * works for result and execution.
+ *
+ */
+function registerJobOperation (key, job){
+  // submit job operation to elastic search
+  job.populate([
+    { path: 'user' },
+    { path: 'host' }
+  ],
+  (err) => {
+    var data = {
+      'hostname': job.host.hostname,
+      'customer_name': job.customer_name,
+      'user_id': job.user._id,
+      'user_email': job.user.email,
+      'task_name': job.task.name,
+      'task_type': job.task.type,
+      'state' : job.state,
+    };
+
+    if( job._type == 'ScraperJob' ){
+      data.task_url = job.task.url;
+      data.task_method = job.task.method;
+      data.task_status_code = job.task.status_code ;
+      data.task_pattern = job.task.pattern ;
+    } else {
+      data.script_name = job.script.filename;
+      data.script_md5 = job.script.md5;
+      data.script_last_update = job.script.last_update;
+      data.script_mimetype = job.script.mimetype;
+    }
+
+    if( job.result ) data.result = job.result ;
+    elastic.submit(job.customer_name,key,data);
+  });
 }
 
 
@@ -166,14 +198,8 @@ function createScriptJob(input, done){
     job.save(error => {
       if(error) return done(error);
 
-      registerJobCreation(input.customer.name,{
-        'customer_name': input.customer.name,
-        'user_id': input.user.id,
-        'user_email': input.user.email,
-        'task_name': task.name,
-        'task_type': task.type,
-        'script_name': script.filename,
-      });
+      var key = globalconfig.elasticsearch.keys.task.execution;
+      registerJobOperation(key, job);
 
       debug.log('script job created.');
       done(null, job);
@@ -200,13 +226,8 @@ function createScraperJob(input, done){
   job.save(error => {
     if(error) return done(error);
 
-    registerJobCreation(input.customer.name,{
-      'customer_name': input.customer.name,
-      'user_id': input.user.id,
-      'user_email': input.user.email,
-      'task_name': task.name,
-      'task_type': task.type
-    });
+    var key = globalconfig.elasticsearch.keys.task.execution;
+    registerJobOperation(key, job);
 
     debug.log('scraper job created.');
     done(null, job);
