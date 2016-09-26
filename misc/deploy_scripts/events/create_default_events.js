@@ -17,7 +17,7 @@ var mongodb = require( appRoot + '/lib/mongodb' ).connect(() => {
   var completed = lodash.after( 2, () => process.exit(0) );
 
 
-  Monitor.find().populate('resource').exec( (err, monitors) => {
+  Monitor.find().exec( (err, monitors) => {
     if(err) throw err;
 
     var debug = require('debug')('eye:deploy:monitor-event');
@@ -25,19 +25,29 @@ var mongodb = require( appRoot + '/lib/mongodb' ).connect(() => {
     var next = lodash.after(monitors.length, () => completed());
 
     monitors.forEach( m => {
-      if( ! m.resource ){
-        debug('ERROR monitor resource cannot be found');
-        return next();
-      }
+      m.populate('resource', err => {
+        if(err){
+          debug('error populating monitor %j', m.toObject());
+          debug(err);
+        }
 
-      debug('creating monitor event %s/%s', m._id, m.name);
-      MonitorService.createDefaultEvents(
-        m,
-        m.resource.customer_id,
-        err => next()
-      );
+        if( ! m.resource ){
+          debug('ERROR monitor resource cannot be found %j', m.toObject());
+          return next();
+        }
+
+        debug('creating monitor event %s/%s', m._id, m.name);
+        MonitorService.createDefaultEvents(
+          m,
+          m.resource.customer_id,
+          err => next()
+        );
+      });
     });
   });
+
+
+
 
 
   Task.find().exec( (err, tasks) => {

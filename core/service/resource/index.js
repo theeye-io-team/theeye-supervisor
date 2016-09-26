@@ -145,7 +145,9 @@ function Service(resource) {
         });
       }
     }
-    resource.save();
+    resource.save( err => {
+      if(err) logger.error(err) 
+    });
   }
 
   function handleNormalState (resource,input,config) {
@@ -180,7 +182,9 @@ function Service(resource) {
           data:input
         });
       }
-      resource.save();
+      resource.save( err => {
+        if(err) logger.error(err) 
+      });
     }
   }
 
@@ -218,7 +222,9 @@ function Service(resource) {
         });
       }
     }
-    resource.save();
+    resource.save( err => {
+      if(err) logger.error(err) 
+    });
   }
 
   function dispatchStateChangeSNS (resource, options) {
@@ -284,7 +290,9 @@ function Service(resource) {
 
         if(input.last_update) resource.last_update = input.last_update;
         if(input.last_check) resource.last_check = input.last_check;
-        resource.save();
+        resource.save( err => {
+          if(err) logger.error(err) 
+        });
         next();
       }
     );
@@ -639,7 +647,7 @@ Service.disableResourcesByCustomer = function(customer, doneFn){
           var resource = resources[i];
 
           resource.enable = false;
-          resource.save((error) => {
+          resource.save(error => {
             if(error) {
               logger.log('ERROR updating resource property');
               throw error;

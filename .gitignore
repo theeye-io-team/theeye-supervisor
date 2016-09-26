@@ -3,9 +3,10 @@ node_modules/
 *.swo
 newrelic_*.log
 scripts/
-config/*
 misc/playground/aws/config.json
 misc/deploy_scripts/events/config/*
 supervisor
+config*
 misc/mongodb/*
 npm-debug.log*
+dump*
