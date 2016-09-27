@@ -1,29 +1,20 @@
 "use strict";
 
-var crypto = require('crypto');
 var util = require('util');
 var Schema = require('mongoose').Schema;
 
 function BaseSchema (specs) {
-
   // Schema constructor
   Schema.call(this, util._extend({
-    name: { type: String, 'default': '' },
+    name: { type: String, required:true },
     creation_date: { type: Date, 'default': Date.now },
     last_update: { type: Date, 'default': null },
     enable: { type: Boolean, 'default': true },
-    customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
-    secret: { type: String, 'default': function(){
-      // one way hash
-      return crypto.createHmac('sha256','THEEYE' + Math.random())
-      .update( new Date().toISOString() )
-      .digest('hex');
-    }}
+    customer: { type: Schema.Types.ObjectId, ref: 'Customer' }
   }, specs),{
-    collection: 'events',
+    collection: 'triggers',
     discriminatorKey: '_type'
   });
-
 
   // Duplicate the ID field.
   this.virtual('id').get(function(){
@@ -50,9 +41,10 @@ function BaseSchema (specs) {
     next();
   });
 
-
   return this;
 }
+
 util.inherits(BaseSchema, Schema);
 
 module.exports = BaseSchema;
+

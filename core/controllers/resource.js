@@ -7,7 +7,7 @@ var ResourceMonitor = require('../entity/monitor').Entity;
 var Host = require('../entity/host').Entity;
 var Job = require('../entity/job').Job;
 var resolver = require('../router/param-resolver');
-var DbQuery = require('../lib/db-filter');
+var dbFilter = require('../lib/db-filter');
 
 module.exports = function(server, passport) {
   var middlewares = [
@@ -46,7 +46,7 @@ var controller = {
       return res.send(403,json.error('specify an organization'));
     }
 
-    var filter = DbQuery(req.query,{
+    var filter = dbFilter(req.query,{
       sort: {
         fails_count: -1,
         type: 1 
