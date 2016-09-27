@@ -1,4 +1,4 @@
-var debug = require('debug')('eye:supervisor:router:param-validator-middleware');
+var debug = require('debug')('eye:router:middleware:params-validator');
 
 module.exports = {
   'isMongoId': isMongoId,

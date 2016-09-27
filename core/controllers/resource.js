@@ -1,4 +1,4 @@
-var debug = require('debug')('eye:supervisor:controller:resource');
+var debug = require('debug')('eye:controller:resource');
 var json = require('../lib/jsonresponse');
 var ResourceManager = require('../service/resource');
 var MonitorManager = require('../service/resource/monitor');
@@ -7,55 +7,29 @@ var ResourceMonitor = require('../entity/monitor').Entity;
 var Host = require('../entity/host').Entity;
 var Job = require('../entity/job').Job;
 var resolver = require('../router/param-resolver');
-
 var DbQuery = require('../lib/db-filter');
 
 module.exports = function(server, passport) {
-  server.get('/:customer/resource',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({})
-  ], controller.fetch);
-
-  server.get('/:customer/resource/:resource',[
-    passport.authenticate('bearer', {session:false}),
+  var middlewares = [
+    passport.authenticate('bearer',{session:false}),
     resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'resource'})
-  ], controller.get);
+  ];
 
-  server.post('/:customer/resource',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-  ], controller.create);
+  server.get   ( '/:customer/resource'                  , middlewares , controller.fetch);
+  server.get   ( '/:customer/resource/:resource'        , middlewares , controller.get);
+  server.post  ( '/:customer/resource'                  , middlewares , controller.create);
+  server.put   ( '/:customer/resource/:resource'        , middlewares , controller.update);
+  //server.put   ( '/resource/:resource'                  , middlewares , controller.update);
+  server.del   ( '/:customer/resource/:resource'        , middlewares , controller.remove);
+  server.patch ( '/:customer/resource/:resource/alerts' , middlewares , controller.alerts);
 
-  server.put('/:customer/resource/:resource',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'resource'})
-  ], controller.update);
+  server.patch(
+    '/:customer/resource/:resource',
+    middlewares.concat( resolver.idToEntity({param:'host'}) ),
+    controller.patch
+  );
 
-  server.put('/resource/:resource',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.idToEntity({param:'resource'})
-  ], controller.update);
-
-  server.del('/:customer/resource/:resource',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'resource'})
-  ], controller.remove);
-
-  server.patch('/:customer/resource/:resource',[
-    resolver.customerNameToEntity({}),
-    passport.authenticate('bearer', {session:false}),
-    resolver.idToEntity({param:'host'}),
-    resolver.idToEntity({param:'resource'})
-  ], controller.patch);
-
-  server.patch('/:customer/resource/:resource/alerts',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'resource'})
-  ],controller.alerts);
 }
 
 var controller = {

@@ -1,10 +1,9 @@
 "use strict";
 
-var appRoot = require('app-root-path');
-
 var resolver = require('../router/param-resolver');
 
 module.exports = function (server, passport) {
+  /*
   server.get('/:customer/trigger/:event',[
     passport.authenticate('bearer', {session:false}),
     resolver.customerNameToEntity({}),
@@ -16,6 +15,7 @@ module.exports = function (server, passport) {
     resolver.customerNameToEntity({}),
     resolver.idToEntity({ param:'event' })
   ], controller.emitEvent);
+*/
 }
 
 var controller = {

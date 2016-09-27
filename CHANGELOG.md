@@ -1,5 +1,18 @@
 # CHANGELOG
 
+### next release
+
+> separate task & task scheduler in different controllers       
+
+> add user-customer route validation : requesting user and organization/customer param validation     
+
+> added webhook controller       
+
+> improve routes definition legibility      
+
+> add "required" option to idToEntity resolver middleware       
+
+
 ### 0.5.1 - 2016-09-26
 
 > monitoring via agenda/scheduler            

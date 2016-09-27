@@ -1,4 +1,4 @@
-var logger = require('../lib/logger')('eye:supervisor:router');
+var logger = require('../lib/logger')('eye:router');
 var config = require('config');
 var fs = require("fs");
 var join = require("path").join;
@@ -10,6 +10,8 @@ Router.resolve = require('./param-resolver');
 Router.filter = require('./param-filter');
 
 Router.validate = require('./param-validator');
+
+Router.userCustomer = require('./user-customer');
 
 Router.loadControllers = function(server, passport)
 {
