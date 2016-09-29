@@ -1,7 +1,8 @@
 "use strict";
 
-var util = require('util');
-var Schema = require('mongoose').Schema;
+const util = require('util');
+const Schema = require('mongoose').Schema;
+const lifecicle = require('mongoose-lifecycle');
 
 function BaseSchema (specs) {
   // Schema constructor
@@ -12,7 +13,7 @@ function BaseSchema (specs) {
     enable: { type: Boolean, 'default': true },
     customer: { type: Schema.Types.ObjectId, ref: 'Customer' }
   }, specs),{
-    collection: 'triggers',
+    collection: 'webhooks',
     discriminatorKey: '_type'
   });
 
@@ -35,11 +36,7 @@ function BaseSchema (specs) {
   this.set('toJSON'  , def);
   this.set('toObject', def);
 
-  this.pre('save', function(next) {
-    this.last_update = new Date();
-    // do stuff
-    next();
-  });
+  this.plugin(lifecicle);
 
   return this;
 }
@@ -47,4 +44,3 @@ function BaseSchema (specs) {
 util.inherits(BaseSchema, Schema);
 
 module.exports = BaseSchema;
-

@@ -143,6 +143,10 @@ module.exports = {
         "crud":"crud-task",
         "execution":"task-execution",
         "result":"task-result"
+      },
+      "webhook":{
+        "crud":"crud-webhook",
+        "triggered":"triggered-webhook"
       }
     }
   },

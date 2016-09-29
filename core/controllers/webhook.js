@@ -2,10 +2,15 @@
 
 var router = require('../router');
 var resolve = router.resolve;
-var debug = require('debug')('eye:controller:trigger');
+var debug = require('debug')('eye:controller:webhook');
 var dbFilter = require('../lib/db-filter');
-var Trigger = require('../entity/trigger').Trigger;
+var Webhook = require('../entity/webhook').Webhook;
 var extend = require('lodash/assign');
+
+const EventDispatcher = require('../service/events');
+const WebhookEvent = require('../entity/event').WebhookEvent;
+
+var audit = require('../lib/audit');
 
 module.exports = function (server, passport) {
   var middlewares = [
@@ -15,22 +20,34 @@ module.exports = function (server, passport) {
   ];
 
   server.get(
-    '/:customer/trigger',
+    '/:customer/webhook',
     middlewares,
     controller.fetch
   );
 
   server.post(
-    '/:customer/trigger',
+    '/:customer/webhook',
     middlewares,
-    controller.create
+    controller.create,
+    audit.afterCreate('webhook',{display:'name'})
+  );
+
+  server.post(
+    '/:customer/webhook/:webhook/trigger',
+    middlewares.concat(
+      resolve.idToEntity({
+        param:'webhook',
+        required: true
+      })
+    ),
+    controller.trigger
   );
 
   server.get(
-    '/:customer/trigger/:trigger',
+    '/:customer/webhook/:webhook',
     middlewares.concat(
       resolve.idToEntity({
-        param:'trigger',
+        param:'webhook',
         required: true
       })
     ),
@@ -38,25 +55,27 @@ module.exports = function (server, passport) {
   );
 
   server.put(
-    '/:customer/trigger/:trigger',
+    '/:customer/webhook/:webhook',
     middlewares.concat(
       resolve.idToEntity({
-        param:'trigger',
+        param:'webhook',
         required: true
       })
     ),
-    controller.update
+    controller.update,
+    audit.afterUpdate('webhook',{display:'name'})
   );
 
   server.del(
-    '/:customer/trigger/:trigger',
+    '/:customer/webhook/:webhook',
     middlewares.concat(
       resolve.idToEntity({
-        param:'trigger',
+        param:'webhook',
         required: true
       })
     ),
-    controller.remove
+    controller.remove,
+    audit.afterRemove('webhook',{display:'name'})
   );
 }
 
@@ -73,9 +92,9 @@ var controller = {
       })
     );
 
-    Trigger.find(filter.where, (err, triggers) => {
+    Webhook.find(filter.where, (err, webhooks) => {
       if(err) return res.send(500);
-      res.send(200, triggers);
+      res.send(200, webhooks);
     });
   },
   /**
@@ -86,14 +105,15 @@ var controller = {
       customer: req.customer
     });
 
-    var trigger = new Trigger(input);
-    trigger.save(err => {
+    var webhook = new Webhook(input);
+    webhook.save(err => {
       if(err){
         if( err.name == 'ValidationError' )
           return res.send(400, err);
         else return res.send(500);
       }
-      res.send(200, trigger);
+      res.send(200, webhook);
+      req.webhook = webhook;
       next();
     });
   },
@@ -101,33 +121,51 @@ var controller = {
    * @method PUT
    */
   update (req, res, next) {
-    var trigger = req.trigger;
+    var webhook = req.webhook;
     var input = extend({},req.body,{
       customer: req.customer
     });
 
-    extend(trigger,input);
+    extend(webhook,input);
 
-    trigger.save(err => {
+    webhook.save(err => {
       if(err) return res.send(500);
-      res.send(200, trigger);
+      res.send(200, webhook);
+      next();
     });
   },
   /**
    * @method GET
    */
   get (req, res, next) {
-    var trigger = req.trigger;
-    return res.send(200, trigger);
+    var webhook = req.webhook;
+    return res.send(200, webhook);
   },
   /**
    * @method DELETE
    */
   remove (req, res, next) {
-    var trigger = req.trigger;
-    trigger.remove(err => {
+    var webhook = req.webhook;
+    webhook.remove(err => {
       if(err) return res.send(500);
       res.send(204);
+      next();
     });
   },
+  /**
+   * @method POST
+   */
+  trigger (req, res, next) {
+    var webhook = req.webhook;
+
+    WebhookEvent.findOne({
+      emitter: webhook
+    },(err, event) => {
+
+      EventDispatcher.dispatch( event );
+      res.send(202);
+      next();
+
+    });
+  }
 }
