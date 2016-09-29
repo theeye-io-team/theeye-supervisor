@@ -38,10 +38,12 @@ require("./environment").setenv(function(){
   require('./lib/mongodb').connect(function(){
 
     logger.log('initializing scheduler');
-    require('./service/scheduler').initialize(function(){
+    var scheduler = require('./service/scheduler');
+    scheduler.initialize(function(){
 
       logger.log('initializing events dispatcher');
-      require('./service/events').initialize(function(){
+      var dispatcher = require('./service/events');
+      dispatcher.initialize(function(){
 
         if( ! process.env.NO_MONITORING ){
           logger.log('initializing monitor');
@@ -50,8 +52,11 @@ require("./environment").setenv(function(){
         }
 
         logger.log('initializing server');
-        var server = require("./server");
-        server.start();
+        var app = require("./app");
+        app.start();
+        app.jobDispatcher = require('./service/job');
+        app.eventDispatcher = dispatcher;
+        app.scheduler = scheduler;
 
         logger.log('supervisor is running');
       });

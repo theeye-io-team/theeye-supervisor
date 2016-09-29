@@ -40,4 +40,26 @@ module.exports = {
       "type":"sendmail"
     }
   }
+/**
+  mailer: {
+    from: "The Eye Development %customer% <%customer%@theeye.io>",
+    reply_to: "Support <support@theeye.io>",
+    only_support: true,
+    include_support_bcc: false,
+    support: ["facugon@interactar.com"],
+    transport: {
+      //"type":"sendmail"
+      type:"smtp",
+      service:"gmail",
+			auth: {
+				XOAuth2: {
+					user: "facundo.siquot@gmail.com", // Your gmail address.
+					clientId : "714923395260-9jd45ige6gg86mffrvf419dvuh85360t.apps.googleusercontent.com",
+					clientSecret : "k6eNjkeiRriseEUgPBWlGiHr",
+					refreshToken: "1/V8cfViH1Qaw9dOWi3eX-YbzmEjzaUyQ6zch6Wo7mq0A"
+				}
+			}
+    }
+  }
+*/
 }

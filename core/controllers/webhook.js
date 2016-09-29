@@ -1,16 +1,15 @@
 "use strict";
 
+var extend = require('lodash/assign');
+var dbFilter = require('../lib/db-filter');
+var logger = require('../lib/logger')('eye:controller:webhook');
+var audit = require('../lib/audit');
 var router = require('../router');
 var resolve = router.resolve;
-var debug = require('debug')('eye:controller:webhook');
-var dbFilter = require('../lib/db-filter');
-var Webhook = require('../entity/webhook').Webhook;
-var extend = require('lodash/assign');
 
 const EventDispatcher = require('../service/events');
 const WebhookEvent = require('../entity/event').WebhookEvent;
-
-var audit = require('../lib/audit');
+const Webhook = require('../entity/webhook').Webhook;
 
 module.exports = function (server, passport) {
   var middlewares = [
@@ -159,8 +158,13 @@ var controller = {
     var webhook = req.webhook;
 
     WebhookEvent.findOne({
-      emitter: webhook
+      emitter: webhook._id
     },(err, event) => {
+
+      if( err ){
+        return res.send(500, err);
+      }
+      if( ! event ) return res.send(500);
 
       EventDispatcher.dispatch( event );
       res.send(202);

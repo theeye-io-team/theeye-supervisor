@@ -5,6 +5,8 @@ var Job = JobModels.Job;
 var ScriptJob = JobModels.Script;
 var ScraperJob = JobModels.Scraper;
 var Script = require('../entity/script').Entity;
+var TaskEvent = require('../entity/event').TaskEvent;
+var EventDispatcher = require('./events');
 
 var async = require('async');
 var NotificationService = require('./notification');
@@ -12,11 +14,13 @@ var globalconfig = require('config');
 var elastic = require('../lib/elastic');
 var debug = require('../lib/logger')('eye:jobs');
 
-const JOB_UPDATE_AGENT_CONFIG = 'agent:config:update';
-const STATUS_AGENT_UPDATED = 'agent-updated';
-const STATUS_JOB_COMPLETED = 'job-completed';
-const JOB_STATE_NEW = 'new';
+const app = require('../app');
 
+const JOB_UPDATE_AGENT_CONFIG = 'agent:config:update';
+//const STATE_AGENT_UPDATED = 'agent-updated';
+const STATE_SUCCESS = 'success';
+const STATE_FAILURE = 'failure';
+const STATE_NEW = 'new';
 
 var service = {
   fetchBy (input,next) {
@@ -31,7 +35,7 @@ var service = {
   },
   getNextPendingJob(input,next) {
     var query = {};
-    query.state = JOB_STATE_NEW;
+    query.state = STATE_NEW;
     query.host_id = input.host._id;
 
     Job.findOne(query,function(error,job){
@@ -72,29 +76,24 @@ var service = {
       done( new Error('invalid or undefined task type ' + task.type) );
     }
   },
-  updateResult ( job, result, done ) {
-    //job.state = (job.name==JOB_UPDATE_AGENT_CONFIG) ?
-    //  STATUS_AGENT_UPDATED : STATUS_JOB_COMPLETED ;
-    job.state = STATUS_JOB_COMPLETED;
+  update ( job, result, done ) {
+    job.state = result.state || STATE_FAILURE;
     job.result = result;
-    job.save( error => {
-      done(error);
-      if( job.notify ){
-        // notify job result to clients
-        NotificationService.sendSNSNotification(
-          job, { topic: "jobs", subject: "job_update" }
-        );
+    job.save( err => done(err, job) );
+    if( job.notify ){
+      // notify job result to clients
+      var message = { topic: "jobs", subject: "job_update" };
+      NotificationService.sendSNSNotification(job, message);
+    }
 
-        var key = globalconfig.elasticsearch.keys.task.result;
-        registerJobOperation(key, job);
+    var key = globalconfig.elasticsearch.keys.task.result;
+    registerJobOperation(key, job);
 
-        this.sendJobExecutionResultNotifications(job);
-      }
-    });
-  },
-  // job completed .
-  sendJobExecutionResultNotifications ( job ) {
+    // job completed mail.
     new ResultMail ( job );
+
+    // trigger result event
+    new ResultEvent ( job );
   },
   // automatic job scheduled . send cancelation
   sendJobCancelationEmail (input) {
@@ -133,6 +132,23 @@ var service = {
     });
   },
 };
+
+/**
+ *
+ *
+ */
+function ResultEvent (job) {
+  TaskEvent.findOne({
+    emitter: job.task.id,
+    enable: true,
+    name: job.state
+  }, (err, event) => {
+    if(err) return logger.error(err);
+    if(!event) return logger.error(new Error('no events defined'));
+
+    app.eventDispatcher.dispatch(event);
+  });
+}
 
 
 /**
@@ -193,7 +209,7 @@ function createScriptJob(input, done){
     job.customer_id = input.customer._id;
     job.customer_name = input.customer.name;
     job.notify = input.notify;
-    job.state = JOB_STATE_NEW;
+    job.state = STATE_NEW;
     job.event = input.event||null;
     job.save(error => {
       if(error) return done(error);
@@ -221,7 +237,7 @@ function createScraperJob(input, done){
   job.customer_id = input.customer._id;
   job.customer_name = input.customer.name;
   job.notify = input.notify;
-  job.state = JOB_STATE_NEW;
+  job.state = STATE_NEW;
   job.event = input.event||null;
   job.save(error => {
     if(error) return done(error);

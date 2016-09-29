@@ -7,10 +7,10 @@ const logger = require('../../lib/logger')('eye::events');
 
 const User = require('../../entity/user').Entity;
 const Task = require('../../entity/task').Entity;
-const JobDispatcher = require('../job');
-const Scheduler = require('../scheduler');
 const ObjectId = require('mongoose').Types.ObjectId;
 const CustomerService = require('../customer');
+
+const app = require('../../app');
 
 class EventDispatcher extends EventEmitter {
 
@@ -80,7 +80,7 @@ class EventDispatcher extends EventEmitter {
 
       if( task.grace_time > 0 ){
         // schedule the task
-        Scheduler.scheduleTask({
+        app.scheduler.scheduleTask({
           event: event,
           task: task,
           user: this.user,
@@ -94,7 +94,7 @@ class EventDispatcher extends EventEmitter {
 
           task.populate('host', (err) => {
             CustomerService.getAlertEmails(customer.name,(err, emails)=>{
-              JobDispatcher.sendJobCancelationEmail({
+              app.jobDispatcher.sendJobCancelationEmail({
                 task_id: task.id,
                 schedule_id: agenda.attrs._id,
                 task_name: task.name,
@@ -108,7 +108,7 @@ class EventDispatcher extends EventEmitter {
           });
         });
       } else {
-        JobDispatcher.create({
+        app.jobDispatcher.create({
           event: event,
           task: task,
           user: this.user,
