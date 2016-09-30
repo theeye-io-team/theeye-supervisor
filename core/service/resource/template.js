@@ -99,7 +99,7 @@ exports.createResourceMonitorsTemplates = function (input, done){
  */
 exports.createMonitorFromTemplate = function(options) {
 
-  var doneFn = (options.done||()=>{}),
+  var doneFn = ( options.done||(function(){}) ),
     template = options.template,
     host = options.host;
 

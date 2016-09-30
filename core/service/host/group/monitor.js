@@ -10,7 +10,7 @@ var lodash = require('lodash');
 var ResourceTemplateService = require(appRoot + '/service/resource/template');
 
 exports.addTemplatesToGroup = function(group,templates,done){
-  done=done||()=>{};
+  done||(done=function(){});
   var published = lodash.after(templates.length,()=>done());
   templates.forEach(template=>{
     group.addMonitorTemplate(template);
@@ -39,7 +39,7 @@ exports.addTemplatesToGroup = function(group,templates,done){
 exports.removeMonitorTemplateInstancesFromGroupHosts = function(
   template, done
 ){
-  done=done||()=>{};
+  done||(done=function(){});
   logger.log('removing monitor instances');
 
   removeResourceTemplateInstancesFromGroupHosts(
@@ -117,7 +117,7 @@ function addMonitorInstancesToGroupHosts(
 function removeResourceTemplateInstancesFromGroupHosts(
   template, done
 ){
-  done=done||()=>{};
+  done||(done=function(){});
   Resource.find(template).exec(function(err,resources){
     if(err){ logger.error(err); return done(err); }
 
