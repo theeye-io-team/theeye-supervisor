@@ -17,7 +17,7 @@ COPY . ${destDir}
 # Move packages
 RUN mv /tmp/node_modules ${destDir}
 # Install app dependencies
-RUN cd ${destDir}; npm install; npm install mongoose-lifecycle
+RUN cd ${destDir}; npm install
 #Export and run.
 EXPOSE 60080
 #By default run prod, If development is requiered This command would be override by docker-compose up
