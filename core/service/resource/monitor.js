@@ -299,7 +299,7 @@ function validateData (input) {
 
 
 function createMonitor(type, input, next) {
-  next=next||()=>{};
+  next||(next=function(){});
 	logger.log('processing monitor %s creation data', type);
 	setMonitorData(type, input,
     function(error,monitor){

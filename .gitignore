@@ -10,3 +10,4 @@ config*
 misc/mongodb/*
 npm-debug.log*
 dump*
+bundle/

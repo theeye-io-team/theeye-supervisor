@@ -121,7 +121,7 @@ EntitySchema.methods.setTemplatesProperty = function(prop, tpls){
 
 EntitySchema.methods.detachTaskTemplate = function(template,done)
 {
-  done=done||()=>{};
+  done||(done=function(){});
 
   var task = template._id;
   Entity.update(this,{
@@ -132,7 +132,7 @@ EntitySchema.methods.detachTaskTemplate = function(template,done)
 }
 
 EntitySchema.methods.detachMonitorTemplate = function(template,done){
-  done=done||()=>{};
+  done||(done=function(){});
 
   function deleteMonitorTemplate(id,next){
     Entity.update(this,{
