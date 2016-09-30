@@ -57,6 +57,7 @@ require("./environment").setenv(function(){
         app.jobDispatcher = require('./service/job');
         app.eventDispatcher = dispatcher;
         app.scheduler = scheduler;
+        app.customer = require('./service/customer');
 
         logger.log('supervisor is running');
       });

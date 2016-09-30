@@ -253,7 +253,7 @@ function createScraperJob(input, done){
 
 function ResultMail ( job ) {
 
-  this.ScriptJob = function( job ) {
+  this.ScriptJob = function( job, mails ) {
     var stdout, stderr, code, result = job.result;
     if (result) {
       stdout = result.stdout ? result.stdout.trim() : 'no stdout';
@@ -272,27 +272,29 @@ function ResultMail ( job ) {
       customer_name: job.customer_name,
       subject: `[TASK] ${job.task.name} executed on ${job.host.hostname}`,
       content: html,
-      to: job.user.email
+      to: mails
     });
   }
 
-  this.ScraperJob = function ( job ) {
+  this.ScraperJob = function ( job, mails ) {
     var html = `<h3>Task ${job.task.name} execution completed on ${job.host.hostname}.</h3>`;
 
     NotificationService.sendEmailNotification({
       customer_name: job.customer_name,
       subject: `[TASK] ${job.task.name} executed on ${job.host.hostname}`,
       content: html,
-      to: job.user.email
+      to: mails
     });
   }
 
-  job.populate([
-    { path: 'user' },
-    { path: 'host' }
-  ],
-  error => {
-    this[ job._type ]( job );
+  app.customer.getAlertEmails( job.customer_name, (err, mails) => {
+    job.populate([
+      { path: 'user' },
+      { path: 'host' }
+    ],
+    error => {
+      this[ job._type ]( job, mails );
+    });
   });
 
 };
