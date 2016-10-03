@@ -147,7 +147,7 @@ var controller = {
     var webhook = req.webhook;
     webhook.remove(err => {
       if(err) return res.send(500);
-      res.send(204);
+      res.send(200,webhook);
       next();
     });
   },

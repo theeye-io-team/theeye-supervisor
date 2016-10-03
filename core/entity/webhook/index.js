@@ -8,12 +8,7 @@ var afterRemove = require('./afterRemove');
 
 var Webhook = mongodb.model('Webhook',
   new BaseSchema({
-    _type: { type: String, 'default': 'Webhook' },
-    host: {
-      type: Schema.Types.ObjectId,
-      ref: 'Host',
-      required: true
-    }
+    _type: { type: String, 'default': 'Webhook' }
   })
 );
 
