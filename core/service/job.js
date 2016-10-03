@@ -80,11 +80,12 @@ var service = {
     job.state = result.state || STATE_FAILURE;
     job.result = result;
     job.save( err => done(err, job) );
-    if( job.notify ){
-      // notify job result to clients
-      var message = { topic: "jobs", subject: "job_update" };
-      NotificationService.sendSNSNotification(job, message);
-    }
+
+    // if job is an agent update, break
+    if( job.name == 'agent:config:update' ) return;
+
+    var message = { topic: "jobs", subject: "job_update" };
+    NotificationService.sendSNSNotification(job, message);
 
     var key = globalconfig.elasticsearch.keys.task.result;
     registerJobOperation(key, job);

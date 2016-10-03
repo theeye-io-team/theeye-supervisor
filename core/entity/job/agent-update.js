@@ -26,6 +26,7 @@ AgentUpdateJobSchema.statics.create = function(specs,next) {
     }
 
     var job = new Job(specs);
+    job.host = specs.host_id;
     job.save(err => {
       if(err) debug.error(err);
       next(err,job);

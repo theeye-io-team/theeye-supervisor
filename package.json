@@ -18,7 +18,7 @@
     "mime": "~1.3.4",
     "moment": "~2.13.0",
     "mongoose": "~4.3.5",
-    "mongoose-lifecycle": "^1.0.0",
+    "mongoose-lifecycle": "~1.0.0",
     "mongoose-schema-extend": "~0.2.2",
     "multer": "~0.1.8",
     "node-uuid": "~1.4.7",
