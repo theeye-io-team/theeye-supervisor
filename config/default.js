@@ -115,6 +115,7 @@ module.exports = {
     "url":"",
     "db":"",
     "keys":{
+      "prefix":null,
       "agent":{
         "version":"agent-version"
       },

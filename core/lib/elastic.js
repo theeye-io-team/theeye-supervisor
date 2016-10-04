@@ -9,8 +9,11 @@ var request = require("request").defaults({
 });
 
 var ElasticSearch = {
-  submit : function(index,endpoint,data)
+  submit : function(index,key,data)
   {
+    var prefix = config.elasticsearch.keys.prefix
+    if( prefix ) key = prefix + key ;
+
     if( ! config.elasticsearch.enabled ){
       debug('elastic search disabled by config');
       return;
@@ -21,11 +24,11 @@ var ElasticSearch = {
       return debug('ERROR invalid elasticsearch configuration.');
     }
 
-    data.type = endpoint;
+    data.type = key;
     data.timestamp || ( data.timestamp = (new Date()).getTime() );
     data.date || ( data.date = (new Date()).toISOString() );
 
-    var url = elastic.url + '/' + path.join(index, endpoint);
+    var url = elastic.url + '/' + path.join(index,key);
 
     request.post({
       url: url,

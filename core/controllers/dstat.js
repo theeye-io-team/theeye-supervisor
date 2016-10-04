@@ -1,6 +1,6 @@
 var json = require("../lib/jsonresponse");
 var HostStats = require("../entity/host/stats").Entity;
-var debug = require("../lib/logger")("eye:supervisor:controller:dstat");
+var logger = require("../lib/logger")("eye:supervisor:controller:dstat");
 var NotificationService = require("../service/notification");
 var paramsResolver = require('../router/param-resolver');
 var config = require('config');
@@ -33,7 +33,7 @@ module.exports = function(server, passport) {
 
 var controller = {
   create : function create(req, res, next) {
-    debug.log('Handling host dstat data');
+    logger.log('Handling host dstat data');
 
     var host = req.host;
     var customer = req.customer;
@@ -44,12 +44,12 @@ var controller = {
 
     HostStats.findOneByHostAndType(host._id,'dstat',
       function(error,dstat){
-        if(error) return debug.error(error);
+        if(error) return logger.error(error);
         if(dstat == null) {
-          debug.log('creating host dstat');
+          logger.log('creating host dstat');
           HostStats.create(host,'dstat',stats);
         } else {
-          debug.log('updating host dstat');
+          logger.log('updating host dstat');
 
           var date = new Date();
           dstat.last_update = date ;
@@ -60,6 +60,8 @@ var controller = {
       }
     );
 
+    logger.log('resending dstat data');
+
     var data = {
       'timestamp': (new Date()).getTime(),
       'date': (new Date()).toISOString(),
@@ -68,6 +70,8 @@ var controller = {
       'stats': req.params.dstat,
       'type': 'host-stats'
     };
+
+    logger.data('dstat %j', data);
 
     var key = config.elasticsearch.keys.host.stats;
     elastic.submit(customer.name,key,data);
