@@ -31,17 +31,6 @@ module.exports = function (server, passport) {
     audit.afterCreate('webhook',{display:'name'})
   );
 
-  server.post(
-    '/:customer/webhook/:webhook/trigger',
-    middlewares.concat(
-      resolve.idToEntity({
-        param:'webhook',
-        required: true
-      })
-    ),
-    controller.trigger
-  );
-
   server.get(
     '/:customer/webhook/:webhook',
     middlewares.concat(
@@ -76,6 +65,36 @@ module.exports = function (server, passport) {
     controller.remove,
     audit.afterRemove('webhook',{display:'name'})
   );
+
+  /**
+   *
+   * trigger webhook event
+   *
+   */
+  server.post(
+    '/:customer/webhook/:webhook/trigger',
+    middlewares.concat(
+      resolve.idToEntity({ param:'webhook', required: true })
+    ),
+    controller.trigger
+  );
+
+  server.post(
+    '/:customer/webhook/:webhook/trigger/secret/:secret',
+    [
+      resolve.customerNameToEntity({ required: true }),
+      resolve.idToEntity({ param:'webhook', required: true }),
+      function (req,res,next) { // validate secret
+        var secret = req.params.secret;
+        if( ! secret ) return res.send(403,'secret is required');
+        if( secret.length != 64 ) return res.send(403,'invalid secret');
+        if( req.webhook.secret != secret ) return res.send(403,'invalid secret');
+        next();
+      }
+    ],
+    controller.trigger
+  );
+
 }
 
 var controller = {
@@ -167,9 +186,8 @@ var controller = {
       if( ! event ) return res.send(500);
 
       EventDispatcher.dispatch( event );
-      res.send(202);
+      res.send(202,{ message: 'success' });
       next();
-
     });
   }
 }
