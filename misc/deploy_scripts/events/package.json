@@ -4,7 +4,9 @@
   "description": "",
   "main": "create_default_events.js",
   "scripts": {
-    "start": "DEBUG=eye:* NODE_ENV=localdev nodejs --harmony_proxies create_default_events.js"
+    "start": "DEBUG=eye:* NODE_ENV=localdev nodejs --harmony_proxies create_default_events.js",
+    "demo": "DEBUG=eye:* NODE_ENV=demo nodejs --harmony_proxies create_default_events.js",
+    "prod": "DEBUG=eye:* NODE_ENV=production nodejs --harmony_proxies create_default_events.js"
   },
   "author": "",
   "license": "ISC",

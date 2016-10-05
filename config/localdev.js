@@ -5,6 +5,11 @@
 var join = require('path').join;
 module.exports = {
   "is_dev": true,
+  "system": {
+    "base_url": "http://localhost:60080",
+    "web_url": "http://localhost:6080",
+    "file_upload_folder" : join(__dirname , '..', 'uploads')
+  },
   "storage": {
     "driver": "local"
   },
@@ -14,11 +19,6 @@ module.exports = {
     "resources_check_failure_interval_milliseconds": 10000,
     "resources_alert_failure_threshold_milliseconds": 30000
   },
-  "system": {
-    "base_url": "http://localhost:60080",
-    "web_url": "http://localhost:6080",
-    "file_upload_folder" : join(__dirname , '..', 'uploads')
-  },
   "mongo": {
     "user": "",
     "password": "",
@@ -27,17 +27,42 @@ module.exports = {
   },
   "elasticsearch": {
     "enabled":true,
-    "url":"http://localhost:9200",
+    "url":"http://localhost:9200", // via ssh tunnel
     "db":"theeye_allcustomers",
+    "keys":{
+      "prefix":"localdev-"
+    }
   },
   "mailer": {
     "from": "The Eye Development %customer% <%customer%@theeye.io>",
     "reply_to": "Support <support@theeye.io>",
     "only_support": false,
     "include_support_bcc": false,
-    "support": [ "support@theeye.io" ],
+    "support": [],
     "transport": {
       "type":"sendmail"
     }
   }
+/**
+  mailer: {
+    from: "The Eye Development %customer% <%customer%@theeye.io>",
+    reply_to: "Support <support@theeye.io>",
+    only_support: true,
+    include_support_bcc: false,
+    support: ["facugon@interactar.com"],
+    transport: {
+      //"type":"sendmail"
+      type:"smtp",
+      service:"gmail",
+			auth: {
+				XOAuth2: {
+					user: "facundo.siquot@gmail.com", // Your gmail address.
+					clientId : "714923395260-9jd45ige6gg86mffrvf419dvuh85360t.apps.googleusercontent.com",
+					clientSecret : "k6eNjkeiRriseEUgPBWlGiHr",
+					refreshToken: "1/V8cfViH1Qaw9dOWi3eX-YbzmEjzaUyQ6zch6Wo7mq0A"
+				}
+			}
+    }
+  }
+*/
 }

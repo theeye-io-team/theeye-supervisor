@@ -16,7 +16,7 @@ module.exports = function(server, passport) {
   server.put('/:customer/job/:job',[
     passport.authenticate('bearer', {session:false}),
     paramsResolver.customerNameToEntity({}),
-    paramsResolver.idToEntity({param:'job'})
+    paramsResolver.idToEntity({param:'job', required:true})
   ],controller.update);
 
   server.get('/:customer/job',[
@@ -63,13 +63,17 @@ var controller = {
     }
   },
   update (req, res, next) {
-    var job = req.job;
-    var input = req.params.result ;
-    if(!job) return res.send(404, json.error('not found'));
-    if(!input) return res.send(400, json.error('result data is required'));
+    var result = req.params.result;
+    if( ! result ){
+      return res.send(400, json.error('result data is required'));
+    }
 
-    JobDispatcher.updateResult(job,input,error=>{
-      res.send(200,job);
+    console.log( result );
+
+    JobDispatcher.update(req.job, result, (err, job) => {
+      if(err) return res.send(500);
+      res.send(200, job);
+      next();
     });
   },
   create (req,res,next) {
@@ -91,6 +95,10 @@ var controller = {
       customer: customer,
       notify: true
     },(error,job) => {
+      if(error){
+        debug.log(error);
+        return res.send(500);
+      }
       res.send(200,{job: job});
     });
   }

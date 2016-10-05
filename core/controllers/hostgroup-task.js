@@ -222,7 +222,7 @@ var controller = {
 
 function removeTaskTemplateInstancesFromHostGroups(template,done)
 {
-  done=done||()=>{};
+  done||(done=()=>{});
   var query = { 'template': template._id };
   Task.find(query).exec(function(err, tasks){
     if(err){ logger.error(err); return done(err); }
@@ -277,7 +277,7 @@ function addTaskTemplateInstancesToGroupHosts(
 
 function updateTaskInstancesOnHostGroups(template, done)
 {
-  done=done||()=>{};
+  done||(done=()=>{});
   var query = { 'template': template._id };
   Task.find(query).exec(function(err,tasks){
     if(err){ logger.error(err); return done(err); }

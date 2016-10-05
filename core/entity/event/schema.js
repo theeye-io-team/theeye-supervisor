@@ -44,6 +44,13 @@ function BaseSchema (specs) {
   this.set('toJSON'  , def);
   this.set('toObject', def);
 
+  this.pre('save', function(next) {
+    this.last_update = new Date();
+    // do stuff
+    next();
+  });
+
+
   return this;
 }
 util.inherits(BaseSchema, Schema);

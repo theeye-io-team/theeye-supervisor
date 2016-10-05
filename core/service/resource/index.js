@@ -108,7 +108,8 @@ function Service(resource) {
 
 
   function handleFailureState (resource,input,config) {
-    var newState = 'failure';
+    var newState = Constants.RESOURCE_FAILURE;
+
     var failure_threshold = config.fails_count_alert;
     logger.log('resource "%s" check fails.', resource.name);
 
@@ -123,6 +124,7 @@ function Service(resource) {
 
     // current resource state
     if(resource.state != newState) {
+      // is it time to start sending failure alerts?
       if(resource.fails_count >= failure_threshold) {
         logger.log('resource "%s" state failure', resource.name);
 
@@ -143,7 +145,9 @@ function Service(resource) {
         });
       }
     }
-    resource.save();
+    resource.save( err => {
+      if(err) logger.error(err) 
+    });
   }
 
   function handleNormalState (resource,input,config) {
@@ -154,6 +158,7 @@ function Service(resource) {
 
     // failed at least once
     if(resource.fails_count != 0){
+      // resource failure was alerted ?
       if(resource.fails_count >= failure_threshold){
         logger.log('resource "%s" "%s" has been restored', resource.type, resource.name);
         input.severity = getEventSeverity(input);
@@ -177,7 +182,9 @@ function Service(resource) {
           data:input
         });
       }
-      resource.save();
+      resource.save( err => {
+        if(err) logger.error(err) 
+      });
     }
   }
 
@@ -193,7 +200,6 @@ function Service(resource) {
       resource.fails_count,
       failure_threshold
     );
-
 
     // current resource state
     if( resource.state != newState ) {
@@ -216,7 +222,9 @@ function Service(resource) {
         });
       }
     }
-    resource.save();
+    resource.save( err => {
+      if(err) logger.error(err) 
+    });
   }
 
   function dispatchStateChangeSNS (resource, options) {
@@ -282,7 +290,9 @@ function Service(resource) {
 
         if(input.last_update) resource.last_update = input.last_update;
         if(input.last_check) resource.last_check = input.last_check;
-        resource.save();
+        resource.save( err => {
+          if(err) logger.error(err) 
+        });
         next();
       }
     );
@@ -381,9 +391,10 @@ Service.create = function (input, next) {
 Service.createDefaultEvents = function(monitor,customer,done){
   // CREATE DEFAULT EVENT
   MonitorEvent.create(
+    // NORMAL state does not trigger EVENT
+    //{ customer: customer, emitter: monitor, name: Constants.RESOURCE_NORMAL } ,
     { customer: customer, emitter: monitor, name: Constants.RESOURCE_RECOVERED } ,
     { customer: customer, emitter: monitor, name: Constants.RESOURCE_STOPPED } ,
-    { customer: customer, emitter: monitor, name: Constants.RESOURCE_NORMAL } ,
     { customer: customer, emitter: monitor, name: Constants.RESOURCE_FAILURE } ,
     (err, result) => {
       if(err) logger.error(err);
@@ -636,7 +647,7 @@ Service.disableResourcesByCustomer = function(customer, doneFn){
           var resource = resources[i];
 
           resource.enable = false;
-          resource.save((error) => {
+          resource.save(error => {
             if(error) {
               logger.log('ERROR updating resource property');
               throw error;

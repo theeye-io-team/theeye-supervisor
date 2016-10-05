@@ -1,13 +1,22 @@
 module.exports = {
   "is_dev": false ,
-  "storage": {
-    "driver": "s3" // local or s3
+  "server": {
+    "name": "TheEye",
+    "version": process.env.VERSION || "0.0.0",
+    "port": process.env.PORT || 60080,
+    "auth_strategy": "bearer"
   },
   "system": {
     "base_url": "",
     "web_url": "",
     "view_teamplates_path": __dirname + "/../core/view/template",
     "file_upload_folder": "/tmp"
+  },
+  "storage": {
+    "driver": "s3" // local or s3
+  },
+  "s3": {
+    "bucket":"theeye.scripts"
   },
   "monitor": {
     /* cantidad de fallas antes de emitir alertas */
@@ -32,21 +41,11 @@ module.exports = {
     "username":"",
     "accessKeyId": "",
     "secretAccessKey": "",
-    "region": "",
-  },
-  "s3": {
-    "bucket":"theeye.scripts"
-  },
-  "sns": {
-    "topicArn": {
-      "events": "",
-      "host-stats": "",
-      "jobs": ""
-    }
+    "region": ""
   },
   "mailer": {
     "from": "The Eye %customer% <%customer%@theeye.io>",
-    "reply_to": "Support <support@theeye.io>",
+    "reply_to": "Info <info@theeye.io>",
     "only_support": false,
     "include_support_bcc": false,
     "support": [],
@@ -96,6 +95,13 @@ module.exports = {
        */
     }
   },
+  "sns": {
+    "topicArn": {
+      "events": "",
+      "host-stats": "",
+      "jobs": ""
+    }
+  },
   // development no AWS-SNS endpoints
   "web-sns":{
     "topicEndpoint": {
@@ -109,6 +115,7 @@ module.exports = {
     "url":"",
     "db":"",
     "keys":{
+      "prefix":null,
       "agent":{
         "version":"agent-version"
       },
@@ -136,23 +143,22 @@ module.exports = {
       "task":{
         "crud":"crud-task",
         "execution":"task-execution",
+        "result":"task-result"
+      },
+      "webhook":{
+        "crud":"crud-webhook",
+        "triggered":"triggered-webhook"
       }
     }
   },
-  "server": {
-    "name": "TheEye",
-    "version": process.env.VERSION || "0.0.0",
-    "port": process.env.PORT || 60080,
-    "auth_strategy": "bearer",
-  },
   "events": {
     "user": {
-      "email" : "support@theeye.io",
-      "username" : "theeye",
-      "enabled" : true,
-      "client_id":null,
-      "client_secret":null,
-      "token":null
+      "email": "info@theeye.io",
+      "username": "theeye",
+      "enabled": true,
+      "client_id": null,
+      "client_secret": null,
+      "token": null
     }
   }
 }

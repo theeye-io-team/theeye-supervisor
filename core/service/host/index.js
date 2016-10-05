@@ -114,8 +114,8 @@ function createBaseMonitors (input, doneFn){
   doneFn||(doneFn = ()=>{});
   let dstat = Object.assign({},input,{'type':'dstat'});
   let psaux = Object.assign({},input,{'type':'psaux'});
-  createMonitor([input.host],dstat);
-  createMonitor([input.host],psaux);
+  createMonitor([input.host._id],dstat);
+  createMonitor([input.host._id],psaux);
 }
 
 /**

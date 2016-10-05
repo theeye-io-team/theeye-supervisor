@@ -25,29 +25,32 @@ var Service = module.exports = {
         return next(error);
       }
 
-      if(!customer) {
-        logger.log('customer %s data does not exist!', customerName);
-        return next(null,emails);
+      if(!customer){
+        var err = new Error('customer ' + customerName + ' data does not exist!');
+        logger.error(err);
+        return next(err,[]);
       }
 
       emails = customer.emails;
 
-      var query = { 'customers._id' : customer._id };
-      User.find(query,(error,users)=>{
+      User.find({
+        'customers._id': customer._id,
+        'credential': { $ne:'agent' }
+      },(error,users)=>{
         if(error){
           logger.log(error);
           return next(error);
         }
 
-        if(!users||users.length==0){
-          next(null,customer.emails);
+        if( Array.isArray(users) && users.length > 0 ){
+          users.forEach( user => {
+            if( user.email ){
+              emails.push(user.email) 
+            }
+          })
         }
 
-        for(var i=0;i<users.length;i++){
-          emails.push( users[i].email );
-        }
-
-        return next(null,emails);
+        return next(null, emails);
       });
     });
   },

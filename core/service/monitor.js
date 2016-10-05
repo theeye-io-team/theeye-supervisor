@@ -1,146 +1,87 @@
 "use strict";
 
+var config = require('config');
+var lodash = require('lodash');
 var Resource = require('../entity/resource').Entity;
 var ResourceMonitor = require('../entity/monitor').Entity;
 var Host = require('../entity/host').Entity;
 var ResourceService = require('./resource');
 var CustomerService = require('./customer');
 var HostService = require('./host');
-var logger = require('../lib/logger')('eye:supervisor:service:monitor');
-var config = require('config');
-var MonitorChecker = require('../entity/monitor/checker').Entity;
-var _ = require('lodash');
+var logger = require('../lib/logger')('eye::monitor');
 
 const Constants = require('../constants/monitors');
+const Scheduler = require('../service/scheduler');
 
 module.exports = {
   start: function() {
-    var interval = config
-      .get('monitor')
-      .resources_check_failure_interval_milliseconds;
+    let mconfig = config.get('monitor');
+    // to seconds
+    var interval = mconfig.resources_check_failure_interval_milliseconds / 1000;
 
-    Checker.setup();
-    setInterval(checkResourcesState, interval);
-  }
-};
-
-var Checker = {
-  setup:function(){
-    MonitorChecker.find().exec(function(err,checker){
-      if(err) throw err;
-      if(Array.isArray(checker)){
-        if(checker.length == 0){
-          checker = new MonitorChecker();
-          checker.save(function(err){
-            if(err) logger.error(err);
-            else logger.log('monitoring job created');
-          });
-        }
-      }
-    });
-  },
-  getJob: function(next){
-    next||(next=function(){});
-    MonitorChecker.find({enabled:true}).exec(function(err,result){
-      if(err) throw err;
-      if(Array.isArray(result)){
-        if(result.length == 0){
-          logger.log('no checker enabled');
-          return next(null);
-        }
-        var checker = result[0];
-        next(checker);
-      }
-    });
+    Scheduler.agenda.define(
+      'monitoring',
+      { lockLifetime: (5 * 60 * 1000) }, // max lock
+      (job, done) => { checkResourcesState(done) }
+    );
+    Scheduler.agenda.every(`${interval} seconds`,'monitoring');
+    logger.log('monitoring started');
   }
 };
 
 
-function takeCheckerJob(next){
-  Checker.getJob(function(job){
-    if(!job) return;
-    if(!job.inProgress()){
-      logger.log('taking check job');
-      job.take(next);
-    } else {
-      logger.log('in progress');
-    }
-  });
-}
+function checkResourcesState(done){
+  logger.log('***** CHECKING RESOURCES STATUS *****');
+  Resource
+  .find({ 'enable': true })
+  .exec(function(err,resources){
+    var total = resources.length;
+    logger.log('running %s checks',total);
+    var completed = lodash.after(total,function(){
+      logger.log('releasing monitoring job');
+      done();
+    });
 
-function releaseCheckerJob(next){
-  Checker.getJob(function(job){
-    if(!job) return;
-    if(job.inProgress()){
-      logger.log('releasing check job');
-      job.release(function(){
-        logger.log('released!');
-      });
-    }
-  });
-}
-
-function checkResourcesState(){
-  logger.log('preparing monitoring cicle');
-  takeCheckerJob(function(){
-    logger.log('***** CHECKING RESOURCES STATUS *****');
-    var query = { 'enable': true };
-    Resource.find(query,function(err,resources){
-
-      var total = resources.length;
-      logger.log('running %s checks',total);
-      var completed = _.after(total,function(){
-        logger.log('releasing monitoring job');
-        releaseCheckerJob();
-      });
-
-      var count = 0;
-      for(var i=0; i<resources.length; i++){
-        var resource = resources[i];
-        runChecks(resource,function(){
-          logger.log('check completed %s',++count);
-          completed();
-        });
-      }
+    resources.forEach(resource => {
+      runChecks(resource,()=>completed());
     });
   });
 }
 
-function runChecks(resource,completed) {
+function runChecks(resource,done) {
   CustomerService.getCustomerConfig(
     resource.customer_id,
     function(error,cconfig) {
       if(error){
         logger.error('customer %s configuration fetch failed',resource.customer_name);
-        return completed();
+        return done();
       }
       if(!cconfig){
         logger.error('customer %s configuration not found',resource.customer_name);
-        return completed();
+        return done();
       }
 
       switch(resource.type){
         case 'host':
-          checkHostResourceStatus(resource,completed);
+          checkHostResourceStatus(resource,done);
           break;
         case 'script':
         case 'scraper':
         case 'process':
         case 'dstat':
         case 'psaux':
-          checkResourceMonitorStatus(resource,cconfig,completed);
+          checkResourceMonitorStatus(resource,cconfig,done);
           break;
         case 'default':
           logger.error('unhandled resource %s', resource.type);
-          completed();
+          done();
           break;
       }
     }
   );
 }
 
-function checkResourceMonitorStatus(resource,cconfig,done)
-{
+function checkResourceMonitorStatus(resource,cconfig,done) {
   done||(done=function(){});
 
   ResourceMonitor.findOne({

@@ -1,29 +1,25 @@
 "use strict";
 
-var debug = require('../lib/logger')('eye:supervisor:controller:task');
+var logger = require('../lib/logger')('eye:supervisor:controller:task');
 var json = require(process.env.BASE_PATH + "/lib/jsonresponse");
-// var Task = require(process.env.BASE_PATH + '/entity/task').Entity;
 var TaskService = require(process.env.BASE_PATH + '/service/task');
-// var Script = require(process.env.BASE_PATH + '/entity/script').Entity;
-// var Host = require(process.env.BASE_PATH + '/entity/host').Entity;
-var resolver = require('../router/param-resolver');
-var filter = require('../router/param-filter');
+var router = require('../router');
+var resolver = router.resolve;
+var filter = router.filter;
 var extend = require('lodash/assign');
 
-var Scheduler = require('../service/scheduler');
-
 module.exports = function(server, passport){
-  server.get('/:customer/task/:task',[
-    resolver.customerNameToEntity({}),
+  var middlewares = [
     passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
+    router.userCustomer,
     resolver.idToEntity({param:'task'})
-  ],controller.get);
+  ];
 
-  server.get('/:customer/task/:task/schedule',[
-    resolver.customerNameToEntity({}),
-    passport.authenticate('bearer', {session:false}),
-    resolver.idToEntity({param:'task'})
-  ], controller.getSchedule);
+  server.get('/:customer/task/:task',middlewares,controller.get);
+  server.patch('/:customer/task/:task',middlewares,controller.patch);
+  server.del('/:customer/task/:task',middlewares,controller.remove);
+
 
   server.get('/:customer/task',[
     passport.authenticate('bearer', {session:false}),
@@ -31,35 +27,12 @@ module.exports = function(server, passport){
     resolver.idToEntity({param:'host'})
   ], controller.fetch);
 
-  server.patch('/:customer/task/:task',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'task'})
-  ],controller.patch);
-
   server.post('/:customer/task',[
     passport.authenticate('bearer', {session:false}),
     resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'script'})
   ],controller.create);
 
-  server.post('/:customer/task/schedule',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'task'})
-  ],controller.schedule);
-
-  server.del('/:customer/task/:task',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'task'})
-  ],controller.remove);
-
-  server.del('/:customer/task/:task/schedule/:schedule',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'task'})
-  ], controller.cancelSchedule);
 };
 
 
@@ -95,7 +68,7 @@ var controller = {
 
     TaskService.createManyTasks(input, function(error, tasks) {
       if(error) {
-        debug.error(error);
+        logger.error(error);
         return res.send(500, error);
       }
       res.send(200, tasks);
@@ -115,7 +88,7 @@ var controller = {
     if(customer) input.customer_id = customer._id;
     if(host) input.host_id = host._id;
 
-    debug.log('fetching tasks');
+    logger.log('fetching tasks');
     TaskService.fetchBy(input, function(error, tasks) {
       if(error) return res.send(500);
       res.send(200, tasks);
@@ -135,42 +108,6 @@ var controller = {
 
     task.publish(function(data) {
       res.send(200, data);
-    });
-  },
-  /**
-   * Gets schedule data for a task
-   * @author cg
-   * @method GET
-   * @route /task/:task/schedule
-   * @param {String} :task , mongo ObjectId
-   *
-   */
-  getSchedule (req, res, next) {
-    var task = req.task;
-    if(!task) return res.send(404);
-    Scheduler.getTaskScheduleData(task._id, function(err, scheduleData){
-      if(err) {
-        console.log(' ------ Scheduler had an error retrieving data for',task._id);
-        console.log(err);
-        res.send(500);
-      }
-      res.send(200, { scheduleData: scheduleData });
-    });
-  },
-  cancelSchedule (req, res, next) {
-    var taskId = req.params.task;
-    var scheduleId = req.params.schedule;
-    if(!taskId || !scheduleId) {
-      res.send(500, 'Parameter missing');
-    }
-
-    Scheduler.cancelTaskSchedule(taskId, scheduleId, function(err, qtyRemoved){
-      if(err) {
-        console.log(' ------ Scheduler had an error canceling schedule', scheduleId);
-        console.log(err);
-        res.send(500, 'Error canceling schedule');
-      }
-      res.send(200,{status:'done'});
     });
   },
   /**
@@ -211,7 +148,7 @@ var controller = {
     if(!req.task) return res.send(404);
     var input = extend({},req.body);
 
-    debug.log('updating task %j', input);
+    logger.log('updating task %j', input);
     TaskService.update({
       user: req.user,
       customer: req.customer,
@@ -221,60 +158,9 @@ var controller = {
         res.send(200,task);
       },
       fail: function(error){
-        debug.error(error);
+        logger.error(error);
         res.send(500);
       }
     });
   },
-  /**
-   *
-   * @author cg
-   * @method POST
-   * @route /task/:task
-   *
-   */
-  schedule(req, res, next){
-    var task = req.task;
-    var schedule = req.body.scheduleData;
-
-    if(!task) return res.send(400,json.error('task required'));
-
-    if(!schedule || !schedule.runDate) {
-      return res.send(406,json.error('Must have a date'));
-    }
-    var user = req.user ;
-    var customer = req.customer ;
-
-    if(!user) return res.send(400,json.error('user required'));
-    if(!customer) return res.send(400,json.error('customer required'));
-
-    var jobData = {
-      // task: task,
-      // user: user,
-      // customer: customer,
-      // notify: true
-    };
-    jobData.task_id = task._id ;
-    jobData.host_id = task.host_id ;
-    jobData.script_id = task.script_id ;
-    jobData.script_arguments = task.script_arguments ;
-    jobData.user_id = user._id;
-    jobData.name = task.name ;
-    jobData.customer_id = customer._id;
-    jobData.customer_name = customer.name;
-    jobData.state = 'new' ;
-    jobData.notify = true ;
-    jobData.scheduleData = schedule;
-
-    Scheduler.scheduleTask(jobData, function(err){
-      if(err) {
-        console.log(err);
-        console.log(arguments);
-        res.send(500, err);
-      }
-      res.send(200, {nextRun : schedule.runDate});
-    });
-
-
-  }
 };

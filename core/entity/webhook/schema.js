@@ -2,29 +2,25 @@
 
 const util = require('util');
 const Schema = require('mongoose').Schema;
-const ObjectId = Schema.Types.ObjectId;
+const crypto = require('crypto');
+const lifecicle = require('mongoose-lifecycle');
 
 function BaseSchema (specs) {
-
   // Schema constructor
   Schema.call(this, util._extend({
-    task_id: { type: String, 'default':null },
-    task: { type: Object, 'default':null }, // embedded
-    host_id: { type: String, 'default':null },
-    host: { type: ObjectId, ref:'Host', 'default':null },
-    user_id: { type: String, 'default':null },
-    user: { type: ObjectId, ref:'User', 'default':null },
-    customer_id: { type:String, 'default':null },
-    customer_name: { type : String, 'default':null },
-    name: { type: String, 'default':null },
-    notify: { type: Boolean, 'default':null },
-    state: { type: String, 'default':null },
-    result: { type: Object, 'default': {} },
+    name: { type: String, required:true },
     creation_date: { type: Date, 'default': Date.now },
-    last_update: { type: Date, 'default': Date.now },
-    event: { type: ObjectId, ref: 'Event', 'default': null }
+    last_update: { type: Date, 'default': null },
+    enable: { type: Boolean, 'default': true },
+    customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
+    secret: { type: String, 'default': function(){
+      // one way hash
+      return crypto.createHmac('sha256','THEEYE' + Math.random())
+      .update( new Date().toISOString() )
+      .digest('hex');
+    }}
   }, specs),{
-    collection: 'jobs',
+    collection: 'webhooks',
     discriminatorKey: '_type'
   });
 
@@ -46,6 +42,8 @@ function BaseSchema (specs) {
 
   this.set('toJSON'  , def);
   this.set('toObject', def);
+
+  this.plugin(lifecicle);
 
   return this;
 }
