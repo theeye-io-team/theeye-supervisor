@@ -1,7 +1,7 @@
 var debug = require('debug');
 
 module.exports = function(name) {
-  var log = debug(name);
+  var log = debug(name + ':log');
   var error = debug(name + ':error');
   var data = debug(name + ':data');
 
