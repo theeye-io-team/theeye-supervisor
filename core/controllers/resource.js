@@ -165,7 +165,6 @@ var controller = {
   /**
    *
    * this is PUT not PATCH ! but PUT is taken above to update resource status.
-   * will change when resource status is changed via events -
    *
    * @author Facugon
    *

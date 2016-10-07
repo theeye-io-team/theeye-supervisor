@@ -2,6 +2,12 @@ var Schema = require('mongoose').Schema;
 var debug = require('debug')('eye:entity:monitor');
 var _ = require('lodash');
 
+if(!RegExp.escape){
+  RegExp.escape = function(s){
+    return String(s).replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
+  };
+}
+
 /** Entity properties **/
 const properties = exports.properties = {
   customer_name: { type: String, required: true },
@@ -132,9 +138,10 @@ EntitySchema.methods.setUpdates = function(input, next) {
       }
       break;
     case 'process':
-      if(input.ps) _.assign(input, input.ps);
-      if(input.pattern) config.ps.pattern = input.pattern;
-      if(input.psargs) config.ps.psargs = input.psargs;
+      config.ps.raw_search = input.raw_search;
+      config.ps.is_regexp = Boolean( input.is_regexp == 'true' || input.is_regexp === true );
+      config.ps.pattern = ( ! config.ps.is_regexp ? RegExp.escape(input.raw_search) : input.raw_search );
+      config.ps.psargs = input.psargs;
       break;
     case 'script':
       if(input.script_id) config.script_id = input.script_id;
