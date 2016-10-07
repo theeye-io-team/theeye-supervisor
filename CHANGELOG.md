@@ -1,6 +1,6 @@
 # CHANGELOG
 
-### next release
+### 0.6.0 - 2016-10-05
 
 > separate task & task scheduler in different controllers       
 
@@ -12,6 +12,13 @@
 
 > add "required" option to idToEntity resolver middleware       
 
+> added webhook entity , and webhook events       
+
+> added webhook trigger remote method and trigger with secret        
+
+> send jobs result mail to every customer     
+
+> beautify lib/elasticsearch code      
 
 ### 0.5.1 - 2016-09-26
 
