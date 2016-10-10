@@ -1,6 +1,5 @@
 "use strict";
 
-var appRoot = require('app-root-path');
 var resolver = require('../router/param-resolver');
 var Event = require('../entity/event').Event;
 

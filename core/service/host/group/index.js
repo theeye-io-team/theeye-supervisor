@@ -1,24 +1,23 @@
 "use strict";
 
-var appRoot = require('app-root-path');
 var lodash = require('lodash');
 var config = require('config');
-var logger = require(appRoot + '/lib/logger')('eye:service:host:group');
+var logger = require('../../../lib/logger')('eye:service:host:group');
 
-var HostGroup = require(appRoot + '/entity/host/group').Entity;
+var HostGroup = require('../../../entity/host/group').Entity;
 /** TEMPLATES **/
-var ResourceTemplate = require(appRoot + '/entity/resource/template').Entity;
-var MonitorTemplate = require(appRoot + '/entity/monitor/template').Entity;
-var TaskTemplate = require(appRoot + '/entity/task/template').Entity;
+var ResourceTemplate = require('../../../entity/resource/template').Entity;
+var MonitorTemplate = require('../../../entity/monitor/template').Entity;
+var TaskTemplate = require('../../../entity/task/template').Entity;
 /** NON TEMPLATES **/
-var Resource = require(appRoot + '/entity/resource').Entity;
-var Monitor = require(appRoot + '/entity/monitor').Entity;
-var Task = require(appRoot + '/entity/task').Entity;
-var AgentUpdateJob = require(appRoot + '/entity/job').AgentUpdate;
-var elastic = require(appRoot + '/lib/elastic');
+var Resource = require('../../../entity/resource').Entity;
+var Monitor = require('../../../entity/monitor').Entity;
+var Task = require('../../../entity/task').Entity;
+var AgentUpdateJob = require('../../../entity/job').AgentUpdate;
+var elastic = require('../../../lib/elastic');
 
-var TaskService = require(appRoot + '/service/task');
-var ResourceTemplateService = require(appRoot + '/service/resource/template');
+var TaskService = require('../../../service/task');
+var ResourceTemplateService = require('../../../service/resource/template');
 
 exports.Monitor = require('./monitor');
 
