@@ -1,0 +1,1 @@
+"use strict";var WebhookEvent=require("../event").WebhookEvent,elastic=require("../../lib/elastic"),config=require("config");module.exports=function(e){var t=new WebhookEvent({name:"trigger",customer:e.customer,emitter:e});t.save(function(e){})};

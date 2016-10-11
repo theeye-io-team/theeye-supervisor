@@ -1,0 +1,1 @@
+"use strict";var ConnectionTemplate={client_id:[],client_secret:[],customer_id:"",customer_name:"",host_id:"",data_submit:{url:"http://supervisor.theeye.io",port:"80",version:"*"},auth:{url:"http://auth.theeye.io",port:"80",controller:"/:customer/token",version:"*"}};module.exports=ConnectionTemplate;

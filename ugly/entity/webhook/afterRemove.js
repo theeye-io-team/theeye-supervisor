@@ -1,0 +1,1 @@
+"use strict";var WebhookEvent=require("../event").WebhookEvent;module.exports=function(e){WebhookEvent.remove({emitter:e._id},function(e){})};

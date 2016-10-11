@@ -1,0 +1,1 @@
+"use strict";var success=function(e,t){return t||(t={}),e||(e="undefined"),{status:"success",message:e,data:t}},error=function(e,t){return t||(t={}),e||(e="undefined"),{status:"error",message:e,data:t}};exports.success=success,exports.error=error;
