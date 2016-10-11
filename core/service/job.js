@@ -12,7 +12,7 @@ var async = require('async');
 var NotificationService = require('./notification');
 var globalconfig = require('config');
 var elastic = require('../lib/elastic');
-var debug = require('../lib/logger')('eye:jobs');
+var logger = require('../lib/logger')('eye:jobs');
 
 const app = require('../app');
 
@@ -218,7 +218,7 @@ function createScriptJob(input, done){
       var key = globalconfig.elasticsearch.keys.task.execution;
       registerJobOperation(key, job);
 
-      debug.log('script job created.');
+      logger.log('script job created.');
       done(null, job);
     });
   });
@@ -246,7 +246,7 @@ function createScraperJob(input, done){
     var key = globalconfig.elasticsearch.keys.task.execution;
     registerJobOperation(key, job);
 
-    debug.log('scraper job created.');
+    logger.log('scraper job created.');
     done(null, job);
   });
 }

@@ -1,13 +1,12 @@
 "use strict";
 
-var appRoot = require('app-root-path');
-var Resource = require(appRoot + '/entity/resource').Entity;
-var Host = require(appRoot + '/entity/host').Entity;
-var Monitor = require(appRoot + '/entity/monitor').Entity;
-var AgentUpdateJob = require(appRoot + '/entity/job').AgentUpdate;
-var logger = require(appRoot + '/lib/logger')('eye:service:group:monitor');
+var Resource = require('../../../entity/resource').Entity;
+var Host = require('../../../entity/host').Entity;
+var Monitor = require('../../../entity/monitor').Entity;
+var AgentUpdateJob = require('../../../entity/job').AgentUpdate;
+var logger = require('../../../lib/logger')('eye:service:group:monitor');
 var lodash = require('lodash');
-var ResourceTemplateService = require(appRoot + '/service/resource/template');
+var ResourceTemplateService = require('../../../service/resource/template');
 
 exports.addTemplatesToGroup = function(group,templates,done){
   done||(done=function(){});

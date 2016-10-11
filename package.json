@@ -5,7 +5,6 @@
   "author": "Facundo S. Gonzalez <facugon@interactar.com>",
   "dependencies": {
     "agenda": "~0.9.0",
-    "app-root-path": "~1.0.0",
     "async": "~1.5.2",
     "aws-sdk": "~2.3.19",
     "config": "~1.20.4",
@@ -43,7 +42,9 @@
     "core": "DEBUG=eye:* ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' core/main.js",
     "local": "NODE_TLS_REJECT_UNAUTHORIZED=0 DEBUG=eye:* NODE_ENV=localdev ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' `pwd`/core/main.js",
     "elastic_tunnel": "ssh -L 9200:elasticsearch.theeye.io:9200 awsnodep02.theeye.io ",
-    "babelify": "babel --presets es2015,stage-0 core/ --out-dir bundle/"
+    "babelify": "babel --presets es2015,stage-0 core/ --out-dir bundle/",
+    "compile": "browserify --entry ugly/main.js --bare --outfile bundle/main.js",
+    "bundled-app": "DEBUG=eye:* node --harmony_proxies bundle/main.js"
   },
   "engines": {
     "node": ">=4.*"

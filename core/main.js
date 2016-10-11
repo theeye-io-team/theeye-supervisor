@@ -1,8 +1,5 @@
 "use strict";
 
-var rootPath = require('app-root-path');
-require('app-root-path').setPath(rootPath + '/core');
-
 var ErrorHandler = require('./lib/errorHandler');
 
 var logger = require('./lib/logger')('eye:supervisor:main');
