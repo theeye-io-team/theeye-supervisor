@@ -38,7 +38,7 @@
   },
   "scripts": {
     "test": "NODE_ENV=localdev ./mocha --harmony_proxies",
-    "start": "node --harmony_proxies $(dirname $0)/core/main.js",
+    "start": "node --harmony_proxies $PWD/core/main.js",
     "devel": "/bin/bash ./run.debug.sh",
     "core": "DEBUG=eye:* ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' core/main.js",
     "local": "NODE_TLS_REJECT_UNAUTHORIZED=0 DEBUG=eye:* NODE_ENV=localdev ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' `pwd`/core/main.js",
