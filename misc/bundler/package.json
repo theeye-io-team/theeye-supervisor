@@ -1,0 +1,21 @@
+{
+  "name": "bundler",
+  "version": "0.0.1",
+  "main": "index.js",
+  "scripts": {
+    "start": "node .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Facugon <facugon@interactar.com>",
+  "license": "MIT",
+  "dependencies": {
+    "babel": "6.5.2",
+    "babel-core": "6.17.0",
+    "babel-preset-es2015": "6.16.0",
+    "babel-preset-stage-0": "6.16.0",
+    "uglify-js": "2.7.3",
+    "walk": "2.3.9"
+  },
+  "devDependencies": {},
+  "description": ""
+}

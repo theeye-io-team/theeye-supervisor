@@ -1,6 +1,11 @@
 # CHANGELOG
 
-### 0.6.0 - 2016-10-05
+### 0.6.1 - 2016-10-07
+
+> added process monitor schema property is_regexp & raw_search (unescaped search pattern )       
+
+
+### 0.6.0 - 2016-10-06
 
 > separate task & task scheduler in different controllers       
 

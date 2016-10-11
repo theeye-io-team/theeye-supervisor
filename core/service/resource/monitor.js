@@ -11,6 +11,11 @@ var ResourceTemplateService = require('./template');
 var ResourceService = require('./index');
 var Job = require('../../entity/job').Job;
 
+if(!RegExp.escape){
+  RegExp.escape = function(s){
+    return String(s).replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
+  };
+}
 
 /**
  * Monitor object namespace for manipulating resources monitor
@@ -56,6 +61,7 @@ function setMonitorForScraper(input) {
 }
 
 function setMonitorForProcess(input) {
+  var is_regexp = Boolean(input.is_regexp=='true'||input.is_regexp===true);
 	return {
     'tags': input.tags,
     'customer_name': input.customer_name,
@@ -66,8 +72,10 @@ function setMonitorForProcess(input) {
 		'looptime': input.looptime,
 		'config': {
 			'ps': {
-				'pattern': input.pattern,
-				'psargs': input.psargs
+        'is_regexp': is_regexp,
+				'pattern': ( ! is_regexp ? RegExp.escape(input.raw_search) : input.raw_search ),
+				'raw_search': input.raw_search,
+				'psargs': input.psargs,
 			}
 		}
 	};
@@ -176,18 +184,14 @@ function setMonitorData(type, input, next){
 	try {
 		switch(type) {
 			case 'scraper':
-        logger.log('scraper monitor');
 				monitor = setMonitorForScraper(input);
 				next(null, monitor);
 				break;
 			case 'process':
-        logger.log('process monitor');
-				if(!input.pattern) throw new Error('search pattern required');
 				monitor = setMonitorForProcess(input);
 				next(null, monitor);
 				break;
 			case 'script':
-        logger.log('script monitor');
 				monitor = setMonitorForScript(input);
 				next(null, monitor);
 				break;
@@ -270,8 +274,10 @@ function validateData (input) {
       }
       break;
     case 'process':
-      data.pattern = input.pattern || errors.required('pattern');
+      data.raw_search = input.raw_search || errors.required('raw_search');
       data.psargs = input.psargs || 'aux';
+      data.is_regexp = Boolean(input.is_regexp=='true'||input.is_regexp===true);
+      data.pattern = ( ! data.is_regexp ? RegExp.escape(data.raw_search) : data.raw_search );
       break;
     case 'script':
       var scriptArgs = filter.toArray(input.script_arguments);
