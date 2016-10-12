@@ -39,12 +39,12 @@
     "test": "NODE_ENV=localdev ./mocha --harmony_proxies",
     "start": "/bin/bash ./run.sh",
     "devel": "/bin/bash ./run.debug.sh",
-    "core": "DEBUG=eye:* ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' core/main.js",
-    "local": "NODE_TLS_REJECT_UNAUTHORIZED=0 DEBUG=eye:* NODE_ENV=localdev ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' `pwd`/core/main.js",
+    "core": "./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' core/main.js",
+    "local": "DEBUG='theeye:log*,theeye:error*' NODE_TLS_REJECT_UNAUTHORIZED=0 NODE_ENV=localdev ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' `pwd`/core/main.js",
     "elastic_tunnel": "ssh -L 9200:elasticsearch.theeye.io:9200 awsnodep02.theeye.io ",
     "babelify": "babel --presets es2015,stage-0 core/ --out-dir bundle/",
     "compile": "browserify --entry ugly/main.js --bare --outfile bundle/main.js",
-    "bundled-app": "DEBUG=eye:* node --harmony_proxies bundle/main.js"
+    "bundled-app": "node --harmony_proxies bundle/main.js"
   },
   "engines": {
     "node": ">=4.*"

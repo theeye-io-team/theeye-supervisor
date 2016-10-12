@@ -1,25 +1,9 @@
 var debug = require('debug');
-
 module.exports = function(name) {
-  var log = debug(name + ':log');
-  var error = debug(name + ':error');
-  var data = debug(name + ':data');
-
-  function logFn() {
-    log.apply(this, arguments);
-  }
-
-  function errorFn() {
-    error.apply(this, arguments);
-  }
-
-  function dataFn() {
-    data.apply(this, arguments);
-  }
-
   return {
-    log: logFn,
-    error: errorFn,
-    data: dataFn 
+    log: function(){ debug('theeye:log:' + name).apply(this, arguments); },
+    error: function(){ debug('theeye:error:' + name).apply(this, arguments); },
+    data: function(){ debug('theeye:data:' + name).apply(this, arguments); },
+    debug: function(){ debug('theeye:debug:' + name).apply(this, arguments); }
   };
 };

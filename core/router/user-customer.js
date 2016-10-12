@@ -1,5 +1,3 @@
-var debug = require('debug')('eye:router:middleware:customer');
-
 module.exports = function (req,res,next) {
   var customer = req.customer,
     user = req.user;

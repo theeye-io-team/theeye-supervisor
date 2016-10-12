@@ -10,7 +10,7 @@ var TaskEvent = require('../entity/event').TaskEvent;
 var async = require('async');
 var _ = require('lodash');
 
-var validator = require('../router/param-validator');
+var validator = require('validator');
 var filter = require('../router/param-filter');
 var elastic = require('../lib/elastic');
 var config = require('config');

@@ -46,7 +46,7 @@ var app = {
     router.loadControllers(server, passport);
 
     server.listen( config.server.port || 60080, function() {
-      logger.log('server started. "%s" listening at "%s"', server.name, server.url);
+      logger.log('TheEye server started. listening at "%s"', server.url);
     });
   }
 
