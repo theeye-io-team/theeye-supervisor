@@ -1,11 +1,32 @@
 # CHANGELOG
 
-### 0.6.2 - 2016-10-07
-
-> added process monitor schema property is_regexp & raw_search (unescaped search pattern)       
+### 0.6.2 - 2016-10-13
 
 > monitor result stored in ElasticSearch      
 
+> change logger headers output from eye: > theeye:log:  (define new log levels : log, error, data , debug )         
+
+> remove console.log       
+
+> remove migration controller ( deprecated )        
+
+> change webhook response code from 202 to 200       
+
+> added controller workflow controller      
+
+> replace some debug with logger calls     
+
+> declare requires for each controller file found (instead of directory walk and dynamic requires )      
+
+> remove unused route.validation calls and file , replace with node-validator                 
+
+> added bundle & compilation tools (unglify2 , browserify , babel)            
+
+> improve code syntax and compatibility       
+
+### 0.6.1 - no deploy. only tag.
+
+> added process monitor schema property is_regexp & raw_search (unescaped search pattern)       
 
 ### 0.6.0 - 2016-10-06
 
