@@ -1,4 +1,4 @@
-var debug = require('debug')('eye:supervisor:service:task');
+var debug = require('debug')('service:task');
 
 var Tag = require('../entity/tag').Entity;
 var Host = require('../entity/host').Entity;

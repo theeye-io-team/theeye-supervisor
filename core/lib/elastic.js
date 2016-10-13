@@ -1,5 +1,5 @@
 var config = require('config');
-var debug = require('debug')('eye::elastic');
+var logger = require('./logger')(':elastic');
 var path = require('path');
 
 var request = require("request").defaults({
@@ -15,13 +15,13 @@ var ElasticSearch = {
     if( prefix ) key = prefix + key ;
 
     if( ! config.elasticsearch.enabled ){
-      debug('elastic search disabled by config');
+      logger.log('elastic search disabled by config');
       return;
     }
 
     var elastic = config.elasticsearch ;
     if( !elastic.url || !elastic.db ){
-      return debug('ERROR invalid elasticsearch configuration.');
+      return logger.log('ERROR invalid elasticsearch configuration.');
     }
 
     data.type = key;
@@ -35,11 +35,11 @@ var ElasticSearch = {
       body: data
     },function(err,respose,body){
       if(err) {
-        debug('ERROR %s',err);
-        debug(arguments);
+        logger.error('ERROR %s',err);
+        logger.error(arguments);
         return;
       }
-      debug('submit done to %s', url);
+      logger.log('submit done to %s', url);
     });
   }
 }

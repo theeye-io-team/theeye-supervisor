@@ -5,7 +5,7 @@ var multer = require('multer');
 var config =  require('config');
 var router = require('./router');
 var strategys = require('./lib/auth/strategys');
-var logger = require('./lib/logger')('eye:supervisor:server');
+var logger = require('./lib/logger')('server');
 
 var app = {
 

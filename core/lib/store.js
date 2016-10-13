@@ -2,7 +2,7 @@ var AWS = require('aws-sdk');
 var path = require('path');
 var fs = require('fs');
 var zlib = require('zlib');
-var debug = require('debug')('eye:supervisor:lib:store');
+var debug = require('debug')('lib:store');
 
 var config = require("config");
 var systemConfig = config.get('system');

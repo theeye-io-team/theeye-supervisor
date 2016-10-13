@@ -1,8 +1,10 @@
 # CHANGELOG
 
-### 0.6.1 - 2016-10-07
+### 0.6.2 - 2016-10-07
 
-> added process monitor schema property is_regexp & raw_search (unescaped search pattern )       
+> added process monitor schema property is_regexp & raw_search (unescaped search pattern)       
+
+> monitor result stored in ElasticSearch      
 
 
 ### 0.6.0 - 2016-10-06

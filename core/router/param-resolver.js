@@ -1,4 +1,4 @@
-var debug = require('debug')('eye:router:middleware:params-resolver');
+var logger = require('../lib/logger')(':router:middleware:params-resolver');
 var Host = require('../entity/host').Entity;
 var User = require('../entity/user').Entity;
 var Customer = require('../entity/customer').Entity;
@@ -27,7 +27,7 @@ module.exports = {
           return next(e);
         }
 
-        debug('no param "%s"', paramName);
+        logger.debug('no param "%s"', paramName);
         req[paramName] = null;
         return next();
       }
@@ -43,7 +43,7 @@ module.exports = {
         return next();
       }
 
-      debug('resolving "%s" with id "%s"', paramName, _id);
+      logger.debug('resolving "%s" with id "%s"', paramName, _id);
 
       var entityModule = require('../entity/' + entityName);
       var Entity = (
@@ -54,7 +54,7 @@ module.exports = {
 
       Entity.findById( _id, (err, resource) => {
         if(err) {
-          debug(err);
+          logger.error(err);
           req[paramName] = null;
           return next(err);
         }
@@ -71,7 +71,7 @@ module.exports = {
           return next();
         }
 
-        debug('instances of "%s" found', options.param);
+        logger.debug('instances of "%s" found', options.param);
         req[paramName] = resource;
         next(null, resource);
       });
@@ -84,18 +84,18 @@ module.exports = {
       var customer = req.customer;
 
       if(!customer) {
-        debug('no customer');
+        logger.debug('no customer');
         req.host = null;
         return next();
       }
 
       if(!hostname) {
-        debug('no hostname');
+        logger.debug('no hostname');
         req.host = null;
         return next();
       }
 
-      debug('resolving host with hostname "%s"', hostname);
+      logger.debug('resolving host with hostname "%s"', hostname);
 
       var query = {
         'hostname': hostname,
@@ -104,7 +104,7 @@ module.exports = {
 
       Host.findOne(query,function(err,host){
         if(err) {
-          debug(err);
+          logger.debug(err);
           next(err);
         } else if(host == null) {
           req.host = null ;
@@ -130,17 +130,17 @@ module.exports = {
           return next(error);
         }
 
-        debug('no customer');
+        logger.debug('no customer');
         req.customer = null;
         return next();
       }
 
-      debug('resolving customer with name "%s"', name);
+      logger.debug('resolving customer with name "%s"', name);
 
       var query = { name : name };
       Customer.findOne(query, (err, customer) => {
         if(err) {
-          debug(err);
+          logger.error(err);
           return next(err);
         }
 

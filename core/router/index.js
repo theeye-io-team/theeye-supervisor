@@ -1,6 +1,6 @@
 "use strict";
 
-var logger = require('../lib/logger')('eye:router');
+var logger = require('../lib/logger')(':router');
 var config = require('config');
 var fs = require("fs");
 var join = require("path").join;
@@ -20,7 +20,6 @@ module.exports = {
     require('../controllers/hostgroup-task')(server,passport);
     require('../controllers/hostgroup')(server,passport);
     require('../controllers/job')(server,passport);
-    require('../controllers/migration')(server,passport);
     require('../controllers/psaux')(server,passport);
     require('../controllers/resource-monitor')(server,passport);
     require('../controllers/resource-type')(server,passport);

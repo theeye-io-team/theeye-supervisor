@@ -186,7 +186,7 @@ var controller = {
       if( ! event ) return res.send(500);
 
       EventDispatcher.dispatch( event );
-      res.send(202,{ message: 'success' });
+      res.send(200,{ message: 'success' });
       next();
     });
   }

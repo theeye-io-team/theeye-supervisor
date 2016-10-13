@@ -8,7 +8,7 @@ var Host = require('../entity/host').Entity;
 var ResourceService = require('./resource');
 var CustomerService = require('./customer');
 var HostService = require('./host');
-var logger = require('../lib/logger')('eye::monitor');
+var logger = require('../lib/logger')(':monitor');
 
 const Constants = require('../constants/monitors');
 const Scheduler = require('../service/scheduler');
@@ -38,7 +38,7 @@ function checkResourcesState(done){
     var total = resources.length;
     logger.debug('running %s checks',total);
     var completed = lodash.after(total,function(){
-      logger.debug('releasing monitoring job');
+      logger.log('releasing monitoring job');
       done();
     });
 

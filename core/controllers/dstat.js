@@ -1,6 +1,6 @@
 var json = require("../lib/jsonresponse");
 var HostStats = require("../entity/host/stats").Entity;
-var logger = require("../lib/logger")("eye:supervisor:controller:dstat");
+var logger = require("../lib/logger")("controller:dstat");
 var NotificationService = require("../service/notification");
 var paramsResolver = require('../router/param-resolver');
 var config = require('config');

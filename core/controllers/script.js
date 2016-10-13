@@ -2,7 +2,7 @@ const path = require('path');
 const mime = require('mime');
 const fs = require('fs');
 var json = require('../lib/jsonresponse');
-var debug = require('../lib/logger')('eye:supervisor:controller:script');
+var debug = require('../lib/logger')('controller:script');
 var resolve = require('../router/param-resolver');
 
 var ScriptService = require('../service/script');

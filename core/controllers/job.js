@@ -3,7 +3,7 @@
 var json = require('../lib/jsonresponse');
 var Job = require('../entity/job').Job;
 var JobDispatcher = require('../service/job');
-var debug = require('../lib/logger')('eye:supervisor:controller:job');
+var debug = require('../lib/logger')('controller:job');
 var paramsResolver = require('../router/param-resolver');
 
 module.exports = function(server, passport) {
@@ -68,8 +68,6 @@ var controller = {
       return res.send(400, json.error('result data is required'));
     }
 
-    console.log( result );
-
     JobDispatcher.update(req.job, result, (err, job) => {
       if(err) return res.send(500);
       res.send(200, job);
@@ -78,7 +76,6 @@ var controller = {
   },
   create (req,res,next) {
     debug.log('new task received');
-    // console.log(req.body);
     // return res.send(200, json.success('ok', req.body));
 
     var task = req.task ;

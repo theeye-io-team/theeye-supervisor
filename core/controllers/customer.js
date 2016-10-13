@@ -1,4 +1,4 @@
-var debug = require('../lib/logger')('eye:supervisor:controller:customer');
+var debug = require('../lib/logger')('controller:customer');
 var json = require('../lib/jsonresponse');
 var paramsResolver = require('../router/param-resolver');
 

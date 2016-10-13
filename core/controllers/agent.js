@@ -1,6 +1,6 @@
 "use strict";
 var json = require("../lib/jsonresponse");
-var logger = require('../lib/logger')('eye:supervisor:controller:agent');
+var logger = require('../lib/logger')('controller:agent');
 var NotificationService = require("../service/notification");
 var paramsResolver = require('../router/param-resolver');
 var Host = require("../entity/host").Entity;

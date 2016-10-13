@@ -1,4 +1,4 @@
-var debug = require('../lib/logger')('eye:supervisor:controller:user');
+var debug = require('../lib/logger')('controller:user');
 var json = require('../lib/jsonresponse');
 var strategys = require('../lib/auth/strategys');
 var token = require('../lib/auth/token');

@@ -1,6 +1,6 @@
 "use strict";
 
-var logger = require('../lib/logger')('eye:supervisor:controller:task');
+var logger = require('../lib/logger')('controller:task');
 var json = require('../lib/jsonresponse');
 var TaskService = require('../service/task');
 var router = require('../router');

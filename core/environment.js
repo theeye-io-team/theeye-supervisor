@@ -1,5 +1,5 @@
 var fs = require('fs');
-var debug = require('debug')('eye:supervisor:env');
+var debug = require('debug')('env');
 
 function setenv(next) {
 

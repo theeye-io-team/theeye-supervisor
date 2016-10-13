@@ -1,7 +1,7 @@
 "use strict";
 
 var _ = require('lodash');
-var logger = require('../../lib/logger')('eye:supervisor:service:resource:monitor');
+var logger = require('../../lib/logger')('service:resource:monitor');
 var MonitorEntity = require('../../entity/monitor').Entity;
 var ErrorHandler = require('../../lib/errorHandler');
 var filter = require('../../router/param-filter');

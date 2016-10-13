@@ -1,4 +1,4 @@
-var debug = require('debug')('eye:supervisor:controller:resource');
+var debug = require('debug')('controller:resource');
 var json = require('../lib/jsonresponse');
 var _ = require('lodash');
 

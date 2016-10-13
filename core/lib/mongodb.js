@@ -1,6 +1,6 @@
 var mongoose = require('mongoose');
 var config = require("config" ).get("mongo");
-var debug = require('debug')('eye:supervisor:lib:mongodb');
+var debug = require('debug')('lib:mongodb');
 var format = require('util').format;
 
 function connect () {

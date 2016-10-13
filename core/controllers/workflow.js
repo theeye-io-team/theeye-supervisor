@@ -1,9 +1,5 @@
 "use strict";
 
-//var extend = require('lodash/assign');
-//var dbFilter = require('../lib/db-filter');
-//var logger = require('../lib/logger')('eye:controller:webhook');
-//var audit = require('../lib/audit');
 var router = require('../router');
 var resolve = router.resolve;
 
@@ -26,7 +22,7 @@ var controller = {
    * @method GET
    */
   fetch (req, res, next) {
-    // node could be a task , monitor or webhook
+    // node could be a task , monitor , webhook or an event
     var node = req.params.node;
   },
 }
