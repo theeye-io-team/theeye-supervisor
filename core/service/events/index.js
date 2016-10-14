@@ -3,7 +3,7 @@
 const EventEmitter = require('events').EventEmitter;
 const util = require('util');
 const config = require('config').events ;
-const logger = require('../../lib/logger')('eye::events');
+const logger = require('../../lib/logger')(':events');
 
 const User = require('../../entity/user').Entity;
 const Task = require('../../entity/task').Entity;

@@ -6,7 +6,7 @@ var ObjectId = require('mongoose').Types.ObjectId;
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 
-var logger = require('../lib/logger')('eye::scheduler');
+var logger = require('../lib/logger')(':scheduler');
 var mongodb = require('../lib/mongodb').connection.db;
 var Host = require('../entity/host').Entity;
 var Task = require('../entity/task').Entity;
@@ -44,6 +44,10 @@ Scheduler.prototype = {
 
     agenda.on('start', function(job) {
       logger.log('job %s started', job.attrs.name);
+    });
+
+    agenda.on('complete', function(job) {
+      logger.log('job %s completed', job.attrs.name);
     });
 
     agenda.on('error', function(err, job) {
@@ -149,7 +153,6 @@ Scheduler.prototype = {
     logger.log('////////////////////////////////////////');
     logger.log('////////////////////////////////////////');
 
-    // console.log(agendaJob.attrs);
     var jobData = agendaJob.attrs.data;
 
     function JobError (err){

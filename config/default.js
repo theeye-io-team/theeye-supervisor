@@ -126,7 +126,8 @@ module.exports = {
         "stats":"resource-stats",
       },
       "monitor":{
-        "crud":"crud-monitor"
+        "crud":"crud-monitor",
+        "execution":"monitor-execution"
       },
       "script":{
         "crud":"crud-script"

@@ -1,6 +1,6 @@
 "use strict";
 
-var debug = require('debug')('eye:supervisor:controller:host');
+var debug = require('debug')('controller:host');
 var config = require('config');
 var _ = require('underscore');
 var json = require("../lib/jsonresponse");

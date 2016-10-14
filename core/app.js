@@ -5,7 +5,7 @@ var multer = require('multer');
 var config =  require('config');
 var router = require('./router');
 var strategys = require('./lib/auth/strategys');
-var logger = require('./lib/logger')('eye:supervisor:server');
+var logger = require('./lib/logger')('server');
 
 var app = {
 
@@ -46,7 +46,7 @@ var app = {
     router.loadControllers(server, passport);
 
     server.listen( config.server.port || 60080, function() {
-      logger.log('server started. "%s" listening at "%s"', server.name, server.url);
+      logger.log('TheEye server started. listening at "%s"', server.url);
     });
   }
 

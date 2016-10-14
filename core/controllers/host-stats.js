@@ -1,5 +1,5 @@
 var json = require('../lib/jsonresponse');
-var debug = require('../lib/logger')('eye:supervisor:controller:host-stats');
+var debug = require('../lib/logger')('controller:host-stats');
 var paramResolver = require('../router/param-resolver');
 var HostStats = require('../entity/host/stats').Entity;
 

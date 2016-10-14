@@ -1,6 +1,6 @@
 var config = require("config");
 var _ = require("underscore");
-var logger = require("../lib/logger")("eye:supervisor:service:customer");
+var logger = require("../lib/logger")("service:customer");
 
 var Customer = require("../entity/customer").Entity ;
 var User = require("../entity/user").Entity ;

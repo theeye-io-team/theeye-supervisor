@@ -3,7 +3,6 @@ var _ = require('lodash');
 var async = require('async');
 
 var resolver = require('../router/param-resolver');
-var validator = require('../router/param-validator');
 var logger = require('../lib/logger')('eye:controller:template');
 var TaskService = require('../service/task');
 var ResourceMonitorService = require('../service/resource/monitor');

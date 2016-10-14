@@ -9,7 +9,7 @@ var Handlebars = require("../../lib/handlebars");
 var ResourceService = require("../resource");
 var HostGroupService = require('./group');
 var AgentUpdateJob = require('../../entity/job').AgentUpdate;
-var logger = require("../../lib/logger")("eye:supervisor:service:host");
+var logger = require("../../lib/logger")("service:host");
 
 var createMonitor = ResourceService.createResourceOnHosts;
 
