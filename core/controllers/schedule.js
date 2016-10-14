@@ -1,6 +1,6 @@
 "use strict";
 
-var logger = require('../lib/logger')('eye:supervisor:controller:task-schedule');
+var logger = require('../lib/logger')('eye:supervisor:controller:schedule');
 var Scheduler = require('../service/scheduler');
 
 var router = require('../router');
@@ -10,20 +10,15 @@ module.exports = function(server, passport){
   var middlewares = [
     passport.authenticate('bearer', {session:false}),
     resolver.customerNameToEntity({}),
-    router.userCustomer,
-    resolver.idToEntity({param:'task'})
+    router.userCustomer
+    // resolver.idToEntity({param:'schedule'})
   ];
 
-  //server.post('/:customer/task/:task/schedule',middlewares,controller.create);
-  server.post('/:customer/task/schedule',middlewares,controller.create);
-  server.get('/:customer/task/:task/schedule',middlewares, controller.get);
-  server.del('/:customer/task/:task/schedule/:schedule',middlewares, controller.remove);
+  // server.post('/:customer/schedule',middlewares,controller.create);
+  // server.get('/:customer/schedule/:schedule',middlewares, controller.get);
+  // server.del('/:customer/schedule/:schedule',middlewares, controller.remove);
+  server.get('/:customer/schedule', middlewares, controller.getUserSchedules);
 
-  // this is for the email cancelation , NO AUTHENTICATION !
-  server.get('/:customer/task/:task/schedule/:schedule',[
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'task'})
-  ], controller.remove);
 };
 
 var controller = {
@@ -45,6 +40,22 @@ var controller = {
         return res.send(500);
       }
       else res.send(200, { scheduleData: scheduleData });
+    });
+  },
+  /**
+   * Gets schedules for user. This means a list of all scheduled "things" (tasks?)
+   * @author cg
+   * @method GET
+   * @route /:customer/task/
+   */
+  getUserSchedules (req, res, next) {
+    Scheduler.getSchedules(req.user._id, function(err, schedules){
+      if(err) {
+        logger.error('Scheduler had an error retrieving data for user %s',req.user._id);
+        logger.error(err);
+        return res.send(500);
+      }
+      else res.send(200, schedules);
     });
   },
   /**
