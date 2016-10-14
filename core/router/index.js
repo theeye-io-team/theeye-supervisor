@@ -26,6 +26,7 @@ module.exports = {
     require('../controllers/resource')(server,passport);
     require('../controllers/script-download')(server,passport);
     require('../controllers/script')(server,passport);
+    require('../controllers/schedule')(server,passport);
     require('../controllers/tags')(server,passport);
     require('../controllers/task-schedule')(server,passport);
     require('../controllers/task')(server,passport);
