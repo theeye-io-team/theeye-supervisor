@@ -1,7 +1,7 @@
 "use strict";
 
 var extend = require('util')._extend;
-var debug = require('debug')('eye:supervisor:controller:agent-config');
+var debug = require('debug')('controller:agent-config');
 var async = require('async');
 var Script = require("../entity/script").Entity;
 var json = require("../lib/jsonresponse");

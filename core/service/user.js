@@ -1,4 +1,4 @@
-var debug = require('../lib/logger')('eye:supervisor:service:user');
+var debug = require('../lib/logger')('service:user');
 var User = require('../entity/user').Entity;
 var Customer = require('../entity/customer').Entity;
 var crypto = require('crypto');

@@ -2,7 +2,7 @@
 
 var ErrorHandler = require('./lib/errorHandler');
 
-var logger = require('./lib/logger')('eye:supervisor:main');
+var logger = require('./lib/logger')('main');
 logger.log('initializing supervisor');
 
 process.on('SIGINT', function(){

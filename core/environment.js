@@ -1,9 +1,7 @@
 var fs = require('fs');
-var debug = require('debug')('eye:supervisor:env');
+var debug = require('debug')('env');
 
 function setenv(next) {
-  process.env['BASE_PATH'] = __dirname  ;
-  process.env.NODE_PATH += ':' + __dirname  ;
 
   if( ! process.env.NODE_ENV ) {
     console.error('NODE_ENV is required');

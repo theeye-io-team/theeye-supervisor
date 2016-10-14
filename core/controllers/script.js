@@ -2,15 +2,19 @@ const path = require('path');
 const mime = require('mime');
 const fs = require('fs');
 var json = require('../lib/jsonresponse');
-var debug = require('../lib/logger')('eye:supervisor:controller:script');
+var debug = require('../lib/logger')('controller:script');
 var resolve = require('../router/param-resolver');
-var validate = require('../router/param-validator');
-var filter = require('../router/param-filter');
 
 var ScriptService = require('../service/script');
 var ResourceService = require('../service/resource');
 var Script = require('../entity/script').Entity;
 var extend = require('util')._extend;
+
+var filenameRegexp = /^[0-9a-zA-Z-_.]*$/;
+function isValidFilename (filename) {
+  if( ! filename ) return false;
+  return filenameRegexp.test(filename);
+}
 
 module.exports = function(server, passport) {
   server.get('/:customer/script', [
@@ -90,8 +94,7 @@ var controller = {
     var script = req.files.script;
     if(!user) return res.send(400,json.error('invalid user'));
     if(!script) return res.send(400,json.error('invalid script', script));
-    if(!validate.isValidFilename(script.name))
-      return res.send(400,json.error('invalid filename', script.name));
+    if(!isValidFilename(script.name)) return res.send(400,json.error('invalid filename', script.name));
 
     var description = req.body.description;
     var name = req.body.name;

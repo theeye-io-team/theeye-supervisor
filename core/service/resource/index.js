@@ -1,6 +1,6 @@
 "use strict";
 
-var logger = require('../../lib/logger')('eye:supervisor:service:resource');
+var logger = require('../../lib/logger')('service:resource');
 var _ = require('lodash');
 
 var elastic = require('../../lib/elastic');
@@ -244,27 +244,28 @@ function Service(resource) {
     });
   }
 
+  function isSuccess(txt){
+    var successTexts = ['success','ok','normal'];
+    return successTexts.indexOf( txt.toLowerCase() ) != -1 ;
+  }
+  function isFailure(txt){
+    var failureTexts = ['error','fail','failure'];
+    return failureTexts.indexOf( txt.toLowerCase() ) != -1 ;
+  }
   function filterStateEvent(state){
-    function isSuccess(txt){
-      var successTexts = ['success','ok','normal'];
-      return successTexts.indexOf( txt.toLowerCase() ) != -1 ;
-    }
-
-    function isFailure(txt){
-      var failureTexts = ['error','fail','failure'];
-      return failureTexts.indexOf( txt.toLowerCase() ) != -1 ;
-    }
-
-    if( typeof state == 'string' && isSuccess(state) ) return Constants.RESOURCE_NORMAL;
-    if( typeof state == 'string' && isFailure(state) ) return Constants.RESOURCE_FAILURE;
+    if( typeof state == 'string' && isSuccess(state) )
+      return Constants.RESOURCE_NORMAL;
+    if( typeof state == 'string' && isFailure(state) )
+      return Constants.RESOURCE_FAILURE;
     return state;
   }
 
 
-  this.handleState = function(input,next) {
+  this.handleState = function (input,next) {
     next||(next=function(){});
     var resource = _resource;
 
+    logger.data('resource state [%s] > %o', resource.name, input);
     var state = filterStateEvent(input.state);
     input.state = state;
 
@@ -291,12 +292,21 @@ function Service(resource) {
         if(input.last_update) resource.last_update = input.last_update;
         if(input.last_check) resource.last_check = input.last_check;
         resource.save( err => {
-          if(err) logger.error(err) 
+          if(err) logger.error(err);
         });
+
+        // submit monitor result to elastic search
+        var key = globalconfig.elasticsearch.keys.monitor.execution;
+        input.name = resource.name;
+        input.type = resource.type;
+        input.customer_name = resource.customer_name;
+        elastic.submit(resource.customer_name,key,input);
+
         next();
       }
     );
   }
+
 }
 
 

@@ -1,6 +1,6 @@
 "use strict";
 const format = require('util').format;
-const debug = require('debug')('eye:supervisor:service:resource:email-notifications');
+const debug = require('debug')('service:resource:email-notifications');
 const Constants = require('../../constants/monitors');
 const ResourceTypes = {
   'dstat': {

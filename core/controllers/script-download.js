@@ -2,7 +2,7 @@ var fs = require('fs');
 var Script = require('../entity/script').Entity;
 var ScriptService = require('../service/script');
 var json = require("../lib/jsonresponse");
-var debug = require('../lib/logger')('eye:supervisor:controller:script-download');
+var debug = require('../lib/logger')('controller:script-download');
 var resolve = require('../router/param-resolver');
 
 module.exports = function(server, passport){

@@ -1,7 +1,6 @@
 "use strict";
 
 var resolver = require('../router/param-resolver');
-var validator = require('../router/param-validator');
 var logger = require('../lib/logger')('eye:controller:template:monitor');
 var ResourceMonitorService = require('../service/resource/monitor');
 var GroupMonitorService = require('../service/host/group').Monitor;
