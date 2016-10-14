@@ -5,16 +5,15 @@ const Schema = require('mongoose').Schema;
 const crypto = require('crypto');
 const lifecicle = require('mongoose-lifecycle');
 
-function BaseSchema (specs) {
+function BaseSchema (props,specs) {
   // Schema constructor
   Schema.call(this, util._extend({
-    name: { type: String, required: true },
     creation_date: { type: Date, 'default': Date.now },
     last_update: { type: Date, 'default': null },
     enable: { type: Boolean, 'default': true },
     customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
-  }, specs),{
-    collection: 'workflow',
+  }, props),{
+    collection: specs.collection,
     discriminatorKey: '_type'
   });
 
