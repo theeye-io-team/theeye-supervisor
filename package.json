@@ -10,6 +10,7 @@
     "config": "~1.20.4",
     "debug": "~1.0.4",
     "extend": "~3.0.0",
+    "graphlib": "~2.1.1",
     "handlebars": "~3.0.3",
     "kerberos": "~0.0.21",
     "lodash": "~4.11.2",
@@ -37,7 +38,7 @@
   },
   "scripts": {
     "test": "NODE_ENV=localdev ./mocha --harmony_proxies",
-    "start": "/bin/bash ./run.sh",
+    "start": "node --harmony_proxies $PWD/core/main.js",
     "devel": "/bin/bash ./run.debug.sh",
     "core": "./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' core/main.js",
     "local": "DEBUG='theeye:data*,theeye:log*,theeye:error*,eye:*' NODE_TLS_REJECT_UNAUTHORIZED=0 NODE_ENV=localdev ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' `pwd`/core/main.js",

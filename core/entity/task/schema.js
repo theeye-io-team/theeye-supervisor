@@ -2,19 +2,18 @@
 
 require('mongoose-schema-extend');
 var debug = require('debug')('entity:task');
-var Schema = require('mongoose').Schema;
+var BaseSchema = require('../base-schema');
+const Schema = require('mongoose').Schema;
 var lodash = require('lodash');
+const lifecicle = require('mongoose-lifecycle');
 
-/** Entity properties **/
-const properties = exports.properties = {
-  creation_date : { type: Date, 'default': Date.now() },
-  last_update : { type: Date, 'default': Date.now() },
+var EntitySchema = new BaseSchema({
   user_id : { type: String, 'default': null },
   customer_id : { type: String, ref: 'Customer' },
   public : { type: Boolean, 'default': false },
   tags: { type: Array, 'default':[] },
   type: { type: String, required: true },
-  name : { type: String },
+  name: { type: String },
   description : { type: String },
   triggers: [{
     type: Schema.Types.ObjectId,
@@ -22,51 +21,9 @@ const properties = exports.properties = {
     'default':function(){return [];}
   }],
   grace_time: { type: Number, 'default': 0 }
-};
+},{ collection: 'tasks' });
 
-/** Schema **/
-var EntitySchema = new Schema(properties);
 exports.EntitySchema = EntitySchema;
-
-// Duplicate the ID field.
-EntitySchema.virtual('id').get(function(){
-  return this._id.toHexString();
-});
-const specs = {
-	getters: true,
-	virtuals: true,
-	transform: function (doc, ret, options) {
-		// remove the _id of every document before returning the result
-		ret.id = ret._id;
-		delete ret._id;
-		delete ret.__v;
-		delete ret.__t;
-	}
-}
-EntitySchema.set('toJSON', specs);
-EntitySchema.set('toObject', specs);
-
-/**
- *
- *
- *
- */
-EntitySchema.methods.update = function(input,next)
-{
-  var task = this ;
-  var data = task.toObject();
-  for(var key in input){
-    if( data.hasOwnProperty(key) ) {
-      task[key] = input[key];
-    }
-  };
-
-  debug('saving task %j', task);
-  task.save(function(error){
-    if(error) return next(error);
-    next(null, task);
-  });
-}
 
 /**
  *

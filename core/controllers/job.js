@@ -76,7 +76,6 @@ var controller = {
   },
   create (req,res,next) {
     debug.log('new task received');
-    // return res.send(200, json.success('ok', req.body));
 
     var task = req.task ;
     var user = req.user ;

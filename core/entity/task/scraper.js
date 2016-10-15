@@ -4,8 +4,8 @@ var mongodb = require('../../lib/mongodb').db;
 var ObjectId = require('mongoose').Schema.Types.ObjectId;
 var TaskSchema = require('./index').TaskSchema;
 
-/** Entity properties **/
-var properties = {
+/** Schema **/
+var EntitySchema = TaskSchema.extend({
   url: { type: String, 'default': null, required:true },
   method: { type: String, 'default': null, required:true },
   external: { type: Boolean, 'default': null },
@@ -17,11 +17,7 @@ var properties = {
   parser: { type: String, 'default': null },
   pattern: { type: String, 'default': null },
   type: { type: String, 'default': 'scraper' }
-};
-
-
-/** Schema **/
-var EntitySchema = TaskSchema.extend(properties);
+});
 
 var Entity = mongodb.model('ScraperTask', EntitySchema);
 Entity.ensureIndexes();
