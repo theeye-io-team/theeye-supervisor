@@ -1,1 +1,0 @@
-"use strict";var debug=require("debug");module.exports=function(e){function t(){n.apply(this,arguments)}function r(){i.apply(this,arguments)}function o(){s.apply(this,arguments)}var n=debug(e+":log"),i=debug(e+":error"),s=debug(e+":data");return{log:t,error:r,data:o}};

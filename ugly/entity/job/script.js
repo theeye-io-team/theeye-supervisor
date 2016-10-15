@@ -1,1 +1,0 @@
-"use strict";var BaseSchema=require("./schema"),Job=require("./index"),ScriptSchema=new BaseSchema({script_id:{type:String},script_arguments:{type:Array,default:[]},script:{type:Object}});module.exports=ScriptSchema;

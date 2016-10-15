@@ -1,1 +1,0 @@
-"use strict";var mongodb=require("../../lib/mongodb"),Schema=require("mongoose").Schema,EntitySchema=Schema({timestamp:{type:Date,default:Date.now},resource_id:{type:String},state:{type:String}}),Entity=mongodb.db.model("ResourceStats",EntitySchema);Entity.ensureIndexes(),exports.Entity=Entity;

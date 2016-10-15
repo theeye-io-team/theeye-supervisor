@@ -1,1 +1,0 @@
-"use strict";var json=require("../lib/jsonresponse");module.exports=function(e,t){e.get("/:customer/resource/type",[t.authenticate("bearer",{session:!1})],controller.fetch)};var controller={};controller.fetch=function(e,t,r){var o=[{id:1,name:"process"},{id:2,name:"host"},{id:3,name:"service"}];t.send(200,{types:o})};

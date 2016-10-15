@@ -1,1 +1,0 @@
-"use strict";var extend=require("util")._extend;module.exports=function(e,t){var r={};return t||(t={}),r.where=extend(t.where||{},e.where||{}),r.limit=parseInt(e.limit)||null,r.sort=extend(t.sort||{},e.sort||null),r};

@@ -1,1 +1,0 @@
-"use strict";module.exports=function(e,t){for(var r in e)this[r]=e[r];this.save(function(e){return t(e)})};

@@ -1,1 +1,0 @@
-"use strict";function Trigger(e){this.host=e.host,this.service=e.service,this.action=e.action,this.category=e.category}Trigger.prototype={},module.exports=Trigger;

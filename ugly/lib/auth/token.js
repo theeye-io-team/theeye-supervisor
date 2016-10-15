@@ -1,1 +1,0 @@
-"use strict";var moment=require("moment"),crypto=require("crypto");exports.create=function(e,t,r){var o=moment().format("YYYY-MM-DD HH:00:00"),n=e+t+o,i=crypto.createHmac("sha1",n).update(t).digest("hex");i?r(null,{token:i,timestamp:o}):r(new Error("Can't create token"))};
