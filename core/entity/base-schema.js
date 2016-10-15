@@ -38,6 +38,22 @@ function BaseSchema (props,specs) {
 
   this.plugin(lifecicle);
 
+  /**
+   *
+   * helper update method
+   *
+   */
+  this.methods.update = function(updates, next){
+    var model = this ;
+    var data = model.toObject();
+    for(var key in updates){
+      if( data.hasOwnProperty(key) ) {
+        model[key] = updates[key];
+      }
+    };
+    model.save( err => next(err,model) );
+  }
+
   return this;
 }
 

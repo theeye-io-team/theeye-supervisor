@@ -10,7 +10,6 @@ var Script = require('../script').Entity;
 var Host = require('../host').Entity;
 
 
-
 /**
  * Extended Schema. Includes non template attributes
  */
@@ -22,9 +21,6 @@ var TaskSchema = BaseSchema.EntitySchema.extend({
   script_runas: { type: String, 'default':'' },
   type: { type: String, 'default':'script' },
   script_id: { type: String, ref: 'Script' },
-},{
-  collection: 'tasks',
-  discriminatorKey: '_type' 
 });
 
 exports.TaskSchema = TaskSchema;
@@ -79,12 +75,7 @@ TaskSchema.methods.publish = function(next) {
  */
 TaskSchema.methods.toTemplate = function(doneFn) {
   var entity = this;
-  var values = {};
-
-  for(var key in BaseSchema.properties){
-    values[ key ] = entity[ key ];
-  }
-
+  var values = this.toObject();
   var template = new Template(values);
   template.save(function(error){
     doneFn(error, template);
@@ -114,6 +105,19 @@ TaskSchema.statics.create = function(input,next) {
   });
 };
 
-var Entity = mongodb.model('Task', TaskSchema);
-Entity.ensureIndexes();
-exports.Entity = Entity;
+var Task = mongodb.model('Task', TaskSchema);
+Task.ensureIndexes();
+
+// called for both inserts and updates
+Task.on('afterSave', function(model) {
+  model.last_update = new Date();
+  // do stuff
+});
+Task.on('afterUpdate',function(model){
+});
+Task.on('afterInsert',function(model){
+});
+Task.on('afterRemove',function(model){
+});
+
+exports.Entity = Task;

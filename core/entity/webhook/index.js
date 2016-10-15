@@ -14,7 +14,7 @@ var Webhook = mongodb.model('Webhook',
 
 Webhook.ensureIndexes();
 
-// called both insert and update and create
+// called for both inserts and updates
 Webhook.on('afterSave', function(model) {
   model.last_update = new Date();
   // do stuff
