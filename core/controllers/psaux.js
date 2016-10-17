@@ -3,7 +3,7 @@
 var json = require("../lib/jsonresponse");
 var HostStats = require("../entity/host/stats").Entity;
 var NotificationService = require('../service/notification');
-var debug = require("../lib/logger")('eye:supervisor:controller:psaux');
+var debug = require("../lib/logger")('controller:psaux');
 var paramsResolver = require('../router/param-resolver');
 var ResourceManager = require("../service/resource");
 

@@ -2,6 +2,7 @@
 
 const util = require('util');
 const Schema = require('mongoose').Schema;
+const crypto = require('crypto');
 const lifecicle = require('mongoose-lifecycle');
 
 function BaseSchema (specs) {
@@ -11,7 +12,13 @@ function BaseSchema (specs) {
     creation_date: { type: Date, 'default': Date.now },
     last_update: { type: Date, 'default': null },
     enable: { type: Boolean, 'default': true },
-    customer: { type: Schema.Types.ObjectId, ref: 'Customer' }
+    customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
+    secret: { type: String, 'default': function(){
+      // one way hash
+      return crypto.createHmac('sha256','THEEYE' + Math.random())
+      .update( new Date().toISOString() )
+      .digest('hex');
+    }}
   }, specs),{
     collection: 'webhooks',
     discriminatorKey: '_type'

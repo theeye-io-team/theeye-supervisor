@@ -14,11 +14,7 @@ var MonitorEvent = Event.discriminator('MonitorEvent', MonitorEventSchema);
 var WebhookEvent = Event.discriminator('WebhookEvent', WebhookEventSchema);
 
 Event.ensureIndexes();
-
 exports.Event = Event;
-
 exports.TaskEvent = TaskEvent;
-
 exports.MonitorEvent = MonitorEvent;
-
 exports.WebhookEvent = WebhookEvent;

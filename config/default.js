@@ -115,6 +115,7 @@ module.exports = {
     "url":"",
     "db":"",
     "keys":{
+      "prefix":null,
       "agent":{
         "version":"agent-version"
       },
@@ -125,7 +126,8 @@ module.exports = {
         "stats":"resource-stats",
       },
       "monitor":{
-        "crud":"crud-monitor"
+        "crud":"crud-monitor",
+        "execution":"monitor-execution"
       },
       "script":{
         "crud":"crud-script"

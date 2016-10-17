@@ -1,4 +1,4 @@
-var debug = require('debug')('eye:supervisor:service:resource:template');
+var debug = require('debug')('service:resource:template');
 var MonitorService = require('./monitor');
 var ResourceService = require('./index');
 var ResourceTemplate = require('../../entity/resource/template').Entity;

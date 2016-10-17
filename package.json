@@ -1,16 +1,16 @@
 {
-  "version": "0.5.1",
+  "version": "0.6.2",
   "name": "TheEye-Supervisor",
   "description": "The Eye Dependencies",
   "author": "Facundo S. Gonzalez <facugon@interactar.com>",
   "dependencies": {
     "agenda": "~0.9.0",
-    "app-root-path": "~1.0.0",
     "async": "~1.5.2",
     "aws-sdk": "~2.3.19",
     "config": "~1.20.4",
     "debug": "~1.0.4",
     "extend": "~3.0.0",
+    "graphlib": "~2.1.1",
     "handlebars": "~3.0.3",
     "kerberos": "~0.0.21",
     "lodash": "~4.11.2",
@@ -18,7 +18,7 @@
     "mime": "~1.3.4",
     "moment": "~2.13.0",
     "mongoose": "~4.3.5",
-    "mongoose-lifecycle": "~1.0.0",
+    "mongoose-lifecycle": "1.0.0",
     "mongoose-schema-extend": "~0.2.2",
     "multer": "~0.1.8",
     "node-uuid": "~1.4.7",
@@ -38,12 +38,14 @@
   },
   "scripts": {
     "test": "NODE_ENV=localdev ./mocha --harmony_proxies",
-    "start": "/bin/bash ./run.sh",
+    "start": "node --harmony_proxies $PWD/core/main.js",
     "devel": "/bin/bash ./run.debug.sh",
-    "core": "DEBUG=eye:* ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' core/main.js",
-    "local": "NODE_TLS_REJECT_UNAUTHORIZED=0 DEBUG=eye:* NODE_ENV=localdev ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' `pwd`/core/main.js",
+    "core": "./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' core/main.js",
+    "local": "DEBUG='theeye:data*,theeye:log*,theeye:error*,eye:*' NODE_TLS_REJECT_UNAUTHORIZED=0 NODE_ENV=localdev ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' `pwd`/core/main.js",
     "elastic_tunnel": "ssh -L 9200:elasticsearch.theeye.io:9200 awsnodep02.theeye.io ",
-    "babelify": "babel --presets es2015,stage-0 core/ --out-dir bundle/"
+    "babelify": "babel --presets es2015,stage-0 core/ --out-dir bundle/",
+    "compile": "browserify --entry ugly/main.js --bare --outfile bundle/main.js",
+    "bundled-app": "node --harmony_proxies bundle/main.js"
   },
   "engines": {
     "node": ">=4.*"

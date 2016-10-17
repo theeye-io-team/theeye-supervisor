@@ -1,6 +1,6 @@
 "use strict";
 
-var logger = require('../lib/logger')('eye:supervisor:controller:task-schedule');
+var logger = require('../lib/logger')('controller:task-schedule');
 var Scheduler = require('../service/scheduler');
 
 var router = require('../router');
@@ -24,7 +24,7 @@ module.exports = function(server, passport){
     resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'task'})
   ], controller.remove);
-}
+};
 
 var controller = {
   /**

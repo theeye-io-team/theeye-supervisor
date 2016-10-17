@@ -1,21 +1,17 @@
+"use strict"; 
 var restify = require('restify');
 var util = require('util');
 var multer = require('multer');
 var config =  require('config');
-
 var router = require('./router');
 var strategys = require('./lib/auth/strategys');
-var logger = require('./lib/logger')('eye:supervisor:server');
-var systemConfig = config.get('system');
-var serverConfig = config.get('server');
+var logger = require('./lib/logger')('server');
 
 var app = {
 
   start () {
-    var server = restify.createServer({ name : serverConfig.name });
-
-    // Set the auth strategy
-    passport = strategys.setStrategy( serverConfig.auth_strategy );
+    var server = restify.createServer();
+    var passport = strategys.setStrategy('bearer');
 
     server.pre(function (req,res,next) {
       logger.log('REQUEST %s %s', req.method, req.url);
@@ -29,7 +25,7 @@ var app = {
     server.use(restify.jsonBodyParser());
     server.use(passport.initialize());
     server.use(multer({
-      dest: systemConfig.file_upload_folder ,
+      dest: config.system.file_upload_folder ,
       rename: function (fieldname, filename) {
         return filename;
       }
@@ -49,8 +45,8 @@ var app = {
     // Routing the controllers
     router.loadControllers(server, passport);
 
-    server.listen( serverConfig.port, function() {
-      logger.log('server started. "%s" listening at "%s"', server.name, server.url);
+    server.listen( config.server.port || 60080, function() {
+      logger.log('TheEye server started. listening at "%s"', server.url);
     });
   }
 

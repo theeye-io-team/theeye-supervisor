@@ -8,7 +8,7 @@ var Host = require('../entity/host').Entity;
 var ResourceService = require('./resource');
 var CustomerService = require('./customer');
 var HostService = require('./host');
-var logger = require('../lib/logger')('eye::monitor');
+var logger = require('../lib/logger')(':monitor');
 
 const Constants = require('../constants/monitors');
 const Scheduler = require('../service/scheduler');
@@ -31,12 +31,12 @@ module.exports = {
 
 
 function checkResourcesState(done){
-  logger.log('***** CHECKING RESOURCES STATUS *****');
+  logger.debug('***** CHECKING RESOURCES STATUS *****');
   Resource
   .find({ 'enable': true })
   .exec(function(err,resources){
     var total = resources.length;
-    logger.log('running %s checks',total);
+    logger.debug('running %s checks',total);
     var completed = lodash.after(total,function(){
       logger.log('releasing monitoring job');
       done();
@@ -93,11 +93,11 @@ function checkResourceMonitorStatus(resource,cconfig,done) {
       return done();
     }
     if(!monitor){
-      logger.log('resource has not got any monitor');
+      logger.debug('resource hasn\'t got any monitor');
       return done();
     }
 
-    logger.log('checking monitor "%s"', resource.name);
+    logger.debug('checking monitor "%s"', resource.name);
     var last_update = resource.last_update.getTime();
 
     validLastupdate({
@@ -122,7 +122,7 @@ function checkHostResourceStatus(resource,done)
 {
   done||(done=function(){});
 
-  logger.log('checking host resource %s', resource.name);
+  logger.debug('checking host resource %s', resource.name);
   validLastupdate({
     'loop_duration':config.get('agent').core_workers.host_ping.looptime,
     'loop_threshold':config.get('monitor').resources_alert_failure_threshold_milliseconds,
@@ -143,7 +143,7 @@ function checkHostResourceStatus(resource,done)
 function validLastupdate(options,done)
 {
   done||(done=()=>{});
-  logger.log(options);
+  logger.debug(options);
   var valid, nowTime = Date.now();
   var loopDuration = options.loop_duration;
   var loopThreshold = options.loop_threshold;
@@ -153,13 +153,13 @@ function validLastupdate(options,done)
   var updateThreshold = loopDuration + loopThreshold;
 
   var elapsedMinutes = Math.floor(timeElapsed/1000/60);
-  logger.log('last update time elapsed ' + elapsedMinutes + ' minutes');
+  logger.debug('last update time elapsed ' + elapsedMinutes + ' minutes');
 
   var failedLoops = Math.floor(timeElapsed / loopDuration);
-  logger.log('failed loops count %s', failedLoops);
+  logger.debug('failed loops count %s', failedLoops);
   if(timeElapsed > updateThreshold) {
     if(failedLoops > failedLoopsCount) {
-      logger.log('last update check failed %s times',failedLoops);
+      logger.debug('last update check failed %s times',failedLoops);
       done(null,valid=false,failedLoops);
     } else {
       done(null,valid=true,failedLoops);

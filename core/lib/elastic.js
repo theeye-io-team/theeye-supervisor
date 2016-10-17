@@ -1,5 +1,5 @@
 var config = require('config');
-var debug = require('debug')('eye:supervisor:lib:elastic');
+var logger = require('./logger')(':elastic');
 var path = require('path');
 
 var request = require("request").defaults({
@@ -8,35 +8,40 @@ var request = require("request").defaults({
   gzip: true
 });
 
-var submitFn = function(index,endpoint,data)
-{
-  if( ! config.elasticsearch.enabled ){
-    debug('elastic search disabled by config');
-    return;
-  }
+var ElasticSearch = {
+  submit : function(index,key,data)
+  {
+    var prefix = config.elasticsearch.keys.prefix
+    if( prefix ) key = prefix + key ;
 
-  var elastic = config.elasticsearch ;
-  if( !elastic.url || !elastic.db ){
-    return debug('ERROR invalid elasticsearch configuration.');
-  }
-
-  data.type = endpoint;
-  data.timestamp || ( data.timestamp = (new Date()).getTime() );
-  data.date || ( data.date = (new Date()).toISOString() );
-
-  var url = elastic.url + '/' + path.join(index, endpoint);
-
-  request.post({
-    url: url,
-    body: data
-  },function(err,respose,body){
-    if(err) {
-      debug('ERROR %s',err);
-      debug(arguments);
+    if( ! config.elasticsearch.enabled ){
+      logger.log('elastic search disabled by config');
       return;
     }
-    debug('submit done to %s', url);
-  });
+
+    var elastic = config.elasticsearch ;
+    if( !elastic.url || !elastic.db ){
+      return logger.log('ERROR invalid elasticsearch configuration.');
+    }
+
+    data.type = key;
+    data.timestamp || ( data.timestamp = (new Date()).getTime() );
+    data.date || ( data.date = (new Date()).toISOString() );
+
+    var url = elastic.url + '/' + path.join(index,key);
+
+    request.post({
+      url: url,
+      body: data
+    },function(err,respose,body){
+      if(err) {
+        logger.error('ERROR %s',err);
+        logger.error(arguments);
+        return;
+      }
+      logger.log('submit done to %s', url);
+    });
+  }
 }
 
-module.exports = { submit: submitFn }
+module.exports = ElasticSearch ;

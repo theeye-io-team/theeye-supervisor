@@ -1,12 +1,12 @@
 var Agenda = require('agenda');
-var config = require('config');
+// var config = require('config');
 var async = require('async');
-var format = require('util').format;
+// var format = require('util').format;
 var ObjectId = require('mongoose').Types.ObjectId;
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 
-var logger = require('../lib/logger')('eye::scheduler');
+var logger = require('../lib/logger')(':scheduler');
 var mongodb = require('../lib/mongodb').connection.db;
 var Host = require('../entity/host').Entity;
 var Task = require('../entity/task').Entity;
@@ -44,6 +44,10 @@ Scheduler.prototype = {
 
     agenda.on('start', function(job) {
       logger.log('job %s started', job.attrs.name);
+    });
+
+    agenda.on('complete', function(job) {
+      logger.log('job %s completed', job.attrs.name);
     });
 
     agenda.on('error', function(err, job) {
@@ -94,7 +98,7 @@ Scheduler.prototype = {
       customer_name : customer.name ,
       state : 'new' ,
       notify : input.notify ,
-      scheduleData : schedule ,
+      scheduleData : schedule
     };
 
     // runDate is milliseconds
@@ -130,6 +134,20 @@ Scheduler.prototype = {
       },
       callback);
   },
+  // searches for task jobs of a given user id
+  getSchedules: function(uid, callback) {
+    if(!uid) {
+      return callback(new Error('user id must be provided'));
+    }
+    this.agenda.jobs(
+      {
+        $and:[
+          {name: 'task'},
+          {'data.user_id': uid}
+        ]
+      },
+      callback);
+  },
   cancelTaskSchedule: function(taskId, scheduleId, callback) {
     if(!scheduleId) {
       return callback(new Error('schedule id must be provided'));
@@ -149,7 +167,6 @@ Scheduler.prototype = {
     logger.log('////////////////////////////////////////');
     logger.log('////////////////////////////////////////');
 
-    // console.log(agendaJob.attrs);
     var jobData = agendaJob.attrs.data;
 
     function JobError (err){
@@ -159,11 +176,11 @@ Scheduler.prototype = {
     }
 
     async.parallel({
-      customer: (callback) => Customer.findById(jobData.customer_id, callback) ,
-      task: (callback) => Task.findById(jobData.task_id, callback) ,
-      host: (callback) => Host.findById(jobData.host_id, callback) ,
-      user: (callback) => User.findById(jobData.user_id, callback) ,
-      script: (callback) => Script.findById(jobData.script_id, callback)
+      customer: callback => Customer.findById(jobData.customer_id, callback) ,
+      task: callback => Task.findById(jobData.task_id, callback) ,
+      host: callback => Host.findById(jobData.host_id, callback) ,
+      user: callback => User.findById(jobData.user_id, callback) ,
+      script: callback => Script.findById(jobData.script_id, callback)
     }, function(err, data) {
       if(err) return new JobError(err);
 

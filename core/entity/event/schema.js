@@ -3,6 +3,7 @@
 var crypto = require('crypto');
 var util = require('util');
 var Schema = require('mongoose').Schema;
+var async = require('async');
 
 function BaseSchema (specs) {
 
@@ -50,6 +51,30 @@ function BaseSchema (specs) {
     next();
   });
 
+
+  this.statics.fetch = function(query,done){
+    // theres is a bug in mongoose with this schemas
+    // populate within the find query does not work as expected
+    this
+    .find(query)
+    .exec(function(err, events){
+      async.each(
+        events,
+        function(e, callback){
+          e.populate({
+            path: 'emitter',
+            populate: {
+              path: 'host',
+              model: 'Host'
+            }
+          }, callback)
+        },
+        function(err){
+          done(err,events);
+        }
+      );
+    });
+  }
 
   return this;
 }

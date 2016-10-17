@@ -1,7 +1,7 @@
 var passport = require('passport');
 var util = require('util');
 var User = require('../../entity/user').Entity;
-var debug = require('../logger')('eye:supervisor:auth:strategys');
+var debug = require('../logger')('auth:strategys');
 var BearerStrategy = require('passport-http-bearer').Strategy;
 var BasicStrategy = require('passport-http').BasicStrategy;
 

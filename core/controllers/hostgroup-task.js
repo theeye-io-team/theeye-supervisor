@@ -1,7 +1,6 @@
 "use strict";
 
 var resolver = require('../router/param-resolver');
-var validator = require('../router/param-validator');
 var logger = require('../lib/logger')('eye:controller:template:task');
 var TaskService = require('../service/task');
 var Task = require('../entity/task').Entity;

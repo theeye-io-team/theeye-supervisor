@@ -1,4 +1,4 @@
-var debug = require('../lib/logger')('eye:supervisor:controller:user');
+var debug = require('../lib/logger')('controller:user');
 var json = require('../lib/jsonresponse');
 var strategys = require('../lib/auth/strategys');
 var token = require('../lib/auth/token');
@@ -7,7 +7,7 @@ var User = require("../entity/user").Entity;
 
 var resolve = require('../router/param-resolver');
 var filter = require('../router/param-filter');
-var validate = require('../router/param-validator');
+var validator = require('validator');
 
 module.exports = function(server, passport)
 {
@@ -70,7 +70,7 @@ function UserInterface (req, next)
   /** email **/
   if(!req.params.email)
     errors.push({'param':'email','message':'required'});
-  else if(!validate.isEmail(req.params.email))
+  else if(!validator.isEmail(req.params.email))
     errors.push({'param':'email','message':'invalid'});
   else
    values.push({'param':'email','value':req.params.email});

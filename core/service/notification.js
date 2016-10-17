@@ -4,7 +4,7 @@ var AWS = require('aws-sdk');
 var SNS = new AWS.SNS( new AWS.Config( config.aws ) );
 var request = require('request');
 var mailer = require('../lib/mailer');
-var debug = require('../lib/logger')('eye:supervisor:service:notification');
+var debug = require('../lib/logger')('service:notification');
 
 module.exports = {
   sendSNSNotification : function(sns,options)
