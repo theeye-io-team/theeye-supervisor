@@ -11,6 +11,7 @@ var EventDispatcher = require('../events');
 
 var Resource = require('../../entity/resource').Entity;
 var MonitorEntity = require('../../entity/monitor').Entity;
+var MonitorTemplate = require('../../entity/monitor/template').Entity;
 var Host = require('../../entity/host').Entity;
 var Task = require('../../entity/task').Entity;
 var HostStats = require('../../entity/host/stats').Entity;
@@ -306,12 +307,9 @@ function Service(resource) {
       }
     );
   }
-
 }
 
-
 module.exports = Service;
-
 
 function registerResourceCRUDOperation(customer,data) {
   var key = globalconfig.elasticsearch.keys.monitor.crud;
@@ -705,6 +703,66 @@ Service.createResourceOnHosts = function(hosts,input,doneFn)
       hostProcessed(hosts[i], error, result);
     });
   }
+}
+
+/**
+ *
+ * @author Facundo
+ * @param {object MonitorTemplate} template
+ * @param {Object} options
+ * @param {Function} doneFn
+ *
+ */
+Service.createMonitorFromTemplate = function(options) {
+  var doneFn = ( options.done||(function(){}) ),
+    template = options.template,
+    host = options.host;
+
+  MonitorTemplate.populate(template,{
+    path: 'template_resource' 
+  },function(err,monitorTemplate){
+    var resourceTemplate = monitorTemplate.template_resource;
+    var options = { 'host': host };
+    Resource.FromTemplate(
+      resourceTemplate,
+      options,
+      function(err,resource){
+        if(err) {
+          logger.log('Resorce creation error %s', err.message);
+          return doneFn(err);
+        }
+
+        var props = _.extend( template, {
+          host: options.host,
+          host_id: options.host._id,
+          resource: resource._id,
+          resource_id: resource._id,
+          template: monitorTemplate.id,
+          id: null,
+          customer_name: resource.customer_name,
+          _type: 'ResourceMonitor'
+        });
+
+        logger.log('creating monitor from template');
+        logger.data('monitor %j', props);
+        var monitor = new MonitorEntity(props);
+        monitor.save(function(err, instance){
+          if(err) {
+            logger.error(err.message);
+            logger.error(err);
+            return doneFn(err);
+          }
+
+          Service.createDefaultEvents(monitor,resource.customer_id)
+
+          doneFn(null,{
+            'monitor': instance,
+            'resource': resource
+          });
+        });
+      }
+    );
+  });
 }
 
 /**

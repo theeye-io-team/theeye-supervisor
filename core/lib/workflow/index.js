@@ -40,6 +40,32 @@ function Workflow () {
 
     return;
   }
+
+  this.getPath = function (node) {
+    //return graphlib.alg.dijkstra(_graph, node, null, function(v) { return h5.network.graph.nodeEdges(v); })
+    var paths = graphlib.alg.dijkstra(_graph, node);
+
+    var g = new Graph();
+
+    Object.keys(paths).forEach( node => {
+      var path = paths[node];
+      if( path.distance != null && path.distance != Infinity ){
+        if( ! g.hasNode(node) ){
+          g.setNode( node, _graph.node(node) );
+        }
+
+        if( path.hasOwnProperty('predecessor') ) {
+          var predecessor = path.predecessor;
+          if( ! g.hasNode(predecessor) ){
+            g.setNode( predecessor, _graph.node(predecessor) );
+          }
+          g.setEdge( predecessor, node );
+        }
+      }
+    });
+
+    return graphlib.json.write(g);
+  }
 }
 
 module.exports = Workflow;

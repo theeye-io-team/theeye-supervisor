@@ -6,7 +6,7 @@ var Monitor = require('../../../entity/monitor').Entity;
 var AgentUpdateJob = require('../../../entity/job').AgentUpdate;
 var logger = require('../../../lib/logger')('eye:service:group:monitor');
 var lodash = require('lodash');
-var ResourceTemplateService = require('../../../service/resource/template');
+var ResourceService = require('../../../service/resource');
 
 exports.addTemplatesToGroup = function(group,templates,done){
   done||(done=function(){});
@@ -98,8 +98,9 @@ function addMonitorInstancesToGroupHosts(
     for(let i=0;i<resources.length;i++){
       let resource=resources[i];
       Host.findById(resource.host_id,(err,host)=>{
+
         // ... and attach the new monitor to the host
-        ResourceTemplateService.createMonitorFromTemplate({
+        ResourceService.createMonitorFromTemplate({
           template: template,
           host: host,
           done: function(){
@@ -108,6 +109,7 @@ function addMonitorInstancesToGroupHosts(
             AgentUpdateJob.create({ host_id: host._id });
           }
         });
+
       });
     }
   });
