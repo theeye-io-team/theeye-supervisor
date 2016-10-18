@@ -1,5 +1,19 @@
 # CHANGELOG
 
+### 0.6.3 - 2016-10-18
+
+> workflow controller         
+
+> workflow lib . create a workflow from current events & task attached triggers       
+
+> workflow schemas . some schemas to persiste workflows in the feature . there are still not in use , because of the complexity to maintain the workflow       
+
+> scheduler controller       
+
+> change controllers initialization. trying to improve code to build with browserify (further improvements required)         
+
+> some minor bug fixing
+
 ### 0.6.2 - 2016-10-13
 
 > monitor result stored in ElasticSearch      
