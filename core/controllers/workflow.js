@@ -35,7 +35,12 @@ var controller = {
       var workflow = new Workflow();
       workflow.fromEvents(events);
 
-      res.send( 200, workflow.graph );
+      if( ! node ) {
+        return res.send( 200, workflow.graph );
+      } else {
+        return res.send( 200, workflow.getPath(node) );
+      }
+
     })
   },
 }
