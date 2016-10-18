@@ -12,7 +12,7 @@ const Edge = mongodb.model('Edge',
     end: { type: Object, required:true }
   },{
     collection: 'workflow'
-  });
+  })
 );
 Edge.on('afterSave', function(model){
   model.last_update = new Date();
