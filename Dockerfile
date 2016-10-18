@@ -3,7 +3,7 @@ FROM interactar/theeye-supervisor:15_09_16
 MAINTAINER Javier Ailbirt <jailbirt@interactar.com>
 ENV destDir /src/theeye/supervisor
 # Temporary Move node_modules for avoiding packages reinstallation
-RUN mv ${destDir}/node_modules/ /tmp/
+RUN mv ${destDir}/node_modules /tmp/
 # And remove that directory
 RUN rm -rf ${destDir}
 # Create app directory
