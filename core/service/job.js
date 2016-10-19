@@ -68,13 +68,23 @@ var service = {
       else done(null, job);
     }
 
-    if( type == 'script' ){
-      createScriptJob(input, afterCreate);
-    } else if( type == 'scraper' ){
-      createScraperJob(input, afterCreate);
-    } else {
-      done( new Error('invalid or undefined task type ' + task.type) );
-    }
+    task.populate('host', err => {
+      if(err) return done(err);
+
+      if( !task.host ){
+        var err = new Error('invalid task ' + task._id  + ' does not has a host assigned');
+        return done(err);
+      }
+
+      if( type == 'script' ){
+        createScriptJob(input, afterCreate);
+      } else if( type == 'scraper' ){
+        createScraperJob(input, afterCreate);
+      } else {
+        done( new Error('invalid or undefined task type ' + task.type) );
+      }
+
+    });
   },
   update ( job, result, done ) {
     job.state = result.state || STATE_FAILURE;
@@ -145,7 +155,11 @@ function ResultEvent (job) {
     name: job.state
   }, (err, event) => {
     if(err) return logger.error(err);
-    if(!event) return logger.error(new Error('no events defined'));
+
+    if(!event){
+      var err = new Error('no event handler defined for state "' + job.state + '" on task ' + job.task.id);
+      return logger.error(err);
+    }
 
     app.eventDispatcher.dispatch(event);
   });

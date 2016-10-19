@@ -63,11 +63,15 @@ class EventDispatcher extends EventEmitter {
   }
 
   createJob ( task, event ) {
-    logger.log('preparing to run task');
-    task.populate('customer_id', err => {
-      if(err){
-        return logger.error(err);
-      }
+    logger.log('preparing to run task %s', task._id);
+    task.populate([
+      {path:'customer_id'},
+      {path:'host'}
+    ],err => {
+      if(err) return logger.error(err);
+
+      if( !task.customer_id ) return logger.error('FATAL. task %s does not has a customer', task._id);
+      if( !task.host ) return logger.error('WARNING. task %s does not has a host. cannot execute', task._id);
 
       var customer = task.customer_id; //after populate customer_id is a customer model
       if(!customer){
@@ -92,18 +96,16 @@ class EventDispatcher extends EventEmitter {
         },(err, agenda) => {
           if(err) logger.error(err);
 
-          task.populate('host', (err) => {
-            CustomerService.getAlertEmails(customer.name,(err, emails)=>{
-              app.jobDispatcher.sendJobCancelationEmail({
-                task_id: task.id,
-                schedule_id: agenda.attrs._id,
-                task_name: task.name,
-                hostname: task.host.hostname,
-                date: new Date(runDateMilliseconds).toISOString(),
-                grace_time_mins: task.grace_time / 60,
-                customer_name: customer.name,
-                to: emails.join(',')
-              });
+          CustomerService.getAlertEmails(customer.name,(err, emails)=>{
+            app.jobDispatcher.sendJobCancelationEmail({
+              task_id: task.id,
+              schedule_id: agenda.attrs._id,
+              task_name: task.name,
+              hostname: task.host.hostname,
+              date: new Date(runDateMilliseconds).toISOString(),
+              grace_time_mins: task.grace_time / 60,
+              customer_name: customer.name,
+              to: emails.join(',')
             });
           });
         });

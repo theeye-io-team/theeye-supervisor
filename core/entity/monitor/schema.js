@@ -8,18 +8,17 @@ if(!RegExp.escape){
   };
 }
 
-/** Entity properties **/
-const properties = exports.properties = {
+/** Schema **/
+var EntitySchema = Schema({
   customer_name: { type: String, required: true },
   looptime: { type: Number },
   config: { type: Object, 'default': {} },
   name: { type: String },
   type: { type: String },
   tags: { type: Array, 'default': [] }
-};
-
-/** Schema **/
-var EntitySchema = Schema(properties,{ discriminatorKey : '_type' });
+},{
+  discriminatorKey : '_type'
+});
 exports.EntitySchema = EntitySchema;
 
 // Duplicate the ID field.
@@ -34,7 +33,6 @@ const specs = {
 		// remove the _id of every document before returning the result
 		ret.id = ret._id;
 		delete ret._id;
-		delete ret._type;
 		delete ret.__v;
 	}
 }

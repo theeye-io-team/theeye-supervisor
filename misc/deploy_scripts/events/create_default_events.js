@@ -6,13 +6,13 @@ var debug = require('debug')('eye:deploy');
 
 var mongodb = require( appRoot + '/lib/mongodb' ).connect(() => {
 
-  var Event = require( appRoot + '/entity/event' );
-  var Monitor = require( appRoot + '/entity/monitor' ).Entity;
-  var Task = require( appRoot + '/entity/task' ).Entity;
-  var MonitorService = require( appRoot + '/service/resource');
-  require( appRoot + '/entity/task' );
+  var TM = require( appRoot + '/entity/task' );
   require( appRoot + '/entity/task/scraper' );
 
+  var Event = require( appRoot + '/entity/event' );
+  var Monitor = require( appRoot + '/entity/monitor' ).Entity;
+  var Task = TM.Entity;
+  var MonitorService = require( appRoot + '/service/resource');
 
   var completed = lodash.after( 2, () => process.exit(0) );
 
