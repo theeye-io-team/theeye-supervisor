@@ -17,7 +17,7 @@ module.exports = function(server, passport){
   // server.post('/:customer/schedule',middlewares,controller.create);
   // server.get('/:customer/schedule/:schedule',middlewares, controller.get);
   // server.del('/:customer/schedule/:schedule',middlewares, controller.remove);
-  server.get('/:customer/schedule', middlewares, controller.getUserSchedules);
+  server.get('/:customer/schedule', middlewares, controller.getCustomerSchedules);
 
 };
 
@@ -48,10 +48,10 @@ var controller = {
    * @method GET
    * @route /:customer/task/
    */
-  getUserSchedules (req, res, next) {
-    Scheduler.getSchedules(req.user._id, function(err, schedules){
+  getCustomerSchedules (req, res, next) {
+    Scheduler.getSchedules(req.customer._id, function(err, schedules){
       if(err) {
-        logger.error('Scheduler had an error retrieving data for user %s',req.user._id);
+        logger.error('Scheduler got an error retrieving data for customer %s',req.customer._id);
         logger.error(err);
         return res.send(500);
       }
