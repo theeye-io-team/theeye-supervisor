@@ -134,16 +134,17 @@ Scheduler.prototype = {
       },
       callback);
   },
-  // searches for task jobs of a given user id
-  getSchedules: function(uid, callback) {
-    if(!uid) {
+  // searches for task jobs of a given customer id
+  // TODO method naming could be improved if it's not gonna be a generic getter
+  getSchedules: function(cid, callback) {
+    if(!cid) {
       return callback(new Error('user id must be provided'));
     }
     this.agenda.jobs(
       {
         $and:[
           {name: 'task'},
-          {'data.user_id': uid}
+          {'data.customer_id': cid}
         ]
       },
       callback);
