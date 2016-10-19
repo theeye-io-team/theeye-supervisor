@@ -21,7 +21,10 @@ var EntitySchema = new BaseSchema({
     'default':function(){return [];}
   }],
   grace_time: { type: Number, 'default': 0 }
-},{ collection: 'tasks' });
+},{
+  collection: 'tasks',
+  discriminatorKey: '_type'
+});
 
 exports.EntitySchema = EntitySchema;
 

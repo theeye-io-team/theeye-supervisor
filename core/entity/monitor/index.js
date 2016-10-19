@@ -8,7 +8,9 @@ var Template = require('./template').Entity;
 var Resource = require('../resource').Entity;
 var logger = require('../../lib/logger')('eye:entity:monitor');
 
-var properties = {
+
+/** Extended Schema. Includes non template attributes **/
+var MonitorSchema = BaseSchema.EntitySchema.extend({
   host_id: { type: String, required: true },
   host: { type: ObjectId, ref: 'Host' },
   resource: { type: ObjectId, ref: 'Resource' },
@@ -17,10 +19,7 @@ var properties = {
   creation_date: { type: Date, 'default': Date.now },
   last_update: { type: Date, 'default': Date.now },
   template: { type: ObjectId, ref: 'MonitorTemplate', 'default': null }
-}
-
-/** Extended Schema. Includes non template attributes **/
-var MonitorSchema = BaseSchema.EntitySchema.extend(properties);
+});
 
 /**
  * extends publishing method to include Entity specific definitions
@@ -53,12 +52,7 @@ MonitorSchema.methods.publish = function(options, next)
 MonitorSchema.methods.toTemplate = function(doneFn)
 {
   var entity = this;
-  var values = {};
-
-  for(var key in BaseSchema.properties){
-    values[ key ] = entity[ key ];
-  }
-  
+  var values = this.toObject();
   var template = new Template(values);
   template.save(function(error){
     doneFn(error, template);
