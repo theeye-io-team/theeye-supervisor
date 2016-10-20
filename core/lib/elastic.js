@@ -11,8 +11,8 @@ var request = require("request").defaults({
 var ElasticSearch = {
   submit : function(index,key,data)
   {
-    var prefix = config.elasticsearch.keys.prefix
-    if( prefix ) key = prefix + key ;
+    //var prefix = config.elasticsearch.keys.prefix
+    //if( prefix ) key = prefix + key ;
 
     if( ! config.elasticsearch.enabled ){
       logger.log('elastic search disabled by config');
