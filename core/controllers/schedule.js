@@ -71,7 +71,7 @@ var controller = {
     if(!task) return res.send(404,'task not found');
     if(!scheduleId) res.send(400,'schedule id required');
 
-    Scheduler.cancelTaskSchedule(task.id, scheduleId, function(err, qtyRemoved){
+    Scheduler.cancelTaskSchedule(task, scheduleId, function(err, qtyRemoved){
       if(err) {
         logger.error('Scheduler had an error canceling schedule %s',scheduleId);
         logger.error(err);
