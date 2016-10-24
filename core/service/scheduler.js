@@ -48,6 +48,7 @@ Scheduler.prototype = {
 
     agenda.on('complete', function(job) {
       logger.log('job %s completed', job.attrs.name);
+      //TODO nice place to check for schedules and ensure tag
     });
 
     agenda.on('error', function(err, job) {
@@ -101,16 +102,66 @@ Scheduler.prototype = {
       scheduleData : schedule
     };
 
-    // runDate is milliseconds
+    // runDate is miliseconds
     var date = new Date(schedule.runDate);
     var frequency = schedule.repeatEvery || false;
-    this.schedule(date,"task",data,frequency,done);
+
+    var self = this;
+    this.schedule(date,"task",data,frequency, function(err){
+      if(err) {
+        return done(err);
+      }
+      // If everything went well, ensure 'scheduled' tag on the task
+      self.tagThatTask(task, done);
+    });
+  },
+  /*
+  * Given a task, this method will ensure it has a 'scheduled' tag
+  */
+  tagThatTask: function(task, callback) {
+    var tags = [].concat(task.tags);
+
+    if(!~tags.indexOf("scheduled")) {
+      tags.push("scheduled");
+      task.update({tags:tags}, callback);
+    }else{
+      callback();
+    }
+  },
+  // When untaggin we only got ID, find and check
+  untagTask: function(task, callback) {
+    var tags = [].concat(task.tags);
+
+    if(!!~tags.indexOf("scheduled")) {
+      tags.splice(tags.indexOf("scheduled"),1);
+      task.update({tags:tags}, callback);
+    }else{
+      callback();
+    }
+  },
+  handleScheduledTag: function(task, callback) {
+    if(!task) {
+      var err = new Error('Missing task');
+      err.statusCode = 400;
+      return callback(err);
+    }
+
+    var self = this;
+    this.taskSchedulesCount(task, function(err, count){
+      if(err) {
+        return callback(err);
+      }
+      if(count) { //has schedules
+        self.tagThatTask(task, callback);
+      }else{
+        self.untagTask(task, callback);
+      }
+    });
   },
   /**
    * Schedules a job for its starting date and parsing its properties
    */
   schedule: function(starting, jobName, data, interval, done) {
-    // var self = this;
     var agendaJob = this.agenda.create(jobName, data);
 
     agendaJob.schedule(starting);
@@ -149,17 +200,33 @@ Scheduler.prototype = {
       },
       callback);
   },
-  cancelTaskSchedule: function(taskId, scheduleId, callback) {
+
+  // Counts schedules for the given task
+  // @param callback: Function (err, schedulesCount)
+  taskSchedulesCount: function(task, callback) {
+    this.getTaskScheduleData(task._id, function(err, schedules){
+      return callback(err, err ? 0 : schedules.length);
+    });
+  },
+  //Cancels a specific scheduleId. Task if provided for further processing
+  cancelTaskSchedule: function(task, scheduleId, callback) {
     if(!scheduleId) {
       return callback(new Error('schedule id must be provided'));
     }
+    var self = this;
     // la verdad es que con el schedule id alcanza
     this.agenda.cancel({
       $and:[
         {name: 'task'},
         {_id: new ObjectId(scheduleId)}
       ]
-    }, callback);
+    }, function(err, numRemoved){
+      if(err) {
+        return callback(err);
+      }
+      // numRemoved is lost through the callbacks, don't count on it
+      self.handleScheduledTag(task, callback);
+    });
   },
   taskProcessor: function(agendaJob, done) {
     logger.log('////////////////////////////////////////');
