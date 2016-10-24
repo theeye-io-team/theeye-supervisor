@@ -105,7 +105,7 @@ var controller = {
       user: user,
       description: description,
       name: name,
-      public: req.body.public || false,
+      public: (req.body.public||false),
       script: script,
     },function(error,script){
       if(error) {

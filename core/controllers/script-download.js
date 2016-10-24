@@ -22,32 +22,29 @@ var controller = {
     var id = req.params.id;
 
     Script.findById(id, function(error,script){
-      if(!script) {
-        res.send(404, json.error('not found'));
-      } else {
-        ScriptService.getScriptStream(
-          script,
-          function(error,stream)
-          {
-            if(error) {
-              debug.error(error.message);
-              res.send(500, json.error('internal error',null));
-            } else {
-              debug.log('streaming script to client');
-              res.writeHead(200,{
-                'Content-Disposition': 'attachment; filename=' + script.filename,
-                // don't add this headers because if server use gzip 
-                // content type and length should be calculated accordingly
-                // this is only for documentation purpose
-                //
-                //'Content-Length' : script.size,
-                //'Content-Type' : script.mimetype
-              });
-              stream.pipe(res);
-            }
+      if(!script) return res.send(404, json.error('not found'));
+
+      ScriptService.getScriptStream(script, (error,stream) => {
+        if(error) {
+          debug.error(error.message);
+          res.send(500, json.error('internal error',null));
+        } else {
+          debug.log('streaming script to client');
+
+          // don't add this headers because if server use gzip 
+          // content type and length should be calculated accordingly
+          // this is only for documentation purpose
+          //
+          //'Content-Length' : script.size,
+          //'Content-Type' : script.mimetype
+
+          var headers = {
+            'Content-Disposition': 'attachment; filename=' + script.filename,
           }
-        );
-      }
+          res.writeHead(200,headers);
+          stream.pipe(res);
+        }
+      });
     });
     next();
   }

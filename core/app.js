@@ -20,7 +20,6 @@ var app = {
 
     server.use(restify.acceptParser(server.acceptable));
     server.use(restify.gzipResponse());
-    //server.use(restify.bodyParser());
     server.use(restify.queryParser());
     server.use(restify.jsonBodyParser());
     server.use(passport.initialize());
@@ -30,6 +29,7 @@ var app = {
         return filename;
       }
     }));
+
     server.use(function crossOrigin(req,res,next){
       res.header('Access-Control-Allow-Origin' , '*');
       res.header('Access-Control-Allow-Methods', '*');

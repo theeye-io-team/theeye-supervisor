@@ -269,7 +269,7 @@ function createScraperJob(input, done){
 function ResultMail ( job ) {
 
   this.ScriptJob = function( job, mails ) {
-    var stdout, stderr, code, result = job.result;
+    var stdout, stderr, code, result = job.result.script_result;
     if (result) {
       stdout = result.stdout ? result.stdout.trim() : 'no stdout';
       stderr = result.stderr ? result.stderr.trim() : 'no stderr';
