@@ -5,7 +5,7 @@ var lodash = require('lodash');
 var mongodb = require('../../lib/mongodb').db;
 var BaseSchema = require('./schema');
 var Template = require('./template').Entity;
-var logger = require('../../lib/logger')('eye:entity:task');
+// var logger = require('../../lib/logger')('eye:entity:task');
 var Script = require('../script').Entity;
 var Host = require('../host').Entity;
 
@@ -64,7 +64,7 @@ TaskSchema.methods.publish = function(next) {
     if( ! err || script != null ) options.script = script;
     doneFn();
   });
-}
+};
 
 
 /**
@@ -74,7 +74,6 @@ TaskSchema.methods.publish = function(next) {
  *
  */
 TaskSchema.methods.toTemplate = function(doneFn) {
-  var entity = this;
   var values = this.toObject();
   var template = new Template(values);
   template.save(function(error){
@@ -118,6 +117,7 @@ Task.on('afterUpdate',function(model){
 Task.on('afterInsert',function(model){
 });
 Task.on('afterRemove',function(model){
+  // TODO: this is a good place to cancel any schedule on the task
 });
 
 exports.Entity = Task;
