@@ -16,27 +16,27 @@ EntitySchema.virtual('id').get(function(){
 });
 
 const specs = {
-	getters: true,
-	virtuals: true,
-	transform: function (doc, ret, options) {
-		// remove the _id of every document before returning the result
-		ret.id = ret._id;
-		delete ret._id;
-		delete ret.__v;
-	}
-}
+  getters: true,
+  virtuals: true,
+  transform: function (doc, ret, options) {
+    // remove the _id of every document before returning the result
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+  }
+};
 
 EntitySchema.set('toJSON', specs);
 EntitySchema.set('toObject', specs);
 
 EntitySchema.statics.create = function(tags,customer,next){
-  next||(next=function(){});
+  next||(next=function(){}); //malisimo esto
   if(!tags||tags.length===0) return next();
   var data = tags.map(tag => {
     return {
       name: tag,
       customer: mongoose.Types.ObjectId( customer._id )
-    }
+    };
   });
 
   // find or create
@@ -44,10 +44,11 @@ EntitySchema.statics.create = function(tags,customer,next){
   var created = lodash.after(data.length, () => next(null, instances) );
   data.forEach( tag => {
     Entity.findOne(tag , (err, model) => {
+      //TODO capturar el error para que no se convierta en un horror de debugeo
       if( ! model ) {
         model = new Entity(tag);
         model.save( err => {
-          if( ! err ) instances.push( model ); 
+          if( ! err ) instances.push( model );
           created();
         });
       } else {
@@ -56,7 +57,7 @@ EntitySchema.statics.create = function(tags,customer,next){
       }
     });
   });
-}
+};
 
 EntitySchema.index({ name: 1, customer: 1 },{ unique: true });
 
