@@ -11,7 +11,7 @@ var async = require('async');
 var _ = require('lodash');
 
 var validator = require('validator');
-var filter = require('../router/param-filter');
+// var filter = require('../router/param-filter');
 var elastic = require('../lib/elastic');
 var config = require('config');
 
@@ -79,7 +79,7 @@ var TaskService = {
         return next(error);
       }
 
-      var notFound = tasks == null || 
+      var notFound = tasks == null ||
         (tasks instanceof Array && tasks.length === 0);
 
       if( notFound ) {
@@ -149,7 +149,7 @@ var TaskService = {
         } else {
           asyncCb(new Error('invalid host id ' + hostId), null);
         }
-      })
+      });
     }
 
     var hosts = input.hosts ;
@@ -169,9 +169,9 @@ var TaskService = {
    */
   createFromTemplate (options) {
     var template = options.templateData, // plain object
-    host = options.host,
-    customer = options.customer,
-    doneFn = options.done;
+      host = options.host,
+      customer = options.customer,
+      doneFn = options.done;
 
     debug('creating task from template %j', template);
 
@@ -215,10 +215,11 @@ var TaskService = {
     }
 
     debug('creating task with host id %s', input.host_id);
+    var task;
     if( input.type == 'scraper' ){
-      var task = new ScraperTask(input);
+      task = new ScraperTask(input);
     } else {
-      var task = new Task(input);
+      task = new Task(input);
     }
 
     task.save(err => {
@@ -245,6 +246,7 @@ var TaskService = {
   }
 };
 
+
 /**
  *
  * handle tasks.
@@ -256,22 +258,23 @@ var TaskService = {
  * @param {Function} done
  *
  */
-TaskService.tasksToTemplates = function( 
-  tasks, 
+TaskService.tasksToTemplates = function(
+  tasks,
   customer,
   user,
-  done 
+  done
 ) {
+  var err;
   if(!tasks) {
-    var e = new Error('tasks definition required');
-    e.statusCode = 400;
-    return done(e);
+    err = new Error('tasks definition required');
+    err.statusCode = 400;
+    return done(err);
   }
 
   if(! Array.isArray(tasks)) {
-    var e = new Error('tasks must be an array');
-    e.statusCode = 400;
-    return done(e);
+    err = new Error('tasks must be an array');
+    err.statusCode = 400;
+    return done(err);
   }
 
   if(tasks.length == 0) {
@@ -293,9 +296,9 @@ TaskService.tasksToTemplates = function(
     debug('processing task %j', value);
 
     if( Object.keys( value ).length === 0 ) {
-      var e = new Error('invalid task definition');
-      e.statusCode = 400;
-      return done(e);
+      err = new Error('invalid task definition');
+      err.statusCode = 400;
+      return done(err);
     }
 
     // create template from existent task
@@ -309,18 +312,18 @@ TaskService.tasksToTemplates = function(
           templatized();
         });
       } else {
-        var e = new Error('invalid task id');
-        e.statusCode = 400;
-        return done(e);
+        err = new Error('invalid task id');
+        err.statusCode = 400;
+        return done(err);
       }
     } else {
       // validate, set & instantiate template with data
       validateTaskTemplateData(value, function(valErr, data) {
         if(valErr || !data) {
-          var e = new Error('invalid task data');
-          e.statusCode = 400;
-          e.data = valErr;
-          return done(e);
+          err = new Error('invalid task data');
+          err.statusCode = 400;
+          err.data = valErr;
+          return done(err);
         }
 
         data.customer = customer;
@@ -334,7 +337,7 @@ TaskService.tasksToTemplates = function(
       });
     }
   }
-}
+};
 
 /**
  * @author Facundo
