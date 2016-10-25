@@ -1,6 +1,10 @@
-var config = require('config');
-var logger = require('./logger')(':elastic');
-var path = require('path');
+"use strict";
+
+const path = require('path');
+
+const extend = require('util')._extend;
+const CustomerService = require('../service/customer');
+const logger = require('./logger')(':elastic');
 
 var request = require("request").defaults({
   timeout: 5000,
@@ -8,40 +12,50 @@ var request = require("request").defaults({
   gzip: true
 });
 
-var ElasticSearch = {
-  submit : function(index,key,data)
-  {
-    //var prefix = config.elasticsearch.keys.prefix
-    //if( prefix ) key = prefix + key ;
+module.exports = {
+  submit (customerName,key,data) {
+    CustomerService.getCustomerConfig(
+      { name: customerName },
+      function(err,config){
 
-    if( ! config.elasticsearch.enabled ){
-      logger.log('elastic search disabled by config');
-      return;
-    }
+        if(err||!config) return logger.error('no config. elastic search submit failed');
 
-    var elastic = config.elasticsearch ;
-    if( !elastic.url || !elastic.db ){
-      return logger.log('ERROR invalid elasticsearch configuration.');
-    }
+        //
+        // do not use prefix , it changes the sns keys and breaks the comunication with the clients
+        //
+        //var prefix = config.elasticsearch.keys.prefix
+        //if( prefix ) key = prefix + key ;
+        var elastic = config.elasticsearch;
+        if(!elastic){
+          return logger.error('FATAL - elastic config key not set');
+        }
 
-    data.type = key;
-    data.timestamp || ( data.timestamp = (new Date()).getTime() );
-    data.date || ( data.date = (new Date()).toISOString() );
+        if( elastic.enabled === false ){
+          logger.log('elastic search disabled by config');
+          return;
+        }
 
-    var url = elastic.url + '/' + path.join(index,key);
+        if( ! elastic.url ){
+          return logger.error('ERROR invalid elasticsearch configuration.');
+        }
 
-    request.post({
-      url: url,
-      body: data
-    },function(err,respose,body){
-      if(err) {
-        logger.error('ERROR %s',err);
-        logger.error(arguments);
-        return;
-      }
-      logger.log('submit done to %s', url);
-    });
+        data.type = key;
+        data.timestamp || ( data.timestamp = (new Date()).getTime() );
+        data.date || ( data.date = (new Date()).toISOString() );
+
+        var url = elastic.url + '/' + path.join(customerName,key);
+
+        request.post({
+          url: url,
+          body: data
+        },function(err,respose,body){
+          if(err) {
+            logger.error('ERROR %s',err);
+            logger.error(arguments);
+            return;
+          }
+          logger.log('submit done to %s', url);
+        });
+      });
   }
 }
-
-module.exports = ElasticSearch ;

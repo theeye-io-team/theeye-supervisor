@@ -1,13 +1,13 @@
 var config = require("config");
-var _ = require("underscore");
 var logger = require("../lib/logger")("service:customer");
+var merge = require('lodash/merge');
 
 var Customer = require("../entity/customer").Entity ;
 var User = require("../entity/user").Entity ;
 var ResourceMonitor = require("../entity/user").Entity ;
 
 
-var Service = module.exports = {
+module.exports = {
   /**
    * search every user of with this customer
    * and extract its email.
@@ -44,10 +44,8 @@ var Service = module.exports = {
 
         if( Array.isArray(users) && users.length > 0 ){
           users.forEach( user => {
-            if( user.email ){
-              emails.push(user.email) 
-            }
-          })
+            if( user.email ) emails.push(user.email) 
+          });
         }
 
         return next(null, emails);
@@ -58,20 +56,32 @@ var Service = module.exports = {
    *
    *
    */
-  getCustomerConfig : function(customer_id,next)
-  {
-    Customer.findById(customer_id, function(error,customer){
+  getCustomerConfig: function(customer,next) {
+    if(!next) return;
+
+    var query = (customer instanceof String) ? { _id : customer } : customer;
+
+    Customer.findOne(query, function(error,customer){
       if(error){
         logger.error(error);
         return next(error);
       }
+
       if(!customer){
         logger.error('customer %s not found', customer_id);
         return next(error);
       }
-      // replace default options with customer defined options
-      var cconfig = _.extend(config.get("monitor"), customer.config);
-      if(next) next(null, cconfig);
+
+      var basecfg = {
+        monitor: config.get("monitor")||{},
+        elasticsearch: config.get("elasticsearch")||{enabled:false} // no config available
+      };
+
+      // deep replace objects properties
+      var ccfg = merge({}, basecfg, (customer.config||{}));
+
+      // extend default config options with customer defined options
+      if(next) return next(null,ccfg);
     });
   },
   /**

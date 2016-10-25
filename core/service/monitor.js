@@ -70,7 +70,7 @@ function runChecks(resource,done) {
         case 'process':
         case 'dstat':
         case 'psaux':
-          checkResourceMonitorStatus(resource,cconfig,done);
+          checkResourceMonitorStatus(resource,cconfig.monitor,done);
           break;
         case 'default':
           logger.error('unhandled resource %s', resource.type);

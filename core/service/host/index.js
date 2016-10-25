@@ -28,7 +28,7 @@ HostService.prototype = {
       host.customer_id,
       function(error,config){
         host.fails_count += 1;
-        var maxFails = config.fails_count_alert;
+        var maxFails = config.monitor.fails_count_alert;
         logger.log('fails count %d/%d', host.fails_count, maxFails);
 
         if( host.fails_count > maxFails ) {

@@ -22,8 +22,6 @@ module.exports = {
     /* cantidad de fallas antes de emitir alertas */
     "fails_count_alert": 3,
     /* cada cuanto tiempo chequear estado */
-    "agents_check_disconnected_interval_milliseconds": 20000,
-    /* cada cuanto tiempo chequear estado */
     "resources_check_failure_interval_milliseconds": 10000,
     /* despues de cuantos milisegundos de no actualizar estado entra en alerta */
     "resources_alert_failure_threshold_milliseconds": 30000
@@ -102,7 +100,7 @@ module.exports = {
       "jobs": ""
     }
   },
-  // development no AWS-SNS endpoints
+  // direct [ supervisor > web ] notifications - no AWS-SNS endpoints
   "web-sns":{
     "topicEndpoint": {
       "events": "/events/update",
@@ -113,7 +111,6 @@ module.exports = {
   "elasticsearch": {
     "enabled":false,
     "url":"",
-    "db":"",
     "keys":{
       "prefix":null,
       "agent":{

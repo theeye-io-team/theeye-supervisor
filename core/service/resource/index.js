@@ -27,15 +27,6 @@ const Constants = require('../../constants/monitors');
 function Service(resource) {
   var _resource = resource;
 
-  function getCustomerConfig (customer_id, done) {
-    CustomerService.getCustomerConfig(
-      customer_id,
-      (error,config) => {
-        done(config);
-      }
-    );
-  }
-
   function logStateChange (resource,input) {
     var data = {
       'date': (new Date()).toISOString(),
@@ -270,23 +261,27 @@ function Service(resource) {
     var state = filterStateEvent(input.state);
     input.state = state;
 
-    getCustomerConfig(
+    CustomerService.getCustomerConfig(
       resource.customer_id,
-      (config) => {
-        if(!config) throw new Error('config not found');
+      (err,config) => {
+
+        var monitorConfig = config.monitor;
+
+        if(err||!config) throw new Error('customer config unavailable');
+
         switch(input.state) {
           case Constants.RESOURCE_NORMAL :
             input.last_update = Date.now();
-            handleNormalState(resource,input,config);
+            handleNormalState(resource,input,monitorConfig);
             break;
           case Constants.AGENT_STOPPED :
           case Constants.RESOURCE_STOPPED :
-            handleUpdatesStoppedState(resource,input,config);
+            handleUpdatesStoppedState(resource,input,monitorConfig);
             break;
           default:
           case Constants.RESOURCE_FAILURE :
             input.last_update = Date.now();
-            handleFailureState(resource,input,config);
+            handleFailureState(resource,input,monitorConfig);
             break;
         }
 
