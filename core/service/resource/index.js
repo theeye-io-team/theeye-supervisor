@@ -138,7 +138,7 @@ function Service(resource) {
       }
     }
     resource.save( err => {
-      if(err) logger.error(err) 
+      if(err) logger.error(err, err.errors) 
     });
   }
 
@@ -175,7 +175,7 @@ function Service(resource) {
         });
       }
       resource.save( err => {
-        if(err) logger.error(err) 
+        if(err) logger.error(err, err.errors) 
       });
     }
   }
@@ -215,7 +215,7 @@ function Service(resource) {
       }
     }
     resource.save( err => {
-      if(err) logger.error(err) 
+      if(err) logger.error(err, err.errors) 
     });
   }
 

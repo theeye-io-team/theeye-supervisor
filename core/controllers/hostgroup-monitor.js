@@ -216,7 +216,7 @@ var controller = {
           group, templates, function(err){
             if(err) return res.send(500);
             let template = templates[0].monitor_template;
-            res.send(200, { 'monitor':template });
+            res.send(200, { 'monitor': template });
           }
         );
       }
@@ -237,15 +237,14 @@ var controller = {
     if(!req.monitortemplate) return res.send(404,'monitor not found');
     if(!req.body.monitor) return res.send(400,'invalid request. monitor required');
 
+    input.name||(input.name=input.description);
+    input.description||(input.description=input.name);
+
     monitortemplate.update(input, function(err,qr){
       monitortemplate.populate(function(err){
         var resourcetemplate = monitortemplate.template_resource;
-        var updates = {
-          'name': input.name,
-          'description': input.description
-        }; 
         // updates resource template
-        resourcetemplate.update(updates,function(err){
+        resourcetemplate.update(input,function(err){
 
           registerCRUDOperation(req.customer.name,{
             'template':req.group.hostname_regex,

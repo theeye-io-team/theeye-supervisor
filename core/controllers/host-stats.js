@@ -1,26 +1,14 @@
 var json = require('../lib/jsonresponse');
 var debug = require('../lib/logger')('controller:host-stats');
-var paramResolver = require('../router/param-resolver');
+var resolver = require('../router/param-resolver');
 var HostStats = require('../entity/host/stats').Entity;
 
 module.exports = function(server, passport) {
-  server.get('/host/:host/stats',[
+  server.get('/:customer/host/:host/stats',[
     passport.authenticate('bearer', {session:false}),
-    paramResolver.idToEntity({ param:'host' })
+    resolver.customerNameToEntity({required:true}),
+    resolver.idToEntity({param:'host',required:true})
   ],controller.fetch);
-
-  return {
-    routes: [
-      {
-        route: '/host/:host/stats',
-        method: 'get',
-        middleware: [
-          paramResolver.idToEntity({ param:'host' })
-        ],
-        action: controller.fetch
-      },
-    ]
-  };
 }
 
 var controller = {
@@ -28,7 +16,7 @@ var controller = {
     var host = req.host;
     var type = req.query.type;
 
-    var query = { host_id:host._id };
+    var query = { host_id: host._id };
     if(type) query.type = type;
 
     HostStats.find(query,function(error,stats){
@@ -36,11 +24,7 @@ var controller = {
         debug.error('error fetching host stats');
         res.send(500, json.failure('internal error'));
       } else {
-        var pubs = [];
-        stats.forEach(function(stat){
-          pubs.push(stat.publish());
-        });
-        res.send(200, { stats: pubs });
+        res.send(200, stats);
       }
     });
   }

@@ -55,8 +55,8 @@ exports.createResourceMonitorsTemplates = function (input, done){
     'type': input.type,
     'customer_id' : input.customer_id,
     'customer_name' : input.customer_name,
-    'name' : input.name,
-    'description' : input.description,
+    'name' : input.name||input.description,
+    'description' : input.description||input.name,
     'user_id' : input.user_id
   }
 

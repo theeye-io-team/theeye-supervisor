@@ -25,26 +25,25 @@ var controller = {
 
     debug.log('Handling host psaux data');
 
-    HostStats.findOneByHostAndType(
-      host._id,
-      'psaux',
-      function(error,psaux){
-        if(error) {
-          debug.error(error);
-        } else if(psaux == null) {
-          debug.log('creating host psaux');
-          HostStats.create(host,'psaux',stats);
-        } else {
-          debug.log('updating host psaux');
+    HostStats.findOne({
+      host_id: host._id,
+      type: 'psaux'
+    },function(error,psaux){
+      if(error) {
+        debug.error(error);
+      } else if(psaux == null) {
+        debug.log('creating host psaux');
+        HostStats.create(host,'psaux',stats);
+      } else {
+        debug.log('updating host psaux');
 
-          var date = new Date();
-          psaux.last_update = date ;
-          psaux.last_update_timestamp = date.getTime() ;
-          psaux.stats = stats ;
-          psaux.save();
-        }
+        var date = new Date();
+        psaux.last_update = date ;
+        psaux.last_update_timestamp = date.getTime() ;
+        psaux.stats = stats ;
+        psaux.save();
       }
-    );
+    });
 
     let options = {
       'type':'psaux',

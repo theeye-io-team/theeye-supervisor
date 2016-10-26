@@ -7,32 +7,16 @@ var config = require('config');
 
 var elastic = require('../lib/elastic');
 
-module.exports = function(server, passport) {
+module.exports = function(server, passport){
   server.post('/:customer/dstat/:hostname',[
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.customerNameToEntity({}),
+    passport.authenticate('bearer',{session:false}),
+    paramsResolver.customerNameToEntity({required:true}),
     paramsResolver.hostnameToHost({})
   ],controller.create);
-
-/**
-  return {
-    routes: [
-      {
-        route: '/dstat/:hostname',
-        method: 'post',
-        middleware: [
-          paramsResolver.customerNameToEntity({}),
-          paramsResolver.hostnameToHost({})
-        ],
-        action: controller.create
-      }
-    ]
-  }
-  */
 }
 
 var controller = {
-  create : function create(req, res, next) {
+  create (req, res, next) {
     logger.log('Handling host dstat data');
 
     var host = req.host;
@@ -42,23 +26,24 @@ var controller = {
     if(!host) return res.send(404,'host not found');
     if(!stats) return res.send(400,'no stats supplied');
 
-    HostStats.findOneByHostAndType(host._id,'dstat',
-      function(error,dstat){
-        if(error) return logger.error(error);
-        if(dstat == null) {
-          logger.log('creating host dstat');
-          HostStats.create(host,'dstat',stats);
-        } else {
-          logger.log('updating host dstat');
+    HostStats.findOne({
+      host_id: host._id,
+      type:'dstat'
+    },function(error,dstat){
+      if(error) return logger.error(error);
+      if(dstat == null) {
+        logger.log('creating host dstat');
+        HostStats.create(host,'dstat',stats);
+      } else {
+        logger.log('updating host dstat');
 
-          var date = new Date();
-          dstat.last_update = date ;
-          dstat.last_update_timestamp = date.getTime() ;
-          dstat.stats = stats ;
-          dstat.save();
-        }
+        var date = new Date();
+        dstat.last_update = date ;
+        dstat.last_update_timestamp = date.getTime() ;
+        dstat.stats = stats ;
+        dstat.save();
       }
-    );
+    });
 
     logger.log('resending dstat data');
 
