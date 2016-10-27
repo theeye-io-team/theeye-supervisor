@@ -105,13 +105,16 @@ var controller = {
     var filter = dbFilter(
       extend( (req.query||{}) , {
         where:{
-          customer: req.customer
+          customer: req.customer._id
         }
       })
     );
 
     Webhook.find(filter.where, (err, webhooks) => {
-      if(err) return res.send(500);
+      if(err) {
+        logger.error(err);
+        return res.send(500);
+      }
       res.send(200, webhooks);
     });
   },
