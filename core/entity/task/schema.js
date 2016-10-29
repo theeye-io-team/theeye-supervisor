@@ -1,11 +1,13 @@
 "use strict";
 
 require('mongoose-schema-extend');
-var debug = require('debug')('entity:task');
-var BaseSchema = require('../base-schema');
+const debug = require('debug')('entity:task');
 const Schema = require('mongoose').Schema;
-var lodash = require('lodash');
+const lodash = require('lodash');
 const lifecicle = require('mongoose-lifecycle');
+const crypto = require('crypto');
+
+var BaseSchema = require('../base-schema');
 
 var EntitySchema = new BaseSchema({
   user_id : { type: String, 'default': null },
@@ -20,11 +22,37 @@ var EntitySchema = new BaseSchema({
     ref: 'Event',
     'default':function(){return [];}
   }],
+  secret: {type:String,'default':function(){
+    // one way hash
+    return crypto.createHmac('sha256','THEEYE-TASK-' + Math.random())
+    .update( new Date().toISOString() )
+    .digest('hex');
+  }},
   grace_time: { type: Number, 'default': 0 }
 },{
   collection: 'tasks',
   discriminatorKey: '_type'
 });
+
+// Duplicate the ID field.
+EntitySchema.virtual('id').get(function(){
+  return this._id.toHexString();
+});
+
+const def = {
+  getters: true,
+  virtuals: true,
+  transform: function (doc, ret, options) {
+    // remove the _id of every document before returning the result
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    delete ret.secret;
+  }
+}
+
+EntitySchema.set('toJSON'  , def);
+EntitySchema.set('toObject', def);
 
 exports.EntitySchema = EntitySchema;
 

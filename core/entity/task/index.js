@@ -5,10 +5,8 @@ var lodash = require('lodash');
 var mongodb = require('../../lib/mongodb').db;
 var BaseSchema = require('./schema');
 var Template = require('./template').Entity;
-// var logger = require('../../lib/logger')('eye:entity:task');
 var Script = require('../script').Entity;
 var Host = require('../host').Entity;
-
 
 /**
  * Extended Schema. Includes non template attributes
@@ -88,17 +86,18 @@ TaskSchema.methods.toTemplate = function(doneFn) {
  */
 TaskSchema.statics.create = function(input,next) {
   var instance = new this();
-  instance.host_id          = input.host ? input.host._id : null ;
-  instance.customer_id      = input.customer._id;
-  instance.script_id        = input.script._id;
+  instance.host = (input.host||null);
+  instance.host_id = (input.host?input.host._id:null);
+  instance.customer_id = input.customer._id;
+  instance.script_id = input.script._id;
   instance.script_arguments = input.script_arguments;
-  instance.script_runas     = input.script_runas;
-  instance.user_id          = input.user._id;
-  instance.name             = input.name || null;
-  instance.public           = input.public || false;
-  instance.template         = input.template_id || null;
-  instance.description      = input.description || null;
-  instance.tags             = input.tags;
+  instance.script_runas = input.script_runas;
+  instance.user_id = input.user._id;
+  instance.public = (input.public||false);
+  instance.name = (input.name||null);
+  instance.template = (input.template_id||null);
+  instance.description = (input.description||null);
+  instance.tags = input.tags;
   instance.save(function(err,entity){
     next(err, entity);
   });

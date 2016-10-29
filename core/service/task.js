@@ -45,6 +45,8 @@ var TaskService = {
   update:function(options){
     var task = options.task;
     var updates = options.updates;
+    updates.host = updates.host_id;
+
     task.update(updates, function(error){
       if(error){
         return options.fail(error);
@@ -105,31 +107,7 @@ var TaskService = {
       }
     });
   },
-  /**
-  createResourceTask : function (input, doneFn){
-    var hostId = input.resource.host_id;
-    Host.findById(hostId, function(error, host){
-      input.host = host;
-      Task.create(input, function(error, task){
-
-        registerTaskCRUDOperation(input.customer.name,{
-          'name':task.name,
-          'customer_name':input.customer.name,
-          'user_id':input.user.id,
-          'user_email':input.user.email,
-          'operation':'create'
-        });
-
-        task.publish((published) => {
-          debug('host id %s task created', hostId);
-          doneFn(null, published);
-        });
-      });
-    });
-  },
-  */
   createManyTasks (input, doneFn) {
-    var self = this;
     var create = [];
     debug('creating tasks');
 
@@ -139,7 +117,8 @@ var TaskService = {
           Host.findById(hostId, function(error, host){
             if(error) return asyncCb(error);
             if(!host) return asyncCb(new Error('not found host id ' + hostId));
-            self.create( _.extend({}, input, {
+
+            TaskService.create(_.extend({}, input, {
               host: host,
               host_id: host._id,
               customer_id: input.customer._id,

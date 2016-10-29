@@ -92,14 +92,14 @@ var controller = {
   update : function(req,res,next) {
     var resource = req.resource;
     var input = req.params;
-    var state = req.params.state ;
+    var state = req.params.state;
 
-    if(!resource) {
+    if(!resource){
       res.send(404,json.error('resource not found'));
       return next();
     }
 
-    if(!state) {
+    if(!state){
       res.send(400,json.error('resource state is required'));
       return next();
     }
@@ -109,7 +109,7 @@ var controller = {
       if(!error) {
         res.send(200);
       } else {
-        res.send(500, json.error('internal server error'));
+        res.send(500,json.error('internal server error'));
       }
     });
   },

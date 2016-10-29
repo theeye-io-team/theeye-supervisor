@@ -15,7 +15,7 @@ function BaseSchema (specs) {
     customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
     secret: { type: String, 'default': function(){
       // one way hash
-      return crypto.createHmac('sha256','THEEYE' + Math.random())
+      return crypto.createHmac('sha256','THEEYE-WEBHOOK-' + Math.random())
       .update( new Date().toISOString() )
       .digest('hex');
     }}

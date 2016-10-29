@@ -143,7 +143,6 @@ var controller = {
    * @param ...
    *
    */
-
   patch (req, res, next) {
     if(!req.task) return res.send(404);
     var input = extend({},req.body);

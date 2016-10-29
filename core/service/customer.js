@@ -59,7 +59,7 @@ module.exports = {
   getCustomerConfig: function(customer,next) {
     if(!next) return;
 
-    var query = (customer instanceof String) ? { _id : customer } : customer;
+    var query = (typeof customer == "string") ? { _id : customer } : customer;
 
     Customer.findOne(query, function(error,customer){
       if(error){

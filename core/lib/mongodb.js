@@ -21,7 +21,16 @@ function connect () {
       config.database
     );
   }
-  return mongoose.createConnection(connection);
+
+  return mongoose.createConnection(connection,{
+    replset: {
+      socketOptions: {
+        keepAlive: 30*1000,
+        connectTimeoutMS: 60*1000,
+        socketTimeoutMS: 60*1000
+      }
+    }
+  });
 }
 
 function Connection () {
