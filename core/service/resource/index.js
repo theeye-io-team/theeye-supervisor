@@ -265,9 +265,8 @@ function Service(resource) {
       resource.customer_id,
       (err,config) => {
 
-        var monitorConfig = config.monitor;
-
         if(err||!config) throw new Error('customer config unavailable');
+        var monitorConfig = config.monitor;
 
         switch(input.state) {
           case Constants.RESOURCE_NORMAL :
