@@ -137,8 +137,12 @@ function Service(resource) {
         });
       }
     }
+
     resource.save( err => {
-      if(err) logger.error(err, err.errors) 
+      if(err){
+        logger.error('error saving resource %j', resource);
+        logger.error(err, err.errors);
+      }
     });
   }
 
@@ -174,8 +178,12 @@ function Service(resource) {
           data:input
         });
       }
+
       resource.save( err => {
-        if(err) logger.error(err, err.errors) 
+        if(err){
+          logger.error('error saving resource %j', resource);
+          logger.error(err, err.errors);
+        }
       });
     }
   }
@@ -215,7 +223,10 @@ function Service(resource) {
       }
     }
     resource.save( err => {
-      if(err) logger.error(err, err.errors) 
+      if(err){
+        logger.error('error saving resource %j', resource);
+        logger.error(err);
+      }
     });
   }
 
@@ -287,7 +298,10 @@ function Service(resource) {
         if(input.last_update) resource.last_update = input.last_update;
         if(input.last_check) resource.last_check = input.last_check;
         resource.save( err => {
-          if(err) logger.error(err);
+          if(err){
+            logger.error('error saving resource %j', resource);
+            logger.error(err);
+          }
         });
 
         // submit monitor result to elastic search
