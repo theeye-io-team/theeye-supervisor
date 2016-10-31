@@ -99,6 +99,9 @@ module.exports = {
     var errors = new ErrorHandler();
     var type = (input.type||input.monitor_type);
 
+    input.description||(input.description=input.name);
+    input.name||(input.name=input.description);
+
     if( !type ) errors.required('type',type);
     if( !input.looptime || !parseInt(input.looptime) ) errors.required('looptime',input.looptime);
     if( !input.description ) errors.required('description',input.description);
