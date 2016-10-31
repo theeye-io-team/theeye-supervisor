@@ -31,6 +31,9 @@ var controller = {
 
     Event.fetch({ customer: req.customer },(err,events) => {
       if(err) res.send(500);
+      if(!events||events.length==0){
+        return res.send(500,'workflow unavailable');
+      }
 
       var workflow = new Workflow();
       workflow.fromEvents(events);

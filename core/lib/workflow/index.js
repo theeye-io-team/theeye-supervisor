@@ -21,6 +21,8 @@ function Workflow () {
   this.fromEvents = function (events) {
     var g = _graph;
 
+    if(!events||!Array.isArray(events)||!(events.length>0)) return;
+
     function createNodeEvent ( event ) {
       var a = event.emitter;
       var b = event;

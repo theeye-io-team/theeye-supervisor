@@ -1,7 +1,9 @@
-var mongoose = require('mongoose');
-var config = require("config" ).get("mongo");
-var debug = require('debug')('lib:mongodb');
-var format = require('util').format;
+"use strinct";
+
+const mongoose = require('mongoose');
+const config = require("config" ).get("mongo");
+const debug = require('debug')('lib:mongodb');
+const format = require('util').format;
 
 function connect () {
   var connection;
@@ -21,6 +23,8 @@ function connect () {
       config.database
     );
   }
+
+  if(config.debug) mongoose.set("debug",true);
 
   return mongoose.createConnection(connection,{
     replset: {

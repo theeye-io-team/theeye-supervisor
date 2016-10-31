@@ -38,9 +38,9 @@ var controller = {
         logger.log('updating host dstat');
 
         var date = new Date();
-        dstat.last_update = date ;
-        dstat.last_update_timestamp = date.getTime() ;
-        dstat.stats = stats ;
+        dstat.last_update = date;
+        dstat.last_update_timestamp = date.getTime();
+        dstat.stats = stats;
         dstat.save();
       }
     });

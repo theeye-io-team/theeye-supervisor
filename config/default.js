@@ -1,9 +1,9 @@
 module.exports = {
-  "is_dev": false ,
+  "is_dev": false,
   "server": {
     "name": "TheEye",
-    "version": process.env.VERSION || "0.0.0",
-    "port": process.env.PORT || 60080,
+    "version": process.env.VERSION||"0.0.0",
+    "port": process.env.PORT||60080,
     "auth_strategy": "bearer"
   },
   "system": {
@@ -17,6 +17,14 @@ module.exports = {
   },
   "s3": {
     "bucket":"theeye.scripts"
+  },
+  "mongo":{
+    /**
+    "user":"",
+    "password":"",
+    "hosts": "localhost:27017",
+    "database": "theeye"
+    */
   },
   "monitor": {
     /* cantidad de fallas antes de emitir alertas */
