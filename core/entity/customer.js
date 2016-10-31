@@ -15,7 +15,12 @@ function Schema () {
     },
     description: { type: String, 'default': '' },
     emails: { type: Array, 'default': [] },
-    config: { type: Object, 'default': {} },
+    config: { type: Object, 'default': function(){
+      return {
+        monitor:{},
+        elasticsearch:{enabled:false}
+      };
+    } },
     creation_date: { type: Date, 'default': new Date() }
   });
 
