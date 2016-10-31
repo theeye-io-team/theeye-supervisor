@@ -105,6 +105,8 @@ var controller = {
     }
 
     var manager = new ResourceManager(resource);
+    input.last_update = Date.now();
+
     manager.handleState(input,function(error){
       if(!error) {
         res.send(200);

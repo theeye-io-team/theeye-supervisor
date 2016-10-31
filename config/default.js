@@ -10,7 +10,15 @@ module.exports = {
     "base_url": "",
     "web_url": "",
     "view_teamplates_path": __dirname + "/../core/view/template",
-    "file_upload_folder": "/tmp"
+    "file_upload_folder": "/tmp",
+    "user": {
+      "username": "theeye-automatic",
+      "email": "info@theeye.io",
+      "enabled": true,
+      "client_id": null,
+      "client_secret": null,
+      "token": null
+    }
   },
   "storage": {
     "driver": "s3" // local or s3
@@ -158,13 +166,5 @@ module.exports = {
     }
   },
   "events": {
-    "user": {
-      "email": "info@theeye.io",
-      "username": "theeye",
-      "enabled": true,
-      "client_id": null,
-      "client_secret": null,
-      "token": null
-    }
   }
 }

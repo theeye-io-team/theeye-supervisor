@@ -29,7 +29,7 @@ var controller = {
     var customer = req.customer;
     var node = req.params.node;
 
-    Event.fetch({ customer: req.customer },(err,events) => {
+    Event.fetch({ customer: req.customer._id },(err,events) => {
       if(err) res.send(500);
       if(!events||events.length==0){
         return res.send(500,'workflow unavailable');
