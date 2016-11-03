@@ -5,7 +5,7 @@ const debug = require('debug')('entity:task');
 const Schema = require('mongoose').Schema;
 const lodash = require('lodash');
 const lifecicle = require('mongoose-lifecycle');
-const crypto = require('crypto');
+const randomSecret = require('../../lib/random-secret');
 
 var BaseSchema = require('../base-schema');
 
@@ -22,12 +22,8 @@ var EntitySchema = new BaseSchema({
     ref: 'Event',
     'default':function(){return [];}
   }],
-  secret: {type:String,'default':function(){
-    // one way hash
-    return crypto.createHmac('sha256','THEEYE-TASK-' + Math.random())
-    .update( new Date().toISOString() )
-    .digest('hex');
-  }},
+  // one way hash
+  secret: {type:String,'default': randomSecret },
   grace_time: { type: Number, 'default': 0 }
 },{
   collection: 'tasks',

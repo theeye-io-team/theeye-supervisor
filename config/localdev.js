@@ -19,7 +19,7 @@ module.exports = {
     "resources_alert_failure_threshold_milliseconds": 30000
   },
   "mongo": {
-    "debug":true,
+    "debug":false,
     "user": "",
     "password": "",
     "hosts": "localhost:27017",

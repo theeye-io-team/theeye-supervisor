@@ -1,9 +1,9 @@
 "use strict";
 
-var crypto = require('crypto');
-var util = require('util');
-var Schema = require('mongoose').Schema;
-var async = require('async');
+const util = require('util');
+const Schema = require('mongoose').Schema;
+const async = require('async');
+const randomSecret = require('../../lib/random-secret');
 
 function BaseSchema (specs) {
 
@@ -14,12 +14,7 @@ function BaseSchema (specs) {
     last_update: { type: Date, 'default': null },
     enable: { type: Boolean, 'default': true },
     customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
-    secret: { type: String, 'default': function(){
-      // one way hash
-      return crypto.createHmac('sha256','THEEYE' + Math.random())
-      .update( new Date().toISOString() )
-      .digest('hex');
-    }}
+    secret: { type: String, 'default': randomSecret }
   }, specs),{
     collection: 'events',
     discriminatorKey: '_type'

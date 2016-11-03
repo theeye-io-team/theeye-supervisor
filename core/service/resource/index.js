@@ -137,13 +137,6 @@ function Service(resource) {
         });
       }
     }
-
-    resource.save( err => {
-      if(err){
-        logger.error('error saving resource %j', resource);
-        logger.error(err, err.errors);
-      }
-    });
   }
 
   function handleNormalState (resource,input,config) {
@@ -152,12 +145,18 @@ function Service(resource) {
     var failure_threshold = config.fails_count_alert;
     var isRecoveredFromFailure = Boolean(resource.state == Constants.RESOURCE_FAILURE);
 
+    resource.last_event = input;
+
     // failed at least once
     if(resource.fails_count != 0){
+
+      resource.state = Constants.RESOURCE_NORMAL;
+
       // resource failure was alerted ?
       if(resource.fails_count >= failure_threshold){
         logger.log('resource "%s" "%s" has been restored', resource.type, resource.name);
         input.severity = getEventSeverity(input);
+
         if(isRecoveredFromFailure){
           input.event||(input.event=input.state);
         } else {
@@ -165,26 +164,19 @@ function Service(resource) {
           input.event = Constants.RESOURCE_RECOVERED;
         }
 
-        resource.failure_severity = null;
-        resource.state = Constants.RESOURCE_NORMAL;
-        resource.fails_count = 0;
-        resource.last_event = input;
-
         sendResourceEmailAlert(resource,input);
         logStateChange(resource,input);
         dispatchResourceEvent(resource,Constants.RESOURCE_RECOVERED);
         dispatchStateChangeSNS(resource,{
-          message:input.message||'monitor normal',
+          message:(input.message||'monitor normal'),
           data:input
         });
+
+        resource.failure_severity = null;
       }
 
-      resource.save( err => {
-        if(err){
-          logger.error('error saving resource %j', resource);
-          logger.error(err, err.errors);
-        }
-      });
+      // reset state
+      resource.fails_count = 0;
     }
   }
 
@@ -222,12 +214,6 @@ function Service(resource) {
         });
       }
     }
-    resource.save( err => {
-      if(err){
-        logger.error('error saving resource %j', resource);
-        logger.error(err);
-      }
-    });
   }
 
   function dispatchStateChangeSNS (resource, options) {
@@ -271,6 +257,8 @@ function Service(resource) {
     logger.data('resource state [%s] > %o', resource.name, input);
     var state = filterStateEvent(input.state);
     input.state = state;
+    if (input.last_update) resource.last_update = input.last_update;
+    if (input.last_check) resource.last_check = input.last_check;
 
     CustomerService.getCustomerConfig(
       resource.customer_id,
@@ -280,27 +268,25 @@ function Service(resource) {
         var monitorConfig = config.monitor;
 
         switch(input.state) {
-          case Constants.RESOURCE_NORMAL :
-            input.last_update = Date.now();
-            handleNormalState(resource,input,monitorConfig);
-            break;
           case Constants.AGENT_STOPPED :
           case Constants.RESOURCE_STOPPED :
             handleUpdatesStoppedState(resource,input,monitorConfig);
             break;
+          case Constants.RESOURCE_NORMAL :
+            resource.last_update = Date.now();
+            handleNormalState(resource,input,monitorConfig);
+            break;
           default:
           case Constants.RESOURCE_FAILURE :
-            input.last_update = Date.now();
+            resource.last_update = Date.now();
             handleFailureState(resource,input,monitorConfig);
             break;
         }
 
-        if(input.last_update) resource.last_update = input.last_update;
-        if(input.last_check) resource.last_check = input.last_check;
         resource.save( err => {
           if(err){
             logger.error('error saving resource %j', resource);
-            logger.error(err);
+            logger.error(err, err.errors);
           }
         });
 
@@ -633,7 +619,9 @@ Service.remove = function (input, done) {
           AgentUpdateJob.create({ host_id: monitor.host_id });
         }
       });
-    } else logger.error('monitor not found.');
+    } else {
+      logger.error('monitor not found.');
+    }
 
     resource.remove(function(err){
       if(err) return done(err);

@@ -2,7 +2,7 @@
 
 const EventEmitter = require('events').EventEmitter;
 const util = require('util');
-const config = require('config').events ;
+const config = require('config');
 const logger = require('../../lib/logger')(':events');
 
 const User = require('../../entity/user').Entity;
@@ -28,10 +28,10 @@ class EventDispatcher extends EventEmitter {
     if( this.user ){
       next(null,user);
     } else {
-      User.findOne(config.user,(err, user) => {
+      User.findOne(config.system.user,(err, user) => {
         if(err) throw err;
         if(!user) {
-          this.user = new User(config.user);
+          this.user = new User(config.system.user);
           this.user.save( err => {
             if(err) throw err;
             else next(null, user);
@@ -94,10 +94,11 @@ class EventDispatcher extends EventEmitter {
           },
           notify: true
         },(err, agenda) => {
-          if(err) logger.error(err);
+          if(err) return logger.error(err);
 
           CustomerService.getAlertEmails(customer.name,(err, emails)=>{
             app.jobDispatcher.sendJobCancelationEmail({
+              task_secret: task.secret,
               task_id: task.id,
               schedule_id: agenda.attrs._id,
               task_name: task.name,

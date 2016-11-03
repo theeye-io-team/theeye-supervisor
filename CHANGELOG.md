@@ -1,5 +1,30 @@
 # CHANGELOG
 
+### 0.6.4 - 2016-11-03
+
+> clean code       
+
+> force to add last_update when handling resource state update     
+
+> add ._id when query events by customer (which is a ObjectId reference)        
+
+> added secret word in the url to cancel task scheduls via email        
+
+> created a randomeSecret method to use . return a random sha256 string (used in webhooks, events & tasks)       
+
+> added more options to mongo native driver via config           
+
+> moved events.user config key to system.user           
+
+> refactor monitor logic. now seems to be working better        
+
+> fix scheduler service creation return callback, created job was removed from callback      
+
+> add deploy script for tasks , events and monitors
+
+
+
+
 ### 0.6.3 - 2016-10-18
 
 > workflow controller         

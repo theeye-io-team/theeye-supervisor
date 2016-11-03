@@ -19,7 +19,7 @@ var async = require('async');
  */
 function customerNamesToUserCustomers (names, completedFn)
 {
-  if(!names || names.length == 0) return completedFn(null,[]);
+  if(!names||names.length==0) return completedFn(null,[]);
 
   function createCallFn (name) {
     return function (doneFn) {
@@ -53,7 +53,7 @@ function customerNamesToUserCustomers (names, completedFn)
   return async.parallel(calls, completedFn);
 }
 
-var UserService = module.exports = {
+module.exports = {
   /**
    * @author Facundo
    * @param {Array} filters query
@@ -64,26 +64,19 @@ var UserService = module.exports = {
 
     for(var f in filters) {
       switch(f) {
-        case 'customer_id' :
-          query['customers._id'] = filters['customer_id'];
-          break;
-        case 'customer_name' :
-          query['customers.name'] = filters['customer_name'];
-          break;
-        case 'credential' : 
-          query[f] = filters[f]; 
-          break;
+        case 'customer_id': query['customers._id'] = filters['customer_id']; break;
+        case 'customer_name': query['customers.name'] = filters['customer_name']; break;
+        case 'credential': query[f] = filters[f]; break;
       }
     }
 
     debug.log('querying users by %j', query);
 
-    User
-      .find(query)
-      .exec(function(err, users) {
-        if(err) return next(err);
-        else return next(null, users);
-      });
+    User.find(query).exec(function(err, users) {
+      if(err) return next(err);
+
+      return next(null, users);
+    });
   },
   /**
    *
@@ -140,7 +133,7 @@ var UserService = module.exports = {
    */
   create: function(options, next)
   {
-    var service = this;
+    var self = this;
 
     customerNamesToUserCustomers(
       options.customers,
@@ -149,13 +142,13 @@ var UserService = module.exports = {
         if(error) return next(error);
 
         var data = {
-          client_id : options.client_id || service.randomHash(),
-          client_secret : options.client_secret || service.randomHash(),
-          token : service.randomHash(),
-          email : options.email,
-          customers : customers,
-          credential : options.credential,
-          enabled : options.enabled || false,
+          client_id: (options.client_id||self.randomHash()),
+          client_secret: (options.client_secret||self.randomHash()),
+          token: self.randomHash(),
+          email: options.email,
+          customers: customers,
+          credential: options.credential,
+          enabled: options.enabled || false,
         };
 
         var user = new User(data);

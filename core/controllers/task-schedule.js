@@ -21,9 +21,16 @@ module.exports = function(server, passport){
   server.del('/:customer/task/:task/schedule/:schedule',middlewares, controller.remove);
 
   // this is for the email cancelation , NO AUTHENTICATION !
-  server.get('/:customer/task/:task/schedule/:schedule',[
+  server.get('/:customer/task/:task/schedule/:schedule/secret/:secret',[
     resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'task'})
+    resolver.idToEntity({param:'task'}),
+    function (req,res,next) { // validate secret
+      var secret = req.params.secret;
+      if( ! secret ) return res.send(403,'secret is required');
+      if( secret.length != 64 ) return res.send(403,'invalid secret');
+      if( req.task.secret != secret ) return res.send(403,'invalid secret');
+      next();
+    }
   ], controller.remove);
 };
 

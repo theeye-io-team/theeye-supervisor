@@ -26,15 +26,7 @@ function connect () {
 
   if(config.debug) mongoose.set("debug",true);
 
-  return mongoose.createConnection(connection,{
-    replset: {
-      socketOptions: {
-        keepAlive: 30*1000,
-        connectTimeoutMS: 60*1000,
-        socketTimeoutMS: 60*1000
-      }
-    }
-  });
+  return mongoose.createConnection(connection, (config.options||{}) );
 }
 
 function Connection () {

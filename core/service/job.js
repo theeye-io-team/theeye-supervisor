@@ -109,11 +109,12 @@ var service = {
   // automatic job scheduled . send cancelation
   sendJobCancelationEmail (input) {
     var cancelUrl = globalconfig.system.base_url +
-      '/:customer/task/:task/schedule/:schedule';
+      '/:customer/task/:task/schedule/:schedule/secret/:secret';
 
     var url = cancelUrl
       .replace(':customer',input.customer_name)
       .replace(':task',input.task_id)
+      .replace(':secret',input.task_secret)
       .replace(':schedule',input.schedule_id);
 
     var html = `<h3>Task execution on ${input.hostname}<small> Cancel notification</small></h3>
@@ -131,6 +132,7 @@ var service = {
     });
   },
   // send job canceled email
+  /**
   sendJobCanceledEmail (input) {
     var html = `<h3>Task execution on ${input.hostname} canceled</h3>
     The task ${input.task_name} on host ${input.hostname} at ${input.date} has been canceled.<br/>`;
@@ -142,6 +144,7 @@ var service = {
       to: input.to
     });
   },
+  */
 };
 
 /**

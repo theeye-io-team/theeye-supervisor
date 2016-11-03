@@ -1,17 +1,23 @@
-"use strict";
+'use strict';
 
-var json = require("../lib/jsonresponse");
-var HostStats = require("../entity/host/stats").Entity;
+var json = require('../lib/jsonresponse');
+var HostStats = require('../entity/host/stats').Entity;
 var NotificationService = require('../service/notification');
-var debug = require("../lib/logger")('controller:psaux');
-var paramsResolver = require('../router/param-resolver');
-var ResourceManager = require("../service/resource");
+var logger = require('../lib/logger')('controller:dstat');
+var resolver = require('../router/param-resolver');
+var ResourceManager = require('../service/resource');
 
 module.exports = function(server, passport) {
+	server.post('/:customer/psaux/:hostname', [
+    passport.authenticate('bearer', {session:false}),
+    resolver.customerNameToEntity({}),
+    resolver.hostnameToHost({})
+  ], controller.create);
+
 	server.post('/psaux/:hostname', [
     passport.authenticate('bearer', {session:false}),
-    paramsResolver.customerNameToEntity({}),
-    paramsResolver.hostnameToHost({})
+    resolver.customerNameToEntity({}),
+    resolver.hostnameToHost({})
   ], controller.create);
 }
 
@@ -23,19 +29,19 @@ var controller = {
     if(!host) return res.send(404,'host not found');
     if(!stats) return res.send(400,'psaux data required');
 
-    debug.log('Handling host psaux data');
+    logger.log('Handling host psaux data');
 
     HostStats.findOne({
       host_id: host._id,
       type: 'psaux'
     },function(error,psaux){
       if(error) {
-        debug.error(error);
+        logger.error(error);
       } else if(psaux == null) {
-        debug.log('creating host psaux');
+        logger.log('creating host psaux');
         HostStats.create(host,'psaux',stats);
       } else {
-        debug.log('updating host psaux');
+        logger.log('updating host psaux');
 
         var date = new Date();
         psaux.last_update = date ;
@@ -45,15 +51,16 @@ var controller = {
       }
     });
 
-    let options = {
-      'type':'psaux',
-      'ensureOne':true
-    };
-    ResourceManager
-    .findHostResources(host,options,(err,resource)=>{
+    ResourceManager.findHostResources(host,{
+      type:'psaux',
+      ensureOne:true
+    },(err,resource)=>{
       if(err||!resource)return;
       var handler = new ResourceManager(resource);
-      handler.handleState({ state:'normal' });
+      handler.handleState({
+        last_update: new Date(),
+        state: 'normal'
+      });
     });
 
     NotificationService.sendSNSNotification({

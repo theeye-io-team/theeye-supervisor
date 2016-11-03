@@ -2,8 +2,8 @@
 
 const util = require('util');
 const Schema = require('mongoose').Schema;
-const crypto = require('crypto');
 const lifecicle = require('mongoose-lifecycle');
+const randomSecret = require('../../lib/random-secret');
 
 function BaseSchema (specs) {
   // Schema constructor
@@ -13,12 +13,8 @@ function BaseSchema (specs) {
     last_update: { type: Date, 'default': null },
     enable: { type: Boolean, 'default': true },
     customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
-    secret: { type: String, 'default': function(){
-      // one way hash
-      return crypto.createHmac('sha256','THEEYE-WEBHOOK-' + Math.random())
-      .update( new Date().toISOString() )
-      .digest('hex');
-    }}
+    // one way hash
+    secret: { type: String, 'default': randomSecret }
   }, specs),{
     collection: 'webhooks',
     discriminatorKey: '_type'

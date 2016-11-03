@@ -11,6 +11,7 @@ module.exports = {
     "web_url": "",
     "view_teamplates_path": __dirname + "/../core/view/template",
     "file_upload_folder": "/tmp",
+    "secret": "b28d9f2a4d52ace6e5d3ac1dd3e5c2a0e7e66472ec7276ca501b8c4fa1f07679",
     "user": {
       "username": "theeye-automatic",
       "email": "info@theeye.io",
@@ -27,26 +28,31 @@ module.exports = {
     "bucket":"theeye.scripts"
   },
   "mongo":{
-    /**
+  /**
+    "options":{ // passed directly to the mongo-native driver
+      "replset": {
+        "socketOptions": {
+          "keepAlive": 30*1000,
+          "connectTimeoutMS": 60*1000,
+          "socketTimeoutMS": 60*1000
+        }
+      }
+    },
     "user":"",
     "password":"",
     "hosts": "localhost:27017",
     "database": "theeye"
-    */
+  */
   },
   "monitor": {
-    /* cantidad de fallas antes de emitir alertas */
     "fails_count_alert": 3,
-    /* cada cuanto tiempo chequear estado */
-    "resources_check_failure_interval_milliseconds": 10000,
-    /* despues de cuantos milisegundos de no actualizar estado entra en alerta */
-    "resources_alert_failure_threshold_milliseconds": 30000
+    "check_interval": 10000
   },
   "agent": {
     "core_workers": {
       "host_ping": {
-        "looptime":30000,
-        "type":"keepAlive"
+        "type":"keepAlive",
+        "looptime":30000
       }
     }
   },

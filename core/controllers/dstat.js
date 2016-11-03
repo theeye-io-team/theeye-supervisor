@@ -1,17 +1,20 @@
-var json = require("../lib/jsonresponse");
-var HostStats = require("../entity/host/stats").Entity;
-var logger = require("../lib/logger")("controller:dstat");
-var NotificationService = require("../service/notification");
-var paramsResolver = require('../router/param-resolver');
+'use strict';
+
+var json = require('../lib/jsonresponse');
+var HostStats = require('../entity/host/stats').Entity;
+var NotificationService = require('../service/notification');
+var logger = require('../lib/logger')('controller:dstat');
+var resolver = require('../router/param-resolver');
 var config = require('config');
 
+var ResourceManager = require('../service/resource');
 var elastic = require('../lib/elastic');
 
 module.exports = function(server, passport){
   server.post('/:customer/dstat/:hostname',[
     passport.authenticate('bearer',{session:false}),
-    paramsResolver.customerNameToEntity({required:true}),
-    paramsResolver.hostnameToHost({})
+    resolver.customerNameToEntity({required:true}),
+    resolver.hostnameToHost({})
   ],controller.create);
 }
 
@@ -44,6 +47,17 @@ var controller = {
         dstat.save();
       }
     });
+
+    /**
+    ResourceManager.findHostResources(host,options,(err,resource)=>{
+      if(err||!resource)return;
+      var handler = new ResourceManager(resource);
+      handler.handleState({
+        last_update: new Date(),
+        state: 'normal'
+      });
+    });
+    */
 
     logger.log('resending dstat data');
 
