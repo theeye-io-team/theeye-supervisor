@@ -22,7 +22,11 @@
 
 > add deploy script for tasks , events and monitors
 
+> elastic search config is set via customer.config in database. set global config by default if not provided       
 
+> general bug fixing          
+
+> scheduler refactor , add tags to scheduled tasks             
 
 
 ### 0.6.3 - 2016-10-18
