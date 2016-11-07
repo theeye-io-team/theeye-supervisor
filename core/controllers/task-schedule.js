@@ -3,15 +3,15 @@
 
 var logger = require('../lib/logger')('controller:task-schedule');
 var Scheduler = require('../service/scheduler');
-
 var router = require('../router');
 var resolver = router.resolve;
 
-module.exports = function(server, passport){
+module.exports = function (server, passport) {
   var middlewares = [
-    passport.authenticate('bearer', {session:false}),
+    passport.authenticate('bearer',{session:false}),
     resolver.customerNameToEntity({}),
     router.userCustomer,
+    router.requireCredential('admin'),
     resolver.idToEntity({param:'task'})
   ];
 
@@ -24,13 +24,7 @@ module.exports = function(server, passport){
   server.get('/:customer/task/:task/schedule/:schedule/secret/:secret',[
     resolver.customerNameToEntity({}),
     resolver.idToEntity({param:'task'}),
-    function (req,res,next) { // validate secret
-      var secret = req.params.secret;
-      if( ! secret ) return res.send(403,'secret is required');
-      if( secret.length != 64 ) return res.send(403,'invalid secret');
-      if( req.task.secret != secret ) return res.send(403,'invalid secret');
-      next();
-    }
+    router.requireSecret('task')
   ], controller.remove);
 };
 

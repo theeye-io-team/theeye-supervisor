@@ -1,121 +1,65 @@
-var debug = require('../lib/logger')('controller:customer');
+var logger = require('../lib/logger')('controller:customer');
 var json = require('../lib/jsonresponse');
-var paramsResolver = require('../router/param-resolver');
+var router = require('../router');
 
 var CustomerService = require('../service/customer');
 var UserService = require('../service/user');
 var ResourceService = require('../service/resource');
 var HostService = require('../service/host');
 
-module.exports = function(server, passport) 
-{
-  server.get('/customer',[
+module.exports = function (server, passport) {
+  var middlewares = [
     passport.authenticate('bearer', {session:false}),
-  ], controller.fetch);
+    router.requireCredential('root'),
+    router.resolve.idToEntity({param:'customer',required:true}),
+    router.userCustomer,
+  ];
 
-  server.get('/customer/:customer',[
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.idToEntity({param:'customer'})
-  ], controller.get);
+  server.get('/customer/:customer',middlewares,controller.get);
+  server.put('/customer/:customer',middlewares,controller.replace);
+  server.del('/customer/:customer',middlewares,controller.remove);
+  server.patch('/customer/:customer',middlewares,controller.update);
+
+  server.get('/customer',[
+    passport.authenticate('bearer',{session:false}),
+    router.requireCredential('root'),
+  ],controller.fetch);
 
   server.post('/customer',[
-    passport.authenticate('bearer', {session:false}),
-  ], controller.create);
-
-  server.patch('/customer/:customer',[
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.idToEntity({param:'customer'})
-  ], controller.update);
-
-  server.put('/customer/:customer',[
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.idToEntity({param:'customer'})
-  ], controller.replace);
-
-  server.del('/customer/:customer',[
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.idToEntity({param:'customer'})
-  ], controller.remove);
-
-  /**
-  return {
-    routes: [ {
-        route: '/customer',
-        method: 'get',
-        middleware: [],
-        action: controller.fetch
-      }, {
-        route: '/customer',
-        method: 'post',
-        middleware: [],
-        action: controller.create
-      }, {
-        route: '/customer/:customer',
-        method: 'get',
-        middleware: [
-          paramsResolver.idToEntity({param:'customer'})
-        ],
-        action: controller.get
-      }, {
-        route: '/customer/:customer',
-        method: 'patch',
-        middleware: [
-          paramsResolver.idToEntity({param:'customer'})
-        ],
-        action: controller.update
-      }, {
-        route: '/customer/:customer',
-        method: 'put',
-        middleware: [
-          paramsResolver.idToEntity({param:'customer'})
-        ],
-        action:  controller.replace
-      }, {
-        route: '/customer/:customer',
-        method: 'del',
-        middleware: [
-          paramsResolver.idToEntity({param:'customer'})
-        ],
-        action: controller.remove
-      }
-    ]
-  }
-  */
+    passport.authenticate('bearer',{session:false}),
+    router.requireCredential('root'),
+  ],controller.create);
 }
 
 var controller = {
   /**
    *
    */
-  get : function(req,res,next)
-  {
-    var customer = req.customer;
-    if(!customer) return res.send(404,json.error('not found'));
-    res.send(200, {customer: customer.publish()});
+  get (req,res,next) {
+    res.send(200, req.customer.publish());
   },
   /**
    *
    */
-  fetch : function(req,res,next)
-  {
+  fetch (req,res,next) {
     CustomerService.fetch({}, function(error,customers) {
       if(error) {
-        debug.error('error fetching customers');
+        logger.error('error fetching customers');
         res.send(500, json.error('failed to fetch customers'));
       } else {
         var published = [];
+
         for(var c=0;c<customers.length;c++)
           published.push( customers[c].publish() );
           
-        return res.send(200, {'customers': published});
+        return res.send(200, customers.map(customer => customer.publish()) );
       }
     });
   },
   /**
    *
    */
-  create : function(req,res,next)
-  {
+  create (req,res,next) {
     var input = req.body;
 
     if(!input.name) return res.send(400, json.error('name is required'));
@@ -126,11 +70,11 @@ var controller = {
         if(error.code == 11000) { //duplicated
           res.send(400, json.error(input.name + ' customer already exists'));
         } else {
-          debug.log(error);
+          logger.log(error);
           res.send(500, json.error('failed to create customer'));
         }
       } else {
-        debug.log('new customer created');
+        logger.log('new customer created');
 
         UserService.create({
           email: customer.name + '-agent@theeye.io',
@@ -139,27 +83,26 @@ var controller = {
           enabled: true
         }, function(error, user) {
           if(error) {
-            debug.error('creating user agent for customer');
-            debug.error(error);
+            logger.error('creating user agent for customer');
+            logger.error(error);
 
             customer.remove(function(e){
-              if(e) return debug.error(e);
-              debug.log('customer %s removed', customer.name);
+              if(e) return logger.error(e);
+              logger.log('customer %s removed', customer.name);
             });
 
             if(error.code == 11000) { //duplicated
               res.send(400, json.error('customer user agent already registered'));
             } else {
-              debug.log(error);
+              logger.log(error);
               res.send(500, json.error('failed to create user agent'));
             }
           } else {
-            debug.log('user agent created');
+            logger.log('user agent created');
 
-            return res.send(201, {
-              customer: customer.publish(), 
-              user: user.publish()
-            });
+            customer.agent = user;
+
+            return res.send(201, customer);
           } 
         });
       }
@@ -169,21 +112,19 @@ var controller = {
    * @method PATCH 
    * @route /customer/:customer
    */
-  update : function(req, res, next)
-  {
+  update (req, res, next) {
     var customer = req.customer;
-    if(!customer) return req.send(404, 'not found');
+    var updates = req.params;
 
-    var updates = {};
-    if(req.params.description) updates.description = req.params.description;
-    if(req.params.emails) updates.emails = req.params.emails;
-
-    if( Object.keys( updates ).length === 0 ) {
-      return res.send(400,'nothing to update');
+    for (var name in updates) {
+      if (customer[name] != undefined) {
+        customer[name] = updates[name];
+      }
     }
 
-    CustomerService.update( customer, updates, function(error, data){
-      return res.send(205, { 'customer' : data });
+    customer.save( err => {
+      if (err) return res.send(500,err);
+      res.send(200, customer);
     });
   },
   /**
@@ -195,40 +136,45 @@ var controller = {
    * @method PUT
    * @route /customer/:customer
    */
-  replace : function(req, res, next) {
+  replace (req, res, next) {
     var customer = req.customer;
-    if(!customer) return req.send(404, 'not found');
+    var updates = req.params;
 
-    var description = req.params.description || '';
-    var emails = req.params.emails || [];
+    // replace with default values if nothing specified
+    customer.description = (updates.description||'');
+    customer.emails = (updates.emails||[]);
+    customer.config = (updates.config||{
+      monitor:{},
+      elasticsearch:{enabled:false}
+    });
 
-    var updates = {
-      'description': description,
-      'emails': emails
-    };
-
-    CustomerService.update( customer, updates, function(error, data){
-      return res.send(205, { 'customer' : data });
+    customer.save( err => {
+      if (err) return res.send(500,err);
+      res.send(200, customer);
     });
   },
   /**
    *
    *
    */
-  remove : function (req, res, next) {
+  remove (req, res, next) {
     var customer = req.customer;
-    if(!customer) return req.send(404);
 
-    CustomerService.remove(customer, function(error){
-      if(!error) {
-        /** disable customer hosts **/
-        HostService.disableHostsByCustomer(customer);
-        /** disable customer resources **/
-        ResourceService.disableResourcesByCustomer(customer);
-      
-        return res.send(204);
+    CustomerService.remove(customer, err => {
+      if (err) {
+        logger.error(err);
+        return res.send(500,err);
       }
-      else return res.send(500);
+
+      /** disable customer hosts **/
+      HostService.disableHostsByCustomer(customer);
+      /** disable customer resources **/
+      ResourceService.disableResourcesByCustomer(customer);
+
+      logger.data('customer removed %j',customer);
+
+      res.json(200, customer);
+      next();
     });
   }
 };

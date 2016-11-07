@@ -15,6 +15,7 @@ function Schema () {
     },
     description: { type: String, 'default': '' },
     emails: { type: Array, 'default': [] },
+    agent: { type:mongoose.Schema.Types.ObjectId, ref:'User', 'default':null },
     config: { type: Object, 'default': function(){
       return {
         monitor:{},

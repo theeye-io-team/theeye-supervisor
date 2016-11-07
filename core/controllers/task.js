@@ -13,26 +13,22 @@ module.exports = function(server, passport){
     passport.authenticate('bearer', {session:false}),
     resolver.customerNameToEntity({}),
     router.userCustomer,
-    resolver.idToEntity({param:'task'})
+    router.requireCredential('admin'),
+    resolver.idToEntity({param:'task'}),
+    
   ];
 
   server.get('/:customer/task/:task',middlewares,controller.get);
   server.patch('/:customer/task/:task',middlewares,controller.patch);
   server.del('/:customer/task/:task',middlewares,controller.remove);
 
-
-  server.get('/:customer/task',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
+  server.get('/:customer/task',middlewares.concat([
     resolver.idToEntity({param:'host'})
-  ], controller.fetch);
+  ]),controller.fetch);
 
-  server.post('/:customer/task',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
+  server.post('/:customer/task',middlewares.concat([
     resolver.idToEntity({param:'script'})
-  ],controller.create);
-
+  ]),controller.create);
 };
 
 

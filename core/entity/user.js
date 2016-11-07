@@ -5,14 +5,14 @@ var EntitySchema = Schema({
   token : { type : String, index : true },
   client_id	: { type : String, index : true },
   client_secret : { type : String },
-  email : { type : String, unique : true, required : true, dropDups: true },
+  email : { type: String, unique: true, required: true, dropDups: true },
   emails : { type : Array, 'default': [] },
   customers : [{
-    customer : { type : Schema.Types.ObjectId, ref : 'Customer' },
+    customer : { type: Schema.Types.ObjectId, ref: 'Customer' },
     _id : String,
     name : String
   }],
-  username: { type : String, required: false },
+  username: { type : String, required: false, 'default' : null },
   credential : { type : String , 'default' : null },
   enabled : { type : Boolean, 'default' : false },
   last_update : { type : Date, 'default' : new Date() },
@@ -38,11 +38,12 @@ EntitySchema.methods.publish = function(options, nextFn)
     creation_date : user.creation_date,
   };
 
-  if(options.publishSecret)
-    pub.client_secret = user.client_secret ;
+  if(options.publishSecret) {
+    pub.client_secret = user.client_secret;
+  }
 
   if(options.populateCustomers) {
-    Entity.populate(user, { path:'customers.customer' }, function(error, user){
+    user.populate('customers.customer', (error, user) => {
       var pubCustomers = [];
       for(var c=0; c < user.customers.length; c++) {
         pubCustomers.push( user.customers[c].customer.publish() );

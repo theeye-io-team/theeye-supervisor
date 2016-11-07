@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 var ErrorHandler = require('./lib/errorHandler');
 
@@ -29,7 +29,7 @@ process.on('uncaughtException', function(error){
 });
 
 logger.log('setting environment');
-require("./environment").setenv(function(){
+require('./environment').setenv(function(){
 
   logger.log('connecting mongo db');
   require('./lib/mongodb').connect(function(){
@@ -42,19 +42,21 @@ require("./environment").setenv(function(){
       var dispatcher = require('./service/events');
       dispatcher.initialize(function(){
 
-        if( ! process.env.NO_MONITORING ){
+        if (!process.env.NO_MONITORING) {
           logger.log('initializing monitor');
           var monitor = require('./service/monitor');
           monitor.start();
         }
 
         logger.log('initializing server');
-        var app = require("./app");
-        app.start();
+        var app = require('./app');
+
         app.jobDispatcher = require('./service/job');
         app.eventDispatcher = dispatcher;
         app.scheduler = scheduler;
         app.customer = require('./service/customer');
+
+        app.start();
 
         logger.log('supervisor is running');
       });

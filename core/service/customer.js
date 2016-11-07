@@ -118,21 +118,6 @@ module.exports = {
     });  
   },
   /**
-   * @author Facundo
-   * @param {Object} customer
-   * @param {Object} updates
-   *    @attribute {String} description
-   * @param {Function} doneFn callback
-   * @return null
-   */
-  update : function(customer, updates, doneFn) {
-    customer.description = updates.description;
-    customer.emails = updates.emails;
-    return customer.save(function(error){
-      return doneFn(error, customer);
-    });
-  },
-  /**
    *
    *
    */
@@ -142,22 +127,19 @@ module.exports = {
     User
     .find({'customers._id': customer._id})
     .exec(function(error,users){
-      if(users && users.length > 0) {
-        for(var i=0; i<users.length; i++) {
+      if (users && users.length > 0) {
+        for (var i=0; i<users.length; i++) {
           var user = users[i];
 
-          if(user.credential != 'agent')
-          {
+          if (user.credential != 'agent') {
             var customers = user.customers;
             var filteredCustomers = filterCustomer(customer, customers);
             user.customers = filteredCustomers;
-            user.save(function(error){
-              if(error) logger.error(error);
+            user.save(function (error) {
+              if (error) logger.error(error);
               else logger.log('user customers updated');
             });
-          }
-          else
-          {
+          } else {
             // is an agent user
             user.remove(function(error){
               if(error) logger.error(error);

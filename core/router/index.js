@@ -36,5 +36,7 @@ module.exports = {
   },
   resolve: require('./param-resolver'),
   filter: require('./param-filter'),
+  requireCredential: require('./require-credential'),
+  requireSecret: require('./require-secret'),
   userCustomer: require('./user-customer'),
 }
