@@ -38,5 +38,8 @@ module.exports = {
   filter: require('./param-filter'),
   requireCredential: require('./require-credential'),
   requireSecret: require('./require-secret'),
-  userCustomer: require('./user-customer'),
+  ensureCustomer: require('./ensure-customer'),
+  logOldClientRequest: function (req,res,next) {
+    next();
+  }
 }

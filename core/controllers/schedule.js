@@ -10,7 +10,7 @@ module.exports = function(server, passport){
   var middlewares = [
     passport.authenticate('bearer', {session:false}),
     resolver.customerNameToEntity({}),
-    router.userCustomer
+    router.ensureCustomer
   ];
 
   server.get('/:customer/schedule', middlewares, controller.getCustomerSchedules);

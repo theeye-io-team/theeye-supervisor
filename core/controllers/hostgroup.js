@@ -2,7 +2,7 @@
 var _ = require('lodash');
 var async = require('async');
 
-var resolver = require('../router/param-resolver');
+var router = require('../router');
 var logger = require('../lib/logger')('eye:controller:template');
 var TaskService = require('../service/task');
 var ResourceMonitorService = require('../service/resource/monitor');
@@ -19,27 +19,23 @@ var HostGroup = require('../entity/host/group').Entity;
  *
  */
 module.exports = function(server, passport) {
-  server.get('/:customer/hostgroup/:group',[
+  var middleware = [
     passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-  ], controller.get);
+    router.requireCredential('admin'),
+    router.resolve.customerNameToEntity({}),
+    router.ensureCustomer,
+  ];
 
-  server.get('/:customer/hostgroup',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-  ], controller.fetch);
+  server.get('/:customer/hostgroup',middleware,controller.fetch);
+  server.post('/:customer/hostgroup',middleware,controller.create);
 
-  server.post('/:customer/hostgroup',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-  ], controller.create);
+  server.get('/:customer/hostgroup/:group', middleware.concat(
+    router.resolve.idToEntity({param:'group',entity:'host/group'})
+  ),controller.get);
 
-  server.del('/:customer/hostgroup/:group',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-  ], controller.remove);
+  server.del('/:customer/hostgroup/:group', middleware.concat(
+    router.resolve.idToEntity({param:'group',entity:'host/group'})
+  ),controller.remove);
 }
 
 /**

@@ -7,60 +7,88 @@ var json = require("../lib/jsonresponse");
 var Host = require("../entity/host").Entity;
 var Resource = require('../entity/resource').Entity;
 var HostService = require('../service/host');
-var paramsResolver = require('../router/param-resolver');
+var router = require('../router');
 var NotificationService = require('../service/notification');
 var elastic = require('../lib/elastic');
 
 module.exports = function(server, passport) {
-  server.get('/host/:host',[
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.idToEntity({param:'host'})
-  ],controller.get);
+  var middlewares = [
+    passport.authenticate('bearer',{session:false}),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer,
+  ];
 
-  server.get('/host',[
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.customerNameToEntity({}),
-  ],controller.fetch);
+  /**
+   * NEW ROUTES WITH CUSTOMER , TO KEEP IT GENERIC
+   */
+  server.post(
+    '/:customer/host/:hostname',
+    middlewares.concat(
+      router.requireCredential('agent',{exactMatch:true}) // only agents can create hosts
+    ),
+    controller.create
+  );
+  server.get('/:customer/host',middlewares,controller.fetch);
+  server.get('/:customer/host/:host',
+    middlewares.concat(
+      router.resolve.idToEntity({
+        param: 'host',
+        required: true
+      })
+    ),
+    controller.get
+  );
 
-  server.post('/host/:hostname',[
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.customerNameToEntity({}),
-  ],controller.create);
+  /**
+   * KEEP OLD ROUTE FOR BACKWARD COMPATIBILITY WITH OLD AGENTS
+   *
+   * AGENTS VERSION <= v0.9.1
+   */
+  var oldMiddlewares = middlewares.concat(router.logOldClientRequest);
+  server.post(
+    '/host/:hostname',
+    oldMiddlewares.concat(
+      router.requireCredential('agent',{exactMatch:true}) // only agents can create hosts
+    ),
+    controller.create
+  );
 }
 
-
-
 var controller = {
-  /**
-   *
-   *
-   */
-  get : function(req,res,next) {
+  get (req,res,next) {
     var host = req.host;
-    if(!host) return res.send(404);
-
-    host.publish( data => res.send(200, { host: data }) );
+    res.send(200, { host: host.toObject() });
   },
   /**
    *
    *
    */
-  create : function(req, res, next)
-  {
-    var hostname = req.params.hostname;
+  fetch (req,res,next) {
     var customer = req.customer;
-    var input = req.params.info;
-    input.agent_version = req.params.version;
-
-    if(!customer){
-      let msg = json.error('customer is required');
-      return res.send(400, msg);
+    HostService.fetchBy({
+      customer_name: customer.name
+    }, (error,hosts) => {
+      if(error) res.send(500);
+      else res.send(200,{ hosts: hosts });
+    });
+  }
+  /**
+   *
+   *
+   */
+  create (req, res, next) {
+    var customer = req.customer;
+    var hostname = req.params.hostname;
+    if (!hostname) {
+      return res.send(400,'hostname required');
     }
-
     debug('processing hostname "%s" registration request', hostname);
 
+    var input = req.params.info||{};
+    input.agent_version = req.params.version||null;
+
     registerHostname({
-      'user':req.user,
+      'user': req.user,
       'customer': customer,
       'hostname': hostname,
       'host_properties': input
@@ -73,36 +101,14 @@ var controller = {
       debug('host "%s" registration completed.', hostname);
 
       var response = _.extend({
-        "resource_id": resource ? resource._id : null,
-        "host_id": host._id
-      }, config.get("agent.core_workers.host_ping"));
+        resource_id: resource?resource._id:null,
+        host_id: host._id
+      },config.get("agent.core_workers.host_ping"));
 
       res.send(200, response); 
       next();
     });
   },
-  /**
-   *
-   *
-   */
-  fetch : function(req,res,next) {
-    var customer = req.customer;
-    var scraper = req.params.scraper;
-
-    if(!customer) return res.send(400, json.error('customer is required'));
-
-    if(scraper) {
-      HostService.fetchBy({customer_name: 'theeye'},function(error,hosts){
-        if(error) res.send(500);
-        else res.send(200,{'hosts':hosts});
-      });
-    } else {
-      HostService.fetchBy({customer_name: customer.name},function(error,hosts){
-        if(error) res.send(500);
-        else res.send(200,{'hosts':hosts});
-      });
-    }
-  }
 }
 
 /**

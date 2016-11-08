@@ -4,7 +4,7 @@ var json = require('../lib/jsonresponse');
 var HostStats = require('../entity/host/stats').Entity;
 var NotificationService = require('../service/notification');
 var logger = require('../lib/logger')('controller:dstat');
-var resolver = require('../router/param-resolver');
+var router = require('../router');
 var config = require('config');
 
 var ResourceManager = require('../service/resource');
@@ -13,8 +13,10 @@ var elastic = require('../lib/elastic');
 module.exports = function(server, passport){
   server.post('/:customer/dstat/:hostname',[
     passport.authenticate('bearer',{session:false}),
-    resolver.customerNameToEntity({required:true}),
-    resolver.hostnameToHost({})
+    router.requireCredential('agent'),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer,
+    router.resolve.hostnameToHost({})
   ],controller.create);
 }
 

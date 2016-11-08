@@ -12,7 +12,7 @@ module.exports = function (server, passport) {
     passport.authenticate('bearer', {session:false}),
     router.requireCredential('root'),
     router.resolve.idToEntity({param:'customer',required:true}),
-    router.userCustomer,
+    router.ensureCustomer,
   ];
 
   server.get('/customer/:customer',middlewares,controller.get);

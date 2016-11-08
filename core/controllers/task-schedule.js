@@ -10,7 +10,7 @@ module.exports = function (server, passport) {
   var middlewares = [
     passport.authenticate('bearer',{session:false}),
     resolver.customerNameToEntity({}),
-    router.userCustomer,
+    router.ensureCustomer,
     router.requireCredential('admin'),
     resolver.idToEntity({param:'task'})
   ];

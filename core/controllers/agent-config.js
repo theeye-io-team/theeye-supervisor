@@ -5,14 +5,16 @@ var debug = require('debug')('controller:agent-config');
 var async = require('async');
 var Script = require("../entity/script").Entity;
 var json = require("../lib/jsonresponse");
-var paramsResolver = require('../router/param-resolver');
+var router = require('../router');
 var ResourceMonitorService = require("../service/resource/monitor");
 
-module.exports = function(server, passport) {
+module.exports = function (server, passport) {
   server.get('/:customer/agent/:hostname/config',[
     passport.authenticate('bearer', {session:false}),
-    paramsResolver.customerNameToEntity({}),
-    paramsResolver.hostnameToHost({})
+    router.requireCredential('agent'),
+    router.resolve.customerNameToEntity({}),
+    router.ensureCustomer,
+    router.resolve.hostnameToHost({})
   ],controller.fetch);
 }
 

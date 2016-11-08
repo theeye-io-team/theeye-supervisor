@@ -10,7 +10,7 @@ module.exports = function (server, passport) {
   var middlewares = [
     passport.authenticate('bearer', { session:false }),
     resolve.customerNameToEntity({ required:true }),
-    router.userCustomer, // requesting user is authorized to access the customer
+    router.ensureCustomer, // requesting user is authorized to access the customer
   ];
 
   server.get(

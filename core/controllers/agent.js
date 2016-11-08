@@ -2,16 +2,18 @@
 var json = require("../lib/jsonresponse");
 var logger = require('../lib/logger')('controller:agent');
 var NotificationService = require("../service/notification");
-var paramsResolver = require('../router/param-resolver');
+var router = require('../router');
 var Host = require("../entity/host").Entity;
 var ResourceManager = require("../service/resource");
 
 
-module.exports = function(server, passport){
+module.exports = function (server, passport) {
 	server.put('/:customer/agent/:hostname',[
     passport.authenticate('bearer', {session:false}),
-    paramsResolver.customerNameToEntity({}),
-    paramsResolver.hostnameToHost({})
+    router.requireCredential('agent'),
+    router.resolve.customerNameToEntity({}),
+    router.ensureCustomer,
+    router.resolve.hostnameToHost({})
   ],controller.update);
 }
 

@@ -5,13 +5,13 @@ module.exports = function (req,res,next) {
   var user = req.user;
 
   if (!customer) {
-    var err = new Error('customer is not present or not initialized');
+    var err = new Error('customer is yet not present or not initialized in the request');
     err.statusCode = 500;
     next(err);
   }
 
   if (!user) {
-    var err = new Error('user is not present or not initialized');
+    var err = new Error('user is yet not present or not initialized in the request');
     err.statusCode = 500;
     next(err);
   }

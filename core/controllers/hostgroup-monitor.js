@@ -1,6 +1,6 @@
-"use strict";
+'use strict';
 
-var resolver = require('../router/param-resolver');
+var router = require('../router');
 var logger = require('../lib/logger')('eye:controller:template:monitor');
 var ResourceMonitorService = require('../service/resource/monitor');
 var GroupMonitorService = require('../service/host/group').Monitor;
@@ -25,38 +25,53 @@ function registerCRUDOperation (customer,data){
  *
  */
 module.exports = function(server, passport) {
-  server.get('/:customer/hostgroup/:group/monitortemplate/:monitortemplate',[
+  var middlewares = [
     passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'monitortemplate', entity: 'monitor/template' }),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-  ], controller.get);
+    router.requireCredential('admin'),
+    router.resolve.customerNameToEntity({}),
+    router.ensureCustomer,
+    router.resolve.idToEntity({
+      param: 'group',
+      entity: 'host/group',
+      required: true
+    }),
+  ];
 
-  server.put('/:customer/hostgroup/:group/monitortemplate/:monitortemplate',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'monitortemplate', entity: 'monitor/template' }),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-  ], controller.update);
-
-  server.get('/:customer/hostgroup/:group/monitortemplate',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-  ], controller.fetch);
-
-  server.post('/:customer/hostgroup/:group/monitortemplate',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-  ], controller.create);
-
-  server.del('/:customer/hostgroup/:group/monitortemplate/:monitortemplate',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'monitortemplate', entity: 'monitor/template' }),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-  ], controller.remove);
+  server.get('/:customer/hostgroup/:group/monitortemplate',middlewares,controller.fetch);
+  server.post('/:customer/hostgroup/:group/monitortemplate',middlewares,controller.create);
+  server.get(
+    '/:customer/hostgroup/:group/monitortemplate/:monitortemplate',
+    middlewares.concat(
+      router.resolve.idToEntity({
+        param: 'monitortemplate',
+        entity: 'monitor/template',
+        required: true
+      })
+    ),
+    controller.get
+  );
+  server.put(
+    '/:customer/hostgroup/:group/monitortemplate/:monitortemplate',
+    middlewares.concat(
+      router.resolve.idToEntity({
+        param: 'monitortemplate',
+        entity: 'monitor/template',
+        required: true
+      })
+    ),
+    controller.update
+  );
+  server.del(
+    '/:customer/hostgroup/:group/monitortemplate/:monitortemplate',
+    middlewares.concat(
+      router.resolve.idToEntity({
+        param: 'monitortemplate',
+        entity: 'monitor/template',
+        required: true
+      })
+    ),
+    controller.remove
+  );
 }
 
 function validateRequest (req,res) {

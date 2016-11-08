@@ -1,6 +1,6 @@
 "use strict";
 
-var resolver = require('../router/param-resolver');
+var router = require('../router');
 var logger = require('../lib/logger')('eye:controller:template:task');
 var TaskService = require('../service/task');
 var Task = require('../entity/task').Entity;
@@ -25,38 +25,53 @@ function registerCRUDOperation (customer,data){
  *
  */
 module.exports = function(server, passport) {
-  server.get('/:customer/hostgroup/:group/tasktemplate/:tasktemplate',[
+  var middlewares = [
     passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-    resolver.idToEntity({ param: 'tasktemplate', entity: 'task/template' }),
-  ], controller.get);
+    router.requireCredential('admin'),
+    router.resolve.customerNameToEntity({}),
+    router.ensureCustomer,
+    router.resolve.idToEntity({
+      param: 'group',
+      entity: 'host/group',
+      required: true
+    })
+  ];
 
-  server.del('/:customer/hostgroup/:group/tasktemplate/:tasktemplate',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-    resolver.idToEntity({ param: 'tasktemplate', entity: 'task/template' }),
-  ], controller.remove);
-
-  server.put('/:customer/hostgroup/:group/tasktemplate/:tasktemplate',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-    resolver.idToEntity({ param: 'tasktemplate', entity: 'task/template' }),
-  ], controller.replace);
-
-  server.get('/:customer/hostgroup/:group/tasktemplate',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-  ], controller.fetch);
-
-  server.post('/:customer/hostgroup/:group/tasktemplate',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-  ], controller.create);
+  server.get('/:customer/hostgroup/:group/tasktemplate',middlewares,controller.fetch);
+  server.post('/:customer/hostgroup/:group/tasktemplate',middlewares,controller.create);
+  server.get(
+    '/:customer/hostgroup/:group/tasktemplate/:tasktemplate',
+    middlewares.concat(
+      router.resolve.idToEntity({
+        param: 'tasktemplate',
+        entity: 'task/template',
+        required: true
+      })
+    ),
+    controller.get
+  );
+  server.del(
+    '/:customer/hostgroup/:group/tasktemplate/:tasktemplate',
+    middlewares.concat(
+      router.resolve.idToEntity({
+        param: 'tasktemplate',
+        entity: 'task/template',
+        required: true
+      })
+    ),
+    controller.remove
+  );
+  server.put(
+    '/:customer/hostgroup/:group/tasktemplate/:tasktemplate',
+    middlewares.concat(
+      router.resolve.idToEntity({
+        param: 'tasktemplate',
+        entity: 'task/template',
+        required: true
+      })
+    ),
+    controller.replace
+  );
 }
 
 function validateRequest (req,res) {

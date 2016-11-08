@@ -11,11 +11,10 @@ var extend = require('lodash/assign');
 module.exports = function(server, passport){
   var middlewares = [
     passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    router.userCustomer,
     router.requireCredential('admin'),
-    resolver.idToEntity({param:'task'}),
-    
+    router.resolve.customerNameToEntity({}),
+    router.ensureCustomer,
+    router.resolve.idToEntity({param:'task'}),
   ];
 
   server.get('/:customer/task/:task',middlewares,controller.get);
@@ -23,11 +22,11 @@ module.exports = function(server, passport){
   server.del('/:customer/task/:task',middlewares,controller.remove);
 
   server.get('/:customer/task',middlewares.concat([
-    resolver.idToEntity({param:'host'})
+    router.resolve.idToEntity({param:'host'})
   ]),controller.fetch);
 
   server.post('/:customer/task',middlewares.concat([
-    resolver.idToEntity({param:'script'})
+    router.resolve.idToEntity({param:'script'})
   ]),controller.create);
 };
 

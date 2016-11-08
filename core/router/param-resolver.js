@@ -1,3 +1,5 @@
+'use strict';
+
 var logger = require('../lib/logger')(':router:middleware:params-resolver');
 var Host = require('../entity/host').Entity;
 var User = require('../entity/user').Entity;
@@ -11,17 +13,15 @@ function firstToUpper(string) {
 module.exports = {
   idToEntity: function (options) {
 
-    if( ! options.param ) throw new Error('param name is required!');
+    if (!options.param) throw new Error('param name is required!');
     var paramName = options.param;
-    var entityName = options.entity || options.param;
+    var entityName = options.entity||options.param;
 
     return function (req, res, next) {
-      var _id = req.params[paramName] ||
-      req.body[paramName] ||
-      req.query[paramName];
+      var _id = req.params[paramName]||req.body[paramName]||req.query[paramName];
 
-      if( ! _id ) {
-        if( options.required ){
+      if (!_id) {
+        if (options.required) {
           var e = new Error(options.param + ' is required');
           e.statusCode = 400;
           return next(e);
@@ -32,8 +32,8 @@ module.exports = {
         return next();
       }
 
-      if( ! validator.isMongoId(_id) ) {
-        if( options.required ){
+      if (!validator.isMongoId(_id)) {
+        if (options.required) {
           var e = new Error(options.param + ' id is invalid');
           e.statusCode = 400;
           return next(e);
@@ -53,15 +53,14 @@ module.exports = {
       );
 
       Entity.findById( _id, (err, resource) => {
-        if(err) {
+        if (err) {
           logger.error(err);
           req[paramName] = null;
           return next(err);
         }
 
-        if( ! resource ) {
-
-          if( options.required ){
+        if (!resource) {
+          if (options.required) {
             var e = new Error(options.param + ' not found');
             e.statusCode = 404;
             return next(e);
@@ -118,14 +117,12 @@ module.exports = {
   },
   customerNameToEntity: function (options) {
 
-    return function(req,res,next) {
-      var name = req.params.customer ||
-      req.body.customer ||
-      req.query.customer;
+    return function (req,res,next) {
+      var name = req.params.customer||req.body.customer||req.query.customer;
 
-      if(!name) {
-        if( options.required ){
-          var error = new Error('organization is required') ;
+      if (!name) {
+        if (options.required) {
+          var error = new Error('organization is required');
           error.statusCode = 403;
           return next(error);
         }
