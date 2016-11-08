@@ -1,19 +1,19 @@
 "use strict";
 
 var Tag = require('../entity/tag').Entity;
-var resolver = require('../router/param-resolver');
+var router = require('../router');
 
 module.exports = function(server, passport){
   server.get('/:customer/tag',[
-    resolver.customerNameToEntity({}),
-    passport.authenticate('bearer', {session:false})
+    passport.authenticate('bearer', {session:false}),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer
   ], controller.get);
 }
 
 var controller = {
   get (req, res, next) {
     var customer = req.customer;
-    if(!customer) res.send(400,'invalid customer %s', req.param.customer);
     Tag.find({ customer: customer }, function(error,tags){
       res.send(200,tags);
     });

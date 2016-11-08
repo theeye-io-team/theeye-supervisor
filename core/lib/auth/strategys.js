@@ -1,20 +1,23 @@
+'use strict';
+
 var passport = require('passport');
-var util = require('util');
+var passportBearerStrategy = require('passport-http-bearer').Strategy;
+var passportBasicStrategy = require('passport-http').BasicStrategy;
 var User = require('../../entity/user').Entity;
 var debug = require('../logger')('auth:strategys');
-var BearerStrategy = require('passport-http-bearer').Strategy;
-var BasicStrategy = require('passport-http').BasicStrategy;
 
-exports.setStrategy = function setStrategy( type ) {
-  if( type == 'bearer' ) {
-    return SetBearerStrategy();
-  } else if( type == 'basic' ) {
-    return SetBasicStrategy();
+module.exports = {
+  setStrategy (type) {
+    if (type == 'bearer') {
+      return SetBearerStrategy();
+    } else if (type == 'basic') {
+      return SetBasicStrategy();
+    }
   }
 }
 
-function SetBasicStrategy() {
-  passport.use( new BasicStrategy(function(client_id, client_secret, done) {
+function SetBasicStrategy () {
+  passport.use(new passportBasicStrategy(function (client_id, client_secret, done) {
     debug.log('new connection [basic]');
 
     User.findOne({
@@ -37,8 +40,8 @@ function SetBasicStrategy() {
   return passport;
 }
 
-function SetBearerStrategy() {
-  passport.use( new BearerStrategy( function(token, done) {
+function SetBearerStrategy () {
+  passport.use(new passportBearerStrategy(function (token, done) {
     var moment = require('moment');
     var timestamp = moment().format('YYYY-MM-DD HH:00:00');
 
@@ -47,7 +50,7 @@ function SetBearerStrategy() {
     User.findOne({
       token: token, 
       //timestamp: timestamp 
-    }, function(error, user) {
+    }, function (error, user) {
       if (error) {
         debug.error('error fetching user by token');
         debug.error(error);

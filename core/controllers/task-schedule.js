@@ -1,30 +1,32 @@
 /* global json */
 "use strict";
 
+var app = require('../app');
 var logger = require('../lib/logger')('controller:task-schedule');
-var Scheduler = require('../service/scheduler');
 var router = require('../router');
 var resolver = router.resolve;
 
 module.exports = function (server, passport) {
   var middlewares = [
     passport.authenticate('bearer',{session:false}),
-    resolver.customerNameToEntity({}),
-    router.ensureCustomer,
     router.requireCredential('admin'),
+    resolver.customerNameToEntity({required:true}),
+    router.ensureCustomer,
     resolver.idToEntity({param:'task'})
   ];
 
   //server.post('/:customer/task/:task/schedule',middlewares,controller.create);
-  server.post('/:customer/task/schedule',middlewares,controller.create);
-  server.get('/:customer/task/:task/schedule',middlewares, controller.get);
-  server.del('/:customer/task/:task/schedule/:schedule',middlewares, controller.remove);
+  server.post('/:customer/task/:task/schedule',middlewares,controller.create);
+  server.get('/:customer/task/:task/schedule',middlewares,controller.fetch);
+  server.del('/:customer/task/:task/schedule/:schedule',middlewares,controller.remove);
 
-  // this is for the email cancelation , NO AUTHENTICATION !
+  // this is for the email cancelation
+  // authenticate with a secret token
+  // only valid for this action
   server.get('/:customer/task/:task/schedule/:schedule/secret/:secret',[
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'task'}),
-    router.requireSecret('task')
+    resolver.idToEntity({param:'task',required:true}),
+    router.requireSecret('task'),
+    resolver.customerNameToEntity({required:true}),
   ], controller.remove);
 };
 
@@ -37,11 +39,10 @@ var controller = {
    * @param {String} :task , mongo ObjectId
    *
    */
-  get (req, res, next) {
+  fetch (req, res, next) {
     var task = req.task;
-    if(!task) return res.send(404,'task not found');
-    Scheduler.getTaskScheduleData(task._id, function(err, scheduleData){
-      if(err) {
+    app.scheduler.getTaskScheduleData(task._id, function (err, scheduleData) {
+      if (err) {
         logger.error('Scheduler had an error retrieving data for %s',task._id);
         logger.error(err);
         return res.send(500);
@@ -57,13 +58,12 @@ var controller = {
    */
   remove (req, res, next) {
     var task = req.task;
-    var scheduleId = req.params.schedule;
-    if(!req.params.task) return res.send(400,'task id required');
-    if(!task) return res.send(404,'task not found');
-    if(!scheduleId) res.send(400,'schedule id required');
 
-    Scheduler.cancelTaskSchedule(task, scheduleId, function(err, qtyRemoved){
-      if(err) {
+    var scheduleId = req.params.schedule;
+    if (!scheduleId) res.send(400,'schedule id required');
+
+    app.scheduler.cancelTaskSchedule(task, scheduleId, function (err, qtyRemoved) {
+      if (err) {
         logger.error('Scheduler had an error canceling schedule %s',scheduleId);
         logger.error(err);
         return res.send(500);
@@ -75,30 +75,25 @@ var controller = {
    *
    * @author cg
    * @method POST
-   * @route /:customer/task/schedule
+   * @route /:customer/task/:task/schedule
    *
    */
-  create (req, res, next){
+  create (req, res, next) {
     var task = req.task;
+    var user = req.user;
+    var customer = req.customer;
+
     var schedule = req.body.scheduleData;
-
-    if(!task) return res.send(400,json.error('task required'));
-
-    if(!schedule || !schedule.runDate) {
-      return res.send(406,json.error('Must have a date'));
+    if (!schedule||!schedule.runDate) {
+      return res.send(400,json.error('Must have a date'));
     }
-    var user = req.user ;
-    var customer = req.customer ;
 
-    if(!user) return res.send(400,json.error('user required'));
-    if(!customer) return res.send(400,json.error('customer required'));
-
-    Scheduler.scheduleTask({
+    app.scheduler.scheduleTask({
       task: task,
       customer: customer,
       user: user,
       schedule: schedule
-    }, function(err) {
+    }, function (err) {
       if(err) {
         logger.error(err);
         return res.send(500, err);

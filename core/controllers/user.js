@@ -1,58 +1,50 @@
-var debug = require('../lib/logger')('controller:user');
+'use strict';
+
+var validator = require('validator');
+var logger = require('../lib/logger')('controller:user');
 var json = require('../lib/jsonresponse');
-var strategys = require('../lib/auth/strategys');
-var token = require('../lib/auth/token');
 var UserService = require('../service/user');
 var User = require("../entity/user").Entity;
 
-var resolve = require('../router/param-resolver');
-var filter = require('../router/param-filter');
-var validator = require('validator');
+var router = require('../router');
 
-module.exports = function(server, passport)
-{
+module.exports = function (server, passport) {
   /**
-   * use basic authentication to obtain a new token
+   *
+   * crud operations
+   *
    */
-  var passport = strategys.setStrategy('basic');
-  server.post('/token', [
-    passport.authenticate('basic', { session: false })
-  ], controller.token);
-
   server.get('/user/:user',[
     passport.authenticate('bearer', {session:false}),
-    function(req,res,next){
-      req.auth = {user : req.user};
-      return next();
-    },
-    resolve.idToEntity({param:'user'})
+    router.requireCredential('root'),
+    router.resolve.idToEntity({param:'user'})
   ], controller.get);
 
   server.get('/user',[
     passport.authenticate('bearer', {session:false}),
-    resolve.customerNameToEntity({param:'customer'})
+    router.requireCredential('root'),
+    router.resolve.customerNameToEntity({param:'customer'})
   ], controller.fetch);
 
   server.del('/user/:user',[
     passport.authenticate('bearer', {session:false}),
-    resolve.idToEntity({ param:'user' })
+    router.requireCredential('root'),
+    router.resolve.idToEntity({ param:'user' })
   ], controller.remove);
 
   server.patch('/user/:user',[
     passport.authenticate('bearer', {session:false}),
-    function(req,res,next){
-      req.auth = {user : req.user};
-      return next();
-    },
-    resolve.idToEntity({param:'user'}),
-    filter.spawn({param:'customers', filter:'toArray'}),
-    filter.spawn({param:'customers', filter:'uniq'}),
+    router.requireCredential('root'),
+    router.resolve.idToEntity({param:'user'}),
+    router.filter.spawn({param:'customers', filter:'toArray'}),
+    router.filter.spawn({param:'customers', filter:'uniq'}),
   ], controller.patch);
 
   server.post('/user',[
     passport.authenticate('bearer', {session:false}),
-    filter.spawn({param:'customers', filter:'toArray'}),
-    filter.spawn({param:'customers', filter:'uniq'}),
+    router.requireCredential('root'),
+    router.filter.spawn({param:'customers', filter:'toArray'}),
+    router.filter.spawn({param:'customers', filter:'uniq'}),
   ], controller.create);
 }
 
@@ -62,8 +54,7 @@ module.exports = function(server, passport)
  * middleware interface defined
  *
  */
-function UserInterface (req, next)
-{
+function UserInterface (req, next) {
   var errors = [];
   var values = [];
 
@@ -115,8 +106,7 @@ function UserInterface (req, next)
 }
 
 var controller = {
-  get : function(req,res,next)
-  {
+  get : function(req,res,next) {
     var user = req.user;
     if(!user) return res.send(404,json.error('user not found'));
     user.publish({ populateCustomers:true },function(error, data){
@@ -151,7 +141,7 @@ var controller = {
           return res.send(error.statusCode, error.message);
 
         else {
-          debug.error(error);
+          logger.error(error);
           return res.send(500,'internal error');
         }
       } else {
@@ -185,11 +175,11 @@ var controller = {
     var values = params.valueObject();
     UserService.create(values, function(error,user){
       if(error) {
-        debug.log('Error creating user');
-        debug.log(error);
+        logger.log('Error creating user');
+        logger.log(error);
         res.send(500, json.error('failed to create user'));
       } else {
-        debug.log('new user created');
+        logger.log('new user created');
         return user.publish({
           populateCustomers : true,
           publishSecret : true
@@ -203,64 +193,32 @@ var controller = {
    *
    *
    */
-  fetch : function(req,res,next)
-  {
+  fetch (req,res,next) {
     var customer = req.customer;
     var credential = req.params.credential;
 
     var query = {};
-    if( customer ) query['customer_id'] = customer.id ;
-    if( credential ) query.credential = credential ;
+    if (customer) query.customer_id = customer.id;
+    if (credential) query.credential = credential;
 
     UserService.findBy(query, function(error,users) {
-      if(error) {
-        debug.error('error fetching users');
+      if (error) {
+        logger.error('error fetching users');
         res.send(500, json.error('failed to fetch users'));
       } else {
-        debug.log('users fetched');
+        logger.log('users fetched');
 
         var pub = [];
-        for(var u=0; u<users.length; u++) {
+        for (var u=0; u<users.length; u++) {
           var user = users[u];
-
-          var options = ( credential && credential == 'agent' ) ?
-            { publishSecret : true } : {} ;
-
-          var data = user.publish(options, function(error,data){
-            // hook here to have populated customers
-          });
+          var options = (credential&&credential=='agent') ? { publishSecret: true } : {};
+          var data = user.publish(options, function(error,data){ });
           pub.push( data );
         }
 
-        return res.send(200, { 'users' : pub });
+        return res.send(200, {'users':pub});
       }
     });
-  },
-  /**
-   * User basic authentication (user & passwd) to
-   * obtain a new bearer authentication token.
-   */
-  token : function (req, res, next) {
-    var user = req.user ;
-
-    token.create(
-      user.client_id,
-      user.client_secret,
-      function(error, data) {
-        if(error) return res.send(400, 'Error');
-        else {
-          debug.log('creating new token');
-          user.update({
-            'token': data.token,
-            'timestamp': data.timestamp
-          }, function(error) {
-            if(error) throw new Error('user token update fails');
-            else res.send(200, data.token);
-          });
-        }
-      });
-
-    return next;
   },
   /**
    *
@@ -279,4 +237,4 @@ var controller = {
       res.send(204);
     });
   }
-};
+}

@@ -1,33 +1,39 @@
 "use strict";
 
+var extend = require('lodash/assign');
 var logger = require('../lib/logger')('controller:task');
 var json = require('../lib/jsonresponse');
 var TaskService = require('../service/task');
 var router = require('../router');
-var resolver = router.resolve;
-var filter = router.filter;
-var extend = require('lodash/assign');
 
 module.exports = function(server, passport){
   var middlewares = [
     passport.authenticate('bearer', {session:false}),
-    router.requireCredential('admin'),
-    router.resolve.customerNameToEntity({}),
-    router.ensureCustomer,
-    router.resolve.idToEntity({param:'task'}),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer
   ];
 
-  server.get('/:customer/task/:task',middlewares,controller.get);
-  server.patch('/:customer/task/:task',middlewares,controller.patch);
-  server.del('/:customer/task/:task',middlewares,controller.remove);
-
   server.get('/:customer/task',middlewares.concat([
+    router.requireCredential('user'),
     router.resolve.idToEntity({param:'host'})
   ]),controller.fetch);
 
+  server.get('/:customer/task/:task',middlewares.concat(
+    router.requireCredential('user'),
+    router.resolve.idToEntity({param:'task',required:true})
+  ),controller.get);
+
   server.post('/:customer/task',middlewares.concat([
-    router.resolve.idToEntity({param:'script'})
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({param:'script',required:true})
   ]),controller.create);
+
+  var mws = middlewares.concat(
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({param:'task',required:true})
+  );
+  server.patch('/:customer/task/:task',mws,controller.patch);
+  server.del('/:customer/task/:task',mws,controller.remove);
 };
 
 
@@ -40,29 +46,28 @@ var controller = {
    */
   create (req, res, next) {
     var input = extend({},req.body,{
-      'customer': req.customer,
-      'user': req.user,
-      'script': req.script
+      customer: req.customer,
+      user: req.user,
+      script: req.script
     });
 
-    if(!input.type) return res.send(400, json.error('type is required'));
-    if(!input.customer) return res.send(400, json.error('customer is required'));
-    if(!input.hosts) return res.send(400, json.error('a host is required'));
-    if(Array.isArray(input.hosts)){
-      if(input.hosts.length===0){
+    if (!input.type) return res.send(400, json.error('type is required'));
+    if (!input.hosts) return res.send(400, json.error('a host is required'));
+    if (Array.isArray(input.hosts)) {
+      if (input.hosts.length===0) {
         return res.send(400, json.error('a host is required'));
       }
     } else {
       input.hosts = [ input.hosts ];
     }
-    if(!input.name) return res.send(400, json.error('name is required'));
-    if(input.type=='script'){
-      if(!input.script) return res.send(400, json.error('script is required'));
-    } else if(input.type=='scraper'){
-    }
+    if (!input.name) return res.send(400, json.error('name is required'));
+    //if (input.type=='script'){
+    //  if (!input.script) return res.send(400, json.error('script is required'));
+    //} else if(input.type=='scraper'){
+    //}
 
     TaskService.createManyTasks(input, function(error, tasks) {
-      if(error) {
+      if (error) {
         logger.error(error);
         return res.send(500, error);
       }
@@ -80,10 +85,9 @@ var controller = {
     var customer = req.customer;
 
     var input = {};
-    if(customer) input.customer_id = customer._id;
-    if(host) input.host_id = host._id;
+    input.customer_id = customer._id;
+    if (host) input.host_id = host._id;
 
-    logger.log('fetching tasks');
     TaskService.fetchBy(input, function(error, tasks) {
       if(error) return res.send(500);
       res.send(200, tasks);
@@ -99,7 +103,6 @@ var controller = {
    */
   get (req, res, next) {
     var task = req.task;
-    if(!task) return res.send(404);
 
     task.publish(function(data) {
       res.send(200, data);
@@ -115,7 +118,6 @@ var controller = {
    */
   remove (req,res,next) {
     var task = req.task;
-    if(!task) return res.send(404);
 
     TaskService.remove({
       task:task,
@@ -138,8 +140,7 @@ var controller = {
    * @param ...
    *
    */
-  patch (req, res, next) {
-    if(!req.task) return res.send(404);
+  patch (req,res,next) {
     var input = extend({},req.body);
 
     logger.log('updating task %j', input);

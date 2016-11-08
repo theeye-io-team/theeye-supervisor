@@ -1,9 +1,9 @@
-"use strict";
+'use strict';
 
 var logger = require('../lib/logger')(':router');
 var config = require('config');
-var fs = require("fs");
-var join = require("path").join;
+var fs = require('fs');
+var join = require('path').join;
 
 module.exports = {
   loadControllers: function(server, passport) {
@@ -11,6 +11,7 @@ module.exports = {
     // avoiding dynamic linker
     require('../controllers/agent-config')(server,passport);
     require('../controllers/agent')(server,passport);
+    require('../controllers/auth')(server);
     require('../controllers/customer')(server,passport);
     require('../controllers/dstat')(server,passport);
     require('../controllers/event')(server,passport);
@@ -21,8 +22,7 @@ module.exports = {
     require('../controllers/hostgroup')(server,passport);
     require('../controllers/job')(server,passport);
     require('../controllers/psaux')(server,passport);
-    require('../controllers/resource-monitor')(server,passport);
-    require('../controllers/resource-type')(server,passport);
+    require('../controllers/monitor')(server,passport);
     require('../controllers/resource')(server,passport);
     require('../controllers/script-download')(server,passport);
     require('../controllers/script')(server,passport);

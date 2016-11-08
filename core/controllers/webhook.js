@@ -1,11 +1,10 @@
-"use strict";
+'use strict';
 
 var extend = require('lodash/assign');
 var dbFilter = require('../lib/db-filter');
 var logger = require('../lib/logger')('eye:controller:webhook');
 var audit = require('../lib/audit');
 var router = require('../router');
-var resolve = router.resolve;
 
 const EventDispatcher = require('../service/events');
 const WebhookEvent = require('../entity/event').WebhookEvent;
@@ -14,8 +13,8 @@ const Webhook = require('../entity/webhook').Webhook;
 module.exports = function (server, passport) {
   var middlewares = [
     passport.authenticate('bearer', { session:false }),
-    resolve.customerNameToEntity({ required:true }),
-    router.ensureCustomer, // requesting user is authorized to access the customer
+    router.resolve.customerNameToEntity({ required:true }),
+    router.ensureCustomer
   ];
 
   server.get(
@@ -26,7 +25,9 @@ module.exports = function (server, passport) {
 
   server.post(
     '/:customer/webhook',
-    middlewares,
+    middlewares.concat(
+      router.requireCredential('admin')
+    ),
     controller.create,
     audit.afterCreate('webhook',{display:'name'})
   );
@@ -34,9 +35,9 @@ module.exports = function (server, passport) {
   server.get(
     '/:customer/webhook/:webhook',
     middlewares.concat(
-      resolve.idToEntity({
+      router.resolve.idToEntity({
         param:'webhook',
-        required: true
+        required:true
       })
     ),
     controller.get
@@ -45,7 +46,8 @@ module.exports = function (server, passport) {
   server.put(
     '/:customer/webhook/:webhook',
     middlewares.concat(
-      resolve.idToEntity({
+      router.requireCredential('admin'),
+      router.resolve.idToEntity({
         param:'webhook',
         required: true
       })
@@ -57,7 +59,8 @@ module.exports = function (server, passport) {
   server.del(
     '/:customer/webhook/:webhook',
     middlewares.concat(
-      resolve.idToEntity({
+      router.requireCredential('admin'),
+      router.resolve.idToEntity({
         param:'webhook',
         required: true
       })
@@ -74,27 +77,25 @@ module.exports = function (server, passport) {
   server.post(
     '/:customer/webhook/:webhook/trigger',
     middlewares.concat(
-      resolve.idToEntity({ param:'webhook', required: true })
+      router.requireCredential('user'),
+      router.resolve.idToEntity({
+        param:'webhook',
+        required:true
+      })
     ),
     controller.trigger
   );
 
+  // use custom middleware.
+  // requesting user is anonymous, only need to provide secret token
   server.post(
-    '/:customer/webhook/:webhook/trigger/secret/:secret',
-    [
-      resolve.customerNameToEntity({ required: true }),
-      resolve.idToEntity({ param:'webhook', required: true }),
-      function (req,res,next) { // validate secret
-        var secret = req.params.secret;
-        if( ! secret ) return res.send(403,'secret is required');
-        if( secret.length != 64 ) return res.send(403,'invalid secret');
-        if( req.webhook.secret != secret ) return res.send(403,'invalid secret');
-        next();
-      }
+    '/:customer/webhook/:webhook/trigger/secret/:secret', [
+      router.resolve.customerNameToEntity({ required: true }),
+      router.resolve.idToEntity({ param:'webhook', required: true }),
+      router.requireSecret('webhook')
     ],
     controller.trigger
   );
-
 }
 
 var controller = {
