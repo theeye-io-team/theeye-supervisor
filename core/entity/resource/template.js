@@ -7,8 +7,7 @@ var TemplateSchema = BaseSchema.EntitySchema.extend({
   'base_resource': { type: ObjectId, ref: 'Resource', 'default': null }
 });
 
-TemplateSchema.methods.updateInstancesOfGroupHosts = function(done)
-{
+TemplateSchema.methods.updateInstancesOfGroupHosts = function(done) {
   var template = this;
   logger.log('updating template resource "%s"(%s) instances',
     template.description,

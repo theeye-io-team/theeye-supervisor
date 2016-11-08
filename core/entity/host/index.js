@@ -6,8 +6,8 @@ var Schema = mongoose.Schema;
 
 var properties = {
   customer_name : { type:String, index:true },
-  hostname      : { type:String, index:true, required:true },
   customer_id   : { type:String },
+  hostname      : { type:String, index:true, required:true },
   ip            : { type:String },
   os_name       : { type:String },
   os_version    : { type:String },

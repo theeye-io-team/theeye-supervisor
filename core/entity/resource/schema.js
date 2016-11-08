@@ -1,16 +1,21 @@
-var Schema = require('mongoose').Schema;
+'use strict';
 
-var DEFAULT_TYPE = 'unknown' ;
+const Schema = require('mongoose').Schema;
+const DEFAULT_TYPE = 'unknown';
 
 var properties = exports.properties = {
-  'customer_id' : { type:String, required:true },
-  'customer_name' : { type:String, required:true },
-  'description' : { type:String, required:true },
-  'name' : { type:String, required:true },
-  'user_id' : { type: String, 'default': null },
-  'type' : { type:String, 'default':DEFAULT_TYPE },
-  'failure_severity' : { type:String, 'default':null },
-  'alerts': {type:Boolean, 'default':true}
+  customer_id: { type:String, required:true },
+  customer_name: { type:String, required:true },
+  description: { type:String, required:true },
+  name: { type:String, required:true },
+  type: { type:String, required:true },
+  user_id: { type:String, 'default': null }, // owner/creator
+  acl: [{
+    email: String,
+    user: { type:Schema.Types.ObjectId, ref:'User' }
+  }],
+  failure_severity: { type:String, 'default':null },
+  alerts: {type:Boolean, 'default':true}
 };
 
 /**
@@ -38,8 +43,6 @@ const specs = {
 }
 EntitySchema.set('toJSON', specs);
 EntitySchema.set('toObject', specs);
-
-
 EntitySchema.statics.DEFAULT_TYPE = DEFAULT_TYPE ;
 
 EntitySchema.methods.publish = function(next) {

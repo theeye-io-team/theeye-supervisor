@@ -7,7 +7,7 @@ var Template = require('./template').Entity;
 var ObjectId = require('mongoose').Schema.Types.ObjectId;
 
 var debug = require('debug')('eye:entity:resource');
-var _ = require('lodash');
+var extend = require('lodash/assign');
 
 var INITIAL_STATE = 'normal' ;
 
@@ -15,16 +15,16 @@ var INITIAL_STATE = 'normal' ;
  * Extended Schema. Includes non template attributes
  */
 var ResourceSchema = BaseSchema.EntitySchema.extend({
-  'host_id': { type:String },
-  'hostname': { type:String },
-  'fails_count': { type:Number, 'default':0 },
-  'state': { type:String, 'default':INITIAL_STATE },
-  'enable': { type:Boolean, 'default':true },
-  'creation_date': { type:Date, 'default':Date.now },
-  'template': { type: ObjectId, ref: 'ResourceTemplate', 'default': null },
-  'last_check': { type:Date, 'default':null },
-  'last_update': { type:Date, 'default':Date.now },
-  'last_event': { type: Object, 'default':{} }
+  host_id: { type:String },
+  hostname: { type:String },
+  fails_count: { type:Number, 'default':0 },
+  state: { type:String, 'default':INITIAL_STATE },
+  enable: { type:Boolean, 'default':true },
+  template: { type: ObjectId, ref: 'ResourceTemplate', 'default': null },
+  creation_date: { type:Date, 'default': Date.now },
+  last_check: { type:Date, 'default':null },
+  last_update: { type:Date, 'default':Date.now },
+  last_event: { type: Object, 'default':{} }
 });
 
 ResourceSchema.statics.INITIAL_STATE = INITIAL_STATE ;
@@ -87,7 +87,7 @@ ResourceSchema.statics.FromTemplate = function(
     'hostname': options.host.hostname,
     'template': template._id
   };
-  var input = _.extend( data, template.toObject() );
+  var input = extend( data, template.toObject() );
   input.description = input.description;
   input.name = input.name;
   delete input._id;

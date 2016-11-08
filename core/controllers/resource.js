@@ -25,7 +25,8 @@ module.exports = function (server, passport) {
 
   server.get('/:customer/resource/:resource',middlewares.concat([
     router.requireCredential('viewer'),
-    router.resolve.idToEntity({param:'resource',required:true})
+    router.resolve.idToEntity({param:'resource',required:true}),
+    router.ensureAllowed({entity:'resource'})
   ]),controller.get);
 
   server.put('/:customer/resource/:resource',middlewares.concat([

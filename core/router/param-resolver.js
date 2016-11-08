@@ -11,7 +11,7 @@ function firstToUpper(string) {
 }
 
 module.exports = {
-  idToEntity: function (options) {
+  idToEntity (options) {
 
     if (!options.param) throw new Error('param name is required!');
     var paramName = options.param;
@@ -76,7 +76,7 @@ module.exports = {
       });
     }
   },
-  hostnameToHost: function (options) {
+  hostnameToHost (options) {
 
     return function (req,res,next) {
       var hostname = req.params.hostname||req.body.hostname||req.query.hostname;
@@ -119,7 +119,7 @@ module.exports = {
       });
     }
   },
-  customerNameToEntity: function (options) {
+  customerNameToEntity (options) {
 
     return function (req,res,next) {
       var name = req.params.customer||req.body.customer||req.query.customer;
@@ -161,4 +161,4 @@ module.exports = {
       });
     }
   }
-};
+}

@@ -1,30 +1,32 @@
+'use strict';
+
 var mongodb = require("../lib/mongodb");
 var Schema  = require('mongoose').Schema;
 
 var EntitySchema = Schema({
-  token : { type : String, index : true },
-  client_id	: { type : String, index : true },
-  client_secret : { type : String },
-  email : { type: String, unique: true, required: true, dropDups: true },
-  emails : { type : Array, 'default': [] },
-  customers : [{
-    customer : { type: Schema.Types.ObjectId, ref: 'Customer' },
-    _id : String,
-    name : String
+  token: { type:String, index:true },
+  client_id: { type:String, index:true },
+  client_secret: { type:String },
+  email: { type:String, unique:true, required:true, dropDups:true },
+  emails: { type:Array, 'default':[] },
+  customers: [{
+    customer: { type:Schema.Types.ObjectId, ref:'Customer' },
+    _id:String,
+    name:String
   }],
-  username: { type : String, required: false, 'default' : null },
-  credential : { type : String , 'default' : null },
-  enabled : { type : Boolean, 'default' : false },
-  last_update : { type : Date, 'default' : new Date() },
-  creation_date : { type : Date, 'default' : new Date() },
-  timestamp : { type : String, 'default' : Date.now() },
+  username: { type:String, required:false, 'default':null },
+  credential: { type:String , 'default':null },
+  enabled: { type:Boolean, 'default':false },
+  last_update: { type:Date, 'default':new Date() },
+  creation_date: { type:Date, 'default':new Date() },
+  timestamp: { type:String, 'default':Date.now() },
 });
 
 EntitySchema.methods.publish = function(options, nextFn)
 {
   var user = this;
-  options = options || {};
-  nextFn = nextFn || function(){};
+  options = (options||{});
+  nextFn = (nextFn||function(){});
 
   var pub = {
     id: user._id,

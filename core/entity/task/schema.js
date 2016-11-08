@@ -22,9 +22,13 @@ var EntitySchema = new BaseSchema({
     ref: 'Event',
     'default':function(){return [];}
   }],
+  acl: [{
+    email: String,
+    user: { type:Schema.Types.ObjectId, ref:'User' }
+  }],
   // one way hash
-  secret: {type:String,'default': randomSecret },
-  grace_time: { type: Number, 'default': 0 }
+  secret: { type:String, 'default':randomSecret },
+  grace_time: { type:Number, 'default': 0 }
 },{
   collection: 'tasks',
   discriminatorKey: '_type'

@@ -39,7 +39,5 @@ module.exports = {
   requireCredential: require('./require-credential'),
   requireSecret: require('./require-secret'),
   ensureCustomer: require('./ensure-customer'),
-  logOldClientRequest: function (req,res,next) {
-    next();
-  }
+  ensureAllowed: require('./ensure-allowed')
 }

@@ -44,10 +44,9 @@ module.exports = function(server, passport) {
    *
    * AGENTS VERSION <= v0.9.1
    */
-  var oldMiddlewares = middlewares.concat(router.logOldClientRequest);
   server.post(
     '/host/:hostname',
-    oldMiddlewares.concat(
+    middlewares.concat(
       router.requireCredential('agent',{exactMatch:true}) // only agents can create hosts
     ),
     controller.create
