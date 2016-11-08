@@ -1,3 +1,5 @@
+'use strict';
+
 var debug = require('debug')('eye:controller:resource');
 var json = require('../lib/jsonresponse');
 var ResourceManager = require('../service/resource');
@@ -6,46 +8,68 @@ var Resource = require('../entity/resource').Entity;
 var ResourceMonitor = require('../entity/monitor').Entity;
 var Host = require('../entity/host').Entity;
 var Job = require('../entity/job').Job;
-var resolver = require('../router/param-resolver');
+var router = require('../router');
 var dbFilter = require('../lib/db-filter');
 
-module.exports = function(server, passport) {
+module.exports = function (server, passport) {
+  // default middlewares
   var middlewares = [
     passport.authenticate('bearer',{session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'resource'})
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer,
   ];
 
-  server.get   ( '/:customer/resource'                  , middlewares , controller.fetch);
-  server.get   ( '/:customer/resource/:resource'        , middlewares , controller.get);
-  server.post  ( '/:customer/resource'                  , middlewares , controller.create);
-  server.put   ( '/:customer/resource/:resource'        , middlewares , controller.update);
-  //server.put   ( '/resource/:resource'                  , middlewares , controller.update);
-  server.del   ( '/:customer/resource/:resource'        , middlewares , controller.remove);
-  server.patch ( '/:customer/resource/:resource/alerts' , middlewares , controller.alerts);
+  server.get('/:customer/resource',middlewares.concat([
+    router.requireCredential('viewer'),
+  ]),controller.fetch);
+
+  server.get('/:customer/resource/:resource',middlewares.concat([
+    router.requireCredential('viewer'),
+    router.resolve.idToEntity({param:'resource',required:true})
+  ]),controller.get);
+
+  server.put('/:customer/resource/:resource',middlewares.concat([
+    router.requireCredential('agent',{exactMatch:true}),
+    router.resolve.idToEntity({param:'resource',required:true})
+  ]),controller.update);
+
+  server.post('/:customer/resource',middlewares.concat([
+    router.requireCredential('admin'),
+  ]),controller.create);
+
+  server.del('/:customer/resource/:resource',middlewares.concat([
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({param:'resource',required:true})
+  ]),controller.remove);
+
+  server.patch(
+    '/:customer/resource/:resource/alerts',
+    middlewares.concat([
+      router.requireCredential('admin'),
+      router.resolve.idToEntity({param:'resource',required:true})
+    ]),
+    controller.alerts
+  );
 
   server.patch(
     '/:customer/resource/:resource',
-    middlewares.concat( resolver.idToEntity({param:'host'}) ),
+    middlewares.concat([
+      router.requireCredential('admin'),
+      router.resolve.idToEntity({param:'resource',required:true}),
+      router.resolve.idToEntity({param:'host'})
+    ]),
     controller.patch
   );
-
 }
 
 var controller = {
-  get : function(req,res,next) {
+  get (req,res,next) {
     var resource = req.resource;
-    if(!resource) return res.send(404,json.error('not found'));
-
     resource.publish(function(err, pub){
       res.send(200, { 'resource': pub });
     });
   },
-  fetch : function(req,res,next) {
-    if(!req.customer){
-      return res.send(403,json.error('specify an organization'));
-    }
-
+  fetch (req,res,next) {
     var filter = dbFilter(req.query,{
       sort: {
         fails_count: -1,
@@ -68,9 +92,8 @@ var controller = {
    *
    *
    */
-  remove : function(req,res,next) {
+  remove (req,res,next) {
     var resource = req.resource;
-    if(!resource) return res.send(404,json.error('not found'));
 
     if(resource.type == 'host') {
       debug('removing host resource');
@@ -89,15 +112,10 @@ var controller = {
       res.send(204);
     }
   },
-  update : function(req,res,next) {
+  update (req,res,next) {
     var resource = req.resource;
     var input = req.params;
     var state = req.params.state;
-
-    if(!resource){
-      res.send(404,json.error('resource not found'));
-      return next();
-    }
 
     if(!state){
       res.send(400,json.error('resource state is required'));
@@ -118,11 +136,10 @@ var controller = {
    *
    *
    */
-  create : function(req,res,next) {
+  create (req,res,next) {
     var customer = req.customer;
     var hosts = req.body.hosts;
 
-    if( ! customer ) return res.send(400, json.error('customer is required'));
     if( ! hosts ) return res.send(400, json.error('hosts are required'));
     if( ! Array.isArray(hosts) ) hosts = [ hosts ];
 
@@ -170,9 +187,8 @@ var controller = {
    * @author Facugon
    *
    */
-  patch : function(req,res,next) {
+  patch (req,res,next) {
     var resource = req.resource;
-    if(!resource) return res.send(404,json.error('resource not found'));
 
     var params = MonitorManager.validateData(req.body);
     if( params.errors && params.errors.hasErrors() ) return res.send(400, params.errors);
@@ -196,8 +212,6 @@ var controller = {
    *
    */
   alerts (req, res, next) {
-    if(!req.resource) return res.send(404);
-    if(!req.customer) return res.send(400,'Customer required');
     var resource = req.resource;
     resource.alerts = req.params.alerts;
     resource.save(error => {

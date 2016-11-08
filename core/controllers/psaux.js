@@ -4,30 +4,33 @@ var json = require('../lib/jsonresponse');
 var HostStats = require('../entity/host/stats').Entity;
 var NotificationService = require('../service/notification');
 var logger = require('../lib/logger')('controller:dstat');
-var resolver = require('../router/param-resolver');
+var router = require('../router');
 var ResourceManager = require('../service/resource');
 
 module.exports = function(server, passport) {
-	server.post('/:customer/psaux/:hostname', [
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.hostnameToHost({})
-  ], controller.create);
+  var middlewares = [
+    passport.authenticate('bearer',{session:false}),
+    router.requireCredential('agent',{exactMatch:true}),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer,
+    router.resolve.hostnameToHost({required:true})
+  ];
 
-	server.post('/psaux/:hostname', [
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.hostnameToHost({})
-  ], controller.create);
+	server.post('/:customer/psaux/:hostname',middlewares,controller.create);
+  /**
+   *
+   * KEEP ROUTE FOR OUTDATED AGENTS
+   *
+   */
+	server.post('/psaux/:hostname',middlewares,controller.create);
 }
 
 var controller = {
   create (req, res, next) {
-    var host = req.host ;
-    var stats = req.params.psaux ;
+    var host = req.host;
+    var stats = req.params.psaux;
 
-    if(!host) return res.send(404,'host not found');
-    if(!stats) return res.send(400,'psaux data required');
+    if (!stats) return res.send(400,'psaux data required');
 
     logger.log('Handling host psaux data');
 

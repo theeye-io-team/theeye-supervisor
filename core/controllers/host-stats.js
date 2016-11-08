@@ -1,18 +1,21 @@
 var json = require('../lib/jsonresponse');
 var debug = require('../lib/logger')('controller:host-stats');
-var resolver = require('../router/param-resolver');
+var router = require('../router');
 var HostStats = require('../entity/host/stats').Entity;
 
 module.exports = function(server, passport) {
-  server.get('/:customer/host/:host/stats',[
+  var middlewares = [
     passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({required:true}),
-    resolver.idToEntity({param:'host',required:true})
-  ],controller.fetch);
+    router.requireCredential('agent',{exactMatch:true}),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer,
+    router.resolve.idToEntity({param:'host',required:true})
+  ];
+  server.get('/:customer/host/:host/stats',middlewares,controller.fetch);
 }
 
 var controller = {
-  fetch : function(req,res,next) {
+  fetch (req,res,next) {
     var host = req.host;
     var type = req.query.type;
 

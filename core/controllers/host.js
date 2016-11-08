@@ -71,7 +71,7 @@ var controller = {
       if(error) res.send(500);
       else res.send(200,{ hosts: hosts });
     });
-  }
+  },
   /**
    *
    *

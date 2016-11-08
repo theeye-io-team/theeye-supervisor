@@ -1,54 +1,58 @@
 'use strict';
 
+var app = require('../app');
 var json = require('../lib/jsonresponse');
-var Job = require('../entity/job').Job;
-var JobDispatcher = require('../service/job');
 var debug = require('../lib/logger')('controller:job');
-var paramsResolver = require('../router/param-resolver');
+var router = require('../router');
+var Job = require('../entity/job').Job;
 
 module.exports = function(server, passport) {
-  server.get('/:customer/job/:job',[
+  var middlewares = [
     passport.authenticate('bearer', {session:false}),
-    paramsResolver.customerNameToEntity({}),
-    paramsResolver.idToEntity({param:'job'})
-  ],controller.get);
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer
+  ];
 
-  server.put('/:customer/job/:job',[
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.customerNameToEntity({}),
-    paramsResolver.idToEntity({param:'job', required:true})
-  ],controller.update);
+  server.put('/:customer/job/:job', middlewares.concat(
+    router.requireCredential('agent',{exactMatch:true}),
+    router.resolve.idToEntity({param:'job',required:true})
+  ), controller.update);
 
-  server.get('/:customer/job',[
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.customerNameToEntity({}),
-    paramsResolver.hostnameToHost({})
-  ], controller.fetch);
+  /**
+   *
+   * users can trigger tasks
+   *
+   */
+  server.get('/:customer/job/:job', middlewares.concat(
+    router.requireCredential('user'),
+    router.resolve.idToEntity({param:'job',required:true})
+  ), controller.get);
 
-  server.post('/:customer/job',[
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.idToEntity({param:'task'}),
-    paramsResolver.customerNameToEntity({})
-  ],controller.create);
+  server.get('/:customer/job', middlewares.concat(
+    router.requireCredential('user'),
+    router.resolve.hostnameToHost({required:true})
+  ), controller.fetch);
+
+  server.post('/:customer/job', middlewares.concat(
+    router.requireCredential('user'),
+    router.resolve.idToEntity({param:'task',required:true})
+  ), controller.create);
 };
 
 var controller = {
-  get(req,res,next) {
+  get (req,res,next) {
     var job = req.job;
-    if(!job) return res.send(404,json.error('not found'));
     res.send(200,{ job: job });
   },
-  fetch(req,res,next) {
+  fetch (req,res,next) {
     debug.log('querying jobs');
-    if(!req.customer) return res.send(400,json.error('customer is required'));
-    if(!req.host) return res.send(400,json.error('host is required'));
+
     var host = req.host;
     var customer = req.customer;
-
     var input = { host: req.host };
 
     if( req.params.process_next ) {
-      JobDispatcher.getNextPendingJob(input,function(error,job){
+      app.jobDispatcher.getNextPendingJob(input,function(error,job){
         var jobs = [];
         if( job != null ) jobs.push(job);
         res.send(200, { jobs : jobs });
@@ -68,24 +72,20 @@ var controller = {
       return res.send(400, json.error('result data is required'));
     }
 
-    JobDispatcher.update(req.job, result, (err, job) => {
+    app.jobDispatcher.update(req.job, result, (err, job) => {
       if(err) return res.send(500);
       res.send(200, job);
       next();
     });
   },
   create (req,res,next) {
+    var task = req.task;
+    var user = req.user;
+    var customer = req.customer;
+
     debug.log('new task received');
 
-    var task = req.task ;
-    var user = req.user ;
-    var customer = req.customer ;
-
-    if(!task) return res.send(400,json.error('task required'));
-    if(!user) return res.send(400,json.error('user required'));
-    if(!customer) return res.send(400,json.error('customer required'));
-
-    JobDispatcher.create({
+    app.jobDispatcher.create({
       task: task,
       user: user,
       customer: customer,

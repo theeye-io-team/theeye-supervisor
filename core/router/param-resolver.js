@@ -78,17 +78,23 @@ module.exports = {
   },
   hostnameToHost: function (options) {
 
-    return function(req,res,next) {
-      var hostname = req.params.hostname || req.body.hostname || req.query.hostname;
+    return function (req,res,next) {
+      var hostname = req.params.hostname||req.body.hostname||req.query.hostname;
       var customer = req.customer;
 
-      if(!customer) {
-        logger.debug('no customer');
+      if (!customer) {
+        logger.debug('no customer yet present');
         req.host = null;
         return next();
       }
 
-      if(!hostname) {
+      if (!hostname) {
+        if (options.required) {
+          var e = new Error('hostname is required');
+          e.statusCode = 400;
+          return next(e);
+        }
+
         logger.debug('no hostname');
         req.host = null;
         return next();
@@ -96,12 +102,10 @@ module.exports = {
 
       logger.debug('resolving host with hostname "%s"', hostname);
 
-      var query = {
-        'hostname': hostname,
-        'customer_name': customer.name
-      };
-
-      Host.findOne(query,function(err,host){
+      Host.findOne({
+        hostname: hostname,
+        customer_name: customer.name
+      },function(err,host){
         if(err) {
           logger.debug(err);
           next(err);
