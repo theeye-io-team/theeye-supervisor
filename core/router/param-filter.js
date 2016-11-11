@@ -1,8 +1,16 @@
 'use strict';
 
-var _ = require('lodash');
+var lodash = require('lodash');
+var validator = require('validator');
 
 module.exports = {
+  emailArray (value) {
+    var emails = this.toArray(value);
+    if (emails.length===0) { return emails; }
+    return emails.filter( email => {
+      return validator.isEmail(email);
+    });
+  },
   /**
    *
    * turn input into array
@@ -12,7 +20,7 @@ module.exports = {
    *
    */
 
-  toArray: function toArray(value) {
+  toArray (value) {
     if (Array.isArray(value)) {
       return value;
     } else {
@@ -33,7 +41,7 @@ module.exports = {
    */
   uniq: function uniq(value) {
     var isArray = Object.prototype.toString.call(value) === '[object Array]';
-    if (isArray) return _.uniq(value);
+    if (isArray) return lodash.uniq(value);
     else return [value]; // unique value into an array
   },
   toBoolean: function toBoolean(value) {
@@ -59,10 +67,9 @@ module.exports = {
     var filterFn = options.filter;
 
     return function (req, res, next) {
-      var value = req[name] || req.params[name] || req.body[name] || req.query[name];
-
+      var value = req[name]||req.params[name]||req.body[name]||req.query[name];
       req[name] = self[filterFn](value);
       next();
     };
-  }
+  },
 };

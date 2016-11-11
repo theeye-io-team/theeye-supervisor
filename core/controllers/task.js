@@ -5,6 +5,8 @@ var logger = require('../lib/logger')('controller:task');
 var json = require('../lib/jsonresponse');
 var TaskService = require('../service/task');
 var router = require('../router');
+var dbFilter = require('../lib/db-filter');
+var ACL = require('../lib/acl');
 
 module.exports = function(server, passport){
   var middlewares = [
@@ -84,11 +86,25 @@ var controller = {
     var host = req.host;
     var customer = req.customer;
 
-    var input = {};
-    input.customer_id = customer._id;
+    var input = req.query;
     if (host) input.host_id = host._id;
 
-    TaskService.fetchBy(input, function(error, tasks) {
+    var filter = dbFilter(input,{ /** default **/ });
+    filter.where.customer_id = customer._id;
+
+    if ( !ACL.hasAccessLevel(req.user.credential,'admin') ) {
+      // find what this user can access
+      filter.where.acl = {
+        $elemMatch: {
+          $or:[
+            { user: req.user._id },
+            { email: req.user.email }
+          ]
+        }
+      };
+    }
+
+    TaskService.fetchBy(filter, function(error, tasks) {
       if(error) return res.send(500);
       res.send(200, tasks);
     });

@@ -4,7 +4,7 @@ var _ = require('lodash');
 var logger = require('../../lib/logger')('service:resource:monitor');
 var MonitorEntity = require('../../entity/monitor').Entity;
 var ErrorHandler = require('../../lib/errorHandler');
-var filter = require('../../router/param-filter');
+var router = require('../../router');
 var validator = require('validator');
 
 var ResourceTemplateService = require('./template');
@@ -23,34 +23,33 @@ if(!RegExp.escape){
  */
 
 module.exports = {
-
   /**
-  *
-  *
-  *
-  *
-  *
-  *
-  *    WARNING WARNING
-  *
-  *   NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE
-  *
-  *
-  * THIS IS JUST FOR THE CREATION PART
-  * UPDATE IS IN THIS FILE
-  *
-  * entity/monitor/schema.js
-  *
-  *
-  * UGLY I KNOW....
-  *
-  *
-  *
-  *
-  *
-  *
-  */
-  setMonitorData: function (type, input, next){
+   *
+   *
+   *
+   *
+   *
+   *
+   *    WARNING WARNING
+   *
+   *   NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE
+   *
+   *
+   * THIS IS JUST FOR THE CREATION PART
+   * UPDATE IS IN THIS FILE
+   *
+   * entity/monitor/schema.js
+   *
+   *
+   * UGLY I KNOW....
+   *
+   *
+   *
+   *
+   *
+   *
+   */
+  setMonitorData (type, input, next){
     var monitor;
     logger.log('setting up monitor data %j',input);
     try {
@@ -89,22 +88,22 @@ module.exports = {
       return next(e, input);
     }
   },
-
   /**
-  *
-  * @return {object ErrorHandler}
-  *
-  */
-  validateData: function (input) {
+   *
+   * @param {Object} input
+   * @return {Object} ErrorHandler
+   *
+   */
+  validateData (input) {
     var errors = new ErrorHandler();
     var type = (input.type||input.monitor_type);
 
     input.description||(input.description=input.name);
     input.name||(input.name=input.description);
 
-    if( !type ) errors.required('type',type);
-    if( !input.looptime || !parseInt(input.looptime) ) errors.required('looptime',input.looptime);
-    if( !input.description ) errors.required('description',input.description);
+    if (!type) errors.required('type',type);
+    if (!input.looptime||!parseInt(input.looptime)) errors.required('looptime',input.looptime);
+    if (!input.description) errors.required('description',input.description);
     input.name||(input.name=input.description);
 
     var data = _.assign({},input,{
@@ -112,14 +111,13 @@ module.exports = {
       'description': input.description,
       'type': type,
       'monitor_type': type,
-      'tags': filter.toArray(input.tags)
+      'tags': router.filter.toArray(input.tags)
     });
 
     logger.log('setting up resource type & properties');
     logger.log(data);
 
-    switch(type)
-    {
+    switch(type) {
       case 'scraper':
         var url = input.url;
         if( ! url ) errors.required('url',url);
@@ -131,44 +129,44 @@ module.exports = {
         if( !input.external_host_id ) data.external = false;
 
         if(!input.parser) input.parser=null;
-      else if(input.parser != 'script' && input.parser != 'pattern')
-        errors.invalid('parser',input.parser);
+        else if(input.parser != 'script' && input.parser != 'pattern')
+          errors.invalid('parser',input.parser);
 
-      // identify how to parse api response selected option by user
-      if(!input.status_code&&!input.pattern&&!input.script){
-        errors.required('status code or parser');
-      } else {
-        if(input.parser){
-          if(input.parser=='pattern' && !input.pattern){
-            errors.invalid('pattern',input.pattern);
-          } else if(input.parser=='script' && !input.script){
-            errors.invalid('script',input.script);
+        // identify how to parse api response selected option by user
+        if(!input.status_code&&!input.pattern&&!input.script){
+          errors.required('status code or parser');
+        } else {
+          if(input.parser){
+            if(input.parser=='pattern' && !input.pattern){
+              errors.invalid('pattern',input.pattern);
+            } else if(input.parser=='script' && !input.script){
+              errors.invalid('script',input.script);
+            }
           }
         }
-      }
-      break;
-    case 'process':
-      data.raw_search = input.raw_search || errors.required('raw_search');
-      data.psargs = input.psargs || 'aux';
-      data.is_regexp = Boolean(input.is_regexp=='true'||input.is_regexp===true);
-      data.pattern = ( ! data.is_regexp ? RegExp.escape(data.raw_search) : data.raw_search );
-      break;
-    case 'script':
-      var scriptArgs = filter.toArray(input.script_arguments);
-      data.script_arguments = scriptArgs;
-      data.script_id = input.script_id || errors.required('script_id',input.script_id);
-      data.script_runas = input.script_runas || '';
-      break;
-    case 'dstat':
-      data.cpu = input.cpu || 60;
-      data.mem = input.mem || 60;
-      data.cache = input.cache || 60;
-      data.disk = input.disk || 60;
-      break;
-    case 'psaux': break;
-    default:
-      errors.invalid('type', type);
-      break;
+        break;
+      case 'process':
+        data.raw_search = input.raw_search || errors.required('raw_search');
+        data.psargs = input.psargs || 'aux';
+        data.is_regexp = Boolean(input.is_regexp=='true'||input.is_regexp===true);
+        data.pattern = ( ! data.is_regexp ? RegExp.escape(data.raw_search) : data.raw_search );
+        break;
+      case 'script':
+        var scriptArgs = router.filter.toArray(input.script_arguments);
+        data.script_arguments = scriptArgs;
+        data.script_id = input.script_id || errors.required('script_id',input.script_id);
+        data.script_runas = input.script_runas || '';
+        break;
+      case 'dstat':
+        data.cpu = input.cpu || 60;
+        data.mem = input.mem || 60;
+        data.cache = input.cache || 60;
+        data.disk = input.disk || 60;
+        break;
+      case 'psaux': break;
+      default:
+        errors.invalid('type', type);
+        break;
     }
 
     return {
@@ -176,10 +174,7 @@ module.exports = {
       errors: errors.hasErrors() ? errors : null
     };
   },
-
-
-
-  createMonitor: function (type, input, next) {
+  createMonitor (type, input, next) {
     next||(next=function(){});
     logger.log('processing monitor %s creation data', type);
     this.setMonitorData(type, input,
@@ -208,22 +203,22 @@ module.exports = {
 
               logger.log('monitor %s created', monitor.name);
               return next(null, monitor);
-            });
+            }
+          );
         }
-      });
+      }
+    );
   },
-
-
   /**
-  *
-  * @author Facundo
-  * @param {Object} filters
-  *    @property {Boolean} enable
-  *    @property {ObjectId} host_id, valid mongo id string
-  * @param {Function} doneFn
-  *
-  */
-  findBy  : function (filters, options, doneFn) {
+   *
+   * @author Facundo
+   * @param {object} filters
+   * @property {boolean} filters.enable
+   * @property {string} filters.host_id - valid mongo id string
+   * @param {Function} doneFn
+   *
+   */
+  findBy (filters, options, doneFn) {
     var query = {};
     filters = filters || {};
 
@@ -262,26 +257,24 @@ module.exports = {
     if( options.populate ){
       logger.log('populating monitors');
       MonitorEntity
-      .find(query)
-      .populate('resource')
-      .exec(doneExec);
+        .find(query)
+        .populate('resource')
+        .exec(doneExec);
     } else {
       MonitorEntity
-      .find(query)
-      .exec(doneExec);
+        .find(query)
+        .exec(doneExec);
     }
   },
-
-
   /**
-  *
-  * Api to handle monitors.
-  * validate type and data
-  * @author Facundo
-  * @param {Array} monitors
-  *
-  */
-  resourceMonitorsToTemplates : function (
+   *
+   * Api to handle monitors.
+   * validate type and data
+   * @author Facundo
+   * @param {Array} monitors
+   *
+   */
+  resourceMonitorsToTemplates (
     resource_monitors, 
     customer, 
     user,
@@ -317,30 +310,30 @@ module.exports = {
 
     var templates = [];
 
-    for(var i=0; i<resource_monitors.length; i++){
+    for (var i=0; i<resource_monitors.length; i++) {
       var value = resource_monitors[i];
       logger.log('processing resource monitors %j', value);
 
-      if( Object.keys( value ).length === 0 ) {
+      if (Object.keys( value ).length === 0) {
         var e = new Error('invalid resource monitor definition');
         e.statusCode = 400;
         return done(e);
       }
 
-      if( value.hasOwnProperty('id') ){
+      if (value.hasOwnProperty('id')) {
         /* create template from existent monitor & resource */
-        if( validator.isMongoId(value.id) ){
+        if (validator.isMongoId(value.id)) {
           logger.log('creating template from existent resource monitors');
           ResourceTemplateService
-          .resourceMonitorToTemplate(
-            value.id,
-            function(error, tpls){
-              if(error) done(error);
-              logger.log('templates created');
-              templates.push( tpls );
-              templatized();
-            }
-          );
+            .resourceMonitorToTemplate(
+              value.id,
+              function(error, tpls){
+                if(error) done(error);
+                logger.log('templates created');
+                templates.push( tpls );
+                templatized();
+              }
+            );
         } else {
           var e = new Error('invalid monitor id');
           e.statusCode = 400;
@@ -351,7 +344,7 @@ module.exports = {
         logger.log('setting up template data');
 
         var result = this.validateData(value);
-        if(!result || result.error) {
+        if (!result||result.error) {
           let msg = 'invalid resource monitor data';
           logger.error(msg);
           let e = new Error(msg);
@@ -365,8 +358,7 @@ module.exports = {
         data.customer_name = customer_name;
         data.user_id = user_id;
         logger.log('creating template from scratch');
-        ResourceTemplateService
-        .createResourceMonitorsTemplates(
+        ResourceTemplateService.createResourceMonitorsTemplates(
           data, function(err, tpls){
             if(err) {
               logger.error(err);
@@ -381,8 +373,6 @@ module.exports = {
       }
     }
   }
-
-
 }
 
 /**

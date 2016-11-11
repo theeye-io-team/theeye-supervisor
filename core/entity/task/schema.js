@@ -10,25 +10,22 @@ const randomSecret = require('../../lib/random-secret');
 var BaseSchema = require('../base-schema');
 
 var EntitySchema = new BaseSchema({
-  user_id : { type: String, 'default': null },
-  customer_id : { type: String, ref: 'Customer' },
-  public : { type: Boolean, 'default': false },
-  tags: { type: Array, 'default':[] },
+  user_id: { type: String, default: null },
+  customer_id: { type: String, ref: 'Customer' },
+  public: { type: Boolean, default: false },
+  tags: { type: Array, default:[] },
   type: { type: String, required: true },
   name: { type: String },
   description : { type: String },
   triggers: [{
     type: Schema.Types.ObjectId,
     ref: 'Event',
-    'default':function(){return [];}
+    default:function(){return [];}
   }],
-  acl: [{
-    email: String,
-    user: { type:Schema.Types.ObjectId, ref:'User' }
-  }],
+  acl: [{ type: String }],
   // one way hash
-  secret: { type:String, 'default':randomSecret },
-  grace_time: { type:Number, 'default': 0 }
+  secret: { type:String, default:randomSecret },
+  grace_time: { type:Number, default: 0 }
 },{
   collection: 'tasks',
   discriminatorKey: '_type'

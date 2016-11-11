@@ -85,23 +85,19 @@ module.exports = {
    * @return {Object} query result
    *
    */
-  update : function (id, updates, next)
-  {
+  update (id, updates, next) {
     var customerNames = updates.customers;
     debug.log('updating user %s data', id);
 
     customerNamesToUserCustomers(
       customerNames,
-      function(error, customers)
-      {
+      function(error, customers) {
         if(error) return next(error);
 
-        User.findOne({
-          _id : id  
-        }, function(error, user) {
+        User.findOne({ _id : id }, function (error, user) {
           if(error) return next(error);
 
-          for(var attr in updates){
+          for (var attr in updates) {
             if(attr != 'customers'){
               user[attr] = updates[attr];
             } else {
@@ -131,14 +127,12 @@ module.exports = {
    * @param {Function} next callback
    * @return null
    */
-  create: function(options, next)
-  {
+  create (options, next) {
     var self = this;
 
     customerNamesToUserCustomers(
       options.customers,
-      function(error, customers)
-      {
+      function (error, customers) {
         if(error) return next(error);
 
         var data = {

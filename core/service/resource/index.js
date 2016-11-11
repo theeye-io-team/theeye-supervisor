@@ -414,16 +414,21 @@ Service.update = function(input,next) {
   var updates = input.updates;
   var resource = input.resource;
 
-  if(updates.host){
+  if (updates.host) {
     updates.host_id = updates.host._id;
     updates.hostname = updates.host.hostname;
   }
 
   logger.log('updating monitor %j',updates);
-  resource.patch(updates,function(error){
-    if(error) return next(error);
+
+  resource.update(updates,function(error){
+    if (error) {
+      logger.error(error);
+      return next(error);
+    }
+
     MonitorEntity.findOne({
-      'resource_id': resource._id
+      resource_id: resource._id
     },function(error,monitor){
       if(error) return next(error);
       if(!monitor) return next(new Error('resource monitor not found'), null);
@@ -475,8 +480,9 @@ function getEventSeverity (input) {
  */
 Service.fetchBy = function(filter,next) {
   var query = Resource.find( filter.where );
-  if( filter.sort ) query.sort( filter.sort );
-  if( filter.limit ) query.limit( filter.limit );
+  if (filter.sort) query.sort( filter.sort );
+  if (filter.limit) query.limit( filter.limit );
+
   query.exec(function(error,resources){
     if(error) {
       logger.error('unable to fetch resources from database');
@@ -484,7 +490,7 @@ Service.fetchBy = function(filter,next) {
       return next(error,null);
     }
 
-    if(resources.length===0) return next(null,[]);
+    if(resources===null||resources.length===0) return next(null,[]);
 
     var pub = [];
     var fetched = _.after(resources.length,() => next(null,pub));

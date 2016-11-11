@@ -10,10 +10,7 @@ var properties = exports.properties = {
   name: { type:String, required:true },
   type: { type:String, required:true },
   user_id: { type:String, 'default': null }, // owner/creator
-  acl: [{
-    email: String,
-    user: { type:Schema.Types.ObjectId, ref:'User' }
-  }],
+  acl: [{ type: String }],
   failure_severity: { type:String, 'default':null },
   alerts: {type:Boolean, 'default':true}
 };

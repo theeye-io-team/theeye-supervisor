@@ -10,6 +10,7 @@ var Host = require('../entity/host').Entity;
 var Job = require('../entity/job').Job;
 var router = require('../router');
 var dbFilter = require('../lib/db-filter');
+var ACL = require('../lib/acl');
 
 module.exports = function (server, passport) {
   // default middlewares
@@ -57,7 +58,8 @@ module.exports = function (server, passport) {
     middlewares.concat([
       router.requireCredential('admin'),
       router.resolve.idToEntity({param:'resource',required:true}),
-      router.resolve.idToEntity({param:'host'})
+      router.resolve.idToEntity({param:'host'}),
+      router.filter.spawn({filter:'emailArray',param:'acl'})
     ]),
     controller.patch
   );
@@ -66,11 +68,12 @@ module.exports = function (server, passport) {
 var controller = {
   get (req,res,next) {
     var resource = req.resource;
-    resource.publish(function(err, pub){
+    resource.publish(function (err,pub) {
       res.send(200, { 'resource': pub });
     });
   },
   fetch (req,res,next) {
+
     var filter = dbFilter(req.query,{
       sort: {
         fails_count: -1,
@@ -79,6 +82,10 @@ var controller = {
     });
 
     filter.where.customer_id = req.customer._id;
+    if ( !ACL.hasAccessLevel(req.user.credential,'admin') ) {
+      // find what this user can access
+      filter.where.acl = req.user.email ;
+    }
 
     ResourceManager.fetchBy(filter,function(error,resources){
       if(error||!resources) {
@@ -183,27 +190,34 @@ var controller = {
   },
   /**
    *
-   * this is PUT not PATCH ! but PUT is taken above to update resource status.
+   * this is PUT not PATCH !
+   * but PUT is taken above to update resource status.
    *
    * @author Facugon
    *
    */
   patch (req,res,next) {
     var resource = req.resource;
+    var body = req.body;
+    body.host = req.host;
+    body.acl = req.acl;
 
-    var params = MonitorManager.validateData(req.body);
-    if( params.errors && params.errors.hasErrors() ) return res.send(400, params.errors);
-
-    var input = params.data;
-    if(req.host) input.host = req.host;
+    var params = MonitorManager.validateData(body);
+    if (params.errors && params.errors.hasErrors()) {
+      return res.send(400, params.errors);
+    }
+    var updates = params.data;
 
     ResourceManager.update({
-      resource:resource,
-      updates:input,
-      user:req.user
+      resource: resource,
+      updates: updates,
+      user: req.user
     },function(error, result){
-      if(error) res.send(500,json.error('update error', error.message));
-      else res.send(200, result);
+      if (error) {
+        res.send(500,json.error('update error', error.message));
+      } else {
+        res.send(200, result);
+      }
     });
   },
   /**

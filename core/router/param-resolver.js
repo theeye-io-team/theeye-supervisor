@@ -160,5 +160,5 @@ module.exports = {
         next();
       });
     }
-  }
+  },
 }

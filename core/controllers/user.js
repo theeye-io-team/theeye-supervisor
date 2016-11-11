@@ -7,6 +7,9 @@ var UserService = require('../service/user');
 var User = require("../entity/user").Entity;
 
 var router = require('../router');
+var dbFilter = require('../lib/db-filter');
+var ACL = require('../lib/acl');
+var lodash = require('lodash');
 
 module.exports = function (server, passport) {
   /**
@@ -24,6 +27,16 @@ module.exports = function (server, passport) {
     passport.authenticate('bearer', {session:false}),
     router.requireCredential('root'),
     router.resolve.customerNameToEntity({param:'customer'})
+  ], controller.fetch);
+
+  server.get('/:customer/user',[
+    passport.authenticate('bearer', {session:false}),
+    router.requireCredential('admin'),
+    router.resolve.customerNameToEntity({
+      param:'customer',
+      required:true
+    }),
+    router.ensureCustomer,
   ], controller.fetch);
 
   server.del('/user/:user',[
@@ -109,7 +122,7 @@ var controller = {
   get : function(req,res,next) {
     var user = req.user;
     if(!user) return res.send(404,json.error('user not found'));
-    user.publish({ populateCustomers:true },function(error, data){
+    user.publish({ include_customers:true },function(error, data){
       res.send(200, { user: data });
     });
   },
@@ -124,29 +137,28 @@ var controller = {
    * @param {String} enabled
    *
    */
-  patch : function(req, res, next)
-  {
+  patch (req, res, next) {
     var user = req.user; // user parameter to patch
     if(!user) return res.send(404, json.error('user not found'));
 
     var params = new UserInterface(req,next);
     var updates = params.valueObject();
 
-    if(params.values.length === 0)
-      return res.send(400, json.error('nothing to update'));
+    if (params.values.length === 0) {
+      return res.send(400, json.error('no changes'));
+    }
 
     UserService.update(user._id, updates, function(error, user){
-      if(error) {
-        if(error.statusCode)
+      if (error) {
+        if (error.statusCode) {
           return res.send(error.statusCode, error.message);
-
-        else {
+        } else {
           logger.error(error);
           return res.send(500,'internal error');
         }
       } else {
         user.publish({
-          populateCustomers : true
+          include_customers : true
         }, function(error, data){
           res.send(200, { 'user' : data });
         });
@@ -165,8 +177,7 @@ var controller = {
    * @param {String} enabled (false by default)
    *
    */
-  create : function(req,res,next)
-  {
+  create (req,res,next) {
     var params = new UserInterface(req,next);
 
     if(params.errors.length != 0)
@@ -181,8 +192,7 @@ var controller = {
       } else {
         logger.log('new user created');
         return user.publish({
-          populateCustomers : true,
-          publishSecret : true
+          include_customers: true,
         }, function(error, data){
           res.send(200, { user: data });
         });
@@ -194,30 +204,32 @@ var controller = {
    *
    */
   fetch (req,res,next) {
-    var customer = req.customer;
-    var credential = req.params.credential;
+    var filter = dbFilter(req.query,{ /** default **/ });
 
-    var query = {};
-    if (customer) query.customer_id = customer.id;
-    if (credential) query.credential = credential;
+    // find only what this user can access
+    if ( !ACL.hasAccessLevel(req.user.credential,'root')||req.customer ) {
+      filter.where['customers._id'] = req.customer._id;
+    }
 
-    UserService.findBy(query, function(error,users) {
+    User.fetchBy(filter,function (error,users) {
       if (error) {
         logger.error('error fetching users');
-        res.send(500, json.error('failed to fetch users'));
-      } else {
-        logger.log('users fetched');
-
-        var pub = [];
-        for (var u=0; u<users.length; u++) {
-          var user = users[u];
-          var options = (credential&&credential=='agent') ? { publishSecret: true } : {};
-          var data = user.publish(options, function(error,data){ });
-          pub.push( data );
-        }
-
-        return res.send(200, {'users':pub});
+        return res.send(500,error.message);
       }
+
+      if (users.length===0) return res.send(200,[]);
+
+      var pub = [];
+      var end = lodash.after(users.length,() => res.send(200,pub));
+      users.forEach(user => {
+        var options = {
+          include_secret:(filter.where.credential=='agent'),
+        };
+        user.publish(options,(error,data) => {
+          pub.push(data);
+          end();
+        });
+      });
     });
   },
   /**

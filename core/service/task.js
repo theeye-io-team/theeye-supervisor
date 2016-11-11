@@ -72,39 +72,33 @@ var TaskService = {
    * @author Facundo
    *
    */
-  fetchBy : function(input,next)
-  {
-    var publishedTasks = [];
-    Task.find(input, function(error,tasks){
-      if(error) {
-        debug('error %j', error);
-        return next(error);
+  fetchBy (filter,next) {
+    var query = Task.find(filter.where);
+    if (filter.sort) query.sort( filter.sort );
+    if (filter.limit) query.limit( filter.limit );
+
+    query.exec(function(error,tasks){
+      if (error) {
+        debug(error);
+        return next(error,[]);
       }
 
-      var notFound = tasks == null ||
-        (tasks instanceof Array && tasks.length === 0);
+      if (tasks===null||tasks.length===0) return next(null,[]);
 
-      if( notFound ) {
-        debug('cannot find task with that criteria');
-        next(null, []);
-      }
-      else {
-        debug('publishing tasks');
-
-        var asyncTasks = [];
-        tasks.forEach(function(task){
-          asyncTasks.push(function(callback){
-            task.publish(function(data){
-              publishedTasks.push(data);
-              callback();
-            });
+      var publishedTasks = [];
+      var asyncTasks = [];
+      tasks.forEach(function(task){
+        asyncTasks.push(function(callback){
+          task.publish(function(data){
+            publishedTasks.push(data);
+            callback();
           });
         });
+      });
 
-        async.parallel(asyncTasks,function(){
-          next(null, publishedTasks);
-        });
-      }
+      async.parallel(asyncTasks,function(){
+        next(null, publishedTasks);
+      });
     });
   },
   createManyTasks (input, doneFn) {
