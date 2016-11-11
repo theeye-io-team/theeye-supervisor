@@ -5,7 +5,7 @@ var json = require('../lib/jsonresponse');
 var ResourceManager = require('../service/resource');
 var MonitorManager = require('../service/resource/monitor');
 var Resource = require('../entity/resource').Entity;
-var ResourceMonitor = require('../entity/monitor').Entity;
+var Monitor = require('../entity/monitor').Entity;
 var Host = require('../entity/host').Entity;
 var Job = require('../entity/job').Job;
 var router = require('../router');
@@ -68,9 +68,13 @@ module.exports = function (server, passport) {
 var controller = {
   get (req,res,next) {
     var resource = req.resource;
-    resource.publish(function (err,pub) {
-      res.send(200, { 'resource': pub });
-    });
+    Monitor
+      .findOne({ resource: resource._id })
+      .exec(function(err,monitor){
+        var data = resource.toObject();
+        data.monitor = monitor;
+        res.send(200, { resource: data });
+      });
   },
   fetch (req,res,next) {
 
@@ -206,19 +210,33 @@ var controller = {
     if (params.errors && params.errors.hasErrors()) {
       return res.send(400, params.errors);
     }
-    var updates = params.data;
 
-    ResourceManager.update({
-      resource: resource,
-      updates: updates,
-      user: req.user
-    },function(error, result){
-      if (error) {
-        res.send(500,json.error('update error', error.message));
-      } else {
-        res.send(200, result);
-      }
-    });
+    var updates = params.data;
+    if (updates.type=='host') {
+
+      resource.acl = req.acl;
+      resource.save(err => {
+        if (err) {
+          res.send(500,err);
+        } else {
+          res.send(200,resource);
+        }
+      });
+
+    } else {
+
+      ResourceManager.update({
+        resource: resource,
+        updates: updates,
+        user: req.user
+      },function(error, result){
+        if (error) {
+          res.send(500,json.error('update error', error.message));
+        } else {
+          res.send(200, result);
+        }
+      });
+    }
   },
   /**
    *

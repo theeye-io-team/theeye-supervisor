@@ -164,6 +164,7 @@ module.exports = {
         data.disk = input.disk || 60;
         break;
       case 'psaux': break;
+      case 'host': break;
       default:
         errors.invalid('type', type);
         break;

@@ -1,17 +1,17 @@
 var debug = require('debug')('controller:resource');
 var json = require('../lib/jsonresponse');
 var _ = require('lodash');
-
 var ResourceMonitor = require('../entity/monitor').Entity;
 var router = require('../router');
+var dbFilter = require('../lib/db-filter');
 
 module.exports = function (server, passport) {
-  server.get('/:customer/monitor/:resource-monitor', [
+  server.get('/:customer/monitor/:monitor', [
     passport.authenticate('bearer',{session:false}),
     router.requireCredential('viewer'),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,
-    router.resolve.idToEntity({param:'resource-monitor',required:true})
+    router.resolve.idToEntity({param:'monitor',required:true})
   ], controller.get);
 
   server.get('/:customer/monitor', [
@@ -29,10 +29,8 @@ var controller = {
    *
    */
   get (req,res,next) {
-    var monitor = req['resource-monitor'];
-    monitor.publish({},(error, pub) => {
-      res.send(200, { 'monitor': pub }) 
-    });
+    var monitor = req.monitor;
+    res.send(200,monitor);
   },
   /**
    *
