@@ -22,7 +22,8 @@ module.exports = function(server, passport){
 
   server.get('/:customer/task/:task',middlewares.concat(
     router.requireCredential('user'),
-    router.resolve.idToEntity({param:'task',required:true})
+    router.resolve.idToEntity({param:'task',required:true}),
+    router.ensureAllowed({entity:{name:'task'}})
   ),controller.get);
 
   server.post('/:customer/task',middlewares.concat([
@@ -94,14 +95,7 @@ var controller = {
 
     if ( !ACL.hasAccessLevel(req.user.credential,'admin') ) {
       // find what this user can access
-      filter.where.acl = {
-        $elemMatch: {
-          $or:[
-            { user: req.user._id },
-            { email: req.user.email }
-          ]
-        }
-      };
+      filter.where.acl = req.user.email;
     }
 
     TaskService.fetchBy(filter, function(error, tasks) {
@@ -173,5 +167,5 @@ var controller = {
         res.send(500);
       }
     });
-  },
+  }
 };

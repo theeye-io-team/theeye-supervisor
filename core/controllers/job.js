@@ -35,7 +35,8 @@ module.exports = function(server, passport) {
 
   server.post('/:customer/job', middlewares.concat(
     router.requireCredential('user'),
-    router.resolve.idToEntity({param:'task',required:true})
+    router.resolve.idToEntity({param:'task',required:true}),
+    router.ensureAllowed({entity:{name:'task'}})
   ), controller.create);
 };
 

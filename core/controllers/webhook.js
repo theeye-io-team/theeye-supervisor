@@ -78,10 +78,8 @@ module.exports = function (server, passport) {
     '/:customer/webhook/:webhook/trigger',
     middlewares.concat(
       router.requireCredential('user'),
-      router.resolve.idToEntity({
-        param:'webhook',
-        required:true
-      })
+      router.resolve.idToEntity({param:'webhook',required:true}),
+      router.ensureAllowed({entity:{name:'webhook'}})
     ),
     controller.trigger
   );

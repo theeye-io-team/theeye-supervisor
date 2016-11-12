@@ -1,3 +1,5 @@
+'use strict';
+
 var fs = require('fs');
 var Script = require('../entity/script').Entity;
 var ScriptService = require('../service/script');
@@ -6,11 +8,12 @@ var debug = require('../lib/logger')('controller:script-download');
 var router = require('../router');
 
 module.exports = function(server, passport){
-	server.get('/:customer/script/:id/download',[
+	server.get('/:customer/script/:script/download',[
     passport.authenticate('bearer', {session:false}),
     router.requireCredential('user'),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,
+    router.resolve.idToEntity({param:'script',required:true})
   ],controller.get);
 
   /**
@@ -24,27 +27,24 @@ module.exports = function(server, passport){
 }
 
 var controller = {
-  get: function (req, res, next) {
-    var id = req.params.id;
+  get (req, res, next) {
+    var script = req.script;
 
-    Script.findById(id, function (error,script){
-      if (!script) return res.send(404, json.error('not found'));
+    ScriptService.getScriptStream(script, (error,stream) => {
+      if (error) {
+        debug.error(error.message);
+        res.send(500, json.error('internal error',null));
+      } else {
+        debug.log('streaming script to client');
 
-      ScriptService.getScriptStream(script, (error,stream) => {
-        if (error) {
-          debug.error(error.message);
-          res.send(500, json.error('internal error',null));
-        } else {
-          debug.log('streaming script to client');
-
-          var headers = {
-            'Content-Disposition':'attachment; filename=' + script.filename,
-          }
-          res.writeHead(200,headers);
-          stream.pipe(res);
+        var headers = {
+          'Content-Disposition':'attachment; filename=' + script.filename,
         }
-      });
+        res.writeHead(200,headers);
+        stream.pipe(res);
+      }
     });
+
     next();
   }
 };
