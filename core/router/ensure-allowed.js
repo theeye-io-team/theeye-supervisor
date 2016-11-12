@@ -6,7 +6,7 @@ module.exports = function (options) {
 
   return function (req,res,next) {
     // admins are allowed
-    if (req.user.credential==='admin') {
+    if (ACL.hasAccessLevel(req.user.credential,'admin')) {
       return next();
     }
 
