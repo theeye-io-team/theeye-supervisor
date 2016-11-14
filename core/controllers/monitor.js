@@ -52,7 +52,7 @@ var controller = {
       .exec(function(err, monitors){
 
         var total = monitors.length;
-        if(total==0) return res.send(200, { monitors: [] });
+        if(total==0) return res.send(200,[]);
 
         var data = [];
         var published = _.after(total, function(){

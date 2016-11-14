@@ -144,7 +144,7 @@ var controller = {
     var params = new UserInterface(req,next);
     var updates = params.valueObject();
 
-    if (req.params.email) {
+    if (req.params.email!=user.email) {
       return res.send(403,'user email can\'t be changed');
     }
 

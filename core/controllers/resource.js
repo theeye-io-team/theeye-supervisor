@@ -95,7 +95,7 @@ var controller = {
       if(error||!resources) {
         res.send(500);
       } else {
-        res.send(200, resources);
+        res.send(200,resources);
       }
     });
   },
