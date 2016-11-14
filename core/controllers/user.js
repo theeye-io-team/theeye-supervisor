@@ -139,10 +139,14 @@ var controller = {
    */
   patch (req, res, next) {
     var user = req.user; // user parameter to patch
-    if(!user) return res.send(404, json.error('user not found'));
+    if (!user) return res.send(404, json.error('user not found'));
 
     var params = new UserInterface(req,next);
     var updates = params.valueObject();
+
+    if (req.params.email) {
+      return res.send(403,'user email can\'t be changed');
+    }
 
     if (params.values.length === 0) {
       return res.send(400, json.error('no changes'));
