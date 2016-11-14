@@ -14,7 +14,7 @@ module.exports = function(server, passport){
 var controller = {
   get (req, res, next) {
     var customer = req.customer;
-    Tag.find({ customer: customer }, function(error,tags){
+    Tag.find({ customer: customer._id }, function(error,tags){
       res.send(200,tags);
     });
   }

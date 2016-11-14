@@ -193,6 +193,7 @@ var controller = {
         logger.log('new user created');
         return user.publish({
           include_customers: true,
+          include_token: true,
         }, function(error, data){
           res.send(200, { user: data });
         });
@@ -224,6 +225,7 @@ var controller = {
       users.forEach(user => {
         var options = {
           include_secret:(filter.where.credential=='agent'),
+          include_token:(filter.where.credential=='agent'),
         };
         user.publish(options,(error,data) => {
           pub.push(data);

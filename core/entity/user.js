@@ -52,6 +52,8 @@ EntitySchema.methods.publish = function (options, nextFn) {
 
   if (options.include_secret!==true) {
     delete pub.client_secret;
+  }
+  if (options.include_token!==true) {
     delete pub.token;
   }
 
