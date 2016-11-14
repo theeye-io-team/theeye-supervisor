@@ -73,7 +73,7 @@ var controller = {
       .exec(function(err,monitor){
         var data = resource.toObject();
         data.monitor = monitor;
-        res.send(200, { resource: data });
+        res.send(200, data);
       });
   },
   fetch (req,res,next) {
@@ -138,7 +138,7 @@ var controller = {
     input.last_update = new Date();
     manager.handleState(input,function(error){
       if(!error) {
-        res.send(200);
+        res.send(200,resource);
       } else {
         res.send(500,json.error('internal server error'));
       }
@@ -152,11 +152,11 @@ var controller = {
     var customer = req.customer;
     var hosts = req.body.hosts;
 
-    if( ! hosts ) return res.send(400, json.error('hosts are required'));
-    if( ! Array.isArray(hosts) ) hosts = [ hosts ];
+    if (!hosts) return res.send(400, json.error('hosts are required'));
+    if (!Array.isArray(hosts)) hosts = [ hosts ];
 
     var params = MonitorManager.validateData(req.body);
-    if( params.errors && params.errors.hasErrors() ){
+    if (params.errors && params.errors.hasErrors()) {
       return res.send(400, params.errors);
     }
 
@@ -167,8 +167,8 @@ var controller = {
     input.customer_name = customer.name;
 
     ResourceManager.createResourceOnHosts(hosts,input,function(error,results){
-      if(error) {
-        if(error.errors) {
+      if (error) {
+        if (error.errors) {
           var messages=[];
           for(var err in error.errors){
             var e = errors[err];

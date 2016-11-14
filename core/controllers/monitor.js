@@ -56,7 +56,7 @@ var controller = {
 
         var data = [];
         var published = _.after(total, function(){
-          res.send(200, { 'monitors': data });
+          res.send(200, data);
         });
 
         for(var i=0; i<total; i++){
