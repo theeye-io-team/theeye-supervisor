@@ -6,7 +6,7 @@ var HostStats = require('../entity/host/stats').Entity;
 module.exports = function(server, passport) {
   var middlewares = [
     passport.authenticate('bearer', {session:false}),
-    router.requireCredential('agent',{exactMatch:true}),
+    router.requireCredential('viewer'),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,
     router.resolve.idToEntity({param:'host',required:true})
