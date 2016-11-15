@@ -229,11 +229,11 @@ var controller = {
         resource: resource,
         updates: updates,
         user: req.user
-      },function(error, result){
+      },function(error,resource){
         if (error) {
-          res.send(500,json.error('update error', error.message));
+          res.send(500,json.error('update error',error.message));
         } else {
-          res.send(200, result);
+          res.send(200,resource);
         }
       });
     }

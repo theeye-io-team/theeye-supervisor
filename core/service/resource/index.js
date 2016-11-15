@@ -455,8 +455,7 @@ Service.update = function(input,next) {
         }
 
         Tag.create(updates.tags,{ _id: resource.customer_id });
-        var result = { resource: resource, monitor: monitor };
-        next(null,result);
+        next(null,resource);
       });
     });
   });
