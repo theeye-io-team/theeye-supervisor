@@ -28,7 +28,7 @@ module.exports = function(server, passport){
 
   server.post('/:customer/task',middlewares.concat([
     router.requireCredential('admin'),
-    router.resolve.idToEntity({param:'script',required:true})
+    router.resolve.idToEntity({param:'script'})
   ]),controller.create);
 
   var mws = middlewares.concat(

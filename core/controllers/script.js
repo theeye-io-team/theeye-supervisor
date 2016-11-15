@@ -44,12 +44,9 @@ var controller = {
    *
    */
   fetch : function (req, res, next) {
-    var user = req.user ;
-    var customer = req.customer;
 
     ScriptService.fetchBy({
-      customer_name: customer.name,
-      //user_id : user._id
+      customer_name: req.customer.name,
     }, function(scripts){
       if (!scripts) scripts = [];
       res.send(200, { scripts : scripts });
@@ -63,7 +60,6 @@ var controller = {
    */
   get : function (req, res, next) {
     var script = req.script;
-    var customer = req.customer;
 
     script.publish(function(error, data){
       res.send(200, { 'script' : data });
@@ -75,8 +71,6 @@ var controller = {
    *
    */
   create : function (req, res, next) {
-    var user = req.user;
-    var customer = req.customer;
 
     var script = req.files.script;
     if (!isValidFilename(script.name)) {
@@ -88,8 +82,8 @@ var controller = {
     debug.log('creating script');
 
     ScriptService.create({
-      customer: customer,
-      user: user,
+      customer: req.customer,
+      user: req.user,
       description: description,
       name: name,
       public: (req.body.public||false),
