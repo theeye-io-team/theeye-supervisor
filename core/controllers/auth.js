@@ -1,14 +1,12 @@
 'use strict';
 
 var Token = require('../lib/auth/token');
-var strategys = require('../lib/auth/strategys');
+var passport = require('passport');
 
 module.exports = function (server) {
   /**
    * use basic authentication to obtain a new token
    */
-  var passport = strategys.setStrategy('basic');
-
   server.post('/token', [
     passport.authenticate('basic',{session:false})
   ], function (req,res,next) {

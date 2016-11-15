@@ -4,14 +4,14 @@ var util = require('util');
 var multer = require('multer');
 var config =  require('config');
 var router = require('./router');
-var strategys = require('./lib/auth/strategys');
+var auth = require('./lib/auth');
 var logger = require('./lib/logger')('server');
 
 var app = {
 
   start () {
     var server = restify.createServer();
-    var passport = strategys.setStrategy('bearer');
+    var passport = auth.initialize();
 
     server.pre(function (req,res,next) {
       logger.log('REQUEST %s %s', req.method, req.url);

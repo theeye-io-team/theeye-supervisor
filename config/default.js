@@ -2,7 +2,7 @@ module.exports = {
   "is_dev": false,
   "server": {
     "name": "TheEye",
-    "version": process.env.VERSION||"0.0.0",
+    "version": process.env.VERSION||undefined,
     "port": process.env.PORT||60080,
     "auth_strategy": "bearer"
   },
