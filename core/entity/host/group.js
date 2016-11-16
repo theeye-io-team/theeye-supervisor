@@ -34,12 +34,8 @@ EntitySchema.methods.publish = function(options, nextFn) {
   var nextFn = nextFn || function(){};
 
   debug('publishing group');
-  Entity.populate(group, [
-    { path:'task_templates' },
-    { path:'resource_templates' },
-    { path:'monitor_templates' },
-    { path:'provisioning_task_templates' },
-  ],function(error, group){
+  this.populateAll(function(error){
+    if(error) throw error;
 
     var data = {
       'id' : group._id,
@@ -85,16 +81,13 @@ EntitySchema.methods.publish = function(options, nextFn) {
   });
 }
 
-EntitySchema.methods.populate = function(nextFn) {
-  var group = this;
-  Entity.populate(group, [
+EntitySchema.methods.populateAll = function(next) {
+  Entity.populate(this,[
     { path:'task_templates' },
     { path:'resource_templates' },
     { path:'monitor_templates' },
     { path:'provisioning_task_templates' },
-  ],function(error, group){
-    nextFn(error, group);
-  });
+  ],next);
 }
 
 /**

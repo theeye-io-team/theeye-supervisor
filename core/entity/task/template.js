@@ -1,13 +1,13 @@
 var mongodb = require('../../lib/mongodb').db;
-var BaseSchema = require('./schema');
 var Script = require('../script').Entity;
+var BaseSchema = require('./schema').EntitySchema;
 
-var TemplateSchema = BaseSchema.EntitySchema.extend({
+var TemplateSchema = BaseSchema.extend({
   script_id : { type: String, ref: 'Script' },
   script_arguments : { type: Array, 'default': [] },
   script_runas : { type: String, 'default':'' },
   type: { type: String, 'default': 'script' }
-});
+},{ collection: 'tasktemplates' }); // store templates in different collection
 
 TemplateSchema.methods.values = function(){
   var template = this
@@ -21,9 +21,9 @@ TemplateSchema.methods.values = function(){
 
 TemplateSchema.methods.publish = function(done){
   var data = this.toObject();
-  if( ! this.script_id ) return done();
+  if (!this.script_id) return done();
   Script.findById(this.script_id, function(err,script){
-    if(err||!script) return done(data);
+    if (err||!script) return done(data);
     data.script_name = script.filename;
     done(data);
   });

@@ -55,8 +55,8 @@ var controller = {
   get (req,res,next) {
     var group = req.group;
     if(!group) return res.send(400);
-    group.publish({}, (e,g) => {
-      res.send(200, { 'group':g });
+    group.publish({},(e,g) => {
+      res.send(200,g);
     });
   },
   /**
