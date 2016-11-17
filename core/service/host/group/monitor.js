@@ -91,17 +91,19 @@ function addMonitorInstancesToGroupHosts(
   Resource.find({
     'type':'host',
     'template':group,
-  },(err,resources)=>{
+  },(err,resources) => {
     if(resources.length==0) return done();
     var created = lodash.after(resources.length,()=>done());
     logger.log('creating %s monitors', resources.length);
     for(let i=0;i<resources.length;i++){
       let resource=resources[i];
       Host.findById(resource.host_id,(err,host)=>{
+        if (err) throw err;
+        if (!host) throw new Error('host not found');
 
         // ... and attach the new monitor to the host
         ResourceService.createMonitorFromTemplate({
-          template: template,
+          template: template.toObject(),
           host: host,
           done: function(){
             logger.log('monitor created');
@@ -109,7 +111,6 @@ function addMonitorInstancesToGroupHosts(
             AgentUpdateJob.create({ host_id: host._id });
           }
         });
-
       });
     }
   });

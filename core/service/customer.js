@@ -1,10 +1,12 @@
-var config = require("config");
-var logger = require("../lib/logger")("service:customer");
-var merge = require('lodash/merge');
+'use strict';
 
-var Customer = require("../entity/customer").Entity ;
-var User = require("../entity/user").Entity ;
-var ResourceMonitor = require("../entity/user").Entity ;
+const config = require('config');
+const merge = require('lodash/merge');
+var logger = require('../lib/logger')('service:customer');
+var Customer = require('../entity/customer').Entity;
+var User = require('../entity/user').Entity;
+var ResourceMonitor = require('../entity/user').Entity;
+var ACL = require('../lib/acl');
 
 
 module.exports = {
@@ -12,39 +14,40 @@ module.exports = {
    * search every user of with this customer
    * and extract its email.
    */
-  getAlertEmails : function(customerName, next)
-  {
-    var self = this;
-    var emails = [];
+  getAlertEmails (customerName, next) {
+    var self = this,
+      emails = [];
 
-    Customer.findOne({
-      'name': customerName
-    },function(error, customer){
-      if(error) {
+    Customer.findOne({ name: customerName },function(error, customer){
+      if (error) {
         logger.log(error);
         return next(error);
       }
 
-      if(!customer){
-        var err = new Error('customer ' + customerName + ' data does not exist!');
+      if (!customer) {
+        var err = new Error('customer ' + customerName + ' does not exist!');
         logger.error(err);
         return next(err,[]);
       }
 
-      emails = customer.emails;
+      emails = Array.isArray(customer.emails) ? customer.emails : [];
 
       User.find({
         'customers._id': customer._id,
-        'credential': { $ne:'agent' }
-      },(error,users)=>{
-        if(error){
+        credential: { $ne:['agent'] }
+      },(error,users) => {
+        if (error) {
           logger.log(error);
           return next(error);
         }
 
-        if( Array.isArray(users) && users.length > 0 ){
-          users.forEach( user => {
-            if( user.email ) emails.push(user.email) 
+        if (Array.isArray(users) && users.length > 0) {
+          users.forEach(user => {
+            if (ACL.hasAccessLevel(user.credential,'admin')) {
+              if (user.email) {
+                emails.push(user.email);
+              }
+            }
           });
         }
 
@@ -56,10 +59,10 @@ module.exports = {
    *
    *
    */
-  getCustomerConfig: function(customer,next) {
-    if(!next) return;
+  getCustomerConfig (customer,next) {
+    if (!next) return;
 
-    var query = (typeof customer == "string") ? { _id : customer } : customer;
+    var query = (typeof customer == 'string') ? { _id : customer } : customer;
 
     Customer.findOne(query, function(error,customer){
       if(error){
@@ -73,8 +76,8 @@ module.exports = {
       }
 
       var basecfg = {
-        monitor: config.get("monitor")||{},
-        elasticsearch: config.get("elasticsearch")||{enabled:false} // no config available
+        monitor: config.get('monitor')||{},
+        elasticsearch: config.get('elasticsearch')||{enabled:false} // no config available
       };
 
       // deep replace objects properties
@@ -84,13 +87,8 @@ module.exports = {
       if(next) return next(null,ccfg);
     });
   },
-  /**
-   * no defined filters yet
-   */
-  fetch : function(filters, next)
-  {
-    var query = {};
-    Customer.find(query, function(err, customers) {
+  fetch (filter, next) {
+    Customer.find({}, function(err, customers) {
       if(err) return next(err);
       else return next(null, customers);
     });
@@ -103,56 +101,59 @@ module.exports = {
    * @param {Function} next
    * @return null
    */
-  create : function (input, next)
-  {
+  create (input, next) {
     var data = {
-      emails : input.emails,
-      name : input.name,
-      description : input.description || ''
+      emails: input.emails,
+      name: input.name,
+      description: (input.description||'')
     };
 
     var customer = new Customer(data);
-    customer.save(function(err, customer) {
-      if(err) return next(err)
+    customer.save(function(err, customer){
+      if(err) return next(err);
       else return next(null, customer);
-    });  
+    });
   },
   /**
    *
    *
    */
-  remove : function (customer, doneFn) {
+  remove (customer, doneFn) {
     logger.log('removing customer %s from users', customer.name);
 
     User
-    .find({'customers._id': customer._id})
-    .exec(function(error,users){
-      if (users && users.length > 0) {
-        for (var i=0; i<users.length; i++) {
-          var user = users[i];
+      .find({'customers._id': customer._id})
+      .exec(function(error,users){
+        if (users && users.length > 0) {
+          for (var i=0; i<users.length; i++) {
+            var user = users[i];
 
-          if (user.credential != 'agent') {
-            var customers = user.customers;
-            var filteredCustomers = filterCustomer(customer, customers);
-            user.customers = filteredCustomers;
-            user.save(function (error) {
-              if (error) logger.error(error);
-              else logger.log('user customers updated');
-            });
-          } else {
-            // is an agent user
-            user.remove(function(error){
-              if(error) logger.error(error);
-              else logger.log('customer %s agent user removed', customer.name);
-            });
+            if (user.credential != 'agent') {
+              var customers = user.customers;
+              var filteredCustomers = filterCustomer(customer, customers);
+              user.customers = filteredCustomers;
+              user.save(function (error) {
+                if (error) {
+                  logger.error(error);
+                } else {
+                  logger.log('user customers updated');
+                }
+              });
+            } else {
+              // is an agent user
+              user.remove(function(error){
+                if(error) logger.error(error);
+                else logger.log('customer %s agent user removed', customer.name);
+              });
+            }
           }
         }
-      }
-    });
+      });
 
     customer.remove(function(error){
-      if(error) logger(error);
-      else {
+      if (error) {
+        logger(error);
+      } else {
         logger.log('customer %s removed', customer.name);
         doneFn(null);
         return;
@@ -170,7 +171,7 @@ module.exports = {
  * @return {Array} result
  *
  */
-function filterCustomer(customer, customers){
+function filterCustomer (customer,customers) {
   var filtered = [];
   for(var i=0;i<customers.length; i++){
     var item = customers[i];

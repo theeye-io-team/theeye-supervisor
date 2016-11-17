@@ -19,7 +19,7 @@ var Job = require('../../entity/job').Job;
 var AgentUpdateJob = require('../../entity/job').AgentUpdate;
 var Tag = require('../../entity/tag').Entity;
 var MonitorEvent = require('../../entity/event').MonitorEvent;
-var ResourcesEmailNotifications = require('./email-notifications');
+var ResourcesNotifications = require('./notifications');
 var globalconfig = require('config');
 
 const Constants = require('../../constants/monitors');
@@ -45,16 +45,17 @@ function Service(resource) {
   }
 
   function sendResourceEmailAlert (resource,input) {
-    if(resource.alerts===false) return;
+    if (resource.alerts===false) return;
 
-    ResourcesEmailNotifications(
+    ResourcesNotifications(
       resource,
       input.event,
       input.data,
       (error,emailDetails) => {
-        if(error) {
-          if( /event ignored/.test(error.message) === false )
+        if (error) {
+          if ( /event ignored/.test(error.message) === false ) {
             logger.error(error);
+          }
           logger.log('alerts email not send');
           return;
         }
@@ -63,13 +64,22 @@ function Service(resource) {
         CustomerService.getAlertEmails(
           resource.customer_name,
           (error,emails) => {
+            var mailTo, extraEmail=[];
+
+            if ( Array.isArray(resource.acl) && resource.acl.length>0 ) {
+              extraEmail = resource.acl.filter(email => emails.indexOf(email) === -1);
+            }
+
+            mailTo = (extraEmail.length>0) ? emails.concat(extraEmail) : emails;
+
             NotificationService.sendEmailNotification({
-              'to': emails.join(','),
+              'to': mailTo.join(','),
               'customer_name': resource.customer_name,
               'subject': emailDetails.subject,
               'content': emailDetails.content
             });
-          });
+          }
+        );
       }
     );
   }
@@ -749,7 +759,7 @@ Service.createMonitorFromTemplate = function(options) {
         var monitor = new MonitorEntity(props);
         monitor.save(function(err, instance){
           if(err) {
-            logger.error(err.message);
+            logger.error(err.errors);
             logger.error(err);
             return doneFn(err);
           }

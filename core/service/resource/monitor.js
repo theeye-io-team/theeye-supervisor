@@ -1,14 +1,12 @@
 "use strict";
 
+var validator = require('validator');
 var _ = require('lodash');
+
 var logger = require('../../lib/logger')('service:resource:monitor');
-var MonitorEntity = require('../../entity/monitor').Entity;
 var ErrorHandler = require('../../lib/errorHandler');
 var router = require('../../router');
-var validator = require('validator');
-
-var ResourceTemplateService = require('./template');
-var ResourceService = require('./index');
+var MonitorEntity = require('../../entity/monitor').Entity;
 var Job = require('../../entity/job').Job;
 
 if(!RegExp.escape){
@@ -21,7 +19,6 @@ if(!RegExp.escape){
  * Monitor object namespace for manipulating resources monitor
  * @author Facundo
  */
-
 module.exports = {
   /**
    *
@@ -267,113 +264,6 @@ module.exports = {
         .exec(doneExec);
     }
   },
-  /**
-   *
-   * Api to handle monitors.
-   * validate type and data
-   * @author Facundo
-   * @param {Array} monitors
-   *
-   */
-  resourceMonitorsToTemplates (
-    resource_monitors, 
-    customer, 
-    user,
-    done
-  ) {
-    var user_id = user ? user._id : null;
-    var customer_name = customer.name;
-    var customer_id = customer._id;
-
-    if(!resource_monitors) {
-      var e = new Error('resource monitors definition required');
-      e.statusCode = 400;
-      return done(e);
-    }
-
-    if( ! Array.isArray(resource_monitors) ) {
-      var e = new Error('resource monitors must be an array');
-      e.statusCode = 400;
-      return done(e);
-    }
-
-    if(resource_monitors.length == 0) {
-      logger.log('no resource monitoros. skipping');
-      return done(null,[]);
-    }
-
-    var templatized = _.after(resource_monitors.length, function(){
-      logger.log('all resources & monitorese templates processed');
-      done(null, templates);
-    });
-
-    logger.log('processing %s resource monitors', resource_monitors.length);
-
-    var templates = [];
-
-    for (var i=0; i<resource_monitors.length; i++) {
-      var value = resource_monitors[i];
-      logger.log('processing resource monitors %j', value);
-
-      if (Object.keys( value ).length === 0) {
-        var e = new Error('invalid resource monitor definition');
-        e.statusCode = 400;
-        return done(e);
-      }
-
-      if (value.hasOwnProperty('id')) {
-        /* create template from existent monitor & resource */
-        if (validator.isMongoId(value.id)) {
-          logger.log('creating template from existent resource monitors');
-          ResourceTemplateService
-            .resourceMonitorToTemplate(
-              value.id,
-              function(error, tpls){
-                if(error) done(error);
-                logger.log('templates created');
-                templates.push( tpls );
-                templatized();
-              }
-            );
-        } else {
-          var e = new Error('invalid monitor id');
-          e.statusCode = 400;
-          return done(e);
-        }
-      } else {
-        /* create templates from input */
-        logger.log('setting up template data');
-
-        var result = this.validateData(value);
-        if (!result||result.error) {
-          let msg = 'invalid resource monitor data';
-          logger.error(msg);
-          let e = new Error(msg);
-          e.statusCode = 400;
-          e.info = result.error;
-          return done(e);
-        }
-
-        var data = result.data;
-        data.customer_id = customer_id;
-        data.customer_name = customer_name;
-        data.user_id = user_id;
-        logger.log('creating template from scratch');
-        ResourceTemplateService.createResourceMonitorsTemplates(
-          data, function(err, tpls){
-            if(err) {
-              logger.error(err);
-              return done(err);
-            }
-
-            logger.log('templates from scratch created');
-            templates.push( tpls );
-            templatized();
-          }
-        );
-      }
-    }
-  }
 }
 
 /**

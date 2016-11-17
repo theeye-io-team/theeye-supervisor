@@ -1,5 +1,8 @@
 "use strict";
 
+const async = require('async');
+const globalconfig = require('config');
+
 var JobModels = require('../entity/job');
 var Job = JobModels.Job;
 var ScriptJob = JobModels.Script;
@@ -8,9 +11,7 @@ var Script = require('../entity/script').Entity;
 var TaskEvent = require('../entity/event').TaskEvent;
 var EventDispatcher = require('./events');
 
-var async = require('async');
 var NotificationService = require('./notification');
-var globalconfig = require('config');
 var elastic = require('../lib/elastic');
 var logger = require('../lib/logger')('eye:jobs');
 
@@ -271,7 +272,7 @@ function createScraperJob(input, done){
 
 function ResultMail ( job ) {
 
-  this.ScriptJob = function( job, mails ) {
+  this.ScriptJob = function( job, emails ) {
     var stdout, stderr, code, result = job.result.script_result;
     if (result) {
       stdout = result.stdout ? result.stdout.trim() : 'no stdout';
@@ -290,30 +291,42 @@ function ResultMail ( job ) {
       customer_name: job.customer_name,
       subject: `[TASK] ${job.task.name} executed on ${job.host.hostname}`,
       content: html,
-      to: mails
+      to: emails
     });
   }
 
-  this.ScraperJob = function ( job, mails ) {
+  this.ScraperJob = function ( job, emails ) {
     var html = `<h3>Task ${job.task.name} execution completed on ${job.host.hostname}.</h3>`;
 
     NotificationService.sendEmailNotification({
       customer_name: job.customer_name,
       subject: `[TASK] ${job.task.name} executed on ${job.host.hostname}`,
       content: html,
-      to: mails
+      to: emails
     });
   }
 
-  app.customer.getAlertEmails( job.customer_name, (err, mails) => {
-    job.populate([
-      { path: 'user' },
-      { path: 'host' }
-    ],
-    error => {
-      this[ job._type ]( job, mails );
-    });
-  });
+  app.customer.getAlertEmails(
+    job.customer_name,
+    (err, emails) => {
+      var mailTo,
+        extraEmail = [],
+        acls = job.task.acl;
+
+      if (Array.isArray(acls) && acls.length>0) {
+        extraEmail = acls.filter(email => emails.indexOf(email) === -1);
+      }
+
+      mailTo = extraEmail.length>0 ? emails.concat(extraEmail) : emails;
+
+      job.populate([
+        { path: 'user' },
+        { path: 'host' }
+      ], error => {
+        this[ job._type ]( job, mailTo );
+      });
+    }
+  );
 
 };
 
