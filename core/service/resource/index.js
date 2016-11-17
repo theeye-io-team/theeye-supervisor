@@ -153,21 +153,23 @@ function Service(resource) {
     logger.log('resource "%s" "%s" state is normal', resource.type, resource.name);
 
     var failure_threshold = config.fails_count_alert;
-    var isRecoveredFromFailure = Boolean(resource.state == Constants.RESOURCE_FAILURE);
+    var isRecoveredFromFailure = Boolean(resource.state==Constants.RESOURCE_FAILURE);
 
     resource.last_event = input;
-
     // failed at least once
-    if(resource.fails_count != 0){
-
+    if (resource.fails_count!=0||resource.state!=Constants.RESOURCE_NORMAL) {
       resource.state = Constants.RESOURCE_NORMAL;
-
       // resource failure was alerted ?
-      if(resource.fails_count >= failure_threshold){
-        logger.log('resource "%s" "%s" has been restored', resource.type, resource.name);
+      if (resource.fails_count >= failure_threshold) {
+        logger.log(
+          'resource "%s" "%s" has been restored',
+          resource.type,
+          resource.name
+        );
+
         input.severity = getEventSeverity(input);
 
-        if(isRecoveredFromFailure){
+        if (isRecoveredFromFailure) {
           input.event||(input.event=input.state);
         } else {
           // is recovered from "stop sending updates"
@@ -181,7 +183,6 @@ function Service(resource) {
           message:(input.message||'monitor normal'),
           data:input
         });
-
         resource.failure_severity = null;
       }
 
