@@ -243,14 +243,15 @@ function Service(resource) {
     });
   }
 
-  function isSuccess(txt){
-    var successTexts = ['success','ok','normal'];
-    return successTexts.indexOf( txt.toLowerCase() ) != -1 ;
+  function isSuccess (state) {
+    return Constants.SUCCESS_STATES
+      .indexOf( state.toLowerCase() ) != -1 ;
   }
-  function isFailure(txt){
-    var failureTexts = ['error','fail','failure'];
-    return failureTexts.indexOf( txt.toLowerCase() ) != -1 ;
+  function isFailure (state) {
+    return Constants.FAILURE_STATES
+      .indexOf( state.toLowerCase() ) != -1 ;
   }
+
   function filterStateEvent(state){
     if( typeof state == 'string' && isSuccess(state) )
       return Constants.RESOURCE_NORMAL;
