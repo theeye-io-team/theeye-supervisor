@@ -159,6 +159,8 @@ function Service(resource) {
     // failed at least once
     if (resource.fails_count!=0||resource.state!=Constants.RESOURCE_NORMAL) {
       resource.state = Constants.RESOURCE_NORMAL;
+
+      logger.log('resource has failed');
       // resource failure was alerted ?
       if (resource.fails_count >= failure_threshold) {
         logger.log(
@@ -266,11 +268,12 @@ function Service(resource) {
     next||(next=function(){});
     var resource = _resource;
 
-    logger.data('resource state [%s] > %o', resource.name, input);
     var state = filterStateEvent(input.state);
     input.state = state;
     if (input.last_update) resource.last_update = input.last_update;
     if (input.last_check) resource.last_check = input.last_check;
+
+    logger.data('resource state [%s] > %o', resource.name, input);
 
     CustomerService.getCustomerConfig(
       resource.customer_id,

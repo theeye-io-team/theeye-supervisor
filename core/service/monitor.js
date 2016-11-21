@@ -114,11 +114,6 @@ function checkResourceMonitorStatus (resource,cconfig,done) {
         state: Constants.RESOURCE_STOPPED,
         last_check: new Date()
       });
-    } else if (resource.state!=Constants.RESOURCE_NORMAL) {
-      manager.handleState({
-        state: Constants.RESOURCE_NORMAL,
-        last_check: new Date()
-      });
     } else {
       resource.last_check = new Date();
       resource.save();
@@ -179,9 +174,10 @@ function triggerAlert (
   var loopsElapsed = Math.floor(timeElapsed / loopDuration);
 
   logger.debug({
+    'fails count': failsCount,
     'last update': lastUpdate,
     'loops elapsed': loopsElapsed,
-    'loop duration': loopDuration,
+    'loop duration': `${loopDuration} (${ (loopDuration/(60*1000)).toFixed(2) } mins)`,
     'time elapsed (mins)': (timeElapsed/1000/60)
   });
 
