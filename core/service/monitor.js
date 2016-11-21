@@ -108,7 +108,7 @@ function checkResourceMonitorStatus (resource,cconfig,done) {
       cconfig.fails_count_alert
     );
 
-    if( trigger ) {
+    if( trigger === true ) {
       var manager = new ResourceService(resource);
       manager.handleState({
         state: Constants.RESOURCE_STOPPED,
@@ -135,7 +135,7 @@ function checkHostResourceStatus (resource, cconfig, done) {
     cconfig.fails_count_alert
   );
 
-  if( trigger ) {
+  if( trigger === true ) {
     var manager = new ResourceService(resource);
     manager.handleState({
       state: Constants.RESOURCE_STOPPED,

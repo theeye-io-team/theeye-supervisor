@@ -44,6 +44,14 @@ function Service(resource) {
     elastic.submit(resource.customer_name,key,data);
   }
 
+  function dispatchStateChangeSNS (resource, options) {
+    NotificationService.sendSNSNotification(resource,{
+      topic:'events',
+      subject:'resource_update'
+    });
+  }
+
+
   function sendResourceEmailAlert (resource,input) {
     if (resource.alerts===false) return;
 
@@ -229,23 +237,6 @@ function Service(resource) {
     }
   }
 
-  function dispatchStateChangeSNS (resource, options) {
-    var Message = {
-      state: resource.state,
-      customer_name: resource.customer_name,
-      resource: resource.name,
-      id: resource.id,
-      hostname: resource.hostname,
-      type: 'resource',
-      message: options.message,
-      data: options.data
-    };
-    NotificationService.sendSNSNotification(Message,{
-      topic:'events',
-      subject:'resource_update'
-    });
-  }
-
   function isSuccess (state) {
     return Constants.SUCCESS_STATES
       .indexOf( state.toLowerCase() ) != -1 ;
@@ -278,21 +269,22 @@ function Service(resource) {
     CustomerService.getCustomerConfig(
       resource.customer_id,
       (err,config) => {
-
-        if(err||!config) throw new Error('customer config unavailable');
+        if (err||!config) {
+          throw new Error('customer config unavailable');
+        }
         var monitorConfig = config.monitor;
 
         switch(input.state) {
-          case Constants.AGENT_STOPPED :
-          case Constants.RESOURCE_STOPPED :
+          case Constants.AGENT_STOPPED:
+          case Constants.RESOURCE_STOPPED:
             handleUpdatesStoppedState(resource,input,monitorConfig);
             break;
-          case Constants.RESOURCE_NORMAL :
+          case Constants.RESOURCE_NORMAL:
             resource.last_update = Date.now();
             handleNormalState(resource,input,monitorConfig);
             break;
           default:
-          case Constants.RESOURCE_FAILURE :
+          case Constants.RESOURCE_FAILURE:
             resource.last_update = Date.now();
             handleFailureState(resource,input,monitorConfig);
             break;
