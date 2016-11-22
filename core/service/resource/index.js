@@ -273,12 +273,12 @@ function Service(resource) {
             handleUpdatesStoppedState(resource,input,monitorConfig);
             break;
           case Constants.RESOURCE_NORMAL :
-            resource.last_update = Date.now();
+            resource.last_update = new Date();
             handleNormalState(resource,input,monitorConfig);
             break;
           default:
           case Constants.RESOURCE_FAILURE :
-            resource.last_update = Date.now();
+            resource.last_update = new Date();
             handleFailureState(resource,input,monitorConfig);
             break;
         }
