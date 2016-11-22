@@ -1,5 +1,8 @@
 "use strict";
 
+const async = require('async');
+const globalconfig = require('config');
+
 var JobModels = require('../entity/job');
 var Job = JobModels.Job;
 var ScriptJob = JobModels.Script;
@@ -8,9 +11,7 @@ var Script = require('../entity/script').Entity;
 var TaskEvent = require('../entity/event').TaskEvent;
 var EventDispatcher = require('./events');
 
-var async = require('async');
 var NotificationService = require('./notification');
-var globalconfig = require('config');
 var elastic = require('../lib/elastic');
 var logger = require('../lib/logger')('eye:jobs');
 
@@ -87,9 +88,13 @@ var service = {
     });
   },
   update ( job, result, done ) {
-    job.state = result.state || STATE_FAILURE;
+    var state = (result.state||STATE_FAILURE);
+    job.state = state;
     job.result = result;
-    job.save( err => done(err, job) );
+    job.save( err => {
+      if (err) logger.log(err);
+      done(err, job) 
+    });
 
     // if job is an agent update, break
     if( job.name == 'agent:config:update' ) return;
@@ -271,49 +276,98 @@ function createScraperJob(input, done){
 
 function ResultMail ( job ) {
 
-  this.ScriptJob = function( job, mails ) {
-    var stdout, stderr, code, result = job.result.script_result;
-    if (result) {
-      stdout = result.stdout ? result.stdout.trim() : 'no stdout';
-      stderr = result.stderr ? result.stderr.trim() : 'no stderr';
-      code   = result.code || 'no code';
+  /**
+   *
+   * parse result log and return html to send via email
+   *
+   */
+  function scriptExecutionLog (job) {
+    var html, stdout, stderr, code,
+      result = (job.result&&job.result.script_result)||null;
+
+    if (!result) {
+      html = '<span>script execution is not available</span>';
+    } else {
+      stdout = result.stdout?result.stdout.trim():'no stdout',
+      stderr = result.stderr?result.stderr.trim():'no stderr',
+      code = result.code||'no code',
+      html = `<pre><ul>
+        <li>stdout : ${stdout}</li>
+        <li>stderr : ${stderr}</li>
+        <li>code : ${code}</li>
+        </ul></pre>`;
+    }
+    return html;
+  }
+
+  function scriptExecutionMail (job,emails) {
+    var state, html, log = scriptExecutionLog(job);
+
+    var result = job.result;
+    if (result && result.script_result) {
+      if (result.event=='killed'||result.script_result.killed) {
+        state = 'interrupted';
+        html = `
+          <h3>Task ${job.task.name} execution on host ${job.host.hostname} has been interrupted.</h3>
+          <p>The script ${job.script.filename} execution takes more than 10 minutos to finish and was interrupted.</p>
+          <p>If you need more information, please contact the administrator</p>
+          `;
+      } else {
+        state = 'completed';
+        html = `
+          <h3>Task ${job.task.name} execution on ${job.host.hostname} has been completed.</h3>
+          `;
+      }
     }
 
-    var html = 
-    `<h3>Task ${job.task.name} execution completed on ${job.host.hostname}.</h3><ul>
-    <li>stdout : ${stdout}</li>
-    <li>stderr : ${stderr}</li>
-    <li>code : ${code}</li>
-    </ul>`;
+    html += `<span>Script execution log </span><br/>` + log;
 
     NotificationService.sendEmailNotification({
       customer_name: job.customer_name,
-      subject: `[TASK] ${job.task.name} executed on ${job.host.hostname}`,
+      subject: `[TASK] ${job.task.name} on ${job.host.hostname} ${state}`,
       content: html,
-      to: mails
+      to: emails
     });
+
+    return;
   }
 
-  this.ScraperJob = function ( job, mails ) {
+  this.ScriptJob = function (job,emails) {
+    return scriptExecutionMail(job,emails);
+  }
+
+  this.ScraperJob = function (job,emails) {
     var html = `<h3>Task ${job.task.name} execution completed on ${job.host.hostname}.</h3>`;
 
     NotificationService.sendEmailNotification({
       customer_name: job.customer_name,
       subject: `[TASK] ${job.task.name} executed on ${job.host.hostname}`,
       content: html,
-      to: mails
+      to: emails
     });
   }
 
-  app.customer.getAlertEmails( job.customer_name, (err, mails) => {
-    job.populate([
-      { path: 'user' },
-      { path: 'host' }
-    ],
-    error => {
-      this[ job._type ]( job, mails );
-    });
-  });
+  app.customer.getAlertEmails(
+    job.customer_name,
+    (err, emails) => {
+      var mailTo,
+        extraEmail = [],
+        acls = job.task.acl;
+
+      if (Array.isArray(acls) && acls.length>0) {
+        extraEmail = acls.filter(email => emails.indexOf(email) === -1);
+      }
+
+      mailTo = extraEmail.length>0 ? emails.concat(extraEmail) : emails;
+
+      job.populate([
+        { path: 'user' },
+        { path: 'host' }
+      ], error => {
+        this[ job._type ]( job, mailTo );
+      });
+    }
+  );
 
 };
 

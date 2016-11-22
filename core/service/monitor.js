@@ -82,12 +82,12 @@ function runChecks (resource,done) {
   );
 }
 
-function checkResourceMonitorStatus(resource,cconfig,done) {
+function checkResourceMonitorStatus (resource,cconfig,done) {
   done||(done=function(){});
 
   ResourceMonitor.findOne({
-    'enable': true,
-    'resource_id': resource._id 
+    enable: true,
+    resource_id: resource._id 
   },function(error,monitor){
     if(error){
       logger.error('Resource monitor query error : %s', error.message);
@@ -107,6 +107,7 @@ function checkResourceMonitorStatus(resource,cconfig,done) {
       resource.fails_count,
       cconfig.fails_count_alert
     );
+
     if( trigger ) {
       var manager = new ResourceService(resource);
       manager.handleState({
@@ -133,6 +134,7 @@ function checkHostResourceStatus (resource, cconfig, done) {
     resource.fails_count,
     cconfig.fails_count_alert
   );
+
   if( trigger ) {
     var manager = new ResourceService(resource);
     manager.handleState({
@@ -147,21 +149,43 @@ function checkHostResourceStatus (resource, cconfig, done) {
   done();
 }
 
-function triggerAlert (lastUpdate,loopDuration,failsCount,failsCountThreshold) {
-  var timeElapsed = Date.now() - lastUpdate.getTime();
-  var loopsElapsed = Math.floor( timeElapsed / loopDuration );
+/**
+ *
+ * @param {Date} lastUpdate
+ * @param {Number} loopDuration
+ * @param {Number} failsCount
+ * @param {Number} failsCountThreshold
+ * @return {Boolean}
+ *
+ */
+function triggerAlert (
+  lastUpdate,
+  loopDuration,
+  failsCount,
+  failsCountThreshold
+) {
+  // ensure parameters
+  if (!lastUpdate instanceof Date) return true;
+  if (isNaN(loopDuration = parseInt(loopDuration))) return true;
+  if (isNaN(failsCount = parseInt(failsCount))) return true;
+  if (isNaN(failsCountThreshold = parseInt(failsCountThreshold))) return true;
 
-  logger.debug({ 
+  var timeElapsed = Date.now() - lastUpdate.getTime();
+  var loopsElapsed = Math.floor(timeElapsed / loopDuration);
+
+  logger.debug({
+    'fails count': failsCount,
     'last update': lastUpdate,
     'loops elapsed': loopsElapsed,
-    'loop duration': loopDuration,
+    'loop duration': `${loopDuration} (${ (loopDuration/(60*1000)).toFixed(2) } mins)`,
     'time elapsed (mins)': (timeElapsed/1000/60)
   });
 
-  if( loopsElapsed >= 2 ){
-    if( failsCount == 0 ) return true;
-    if( 1 == (loopsElapsed - failsCount) ) return true;
-    if( loopsElapsed > failsCountThreshold ) return true;
+  if (loopsElapsed >= 2) {
+    if (failsCount == 0) return true;
+    if (1 == (loopsElapsed - failsCount)) return true;
+    if (loopsElapsed > failsCountThreshold) return true;
     return false;
-  } else return false;
+  }
+  return false;
 }

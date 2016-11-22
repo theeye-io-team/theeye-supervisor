@@ -95,6 +95,7 @@ var controller = {
       if(error||!resources) {
         res.send(500);
       } else {
+        resources.forEach( r => r.monitor.tags.push(r.hostname) );
         res.send(200,resources);
       }
     });

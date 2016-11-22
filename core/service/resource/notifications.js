@@ -72,8 +72,7 @@ module.exports = function(resource, event_name, event_data, done){
   });
 }
 
-function searchTypeEvent(type,event_name)
-{
+function searchTypeEvent(type,event_name) {
   if( ! ResourceTypes.hasOwnProperty(type) ) {
     throw new Error('resource type "' + type + '" is invalid or not defined');
   }
@@ -97,7 +96,9 @@ function searchTypeEvent(type,event_name)
   if( typeEvents.length !== 0 ) {
     for(var i=0; i<typeEvents.length; i++){
       var typeEvent = typeEvents[i];
-      if(typeEvent.name == event_name) return typeEvent;
+      if (typeEvent.name == event_name) {
+        return typeEvent;
+      }
     }
   }
 
@@ -145,7 +146,7 @@ function defaultTypeEvent(event_name){
       break;
     default:
       spec = {
-        message: (resource, event_data) => `${resource.hostname} ${resource.description} reported an unknown state "${event_name}".` ,
+        message: (resource, event_data) => `${resource.hostname} ${resource.description} reported an error event "${event_name}".` ,
         subject: (resource, event_data) => `[HIGH] ${resource.description} error`
       };
       break;

@@ -5,7 +5,7 @@ var async = require('async');
 var router = require('../router');
 var logger = require('../lib/logger')('eye:controller:template');
 var TaskService = require('../service/task');
-var ResourceMonitorService = require('../service/resource/monitor');
+var TemplateMonitorService = require('../service/resource/template');
 var HostGroupService = require('../service/host/group');
 var TaskTemplate = require('../entity/task/template').Entity;
 var MonitorTemplate = require('../entity/monitor/template').Entity;
@@ -55,8 +55,8 @@ var controller = {
   get (req,res,next) {
     var group = req.group;
     if(!group) return res.send(400);
-    group.publish({}, (e,g) => {
-      res.send(200, { 'group':g });
+    group.publish({},(e,g) => {
+      res.send(200,g);
     });
   },
   /**
@@ -146,7 +146,7 @@ var controller = {
         logger.log('processing group monitors & resources');
         let monitors = group.monitors || [];
 
-        ResourceMonitorService.resourceMonitorsToTemplates(
+        TemplateMonitorService.resourceMonitorsToTemplates(
           monitors,
           req.customer,
           req.user,

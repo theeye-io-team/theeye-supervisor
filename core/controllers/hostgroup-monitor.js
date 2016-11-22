@@ -2,7 +2,7 @@
 
 var router = require('../router');
 var logger = require('../lib/logger')('eye:controller:template:monitor');
-var ResourceMonitorService = require('../service/resource/monitor');
+var TemplateMonitorService = require('../service/resource/template');
 var GroupMonitorService = require('../service/host/group').Monitor;
 
 var ResourceTemplate = require('../entity/resource/template').Entity;
@@ -210,7 +210,7 @@ var controller = {
     var group = req.group;
     var monitors = [ req.body.monitor ];
 
-    ResourceMonitorService.resourceMonitorsToTemplates(
+    TemplateMonitorService.resourceMonitorsToTemplates(
       monitors,
       req.customer,
       req.user,

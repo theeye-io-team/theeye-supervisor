@@ -51,8 +51,6 @@ const def = {
 EntitySchema.set('toJSON'  , def);
 EntitySchema.set('toObject', def);
 
-exports.EntitySchema = EntitySchema;
-
 /**
  *
  *
@@ -78,11 +76,9 @@ EntitySchema.statics.publishAll = function(entities, next){
   if(!entities||entities.length==0) return next([]);
 
   var published = [];
-  var donePublish = lodash.after(entities.length, function(){
-    next(null, published);
-  });
+  var donePublish = lodash.after(entities.length, () => next(null, published));
 
-  for(var i = 0; i<entities.length; i++){
+  for (var i = 0; i<entities.length; i++) {
     var entity = entities[i];
     entity.publish(function(data){
       published.push(data);
@@ -90,3 +86,5 @@ EntitySchema.statics.publishAll = function(entities, next){
     });
   }
 }
+
+exports.EntitySchema = EntitySchema;

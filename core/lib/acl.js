@@ -9,7 +9,13 @@ module.exports = {
     lvl = credentials.indexOf(credential);
     return lvl;
   },
-  hasAccessLevel (current, required) {
-    return this.accessLevel(current) >= this.accessLevel(required);
+  hasAccessLevel (current, required, options) {
+    options||(options={});
+
+    if (options.sameLevel) {
+      return this.accessLevel(current) == this.accessLevel(required);
+    } else {
+      return this.accessLevel(current) >= this.accessLevel(required);
+    }
   }
 }
