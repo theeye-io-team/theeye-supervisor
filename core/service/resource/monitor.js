@@ -152,7 +152,15 @@ module.exports = {
         var scriptArgs = router.filter.toArray(input.script_arguments);
         data.script_arguments = scriptArgs;
         data.script_id = input.script_id || errors.required('script_id',input.script_id);
-        data.script_runas = input.script_runas || '';
+        if (input.script_runas) {
+          if (/%script%/.test(input.script_runas)===false) {
+            data.script_runas = errors.invalid('script_runas',input.script_runas);
+          } else {
+            data.script_runas = input.script_runas;
+          }
+        } else {
+          data.script_runas = '';
+        }
         break;
       case 'dstat':
         data.cpu = input.cpu || 60;

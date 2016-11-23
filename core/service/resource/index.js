@@ -123,6 +123,8 @@ function Service(resource) {
     var failure_threshold = config.fails_count_alert;
     logger.log('resource "%s" check fails.', resource.name);
 
+    resource.last_event = input;
+
     resource.fails_count++;
     logger.log(
       'resource %s[%s] failure event count %s/%s', 
@@ -143,7 +145,6 @@ function Service(resource) {
         input.event||(input.event=input.state);
 
         resource.failure_severity = sev;
-        resource.last_event = input;
         resource.state = newState;
 
         sendResourceEmailAlert(resource,input);
@@ -164,6 +165,7 @@ function Service(resource) {
     var isRecoveredFromFailure = Boolean(resource.state==Constants.RESOURCE_FAILURE);
 
     resource.last_event = input;
+
     // failed at least once
     if (resource.fails_count!=0||resource.state!=Constants.RESOURCE_NORMAL) {
       resource.state = Constants.RESOURCE_NORMAL;
@@ -247,10 +249,15 @@ function Service(resource) {
   }
 
   function filterStateEvent(state){
-    if( typeof state == 'string' && isSuccess(state) )
+    if (typeof state == 'string' && isSuccess(state)) {
       return Constants.RESOURCE_NORMAL;
-    if( typeof state == 'string' && isFailure(state) )
+    }
+    if (typeof state == 'string' && isFailure(state)) {
       return Constants.RESOURCE_FAILURE;
+    }
+    if (!state) {
+      return Constants.RESOURCE_FAILURE;
+    }
     return state;
   }
 
@@ -275,17 +282,18 @@ function Service(resource) {
         var monitorConfig = config.monitor;
 
         switch(input.state) {
-          case Constants.AGENT_STOPPED:
-          case Constants.RESOURCE_STOPPED:
+          // monitoring update event. detected stop
+          case Constants.AGENT_STOPPED :
+          case Constants.RESOURCE_STOPPED :
             handleUpdatesStoppedState(resource,input,monitorConfig);
             break;
           case Constants.RESOURCE_NORMAL:
-            resource.last_update = Date.now();
+            resource.last_update = new Date();
             handleNormalState(resource,input,monitorConfig);
             break;
           default:
           case Constants.RESOURCE_FAILURE:
-            resource.last_update = Date.now();
+            resource.last_update = new Date();
             handleFailureState(resource,input,monitorConfig);
             break;
         }

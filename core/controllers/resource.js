@@ -130,11 +130,6 @@ var controller = {
     var input = req.params;
     var state = req.params.state;
 
-    if(!state){
-      res.send(400,json.error('resource state is required'));
-      return next();
-    }
-
     var manager = new ResourceManager(resource);
     input.last_update = new Date();
     manager.handleState(input,function(error){
@@ -214,7 +209,6 @@ var controller = {
 
     var updates = params.data;
     if (updates.type=='host') {
-
       resource.acl = req.acl;
       resource.save(err => {
         if (err) {
@@ -223,9 +217,7 @@ var controller = {
           res.send(200,resource);
         }
       });
-
     } else {
-
       ResourceManager.update({
         resource: resource,
         updates: updates,
