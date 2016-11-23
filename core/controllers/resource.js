@@ -58,7 +58,7 @@ module.exports = function (server, passport) {
     middlewares.concat([
       router.requireCredential('admin'),
       router.resolve.idToEntity({param:'resource',required:true}),
-      router.resolve.idToEntity({param:'host'}),
+      router.resolve.idToEntity({param:'host_id',entity:'host'}),
       router.filter.spawn({filter:'emailArray',param:'acl'})
     ]),
     controller.patch
@@ -199,7 +199,7 @@ var controller = {
   patch (req,res,next) {
     var resource = req.resource;
     var body = req.body;
-    body.host = req.host;
+    body.host = req.host_id;
     body.acl = req.acl;
 
     var params = MonitorManager.validateData(body);
@@ -218,6 +218,7 @@ var controller = {
         }
       });
     } else {
+
       ResourceManager.update({
         resource: resource,
         updates: updates,

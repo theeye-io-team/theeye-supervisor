@@ -97,7 +97,7 @@ var service = {
     });
 
     // if job is an agent update, break
-    if( job.name == 'agent:config:update' ) return;
+    if (job.name == 'agent:config:update') return;
 
     var message = { topic: "jobs", subject: "job_update" };
     NotificationService.sendSNSNotification(job, message);
