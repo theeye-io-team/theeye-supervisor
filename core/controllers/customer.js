@@ -1,3 +1,5 @@
+'use strict';
+
 var logger = require('../lib/logger')('controller:customer');
 var json = require('../lib/jsonresponse');
 var router = require('../router');
@@ -14,6 +16,13 @@ module.exports = function (server, passport) {
     router.resolve.idToEntity({param:'customer',required:true}),
     router.ensureCustomer,
   ];
+
+  // users can fetch its own current customer information
+  server.get('/:customer/customer',[
+    passport.authenticate('bearer', {session:false}),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer
+  ],controller.get);
 
   server.get('/customer/:customer',middlewares,controller.get);
   server.put('/customer/:customer',middlewares,controller.replace);
