@@ -18,6 +18,13 @@ module.exports = function (server, passport) {
     router.ensureCustomer,
   ];
 
+  // users can fetch its own current customer information
+  server.get('/:customer/customer',[
+    passport.authenticate('bearer', {session:false}),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer
+  ],controller.get);
+
   server.get('/customer/:customer',middlewares,controller.get);
   //server.put('/customer/:customer',middlewares,controller.replace);
   server.del('/customer/:customer',middlewares,controller.remove);
