@@ -21,17 +21,17 @@ function Workflow () {
   this.fromEvents = function (events) {
     var g = _graph;
 
-    if(!events||!Array.isArray(events)||!(events.length>0)) return;
+    if (!events||!Array.isArray(events)||!(events.length>0)) return;
 
     function createNodeEvent ( event ) {
       var a = event.emitter;
       var b = event;
 
-      if( !g.node(a._id) ){ g.setNode(a._id, a); }
-      if( !g.node(b._id) ){ g.setNode(b._id, b); }
+      if (!g.node(a._id)) { g.setNode(a._id, a); }
+      if (!g.node(b._id)) { g.setNode(b._id, b); }
       g.setEdge(a._id, b._id);
 
-      if( Array.isArray(a.triggers) && a.triggers.length > 0 ){
+      if (Array.isArray(a.triggers) && a.triggers.length > 0) {
         // triggers is an array of event ids
         a.triggers.forEach( trigger => {
           g.setEdge(trigger, a._id);

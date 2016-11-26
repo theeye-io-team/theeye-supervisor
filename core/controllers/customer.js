@@ -1,3 +1,6 @@
+'use strict';
+
+var lodash = require('lodash');
 var logger = require('../lib/logger')('controller:customer');
 var json = require('../lib/jsonresponse');
 var router = require('../router');
@@ -16,7 +19,7 @@ module.exports = function (server, passport) {
   ];
 
   server.get('/customer/:customer',middlewares,controller.get);
-  server.put('/customer/:customer',middlewares,controller.replace);
+  //server.put('/customer/:customer',middlewares,controller.replace);
   server.del('/customer/:customer',middlewares,controller.remove);
   server.patch('/customer/:customer',middlewares,controller.update);
 
@@ -109,21 +112,27 @@ var controller = {
     });
   },
   /**
-   * @method PATCH 
+   * @method PATCH
+   *
    * @route /customer/:customer
    */
   update (req, res, next) {
     var customer = req.customer;
     var updates = req.params;
 
-    for (var name in updates) {
-      if (customer[name] != undefined) {
-        customer[name] = updates[name];
-      }
+    if (updates.description) customer.description = updates.description;
+    if (updates.emails) customer.emails = updates.emails;
+    if (updates.config) {
+      var config = lodash.merge({},customer.config,updates.config);
+      customer.config = config;
     }
 
-    customer.save( err => {
-      if (err) return res.send(500,err);
+    customer.save( (err,model) => {
+      console.log(model);
+      if (err) {
+        return res.send(500,err);
+      }
+
       res.send(200, customer);
     });
   },
@@ -136,23 +145,23 @@ var controller = {
    * @method PUT
    * @route /customer/:customer
    */
-  replace (req, res, next) {
-    var customer = req.customer;
-    var updates = req.params;
+  //replace (req, res, next) {
+  //  var customer = req.customer;
+  //  var updates = req.params;
 
-    // replace with default values if nothing specified
-    customer.description = (updates.description||'');
-    customer.emails = (updates.emails||[]);
-    customer.config = (updates.config||{
-      monitor:{},
-      elasticsearch:{enabled:false}
-    });
+  //  // replace with default values if nothing specified
+  //  customer.description = (updates.description||'');
+  //  customer.emails = (updates.emails||[]);
+  //  customer.config = (updates.config||{
+  //    monitor:{},
+  //    elasticsearch:{enabled:false}
+  //  });
 
-    customer.save( err => {
-      if (err) return res.send(500,err);
-      res.send(200, customer);
-    });
-  },
+  //  customer.save( err => {
+  //    if (err) return res.send(500,err);
+  //    res.send(200, customer);
+  //  });
+  //},
   /**
    *
    *

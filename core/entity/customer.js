@@ -13,16 +13,20 @@ function Schema () {
       required: true,
       dropDups: true
     },
-    description: { type: String, 'default': '' },
-    emails: { type: Array, 'default': [] },
-    agent: { type:mongoose.Schema.Types.ObjectId, ref:'User', 'default':null },
-    config: { type: Object, 'default': function(){
+    description: { type: String, default: '' },
+    emails: { type: Array, default: [] },
+    agent: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    config: { type: Object, default: function(){
       return {
-        monitor:{},
-        elasticsearch:{enabled:false}
+        monitor: {},
+        elasticsearch: { enabled: false },
+        kibana: null
       };
     } },
-    creation_date: { type: Date, 'default': new Date() }
+    creation_date: {
+      type: Date,
+      default: new Date()
+    }
   });
 
   // Duplicate the ID field.
