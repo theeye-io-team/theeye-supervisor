@@ -146,7 +146,7 @@ var controller = {
    */
   create (req,res,next) {
     var customer = req.customer;
-    var hosts = req.body.hosts;
+    var hosts = req.body.hosts||req.body.host;
 
     if (!hosts) return res.send(400, json.error('hosts are required'));
     if (!Array.isArray(hosts)) hosts = [ hosts ];
