@@ -359,17 +359,7 @@ Service.findHostResources = function(host,options,done)
 Service.create = function (input, next) {
   next||(next=function(){});
   logger.log('creating resource for host %j', input);
-  var type = input.type||input.monitor_type;
-  var resource_data = {
-    'host':input.host,
-    'host_id':input.host_id,
-    'hostname':input.hostname,
-    'customer_id':input.customer_id,
-    'customer_name':input.customer_name,
-    'name':input.name,
-    'type':type,
-    'description':input.description
-  };
+  var type = (input.type||input.monitor_type);
 
   ResourceMonitorService.setMonitorData(type, input, function(error,monitor_data){
     if(error) return next(error);
@@ -380,7 +370,10 @@ Service.create = function (input, next) {
     }
 
     createResourceAndMonitor({
-      resource_data: resource_data,
+      resource_data: _.extend({},input,{
+        name: input.name,
+        type: type,
+      }),
       monitor_data: monitor_data
     },function(error,result){
       var monitor = result.monitor;
@@ -388,12 +381,12 @@ Service.create = function (input, next) {
       logger.log('resource & monitor created');
       registerResourceCRUDOperation(
         monitor.customer_name,{
-          'name':monitor.name,
-          'type':resource.type,
-          'customer_name':monitor.customer_name,
-          'user_id':input.user.id,
-          'user_email':input.user.email,
-          'operation':'create'
+          name: monitor.name,
+          type: resource.type,
+          customer_name: monitor.customer_name,
+          user_id: input.user.id,
+          user_email: input.user.email,
+          operation: 'create'
         }
       );
 
@@ -454,12 +447,12 @@ Service.update = function(input,next) {
 
         registerResourceCRUDOperation(
           monitor.customer_name,{
-            'name':monitor.name,
-            'type':resource.type,
-            'customer_name':monitor.customer_name,
-            'user_id':input.user.id,
-            'user_email':input.user.email,
-            'operation':'update'
+            name: monitor.name,
+            type: resource.type,
+            customer_name: monitor.customer_name,
+            user_id: input.user.id,
+            user_email: input.user.email,
+            operation: 'update'
           }
         );
 

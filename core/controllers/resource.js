@@ -37,6 +37,7 @@ module.exports = function (server, passport) {
 
   server.post('/:customer/resource',middlewares.concat([
     router.requireCredential('admin'),
+    router.filter.spawn({filter:'emailArray',param:'acl'})
   ]),controller.create);
 
   server.del('/:customer/resource/:resource',middlewares.concat([
@@ -146,12 +147,14 @@ var controller = {
    */
   create (req,res,next) {
     var customer = req.customer;
-    var hosts = req.body.hosts||req.body.host;
+    var body = req.body,
+      hosts = (body.hosts||body.host);
+    body.acl = req.acl;
 
     if (!hosts) return res.send(400, json.error('hosts are required'));
     if (!Array.isArray(hosts)) hosts = [ hosts ];
 
-    var params = MonitorManager.validateData(req.body);
+    var params = MonitorManager.validateData(body);
     if (params.errors && params.errors.hasErrors()) {
       return res.send(400, params.errors);
     }
