@@ -28,7 +28,7 @@ var MonitorSchema = BaseSchema.EntitySchema.extend({
 MonitorSchema.methods.publish = function(options, next)
 {
   options = options || {};
-  if( options.populate ){
+  if (options.populate) {
     Entity.populate(this, {
       path:'resource'
     }, function(error, monitor){
@@ -39,8 +39,9 @@ MonitorSchema.methods.publish = function(options, next)
         next(error,monitor.toObject());
       }
     });
+  } else {
+    next(null, this.toObject());
   }
-  else next(null, this.toObject());
 }
 
 /**

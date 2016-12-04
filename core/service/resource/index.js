@@ -502,7 +502,7 @@ Service.fetchBy = function(filter,next) {
     var pub = [];
     var fetched = _.after(resources.length,() => next(null,pub));
 
-    resources.forEach(resource => {
+    resources.forEach(function(resource){
       resource.publish(function(error, data){
         MonitorEntity.findOne(
           { resource_id: resource._id },
