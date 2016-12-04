@@ -1,5 +1,36 @@
 # CHANGELOG
 
+### 0.7.0 - 2016-12-04
+
+> every route with security
+| added customer validation
+| added credentiales validation
+| added security access level
+| added access control via credentials
+| added restrictions to modify resources
+| users are allowed to view by default
+
+> validate viewer, user, admin, owner, root credentials
+
+> improve filtering and querying data on some routes (code improved) and query via querystring
+
+> standarize some routes response     
+
+> add some fixes and improvements in routes and source     
+
+> added end ejecution of script by killing the process. log and register     
+
+> unify the information that is being sent to elasticsearch      
+
+> send full resource and monitor information via SNS to socket     
+
+> always accept resource status update (assuming failure)
+
+> added remote method to get customer information      
+
+> create monitors with acl's
+
+
 ### 0.6.4 - 2016-11-03
 
 > clean code       
