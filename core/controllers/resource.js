@@ -96,7 +96,13 @@ var controller = {
       if(error||!resources) {
         res.send(500);
       } else {
-        resources.forEach( r => r.monitor.tags.push(r.hostname) );
+        resources.forEach( r => {
+          if (r.monitor) {
+            if (Array.isArray(r.monitor.tags)) {
+              r.monitor.tags.push(r.hostname);
+            }
+          }
+        });
         res.send(200,resources);
       }
     });
