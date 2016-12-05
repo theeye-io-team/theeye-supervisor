@@ -54,6 +54,8 @@ var controller = {
       script: req.script
     });
 
+    input.hosts||(input.hosts=req.body.host);
+
     if (!input.type) return res.send(400, json.error('type is required'));
     if (!input.hosts) return res.send(400, json.error('a host is required'));
     if (Array.isArray(input.hosts)) {
@@ -64,10 +66,6 @@ var controller = {
       input.hosts = [ input.hosts ];
     }
     if (!input.name) return res.send(400, json.error('name is required'));
-    //if (input.type=='script'){
-    //  if (!input.script) return res.send(400, json.error('script is required'));
-    //} else if(input.type=='scraper'){
-    //}
 
     TaskService.createManyTasks(input, function(error, tasks) {
       if (error) {
