@@ -153,11 +153,14 @@ EntitySchema.methods.setUpdates = function(input, next) {
       if(input.cache) config.limit.cache = input.cache;
       if(input.disk) config.limit.disk = input.disk;
       break;
+    case 'host':
     case 'psaux':
       // no custom configuration
       break;
     default: 
-      return next( new Error('monitor type "' + type + '" unsupported') ); 
+      var error = new Error('monitor type "' + type + '" unsupported') ;
+      debug(error.message);
+      return next(error); 
       break;
   }
 

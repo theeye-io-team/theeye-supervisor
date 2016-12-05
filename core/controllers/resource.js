@@ -206,8 +206,10 @@ var controller = {
    *
    */
   patch (req,res,next) {
-    var resource = req.resource;
-    var body = req.body;
+    var updates,
+      resource = req.resource,
+      body = req.body;
+
     body.host = req.host_id;
     body.acl = req.acl;
 
@@ -216,30 +218,26 @@ var controller = {
       return res.send(400, params.errors);
     }
 
-    var updates = params.data;
-    if (updates.type=='host') {
-      resource.acl = req.acl;
-      resource.save(err => {
-        if (err) {
-          res.send(500,err);
-        } else {
-          res.send(200,resource);
-        }
-      });
+    if (resource.type=='host') {
+      updates = {
+        acl: req.acl,
+        tags: body.tags
+      };
     } else {
-
-      ResourceManager.update({
-        resource: resource,
-        updates: updates,
-        user: req.user
-      },function(error,resource){
-        if (error) {
-          res.send(500,json.error('update error',error.message));
-        } else {
-          res.send(200,resource);
-        }
-      });
+      updates = params.data;
     }
+
+    ResourceManager.update({
+      resource: resource,
+      updates: updates,
+      user: req.user
+    },function(error,resource){
+      if (error) {
+        res.send(500,json.error('update error',error.message));
+      } else {
+        res.send(200,resource);
+      }
+    });
   },
   /**
    *
