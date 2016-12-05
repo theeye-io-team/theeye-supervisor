@@ -17,8 +17,14 @@ exports.RESOURCE_NORMAL = RESOURCE_NORMAL;
 exports.RESOURCE_STOPPED = RESOURCE_STOPPED;
 exports.RESOURCE_RECOVERED = RESOURCE_RECOVERED;
 exports.AGENT_STOPPED = AGENT_STOPPED;
+
+exports.RESOURCE_TYPE_DEFAULT = 'unknown';
 exports.RESOURCE_TYPE_DSTAT = 'dstat';
 exports.RESOURCE_TYPE_PSAUX = 'psaux';
 exports.RESOURCE_TYPE_SCRIPT = 'script';
 exports.RESOURCE_TYPE_PROCESS = 'process';
 exports.RESOURCE_TYPE_SCRAPER = 'scraper';
+
+exports.MONITOR_SEVERITY_LOW = 'low';
+exports.MONITOR_SEVERITY_HIGH = 'high';
+exports.MONITOR_SEVERITY_CRITICAL = 'critical';

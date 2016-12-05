@@ -1,7 +1,7 @@
 'use strict';
 
 const Schema = require('mongoose').Schema;
-const DEFAULT_TYPE = 'unknown';
+const Constants = require('../../constants/monitors');
 
 var properties = exports.properties = {
   customer_id: { type:String, required:true },
@@ -11,8 +11,8 @@ var properties = exports.properties = {
   type: { type:String, required:true },
   user_id: { type:String, 'default': null }, // owner/creator
   acl: [{ type: String }],
-  failure_severity: { type:String, 'default':null },
-  alerts: {type:Boolean, 'default':true}
+  failure_severity: { type: String, default: Constants.MONITOR_SEVERITY_HIGH },
+  alerts: { type: Boolean, default: true }
 };
 
 /**
@@ -40,7 +40,7 @@ const specs = {
 }
 EntitySchema.set('toJSON', specs);
 EntitySchema.set('toObject', specs);
-EntitySchema.statics.DEFAULT_TYPE = DEFAULT_TYPE ;
+EntitySchema.statics.DEFAULT_TYPE = Constants.RESOURCE_TYPE_DEFAULT ;
 
 EntitySchema.methods.publish = function(next) {
   var data = this.toObject();

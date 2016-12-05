@@ -20,16 +20,25 @@ module.exports = function(server, passport){
   ],controller.create);
 }
 
+function parseStats (stats) {
+  if (!isNaN(parseInt(stats.cpu_idle))) {
+    if (!stats.cpu_used) {
+      stats.cpu_used = 100 - stats.cpu_idle;
+    }
+  }
+  return stats;
+}
+
 var controller = {
   create (req, res, next) {
     logger.log('Handling host dstat data');
 
-    var host = req.host;
-    var customer = req.customer;
-    var stats = req.params.dstat;
+    var host = req.host,
+      customer = req.customer,
+      stats = parseStats(req.params.dstat);
 
-    if(!host) return res.send(404,'host not found');
-    if(!stats) return res.send(400,'no stats supplied');
+    if (!host) return res.send(404,'host not found');
+    if (!stats) return res.send(400,'no stats supplied');
 
     HostStats.findOne({
       host_id: host._id,
