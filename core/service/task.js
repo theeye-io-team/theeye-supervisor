@@ -14,6 +14,7 @@ var validator = require('validator');
 // var filter = require('../router/param-filter');
 var elastic = require('../lib/elastic');
 var config = require('config');
+var FetchBy = require('../lib/fetch-by');
 
 function registerTaskCRUDOperation(customer,data) {
   var key = config.elasticsearch.keys.task.crud;
@@ -73,17 +74,9 @@ var TaskService = {
    *
    */
   fetchBy (filter,next) {
-    var query = Task.find(filter.where);
-    if (filter.sort) query.sort( filter.sort );
-    if (filter.limit) query.limit( filter.limit );
-
-    query.exec(function(error,tasks){
-      if (error) {
-        debug(error);
-        return next(error,[]);
-      }
-
-      if (tasks===null||tasks.length===0) return next(null,[]);
+    FetchBy.call(Task,filter,function(err,tasks){
+      if (err) return next(err);
+      if (tasks.length===0) return next(null,tasks);
 
       var publishedTasks = [];
       var asyncTasks = [];
