@@ -139,7 +139,7 @@ function checkHostResourceStatus (resource, cconfig, done) {
     var manager = new ResourceService(resource);
     manager.handleState({
       state: Constants.RESOURCE_STOPPED,
-      last_check: Date.now()
+      last_check: new Date()
     });
   } else {
     resource.last_check = new Date();
