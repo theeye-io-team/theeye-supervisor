@@ -4,7 +4,6 @@ require('mongoose-schema-extend');
 const debug = require('debug')('entity:task');
 const Schema = require('mongoose').Schema;
 const lodash = require('lodash');
-const lifecicle = require('mongoose-lifecycle');
 const randomSecret = require('../../lib/random-secret');
 
 var BaseSchema = require('../base-schema');
@@ -31,11 +30,6 @@ var EntitySchema = new BaseSchema({
   discriminatorKey: '_type'
 });
 
-// Duplicate the ID field.
-EntitySchema.virtual('id').get(function(){
-  return this._id.toHexString();
-});
-
 const def = {
   getters: true,
   virtuals: true,
@@ -48,29 +42,8 @@ const def = {
   }
 }
 
-EntitySchema.set('toJSON'  , def);
+EntitySchema.set('toJSON', def);
 EntitySchema.set('toObject', def);
-
-/**
- *
- *
- *
- */
-EntitySchema.statics.create = function(input,next)
-{
-  var instance = new this();
-  instance.user_id = input.user_id||input.user._id;
-  instance.customer_id = input.customer_id||input.customer._id;
-  instance.script_id = input.script_id||input.script._id;
-  instance.script_arguments = input.script_arguments;
-  instance.script_runas = input.script_runas;
-  instance.name = input.name || null;
-  instance.description = input.description || null;
-  instance.tags = input.tags;
-  instance.save(function(error,entity){
-    next(null, entity);
-  });
-}
 
 EntitySchema.statics.publishAll = function(entities, next){
   if(!entities||entities.length==0) return next([]);
@@ -87,4 +60,4 @@ EntitySchema.statics.publishAll = function(entities, next){
   }
 }
 
-exports.EntitySchema = EntitySchema;
+module.exports = EntitySchema;

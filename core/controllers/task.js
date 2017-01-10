@@ -89,7 +89,7 @@ var controller = {
     if (host) input.host_id = host._id;
 
     var filter = dbFilter(input,{ /** default **/ });
-    filter.where.customer_id = customer._id;
+    filter.where.customer_id = customer.id;
 
     if ( !ACL.hasAccessLevel(req.user.credential,'admin') ) {
       // find what this user can access
@@ -97,7 +97,7 @@ var controller = {
     }
 
     TaskService.fetchBy(filter, function(error, tasks) {
-      if(error) return res.send(500);
+      if (error) return res.send(500);
       res.send(200, tasks);
     });
   },

@@ -41,7 +41,7 @@
     "start": "node --harmony_proxies $PWD/core/main.js",
     "devel": "/bin/bash ./run.debug.sh",
     "core": "DEBUG='theeye:*,eye:*' NODE_TLS_REJECT_UNAUTHORIZED=0 ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' core/main.js",
-    "local": "NODE_ENV=localdev DEBUG='theeye:*,eye:*' NODE_TLS_REJECT_UNAUTHORIZED=0 ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' `pwd`/core/main.js",
+    "local": "NODE_ENV=localdev DEBUG='theeye:*,eye:*' NODE_TLS_REJECT_UNAUTHORIZED=0 ./node_modules/.bin/nodemon --inspect --harmony_proxies --ignore 'uploads/*' `pwd`/core/main.js",
     "elastic_tunnel": "ssh -L 9200:elasticsearch.theeye.io:9200 awsnodep02.theeye.io ",
     "babelify": "babel --presets es2015,stage-0 core/ --out-dir bundle/",
     "compile": "browserify --entry ugly/main.js --bare --outfile bundle/main.js",

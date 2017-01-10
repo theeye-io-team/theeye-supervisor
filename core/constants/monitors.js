@@ -1,30 +1,35 @@
 "use strict";
 
-const RESOURCE_FAILURE = 'failure';
-const RESOURCE_NORMAL = 'normal';
-const RESOURCE_STOPPED = 'updates_stopped';
-const RESOURCE_RECOVERED = 'recovered';
-const AGENT_STOPPED = 'agent_stopped';
-
-const FAILURE_STATES = ['error','fail','failure'];
-const SUCCESS_STATES = ['success','ok','normal'];
-
-exports.SUCCESS_STATES = SUCCESS_STATES;
-exports.FAILURE_STATES = FAILURE_STATES;
-
-exports.RESOURCE_FAILURE = RESOURCE_FAILURE;
-exports.RESOURCE_NORMAL = RESOURCE_NORMAL;
-exports.RESOURCE_STOPPED = RESOURCE_STOPPED;
-exports.RESOURCE_RECOVERED = RESOURCE_RECOVERED;
-exports.AGENT_STOPPED = AGENT_STOPPED;
-
-exports.RESOURCE_TYPE_DEFAULT = 'unknown';
-exports.RESOURCE_TYPE_DSTAT = 'dstat';
-exports.RESOURCE_TYPE_PSAUX = 'psaux';
-exports.RESOURCE_TYPE_SCRIPT = 'script';
-exports.RESOURCE_TYPE_PROCESS = 'process';
-exports.RESOURCE_TYPE_SCRAPER = 'scraper';
-
-exports.MONITOR_SEVERITY_LOW = 'low';
-exports.MONITOR_SEVERITY_HIGH = 'high';
-exports.MONITOR_SEVERITY_CRITICAL = 'critical';
+module.exports = Object.freeze({
+  SUCCESS_STATES: [
+    'success',
+    'ok',
+    'normal'
+  ],
+  FAILURE_STATES: [
+    'error',
+    'fail',
+    'failure'
+  ],
+  RESOURCE_FAILURE: 'failure',
+  RESOURCE_NORMAL: 'normal',
+  RESOURCE_STOPPED: 'updates_stopped',
+  RESOURCE_RECOVERED: 'recovered',
+  AGENT_STOPPED: 'agent_stopped',
+  RESOURCE_TYPE_DEFAULT: 'unknown',
+  RESOURCE_TYPE_DSTAT: 'dstat',
+  RESOURCE_TYPE_PSAUX: 'psaux',
+  RESOURCE_TYPE_SCRIPT: 'script',
+  RESOURCE_TYPE_PROCESS: 'process',
+  RESOURCE_TYPE_SCRAPER: 'scraper',
+  MONITOR_SEVERITY_LOW: 'LOW',
+  MONITOR_SEVERITY_HIGH: 'HIGH',
+  MONITOR_SEVERITY_CRITICAL: 'CRITICAL',
+  get MONITOR_SEVERITIES () {
+    return [
+      this.MONITOR_SEVERITY_LOW,
+      this.MONITOR_SEVERITY_HIGH,
+      this.MONITOR_SEVERITY_CRITICAL
+    ];
+  }
+});

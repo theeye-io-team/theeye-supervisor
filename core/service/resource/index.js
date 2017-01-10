@@ -1,27 +1,24 @@
 "use strict";
 
-var logger = require('../../lib/logger')('service:resource');
-var _ = require('lodash');
-
-var elastic = require('../../lib/elastic');
-var CustomerService = require('../customer');
-var NotificationService = require('../notification');
-var ResourceMonitorService = require('./monitor');
-var EventDispatcher = require('../events');
-
-var Resource = require('../../entity/resource').Entity;
-var MonitorEntity = require('../../entity/monitor').Entity;
-var MonitorTemplate = require('../../entity/monitor/template').Entity;
-var Host = require('../../entity/host').Entity;
-var Task = require('../../entity/task').Entity;
-var HostStats = require('../../entity/host/stats').Entity;
-var Job = require('../../entity/job').Job;
-var AgentUpdateJob = require('../../entity/job').AgentUpdate;
-var Tag = require('../../entity/tag').Entity;
-var MonitorEvent = require('../../entity/event').MonitorEvent;
-var ResourcesNotifications = require('./notifications');
-var globalconfig = require('config');
-
+const _ = require('lodash');
+const globalconfig = require('config');
+const logger = require('../../lib/logger')('service:resource');
+const elastic = require('../../lib/elastic');
+const CustomerService = require('../customer');
+const NotificationService = require('../notification');
+const ResourceMonitorService = require('./monitor');
+const EventDispatcher = require('../events');
+const ResourcesNotifications = require('./notifications');
+const Job = require('../../entity/job').Job;
+const AgentUpdateJob = require('../../entity/job').AgentUpdate;
+const MonitorEvent = require('../../entity/event').MonitorEvent;
+const Resource = require('../../entity/resource').Entity;
+const MonitorEntity = require('../../entity/monitor').Entity;
+const MonitorTemplate = require('../../entity/monitor/template').Entity;
+const Host = require('../../entity/host').Entity;
+const Task = require('../../entity/task').Entity;
+const HostStats = require('../../entity/host/stats').Entity;
+const Tag = require('../../entity/tag').Entity;
 const Constants = require('../../constants/monitors');
 
 function Service(resource) {
@@ -29,15 +26,15 @@ function Service(resource) {
 
   function logStateChange (resource,input) {
     var data = {
-      'date': (new Date()).toISOString(),
-      'timestamp': (new Date()).getTime(),
-      'state': input.state,
-      'hostname': resource.hostname,
-      'customer_name': resource.customer_name,
-      'resource_id': resource._id,
-      'resource_name': resource.name,
-      'resource_type': resource.type,
-      'type': 'resource-stats'
+      date: (new Date()).toISOString(),
+      timestamp: (new Date()).getTime(),
+      state: input.state,
+      hostname: resource.hostname,
+      customer_name: resource.customer_name,
+      resource_id: resource._id,
+      resource_name: resource.name,
+      resource_type: resource.type,
+      type: 'resource-stats'
     };
 
     var key = globalconfig.elasticsearch.keys.resource.stats;
@@ -55,41 +52,38 @@ function Service(resource) {
   function sendResourceEmailAlert (resource,input) {
     if (resource.alerts===false) return;
 
-    ResourcesNotifications(
-      resource,
-      input.event,
-      input.data,
-      (error,emailDetails) => {
-        if (error) {
-          if ( /event ignored/.test(error.message) === false ) {
-            logger.error(error);
-          }
-          logger.log('alerts email not send');
-          return;
+    var specs = _.assign({},input,{ resource: resource });
+
+    ResourcesNotifications(specs,(error, emailDetails) => {
+      if (error) {
+        if ( /event ignored/.test(error.message) === false ) {
+          logger.error(error);
         }
-
-        logger.log('sending email alerts');
-        CustomerService.getAlertEmails(
-          resource.customer_name,
-          (error,emails) => {
-            var mailTo, extraEmail=[];
-
-            if ( Array.isArray(resource.acl) && resource.acl.length>0 ) {
-              extraEmail = resource.acl.filter(email => emails.indexOf(email) === -1);
-            }
-
-            mailTo = (extraEmail.length>0) ? emails.concat(extraEmail) : emails;
-
-            NotificationService.sendEmailNotification({
-              'to': mailTo.join(','),
-              'customer_name': resource.customer_name,
-              'subject': emailDetails.subject,
-              'content': emailDetails.content
-            });
-          }
-        );
+        logger.log('alerts email not send');
+        return;
       }
-    );
+
+      logger.log('sending email alerts');
+      CustomerService.getAlertEmails(
+        resource.customer_name,
+        (error,emails) => {
+          var mailTo, extraEmail=[];
+
+          if ( Array.isArray(resource.acl) && resource.acl.length>0 ) {
+            extraEmail = resource.acl.filter(email => emails.indexOf(email) === -1);
+          }
+
+          mailTo = (extraEmail.length>0) ? emails.concat(extraEmail) : emails;
+
+          NotificationService.sendEmailNotification({
+            to: mailTo.join(','),
+            customer_name: resource.customer_name,
+            subject: emailDetails.subject,
+            content: emailDetails.content
+          });
+        }
+      );
+    });
   }
 
   function dispatchResourceEvent (resource,eventName){
@@ -140,11 +134,8 @@ function Service(resource) {
       if(resource.fails_count >= failure_threshold) {
         logger.log('resource "%s" state failure', resource.name);
 
-        var sev = getEventSeverity(input);
-        input.severity = sev;
+        input.failure_severity = getEventSeverity(input.event,resource);
         input.event||(input.event=input.state);
-
-        resource.failure_severity = sev;
         resource.state = newState;
 
         sendResourceEmailAlert(resource,input);
@@ -179,14 +170,14 @@ function Service(resource) {
           resource.name
         );
 
-        input.severity = getEventSeverity(input);
-
         if (isRecoveredFromFailure) {
           input.event||(input.event=input.state);
         } else {
           // is recovered from "stop sending updates"
           input.event = Constants.RESOURCE_RECOVERED;
         }
+
+        input.failure_severity = getEventSeverity(input.event,resource);
 
         sendResourceEmailAlert(resource,input);
         logStateChange(resource,input);
@@ -195,7 +186,6 @@ function Service(resource) {
           message:(input.message||'monitor normal'),
           data:input
         });
-        resource.failure_severity = null;
       }
 
       // reset state
@@ -221,12 +211,10 @@ function Service(resource) {
       if( resource.fails_count >= failure_threshold ) {
         logger.log('resource "%s" notifications stopped', resource.name);
 
-        var sev = getEventSeverity(input);
         input.event||(input.event=input.state); // state = agent or resource stopped
-        input.severity = sev;
+        input.failure_severity = getEventSeverity(input.event,resource);
 
         resource.state = newState;
-        resource.failure_severity = sev;
 
         sendResourceEmailAlert(resource,input);
         logStateChange(resource,input);
@@ -326,8 +314,7 @@ function registerResourceCRUDOperation(customer,data) {
 }
 
 
-Service.findHostResources = function(host,options,done)
-{
+Service.findHostResources = function(host,options,done) {
   var query = { 'host_id': host._id };
   if(options.type) query.type = options.type;
   Resource.find(query,(err,resources)=>{
@@ -469,15 +456,23 @@ Service.update = function(input,next) {
   });
 }
 
-function getEventSeverity (input) {
-  var severity, event = input.event;
+function getEventSeverity (event,resource) {
   logger.log('resource event is "%s"', event);
-  if( event && /^host:stats:.*$/.test(event) ) {
-    severity = 'LOW';
-  } else {
-    severity = 'HIGH';
+
+  // severity is set and is valid
+  if (
+    resource.failure_severity &&
+    Constants.MONITOR_SEVERITIES.indexOf(resource.failure_severity.toUpperCase()) !== -1
+  ) {
+    return resource.failure_severity;
   }
-  return severity;
+
+  // else try to determine the severity
+  if (event && /^host:stats:.*$/.test(event)) {
+    return 'LOW';
+  } else {
+    return 'HIGH';
+  }
 }
 
 /**

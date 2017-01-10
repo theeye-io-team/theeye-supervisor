@@ -58,21 +58,33 @@ const ResourceTypes = {
   }
 };
 
-module.exports = function(resource, event_name, event_data, done){
-  var type = resource.type;
+module.exports = function (specs, done){
+
+  var resource = specs.resource,
+    event_name = specs.event,
+    event_data = specs.data,
+    severity = specs.failure_severity,
+    type = resource.type;
+
   try {
     var typeEvent = searchTypeEvent(type, event_name);
   } catch(error) {
     return done(error,null);
   }
 
+  if (specs.failure_severity) {
+    typeEvent.severity = specs.failure_severity.toUpperCase();
+  }
+
   return done(null,{
-    'content':typeEvent.message(resource, event_data),
-    'subject':typeEvent.subject(resource, event_data)
+    content: typeEvent.message(resource, event_data),
+    subject: typeEvent.subject(resource, event_data)
   });
 }
 
 function searchTypeEvent(type,event_name) {
+  var typeEvent;
+
   if( ! ResourceTypes.hasOwnProperty(type) ) {
     throw new Error('resource type "' + type + '" is invalid or not defined');
   }
@@ -84,7 +96,7 @@ function searchTypeEvent(type,event_name) {
     if(
       event_name == Constants.RESOURCE_STOPPED ||
       event_name == Constants.RESOURCE_RECOVERED ||
-      ! event_name
+      !event_name
     ) {
       throw new Error(type + '/' + event_name + ' event ignored.');
     }
@@ -95,14 +107,15 @@ function searchTypeEvent(type,event_name) {
 
   if( typeEvents.length !== 0 ) {
     for(var i=0; i<typeEvents.length; i++){
-      var typeEvent = typeEvents[i];
+      typeEvent = typeEvents[i];
       if (typeEvent.name == event_name) {
-        return typeEvent;
+        return Object.create(typeEvent);
       }
     }
   }
 
-  return defaultTypeEvent(event_name);
+  typeEvent = defaultTypeEvent(event_name);
+  return Object.create(typeEvent);
 }
 
 /**
@@ -116,38 +129,68 @@ function defaultTypeEvent(event_name){
   switch(event_name){
     case Constants.RESOURCE_FAILURE:
       spec = {
-        message: (resource, event_data) => `${resource.hostname} ${resource.description} checks failed.`,
-        subject: (resource, event_data) => `[HIGH] ${resource.description} failure`
+        severity: 'HIGH',
+        message: function(resource, event_data) {
+          return `${resource.hostname} ${resource.description} checks failed.`
+        } ,
+        subject: function(resource, event_data) {
+          return `[${this.severity}] ${resource.description} failure`
+        }
       };
       break;
     case Constants.RESOURCE_NORMAL:
       spec = {
-        message: (resource, event_data) => `${resource.hostname} ${resource.description} checks recovered.`,
-        subject: (resource, event_data) => `[HIGH] ${resource.description} recovered`
+        severity: 'HIGH',
+        message: function(resource, event_data) {
+          return `${resource.hostname} ${resource.description} checks recovered.`
+        } ,
+        subject: function(resource, event_data) {
+          return `[${this.severity}] ${resource.description} recovered`
+        }
       };
       break;
     case Constants.RESOURCE_RECOVERED:
       spec = {
-        message: (resource, event_data) => `${resource.hostname} ${resource.description} start reporting updates again.` ,
-        subject: (resource, event_data) => `[HIGH] ${resource.description} recovered`
+        severity: 'HIGH',
+        message: function(resource, event_data) {
+          return `${resource.hostname} ${resource.description} start reporting updates again.`
+        } ,
+        subject: function(resource, event_data) {
+          return `[${this.severity}] ${resource.description} recovered`
+        }
       };
       break;
     case Constants.RESOURCE_STOPPED:
       spec = {
-        message: (resource, event_data) => `${resource.hostname} ${resource.description} stopped reporting updates.` ,
-        subject: (resource, event_data) => `[HIGH] ${resource.description} unreachable`
+        severity: 'HIGH',
+        message: function(resource, event_data) {
+          return `${resource.hostname} ${resource.description} stopped reporting updates.`
+        } ,
+        subject: function(resource, event_data) {
+          return `[${this.severity}] ${resource.description} unreachable`
+        }
       };
       break;
     case Constants.AGENT_STOPPED:
       spec = {
-        message: (resource, event_data) => `${resource.hostname} host agent stopped reporting updates.` ,
-        subject: (resource, event_data) => `[HIGH] ${resource.hostname} unreachable`
+        severity: 'HIGH',
+        message: function(resource, event_data) {
+          return `${resource.hostname} host agent stopped reporting updates.`
+        } ,
+        subject: function(resource, event_data) {
+          return `[${this.severity}] ${resource.hostname} unreachable`
+        }
       };
       break;
     default:
       spec = {
-        message: (resource, event_data) => `${resource.hostname} ${resource.description} reported an error event "${event_name}".` ,
-        subject: (resource, event_data) => `[HIGH] ${resource.description} error`
+        severity: 'HIGH',
+        message: function(resource, event_data) {
+          return `${resource.hostname} ${resource.description} reported an error event "${event_name}".`
+        } ,
+        subject: function(resource, event_data) {
+          return `[${this.severity}] ${resource.description} error`
+        }
       };
       break;
   }

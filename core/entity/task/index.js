@@ -11,17 +11,15 @@ var Host = require('../host').Entity;
 /**
  * Extended Schema. Includes non template attributes
  */
-var TaskSchema = BaseSchema.EntitySchema.extend({
+var TaskSchema = BaseSchema.extend({
   host_id: { type: String, 'default': null },
   host: { type: ObjectId, ref: 'Host', 'default': null },
   template: { type: ObjectId, ref: 'TaskTemplate', 'default': null },
+  type: { type: String, 'default':'script' },
   script_arguments: { type: Array, 'default': [] },
   script_runas: { type: String, 'default':'' },
-  type: { type: String, 'default':'script' },
   script_id: { type: String, ref: 'Script' },
 });
-
-exports.TaskSchema = TaskSchema;
 
 /**
  *

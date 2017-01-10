@@ -4,7 +4,7 @@ var ObjectId = require('mongoose').Schema.Types.ObjectId;
 var logger = require('../../lib/logger')('eye:entity:resource:template');
 
 var TemplateSchema = BaseSchema.EntitySchema.extend({
-  'base_resource': { type: ObjectId, ref: 'Resource', 'default': null }
+  base_resource: { type: ObjectId, ref: 'Resource', 'default': null }
 });
 
 TemplateSchema.methods.updateInstancesOfGroupHosts = function(done) {

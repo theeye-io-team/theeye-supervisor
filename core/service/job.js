@@ -93,7 +93,7 @@ var service = {
     job.result = result;
     job.save( err => {
       if (err) logger.log(err);
-      done(err, job) 
+      done(err, job);
     });
 
     // if job is an agent update, break
