@@ -690,8 +690,8 @@ Service.createResourceOnHosts = function(hosts,input,doneFn)
   });
 
   var hostProcessed = function(hostId, error, data){
-    if(error){
-      errors = errors || {};
+    if (error) {
+      errors = errors||{};
       logger.log('there are some error %o', error);
       errors[ hostId ] = error.message;
     } else {
@@ -701,7 +701,7 @@ Service.createResourceOnHosts = function(hosts,input,doneFn)
     completed();
   }
 
-  for(var i=0; i<hosts.length; i++) {
+  for (var i=0; i<hosts.length; i++) {
     var hostId = hosts[i];
     handleHostIdAndData(hostId,input,function(error,result){
       hostProcessed(hosts[i], error, result);

@@ -5,10 +5,8 @@ var mongodb = require('../../lib/mongodb').db;
 var BaseSchema = require('./schema');
 var Template = require('./template').Entity;
 var ObjectId = require('mongoose').Schema.Types.ObjectId;
-
 var debug = require('debug')('eye:entity:resource');
 var extend = require('lodash/assign');
-
 var INITIAL_STATE = 'normal' ;
 
 /**
