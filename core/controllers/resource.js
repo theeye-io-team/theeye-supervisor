@@ -30,10 +30,10 @@ module.exports = function (server, passport) {
     router.ensureAllowed({entity:{name:'resource'}})
   ]),controller.get);
 
-  server.put('/:customer/resource/:resource',middlewares.concat([
+  server.patch('/:customer/resource/:resource/state',middlewares.concat([
     router.requireCredential('agent',{exactMatch:true}),
     router.resolve.idToEntity({param:'resource',required:true})
-  ]),controller.update);
+  ]),controller.update_state);
 
   server.post('/:customer/resource',middlewares.concat([
     router.requireCredential('admin'),
@@ -132,7 +132,7 @@ var controller = {
       res.send(204);
     }
   },
-  update (req,res,next) {
+  update_state (req,res,next) {
     var resource = req.resource;
     var input = req.params;
     var state = req.params.state;
@@ -147,10 +147,6 @@ var controller = {
       }
     });
   },
-  /**
-   *
-   *
-   */
   create (req,res,next) {
     var customer = req.customer;
     var body = req.body,
@@ -158,7 +154,7 @@ var controller = {
     body.acl = req.acl;
 
     if (!hosts) return res.send(400, json.error('hosts are required'));
-    if (!Array.isArray(hosts)) hosts = [ hosts ];
+    if (!Array.isArray(hosts)) hosts = [hosts];
 
     var params = MonitorManager.validateData(body);
     if (params.errors && params.errors.hasErrors()) {
