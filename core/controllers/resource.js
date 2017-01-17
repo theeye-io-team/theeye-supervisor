@@ -42,13 +42,25 @@ module.exports = function (server, passport) {
 
 
   var updateMiddlewares = middlewares.concat([
-    router.requireCredential('admin'),
+    router.requireCredential('agent'),
     router.resolve.idToEntity({param:'resource',required:true}),
     router.resolve.idToEntity({param:'host_id',entity:'host'}),
     router.filter.spawn({filter:'emailArray',param:'acl'})
   ]);
   server.patch('/:customer/resource/:resource', updateMiddlewares, controller.update);
-  server.put('/:customer/resource/:resource', updateMiddlewares, controller.update);
+
+  //
+  // KEEP BACKWARD COMPATIBILITY WITH OLDER AGENT VERSIONS.
+  // SUPPORTED FROM VERSION v0.9.3-beta-11-g8d1a93b
+  //
+  server.put('/:customer/resource/:resource', updateMiddlewares, function(req,res,next){
+    // some older version of agent keep updating state to this URL.
+    if (req.user.credential==='agent') {
+      controller.update_state.apply(controller, arguments);
+    } else {
+      controller.update.apply(controller, arguments);
+    }
+  });
 
   /**
    *
