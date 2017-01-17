@@ -3,16 +3,16 @@
 const path = require('path');
 const mime = require('mime');
 const fs = require('fs');
+const extend = require('util')._extend;
+
 var json = require('../lib/jsonresponse');
 var debug = require('../lib/logger')('controller:script');
 var router = require('../router');
-
 var ScriptService = require('../service/script');
 var ResourceService = require('../service/resource');
 var Script = require('../entity/script').Entity;
-var extend = require('util')._extend;
 
-var filenameRegexp = /^[0-9a-zA-Z-_.]*$/;
+const filenameRegexp = /^[0-9a-zA-Z-_.]*$/;
 
 function isValidFilename (filename) {
   if (!filename) return false;
@@ -43,24 +43,21 @@ var controller = {
    *
    *
    */
-  fetch : function (req, res, next) {
-
+  fetch (req, res, next) {
     ScriptService.fetchBy({
       customer_name: req.customer.name,
     }, function(scripts){
       if (!scripts) scripts = [];
       res.send(200, { scripts : scripts });
     });
-
     next();
   },
   /**
    *
    *
    */
-  get : function (req, res, next) {
+  get (req, res, next) {
     var script = req.script;
-
     script.publish(function(error, data){
       res.send(200, { 'script' : data });
     });
@@ -70,8 +67,7 @@ var controller = {
    *
    *
    */
-  create : function (req, res, next) {
-
+  create (req, res, next) {
     var script = req.files.script;
     if (!isValidFilename(script.name)) {
       return res.send(400,json.error('invalid filename', script.name));
@@ -106,7 +102,7 @@ var controller = {
    *
    *
    */
-  remove : function (req, res, next) {
+  remove (req, res, next) {
     var script = req.script;
 
     ScriptService.remove({
@@ -127,7 +123,7 @@ var controller = {
    *
    *
    */
-  update: function(req, res, next) {
+  update (req, res, next) {
     var script = req.script;
     var file = req.files.script;
     var params = req.body;

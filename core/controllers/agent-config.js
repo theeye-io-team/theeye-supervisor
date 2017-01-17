@@ -68,6 +68,7 @@ function generateAgentConfig(monitors,next) {
     debug('setting up monitor configuration');
     (function(configDone){
       switch(monitor.type){
+        case 'file':
         case 'scraper':
           config = extend(config,monitor.config);
           configDone(null, config);
