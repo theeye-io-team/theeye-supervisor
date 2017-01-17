@@ -24,9 +24,8 @@ var storageMedia = (function getStorageMedia(){
  *
  */
 function updateScriptFile (file, script, doneFn) {
-  if(file)
-  {
-    if(file.name != script.filename) {
+  if (file) {
+    if (file.name != script.filename) {
       logger.log('new file uploaded. removing old one');
       file.keyname = getScriptKeyname(file.name);
       storageMedia.remove(script);
@@ -40,8 +39,8 @@ function updateScriptFile (file, script, doneFn) {
 
     logger.log('saving file to media storage');
     storageMedia.save({
-      'customer_name' : script.customer_name,
-      'script' : file
+      'customer_name': script.customer_name,
+      'script': file
     },function(error,data){
       if(error) {
         logger.error('cannot save script into storage');

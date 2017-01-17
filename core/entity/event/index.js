@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 const mongodb = require('../../lib/mongodb').db;
 

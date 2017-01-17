@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 const util = require('util');
 const Schema = require('mongoose').Schema;
@@ -6,7 +6,6 @@ const async = require('async');
 const randomSecret = require('../../lib/random-secret');
 
 function BaseSchema (specs) {
-
   // Schema constructor
   Schema.call(this, util._extend({
     name: { type: String, 'default': '' },
@@ -19,7 +18,6 @@ function BaseSchema (specs) {
     collection: 'events',
     discriminatorKey: '_type'
   });
-
 
   // Duplicate the ID field.
   this.virtual('id').get(function(){
@@ -45,7 +43,6 @@ function BaseSchema (specs) {
     // do stuff
     next();
   });
-
 
   this.statics.fetch = function(query,done){
     // theres is a bug in mongoose with this schemas
@@ -73,6 +70,7 @@ function BaseSchema (specs) {
 
   return this;
 }
+
 util.inherits(BaseSchema, Schema);
 
 module.exports = BaseSchema;
