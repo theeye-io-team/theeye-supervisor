@@ -3,8 +3,9 @@
 const util = require('util');
 const Schema = require('mongoose').Schema;
 const async = require('async');
-const BaseSchema = require('../base-schema');
 const path = require('path');
+const BaseSchema = require('../base-schema');
+const FetchBy = require('../../lib/fetch-by');
 
 const config = require('config');
 
@@ -29,7 +30,7 @@ function FileSchema (props) {
     tags: { type:Array, 'default':[] }
   }
 
-  BaseSchema.apply(this, util._extend({},properties, props), specs);
+  BaseSchema.call(this, util._extend({},properties, props), specs);
 
   this.methods.getFullPath = function() {
     const uploadPath = config.get('system').file_upload_folder;
@@ -51,11 +52,35 @@ function FileSchema (props) {
     return data;
   }
 
-  this.methods.update = function(props,next){
+  this.methods.update = function(updates,next){
     for( var prop in updates ) {
       this[prop] = updates[prop];
     }
     this.save( err => next(err) );
+  }
+
+  this.statics.fetchBy = function(filter,next){
+    var publishedScripts = [];
+    FetchBy.call(this,filter,function(err,scripts){
+      var notFound = (scripts===null||scripts instanceof Array && scripts.length===0);
+      if (notFound) {
+        next(null,[]);
+      } else {
+        var asyncTasks = [];
+        scripts.forEach(function(script){
+          asyncTasks.push(function(callback){
+            script.publish(function(error, data){
+              publishedScripts.push(data);
+              callback();
+            });
+          });
+        });
+
+        async.parallel(asyncTasks,function(){
+          next(null,publishedScripts);
+        });
+      }
+    });
   }
 
   return this;

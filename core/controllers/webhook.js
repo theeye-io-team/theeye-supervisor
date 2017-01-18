@@ -35,10 +35,7 @@ module.exports = function (server, passport) {
   server.get(
     '/:customer/webhook/:webhook',
     middlewares.concat(
-      router.resolve.idToEntity({
-        param:'webhook',
-        required:true
-      })
+      router.resolve.idToEntity({ param:'webhook', required:true })
     ),
     controller.get
   );
@@ -47,10 +44,7 @@ module.exports = function (server, passport) {
     '/:customer/webhook/:webhook',
     middlewares.concat(
       router.requireCredential('admin'),
-      router.resolve.idToEntity({
-        param:'webhook',
-        required: true
-      })
+      router.resolve.idToEntity({ param:'webhook', required: true })
     ),
     controller.update,
     audit.afterUpdate('webhook',{display:'name'})
@@ -60,10 +54,7 @@ module.exports = function (server, passport) {
     '/:customer/webhook/:webhook',
     middlewares.concat(
       router.requireCredential('admin'),
-      router.resolve.idToEntity({
-        param:'webhook',
-        required: true
-      })
+      router.resolve.idToEntity({ param:'webhook', required: true })
     ),
     controller.remove,
     audit.afterRemove('webhook',{display:'name'})
@@ -78,8 +69,8 @@ module.exports = function (server, passport) {
     '/:customer/webhook/:webhook/trigger',
     middlewares.concat(
       router.requireCredential('user'),
-      router.resolve.idToEntity({param:'webhook',required:true}),
-      router.ensureAllowed({entity:{name:'webhook'}})
+      router.resolve.idToEntity({ param:'webhook', required:true }),
+      router.ensureAllowed({ entity:{name:'webhook'} })
     ),
     controller.trigger
   );

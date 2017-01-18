@@ -1,11 +1,11 @@
 "use strict";
 
-var ObjectId = require('mongoose').Schema.Types.ObjectId;
-var lodash = require('lodash');
+const ObjectId = require('mongoose').Schema.Types.ObjectId;
+const lodash = require('lodash');
 var mongodb = require('../../lib/mongodb').db;
 var BaseSchema = require('./schema');
 var Template = require('./template').Entity;
-var Script = require('../script').Entity;
+var Script = require('../file').Script;
 var Host = require('../host').Entity;
 
 /**

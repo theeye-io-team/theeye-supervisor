@@ -7,7 +7,7 @@ var JobModels = require('../entity/job');
 var Job = JobModels.Job;
 var ScriptJob = JobModels.Script;
 var ScraperJob = JobModels.Scraper;
-var Script = require('../entity/script').Entity;
+var Script = require('../entity/file').Script;
 var TaskEvent = require('../entity/event').TaskEvent;
 var EventDispatcher = require('./events');
 

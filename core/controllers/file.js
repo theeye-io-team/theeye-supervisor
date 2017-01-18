@@ -1,16 +1,13 @@
 'use strict';
 
-const mime = require('mime');
-const fs = require('fs');
-const extend = require('util')._extend;
-
-var json = require('../lib/jsonresponse');
-var debug = require('../lib/logger')('controller:script');
 var router = require('../router');
-var ScriptService = require('../service/script');
-var ResourceService = require('../service/resource');
-var Script = require('../entity/file').Script;
+var logger = require('../lib/logger')('eye:controller:webhook');
+var audit = require('../lib/audit');
 var dbFilter = require('../lib/db-filter');
+
+var File = require('../entity/file').File;
+var FileHandler = require('../lib/file');
+
 
 const filenameRegexp = /^[0-9a-zA-Z-_.]*$/;
 function isValidFilename (filename) {
@@ -18,81 +15,116 @@ function isValidFilename (filename) {
   return filenameRegexp.test(filename);
 }
 
+
 module.exports = function(server, passport){
   var middlewares = [
     passport.authenticate('bearer', {session:false}),
-    router.requireCredential('admin'),
     router.resolve.customerNameToEntity({required:true}),
-    router.ensureCustomer,
+    router.ensureCustomer
   ];
 
-  server.get('/:customer/script',middlewares,controller.fetch);
-  server.post('/:customer/script',middlewares,controller.create);
+  // FETCH
+  server.get('/:customer/file', middlewares, controller.fetch);
 
-  var mws = middlewares.concat(
-    router.resolve.idToEntity({param:'script',required:true,entity:'file'})
+  // GET
+  server.get(
+    '/:customer/file/:file',
+    middlewares.concat(
+      router.resolve.idToEntity({ param:'file', required:true })
+    ),
+    controller.get
   );
-  server.get('/:customer/script/:script',mws,controller.get);
-  server.patch('/:customer/script/:script',mws,controller.update);
-  server.del('/:customer/script/:script',mws,controller.remove);
+
+  // CREATE
+  server.post(
+    '/:customer/file',
+    middlewares.concat( router.requireCredential('admin') ),
+    controller.create
+  );
+
+  // UPDATE
+  server.put(
+    '/:customer/file/:file',
+    middlewares.concat(
+      router.requireCredential('admin'),
+      router.resolve.idToEntity({ param:'file', required: true })
+    ),
+    controller.update
+  );
+
+  // DELETE
+  server.del(
+    '/:customer/file/:file',
+    middlewares.concat(
+      router.requireCredential('admin'),
+      router.resolve.idToEntity({ param:'file', required: true })
+    ),
+    controller.remove
+  );
 
   // users can download scripts
-	server.get('/:customer/script/:script/download',[
-    passport.authenticate('bearer', {session:false}),
-    router.requireCredential('user'),
-    router.resolve.customerNameToEntity({required:true}),
-    router.ensureCustomer,
-    router.resolve.idToEntity({param:'script',required:true,entity:'file'})
-  ],controller.download);
-
+  server.get(
+    '/:customer/file/:file/download',
+    [
+      passport.authenticate('bearer', {session:false}),
+      router.requireCredential('user'),
+      router.resolve.customerNameToEntity({required:true}),
+      router.ensureCustomer,
+      router.resolve.idToEntity({param:'script',required:true})
+    ],
+    controller.download
+  );
 }
 
 var controller = {
   /**
    *
+   * @method GET
    *
    */
   fetch (req, res, next) {
     var customer = req.customer;
-    var input = req.query;
+    var query = req.query;
 
-    var filter = dbFilter(input,{
+    var filter = dbFilter(query,{
       sort: { description: 1 }
     });
     filter.where.customer_id = customer.id;
 
-    Script.fetchBy(filter, function(error,scripts){
-      if (!scripts) scripts = [];
-      res.send(200, { scripts : scripts });
+    File.fetchBy(filter, function(error,files){
+      if (!files) files = [];
+      res.send(200,files);
       next();
     });
   },
   /**
    *
+   * @method GET
    *
    */
   get (req, res, next) {
-    var script = req.script;
-    script.publish(function(error, data){
-      res.send(200, { 'script' : data });
+    req.file.publish(function(error,file){
+      res.send(200,file);
+      next();
     });
-    next();
   },
   /**
    *
+   * @method POST
    *
    */
   create (req, res, next) {
-    var script = req.files.script;
-    if (!isValidFilename(script.name)) {
-      return res.send(400,json.error('invalid filename', script.name));
+    var file = req.files.file,
+      description = req.body.description,
+      name = req.body.name;
+
+    if (!isValidFilename(file.name)) {
+      return res.send(400,json.error('invalid filename',file.name));
     }
 
-    var description = req.body.description;
-    var name = req.body.name;
-    debug.log('creating script');
+    debug.log('creating file');
 
-    ScriptService.create({
+    FileHandler.create({
       customer: req.customer,
       user: req.user,
       description: description,
@@ -110,11 +142,12 @@ var controller = {
           res.send( 200, data );
         });
       }
+      next();
     });
-    next();
   },
   /**
    *
+   * @method DELETE
    *
    */
   remove (req, res, next) {
@@ -136,6 +169,7 @@ var controller = {
   },
   /**
    *
+   * @method PUT
    *
    */
   update (req, res, next) {
@@ -162,6 +196,11 @@ var controller = {
       });
     });
   },
+  /**
+   *
+   * @method GET
+   *
+   */
   download (req, res, next) {
     var script = req.script;
 

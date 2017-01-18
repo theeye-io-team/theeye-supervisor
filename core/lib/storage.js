@@ -1,42 +1,41 @@
-var AWS = require('aws-sdk');
-var path = require('path');
-var fs = require('fs');
-var zlib = require('zlib');
-var debug = require('debug')('lib:store');
+'use strict';
 
-var config = require("config");
-var systemConfig = config.get('system');
+const AWS = require('aws-sdk');
+const path = require('path');
+const fs = require('fs');
+const zlib = require('zlib');
+const debug = require('debug')('lib:store');
+const config = require('config');
+const systemConfig = config.get('system');
 
 var S3Storage = {
-  save : function(input,next)
-  {
+  save : function(input,next) {
     var params = {
-      'Bucket': config.get('s3').bucket,
-      'Key': input.script.keyname
+      Bucket: config.get('s3').bucket,
+      Key: input.script.keyname
     };
 
-    var s3obj = new AWS.S3({ params : params });
+    var s3 = new AWS.S3({ params : params });
 
     var body = fs
-    .createReadStream( input.script.path )
-    .pipe( zlib.createGzip() );
+      .createReadStream( input.script.path )
+      .pipe( zlib.createGzip() );
 
-    s3obj.upload({ Body : body })
-    .on('httpUploadProgress', function(evt) {
-      debug('upload progress %j', evt); 
-    })
-    .send(function(error, data) {
-      if(error) {
-        debug('failed to create s3 script');
-        debug(error.message);
-        if(next) next(error,null);
-      } else {
-        if(next) next(null,data);
-      }
-    });
+    s3.upload({ Body : body })
+      .on('httpUploadProgress', function(evt) {
+        debug('upload progress %j', evt); 
+      })
+      .send(function(error, data) {
+        if(error) {
+          debug('failed to create s3 script');
+          debug(error.message);
+          if(next) next(error,null);
+        } else {
+          if(next) next(null,data);
+        }
+      });
   },
-  remove : function(script,next)
-  {
+  remove : function(script,next) {
     if(!next) next = function(){};
 
     var params = {
@@ -55,8 +54,7 @@ var S3Storage = {
       }
     });
   },
-  getStream: function(key,customer_name,next)
-  {
+  getStream: function(key,customer_name,next) {
     var params = {
       'Bucket': config.get('s3').bucket,
       'Key': key
@@ -113,8 +111,7 @@ var LocalStorage = {
       }
     });
   },
-  save : function(input,next)
-  {
+  save : function(input,next) {
     var self = this ;
 
     var script = input.script;
@@ -138,8 +135,7 @@ var LocalStorage = {
       }
     );
   },
-  getStream : function(key,customer_name,next)
-  {
+  getStream : function(key,customer_name,next) {
     debug('getting script stream');
     var self = this;
     var storagePath = systemConfig.file_upload_folder;
@@ -151,7 +147,7 @@ var LocalStorage = {
       if(err){
         if(err.code=='ENOENT'){
           self.createCustomerScriptsPath(customer_name,function(path){
-            fs.writeFile(filepath,"EMPTY FILE CREATED",function(err){
+            fs.writeFile(filepath,'EMPTY FILE CREATED',function(err){
               if(err) return next(err);
               next(null,fs.createReadStream(filepath));
             });
@@ -162,8 +158,7 @@ var LocalStorage = {
       else return next(null,fs.createReadStream(filepath));
     });
   },
-  remove : function(script,next)
-  {
+  remove : function(script,next) {
     // not implemented
     debug('REMOVE NOT IMPLEMENTED');
     if(next) next();
@@ -171,6 +166,8 @@ var LocalStorage = {
 };
 
 module.exports = {
-  S3: S3Storage,
-  Local: LocalStorage
-};
+  get () {
+    var driver = config.get('storage').driver;
+    return driver == 'local' ? LocalStorage : S3Storage ;
+  }
+}
