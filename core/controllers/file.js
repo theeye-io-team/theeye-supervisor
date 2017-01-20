@@ -1,20 +1,14 @@
 'use strict';
 
+const fs = require('fs');
+const md5 = require('md5');
+
 var router = require('../router');
-var logger = require('../lib/logger')('eye:controller:webhook');
+var logger = require('../lib/logger')('eye:controller:file');
 var audit = require('../lib/audit');
 var dbFilter = require('../lib/db-filter');
-
 var File = require('../entity/file').File;
 var FileHandler = require('../lib/file');
-
-
-const filenameRegexp = /^[0-9a-zA-Z-_.]*$/;
-function isValidFilename (filename) {
-  if (!filename) return false;
-  return filenameRegexp.test(filename);
-}
-
 
 module.exports = function(server, passport){
   var middlewares = [
@@ -114,35 +108,54 @@ var controller = {
    *
    */
   create (req, res, next) {
-    var file = req.files.file,
+
+    var user = req.user,
+      customer = req.customer,
+      file = req.files.file,
       description = req.body.description,
+      isPublic = (req.body.public||false),
       name = req.body.name;
 
-    if (!isValidFilename(file.name)) {
-      return res.send(400,json.error('invalid filename',file.name));
-    }
+    logger.log('creating file');
 
-    debug.log('creating file');
-
-    FileHandler.create({
-      customer: req.customer,
-      user: req.user,
-      description: description,
-      name: name,
-      public: (req.body.public||false),
-      script: script,
-    },function(error,script){
-      if(error) {
-        debug.error(error);
-        res.send(500, json.error('internal server error',{
-          error: error.message
-        }) );
+    FileHandler.store({
+      file: file,
+      pathname: req.customer.name
+    }, function(error,storeData){
+      if (error) {
+        logger.error(error);
+        if (error.statusCode) {
+          res.send(
+            error.statusCode,
+            json.error(error.message,error)
+          );
+        } else {
+          res.send(500, json.error('uncaught error',error));
+        }
       } else {
-        script.publish(function(error, data){
-          res.send( 200, data );
+
+        var buf = fs.readFileSync(storeData.path);
+
+        var data = {
+          filename: file.name,
+          mimetype: file.mimetype,
+          extension: file.extension,
+          size: file.size,
+          description: (description||file.name),
+          customer: customer,
+          customer_id: customer._id,
+          customer_name: customer.name,
+          user_id: user._id,
+          keyname: storeData.keyname,
+          md5: md5(buf),
+          public: isPublic
+        };
+
+        File.create(data, function(error,file){
+          file.publish((error,data) => res.send(200,data));
+          next(error);
         });
       }
-      next();
     });
   },
   /**
@@ -159,7 +172,7 @@ var controller = {
       customer: req.customer
     },function(error,data){
       if(error) {
-        debug.error(error);
+        logger.error(error);
         return res.send(500);
       }
 
@@ -206,10 +219,10 @@ var controller = {
 
     ScriptService.getScriptStream(script, (error,stream) => {
       if (error) {
-        debug.error(error.message);
+        logger.error(error.message);
         res.send(500, json.error('internal error',null));
       } else {
-        debug.log('streaming script to client');
+        logger.log('streaming script to client');
 
         var headers = {
           'Content-Disposition':'attachment; filename=' + script.filename,

@@ -24,10 +24,10 @@ function FileSchema (props) {
     mimetype: { type: String },
     extension: { type: String },
     size: { type: Number },
-    description: { type: String, 'default' : '' },
-    md5: { type: String, 'default': null },
-    public : { type: Boolean, 'default': false },
-    tags: { type:Array, 'default':[] }
+    description: { type: String, default:'' },
+    md5: { type: String, default: null },
+    public : { type: Boolean, default: false },
+    tags: { type:Array, default:[] }
   }
 
   BaseSchema.call(this, util._extend({},properties, props), specs);

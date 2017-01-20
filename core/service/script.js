@@ -59,7 +59,7 @@ function registerScriptCRUDOperation(customer,data) {
 
 
 var Service = {
-  create:function(input,next) {
+  create: function (input,next) {
     var self = this;
     var buf = fs.readFileSync(input.script.path);
 

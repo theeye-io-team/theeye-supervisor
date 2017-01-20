@@ -10,15 +10,16 @@ const systemConfig = config.get('system');
 
 var S3Storage = {
   save : function(input,next) {
+    var file = input.script;
     var params = {
       Bucket: config.get('s3').bucket,
-      Key: input.script.keyname
+      Key: file.keyname
     };
 
     var s3 = new AWS.S3({ params : params });
 
     var body = fs
-      .createReadStream( input.script.path )
+      .createReadStream( file.path )
       .pipe( zlib.createGzip() );
 
     s3.upload({ Body : body })
@@ -27,7 +28,7 @@ var S3Storage = {
       })
       .send(function(error, data) {
         if(error) {
-          debug('failed to create s3 script');
+          debug('failed to create file in s3');
           debug(error.message);
           if(next) next(error,null);
         } else {
@@ -35,18 +36,18 @@ var S3Storage = {
         }
       });
   },
-  remove : function(script,next) {
+  remove : function(file,next) {
     if(!next) next = function(){};
 
     var params = {
       'Bucket': config.get('s3').bucket,
-      'Key': script.name
+      'Key': file.name
     };
 
     var s3 = new AWS.S3({ params : params });
     s3.deleteObject(params, function(error, data) {
       if(error){
-        debug('failed to remove s3 script');
+        debug('failed to remove file from s3 ');
         debug(error.message);
         next(error);
       } else {
@@ -78,31 +79,31 @@ var S3Storage = {
 };
 
 var LocalStorage = {
-  createCustomerScriptsPath : function(customer_name, next) {
-    debug('creating customer script path');
+  createLocalStorage : function(name, next) {
+    debug('creating local storage');
 
-    var storagePath = systemConfig.file_upload_folder ;
-    var customerPath = storagePath + '/' + customer_name ;
-    var scriptsPath = customerPath + '/scripts' ;
+    var basePath = systemConfig.file_upload_folder ;
+    var storagePath = basePath + '/' + name ;
+    var scriptsPath = storagePath + '/scripts' ;
 
     fs.exists(scriptsPath, function(exists) {
-      if(exists) {
+      if (exists) {
         next(scriptsPath);
       } else {
-        fs.exists(customerPath, function(exists) {
-          if( ! exists ) {
-            debug('customer %s directory created', customer_name);
-            fs.mkdirSync(customerPath, '0755');
+        fs.exists(storagePath, function(exists) {
+          if (!exists) {
+            fs.mkdirSync(storagePath, '0755');
+            debug('named storage %s directory created', storagePath);
 
-            debug('customer %s scripts directory created', customer_name);
             fs.mkdirSync(scriptsPath, '0755');
+            debug('files storage %s directory created', scriptsPath);
 
             next(scriptsPath);
           } else {
             fs.exists(scriptsPath, function(exists) {
-              if( ! exists ) {
-                debug('customer %s scripts directory created', customer_name);
+              if (!exists) {
                 fs.mkdirSync(scriptsPath, '0755');
+                debug('file storage %s directory created', scriptsPath);
               }
               next(scriptsPath);
             });
@@ -112,41 +113,43 @@ var LocalStorage = {
     });
   },
   save : function(input,next) {
-    var self = this ;
+    var self = this, targetPath,
+      file = input.script,
+      filename = file.keyname,
+      currentPath = file.path,
+      storeName = input.customer_name;
 
-    var script = input.script;
-    var scriptName = script.keyname;
-    var currentPath = script.path;
-
-    this.createCustomerScriptsPath(
-      input.customer_name,
-      function(scriptsPath) {
-        fs.rename(
-          currentPath,
-          path.join(scriptsPath, scriptName),
-          function(error) {
-            if(error) {
-              debug(error);
-              next(error,null);
-            }
-            else next();
+    this.createLocalStorage(
+      storeName,
+      function(storagePath) {
+        targetPath = path.join(storagePath, filename);
+        fs.rename(currentPath,targetPath,function(error){
+          if (error) {
+            debug(error);
+            next(error,null);
+          } else {
+            next(null,{
+              path: targetPath,
+              filename: filename 
+            });
           }
-        );
+        });
       }
     );
   },
   getStream : function(key,customer_name,next) {
-    debug('getting script stream');
+    debug('creating file stream');
     var self = this;
     var storagePath = systemConfig.file_upload_folder;
     var customerPath = storagePath + '/' + customer_name;
     var scriptsPath = customerPath + '/scripts';
     var filepath = path.join(scriptsPath, key);
+    var storeName = customer_name;
 
     fs.access(filepath, fs.R_OK, function(err){
       if(err){
         if(err.code=='ENOENT'){
-          self.createCustomerScriptsPath(customer_name,function(path){
+          self.createLocalStorage(storeName,function(path){
             fs.writeFile(filepath,'EMPTY FILE CREATED',function(err){
               if(err) return next(err);
               next(null,fs.createReadStream(filepath));
@@ -158,7 +161,7 @@ var LocalStorage = {
       else return next(null,fs.createReadStream(filepath));
     });
   },
-  remove : function(script,next) {
+  remove : function(file,next) {
     // not implemented
     debug('REMOVE NOT IMPLEMENTED');
     if(next) next();
