@@ -1,6 +1,6 @@
 'use strict';
 
-var lodash = require('lodash');
+const lodash = require('lodash');
 var logger = require('../lib/logger')('controller:customer');
 var json = require('../lib/jsonresponse');
 var router = require('../router');
@@ -28,7 +28,7 @@ module.exports = function (server, passport) {
   server.get('/customer/:customer',middlewares,controller.get);
   //server.put('/customer/:customer',middlewares,controller.replace);
   server.del('/customer/:customer',middlewares,controller.remove);
-  server.patch('/customer/:customer',middlewares,controller.update);
+  server.patch('/customer/:customer',middlewares,controller.patch);
 
   server.get('/customer',[
     passport.authenticate('bearer',{session:false}),
@@ -123,24 +123,24 @@ var controller = {
    *
    * @route /customer/:customer
    */
-  update (req, res, next) {
+  patch (req, res, next) {
     var customer = req.customer;
     var updates = req.params;
 
-    if (updates.description) customer.description = updates.description;
-    if (updates.emails) customer.emails = updates.emails;
+    if (updates.description) { customer.description = updates.description; }
+    if (Array.isArray(updates.emails)) { customer.emails = updates.emails; }
     if (updates.config) {
       var config = lodash.merge({},customer.config,updates.config);
       customer.config = config;
     }
 
     customer.save( (err,model) => {
-      console.log(model);
       if (err) {
-        return res.send(500,err);
+        res.send(500,err);
+      } else {
+        res.send(200, customer);
       }
-
-      res.send(200, customer);
+      next();
     });
   },
   /**
