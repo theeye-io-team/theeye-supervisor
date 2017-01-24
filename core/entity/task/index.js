@@ -109,12 +109,8 @@ Task.on('afterSave', function(model) {
   model.last_update = new Date();
   // do stuff
 });
-Task.on('afterUpdate',function(model){
-});
-Task.on('afterInsert',function(model){
-});
-Task.on('afterRemove',function(model){
-  // TODO: this is a good place to cancel any schedule on the task
-});
+Task.on('afterUpdate',function(model){ });
+Task.on('afterInsert',function(model){ });
+Task.on('afterRemove',function(model){ });
 
 exports.Entity = Task;

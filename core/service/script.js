@@ -58,7 +58,7 @@ function registerScriptCRUDOperation(customer,data) {
 }
 
 
-var Service = {
+module.exports = {
   create: function (input,next) {
     var self = this;
     var buf = fs.readFileSync(input.script.path);
@@ -165,11 +165,11 @@ var Service = {
         if(error) return next(error);
 
         registerScriptCRUDOperation(input.customer.name,{
-          'name':script.name,
-          'customer_name':input.customer.name,
-          'user_id':input.user.id,
-          'user_email':input.user.email,
-          'operation':'delete'
+          name: script.name,
+          customer_name: input.customer.name,
+          user_id: input.user.id,
+          user_email: input.user.email,
+          operation: 'delete'
         });
 
         next();
@@ -192,5 +192,3 @@ var Service = {
     );
   }
 };
-
-module.exports = Service ;

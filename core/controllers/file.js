@@ -33,7 +33,8 @@ module.exports = function(server, passport){
   server.post(
     '/:customer/file',
     middlewares.concat( router.requireCredential('admin') ),
-    controller.create
+    controller.create,
+    audit.afterCreate('file',{display:'filename'})
   );
 
   // UPDATE
@@ -41,20 +42,22 @@ module.exports = function(server, passport){
     '/:customer/file/:file',
     middlewares.concat(
       router.requireCredential('admin'),
-      router.resolve.idToEntity({ param:'file', required: true })
+      router.resolve.idToEntity({ param:'file', required:true })
     ),
-    controller.update
+    controller.update,
+    audit.afterUpdate('file',{display:'filename'})
   );
 
   // DELETE
-  server.del(
-    '/:customer/file/:file',
-    middlewares.concat(
-      router.requireCredential('admin'),
-      router.resolve.idToEntity({ param:'file', required: true })
-    ),
-    controller.remove
-  );
+  //server.del(
+  //  '/:customer/file/:file',
+  //  middlewares.concat(
+  //    router.requireCredential('admin'),
+  //    router.resolve.idToEntity({ param:'file', required:true })
+  //  ),
+  //  controller.remove,
+  //  audit.afterRemove('file',{display:'filename'})
+  //);
 
   // users can download scripts
   server.get(
@@ -64,7 +67,7 @@ module.exports = function(server, passport){
       router.requireCredential('user'),
       router.resolve.customerNameToEntity({required:true}),
       router.ensureCustomer,
-      router.resolve.idToEntity({param:'script',required:true})
+      router.resolve.idToEntity({param:'file',required:true})
     ],
     controller.download
   );
@@ -98,8 +101,63 @@ var controller = {
    */
   get (req, res, next) {
     req.file.publish(function(error,file){
+      if (error) return next(error);
       res.send(200,file);
-      next();
+    });
+  },
+  /**
+   *
+   * @method PUT
+   *
+   */
+  update (req, res, next) {
+    var source = req.files.file,
+      user = req.user,
+      //name = req.body.name,
+      file = req.file,
+      customer = req.customer,
+      description = req.body.description,
+      isPublic = (req.body.public||false);
+
+    if (!source) return res.send(400,'file is required');
+
+    FileHandler.replace({
+      file: file,
+      source: source,
+      pathname: customer.name
+    },function(err,storeData){
+      if (err) {
+        logger.error(err);
+        return next(err);
+      } else {
+
+        var buf = fs.readFileSync(storeData.path);
+
+        var data = {
+          filename: source.name,
+          mimetype: source.mimetype,
+          extension: source.extension,
+          size: source.size,
+          description: (description||source.name),
+          user_id: user._id,
+          keyname: storeData.keyname,
+          md5: md5(buf),
+          public: isPublic
+        };
+
+        file.update(data,err => {
+          if (err) {
+            logger.error(err);
+            next(err);
+          } else {
+            file.publish((err,data) => {
+              if (err) return next(err);
+              res.send(200,data);
+              next();
+            });
+          }
+        })
+      }
     });
   },
   /**
@@ -108,40 +166,32 @@ var controller = {
    *
    */
   create (req, res, next) {
-
     var user = req.user,
+      //name = req.body.name,
       customer = req.customer,
-      file = req.files.file,
+      source = req.files.file,
       description = req.body.description,
-      isPublic = (req.body.public||false),
-      name = req.body.name;
+      isPublic = (req.body.public||false);
 
     logger.log('creating file');
 
     FileHandler.store({
-      file: file,
+      source: source,
       pathname: req.customer.name
-    }, function(error,storeData){
-      if (error) {
-        logger.error(error);
-        if (error.statusCode) {
-          res.send(
-            error.statusCode,
-            json.error(error.message,error)
-          );
-        } else {
-          res.send(500, json.error('uncaught error',error));
-        }
+    }, function(err,storeData){
+      if (err) {
+        logger.error(err);
+        return next(err);
       } else {
 
         var buf = fs.readFileSync(storeData.path);
 
         var data = {
-          filename: file.name,
-          mimetype: file.mimetype,
-          extension: file.extension,
-          size: file.size,
-          description: (description||file.name),
+          filename: source.name,
+          mimetype: source.mimetype,
+          extension: source.extension,
+          size: source.size,
+          description: (description||source.name),
           customer: customer,
           customer_id: customer._id,
           customer_name: customer.name,
@@ -151,62 +201,21 @@ var controller = {
           public: isPublic
         };
 
-        File.create(data, function(error,file){
-          file.publish((error,data) => res.send(200,data));
-          next(error);
+        File.create(data,(err,file) => {
+          if (err) {
+            logger.error(err);
+            next(err);
+          } else {
+            file.publish((err,data) => {
+              if (err) return next(err);
+
+              req.file = file; // assign to the route to audit
+              res.send(200,data);
+              next();
+            });
+          }
         });
       }
-    });
-  },
-  /**
-   *
-   * @method DELETE
-   *
-   */
-  remove (req, res, next) {
-    var script = req.script;
-
-    ScriptService.remove({
-      script: script,
-      user: req.user,
-      customer: req.customer
-    },function(error,data){
-      if(error) {
-        logger.error(error);
-        return res.send(500);
-      }
-
-      ResourceService.onScriptRemoved(script);
-      res.send(204);
-    });
-  },
-  /**
-   *
-   * @method PUT
-   *
-   */
-  update (req, res, next) {
-    var script = req.script;
-    var file = req.files.script;
-    var params = req.body;
-
-    if (!file) {
-      return res.send(400,'script file is required');
-    }
-
-    var input = extend(params,{
-      customer: req.customer,
-      user: req.user,
-      script: script,
-      file: file
-    });
-
-    ScriptService.update(input,(error, script) => {
-      if(error) return res.send(500);
-      ResourceService.onScriptUpdated(script);
-      script.publish(function(error, data){
-        res.send(200,{ 'script': data });
-      });
     });
   },
   /**
@@ -215,23 +224,17 @@ var controller = {
    *
    */
   download (req, res, next) {
-    var script = req.script;
-
-    ScriptService.getScriptStream(script, (error,stream) => {
+    var file = req.file;
+    FileHandler.getStream(file,(error,stream) => {
       if (error) {
-        logger.error(error.message);
-        res.send(500, json.error('internal error',null));
+        logger.error(error);
+        next(error);
       } else {
-        logger.log('streaming script to client');
-
-        var headers = {
-          'Content-Disposition':'attachment; filename=' + script.filename,
-        }
+        logger.log('streaming file to client');
+        var headers = { 'Content-Disposition':'attachment; filename=' + file.filename };
         res.writeHead(200,headers);
         stream.pipe(res);
       }
     });
-
-    next();
   }
 };

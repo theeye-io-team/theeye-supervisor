@@ -33,5 +33,15 @@ var Script = File.discriminator('Script', ScriptSchema);
 
 File.ensureIndexes();
 
+// called for both inserts and updates
+File.on('afterSave', function(model) {
+  model.last_update = new Date();
+  // do more stuff
+});
+
+//File.on('afterUpdate',function(model){ });
+//File.on('afterInsert',function(model){ });
+//File.on('afterRemove',function(model){ });
+
 exports.File = File;
 exports.Script = Script;

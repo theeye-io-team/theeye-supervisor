@@ -53,10 +53,10 @@ function FileSchema (props) {
   }
 
   this.methods.update = function(updates,next){
-    for( var prop in updates ) {
+    for (var prop in updates) {
       this[prop] = updates[prop];
     }
-    this.save( err => next(err) );
+    this.save(err => next(err,this));
   }
 
   this.statics.fetchBy = function(filter,next){

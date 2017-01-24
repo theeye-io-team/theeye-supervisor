@@ -26,7 +26,7 @@ module.exports = {
     "database": "theeye"
   },
   "elasticsearch": {
-    "enabled":true,
+    "enabled":false,
     "url":"http://localhost:9200", // via ssh tunnel
     "keys":{
       //"prefix":"localdev-"

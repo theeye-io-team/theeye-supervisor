@@ -1,10 +1,11 @@
 "use strict";
 
 const path = require('path');
-
 const extend = require('util')._extend;
 const CustomerService = require('../service/customer');
 const logger = require('./logger')(':elastic');
+const config = require('config');
+const fs = require('fs');
 
 var request = require("request").defaults({
   timeout: 5000,
@@ -17,45 +18,54 @@ module.exports = {
     CustomerService.getCustomerConfig(
       { name: customerName },
       function(err,config){
+        var url, specs,
+          elastic = config.elasticsearch;
 
-        if(err||!config) return logger.error('no config. elastic search submit failed');
-
-        //
-        // do not use prefix , it changes the sns keys and breaks the comunication with the clients
-        //
-        //var prefix = config.elasticsearch.keys.prefix
-        //if( prefix ) key = prefix + key ;
-        var elastic = config.elasticsearch;
-        if(!elastic){
-          return logger.error('FATAL - elastic config key not set');
+        if (err||!config) {
+          return logger.error('FATAL - no config found. elasticsearch submit will fail');
         }
 
-        if( elastic.enabled === false ){
-          logger.log('elastic search disabled by config');
-          return;
+        if (!elastic) {
+          return logger.error('FATAL - no config. elasticsearch config key not set');
         }
 
-        if( ! elastic.url ){
-          return logger.error('ERROR invalid elasticsearch configuration.');
+        if (!elastic.url) {
+          return logger.error('ERROR - invalid elasticsearch url configuration.');
         }
 
         data.type = key;
-        data.timestamp || ( data.timestamp = (new Date()).getTime() );
-        data.date || ( data.date = (new Date()).toISOString() );
-
-        var url = elastic.url + '/' + path.join(customerName,key);
-
-        request.post({
-          url: url,
+        data.timestamp||(data.timestamp = (new Date()).getTime());
+        data.date||(data.date = (new Date()).toISOString());
+        specs = {
+          url: elastic.url + '/' + path.join(customerName,key),
           body: data
-        },function(err,respose,body){
-          if(err) {
-            logger.error('ERROR %s',err);
-            logger.error(arguments);
-            return;
-          }
-          logger.log('submit done to %s', url);
-        });
-      });
+        }
+
+        if (elastic.enabled===true) {
+          request.post(specs,(err,respose,body) => {
+            if (err) {
+              logger.error('ERROR %s',err);
+              logger.error(arguments);
+              return;
+            }
+            logger.log('submit done to %s', url);
+          });
+        } else {
+          logger.log('elasticsearch is not enabled');
+        }
+
+        if (elastic.debug===true) {
+          logger.log('elasticsearch debug enabled');
+          debug(elastic.debug_file,specs);
+        }
+      }
+    );
   }
+}
+
+function debug (filename, data) {
+  if (!filename) return logger.error('no filename provided');
+  fs.appendFile(filename, JSON.stringify(data) + "\n", (err) => {
+    if (err) { logger.error(err); }
+  }); 
 }
