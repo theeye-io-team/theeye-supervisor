@@ -1,6 +1,7 @@
-"use strict";
+'use strict';
+
 const format = require('util').format;
-const debug = require('debug')('service:resource:email-notifications');
+const debug = require('debug')('service:resource:notifications');
 const Constants = require('../../constants/monitors');
 const ResourceTypes = {
   'dstat': {
@@ -32,30 +33,21 @@ const ResourceTypes = {
       subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} STATS recovered`; }
     }]
   },
-  'psaux': {
-    type: 'psaux',
-    events: []
+  'psaux': { type: 'psaux', events: [] },
+  'host': { type: 'host', events: [] },
+  'process': { type: 'process', events: [] },
+  'script': { type: 'script', events: [] },
+  'scraper': { type: 'scraper', events: [] },
+  'service': { type: 'service', events: [] },
+  'file': {
+    type: 'file', 
+    events: [{
+      severity: 'LOW',
+      name: 'monitor:file:changed',
+      message: function(resource, event_data) { return `${resource.hostname} file stats has been changed or was not present in the filesystem. It was replaced with the saved version.`; },
+      subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} file was restored`; }
+    }]
   },
-  'host': {
-    type: 'host',
-    events: []
-  },
-  'process': {
-    type: 'process',
-    events: []
-  },
-  'script': {
-    type: 'script',
-    events: []
-  },
-  'scraper': {
-    type: 'scraper',
-    events: []
-  },
-  'service': {
-    type: 'service',
-    events: []
-  }
 };
 
 module.exports = function (specs, done){

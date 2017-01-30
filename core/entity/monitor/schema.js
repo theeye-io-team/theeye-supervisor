@@ -1,8 +1,11 @@
-var Schema = require('mongoose').Schema;
-var debug = require('debug')('eye:entity:monitor');
-var _ = require('lodash');
+'use strict';
 
-if(!RegExp.escape){
+const Schema = require('mongoose').Schema;
+const ObjectId = Schema.Types.ObjectId;
+const debug = require('debug')('eye:entity:monitor');
+const _ = require('lodash');
+
+if (!RegExp.escape) {
   RegExp.escape = function(s){
     return String(s).replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
   };
@@ -85,7 +88,7 @@ EntitySchema.statics.publishAll = function(entities, next){
  * resource/monitor.js
  *
  *
- * UGLY I KNOW....
+ * UGLY LIKE SHIT I KNOW....
  *
  *
  *
@@ -137,21 +140,28 @@ EntitySchema.methods.setUpdates = function(input, next) {
       break;
     case 'process':
       config.ps.raw_search = input.raw_search;
-      config.ps.is_regexp = Boolean( input.is_regexp == 'true' || input.is_regexp === true );
-      config.ps.pattern = ( ! config.ps.is_regexp ? RegExp.escape(input.raw_search) : input.raw_search );
+      config.ps.is_regexp = Boolean(input.is_regexp=='true'||input.is_regexp===true);
+      config.ps.pattern = (!config.ps.is_regexp?RegExp.escape(input.raw_search):input.raw_search);
       config.ps.psargs = input.psargs;
       break;
+    case 'file':
+      config.path = input.path;
+      config.permissions = (input.permissions||'0755');
+      config.owner = input.owner;
+      config.group = input.group;
+      config.file = input.file;
+      break;
     case 'script':
-      if(input.script_id) config.script_id = input.script_id;
-      if(input.script_arguments) config.script_arguments = input.script_arguments;
-      if(input.script_runas) config.script_runas = input.script_runas;
+      if (input.script_id) config.script_id = input.script_id;
+      if (input.script_arguments) config.script_arguments = input.script_arguments;
+      if (input.script_runas) config.script_runas = input.script_runas;
       break;
     case 'dstat':
-      if(input.limit) _.assign(input, input.limit);
-      if(input.cpu) config.limit.cpu = input.cpu;
-      if(input.mem) config.limit.mem = input.mem;
-      if(input.cache) config.limit.cache = input.cache;
-      if(input.disk) config.limit.disk = input.disk;
+      if (input.limit) _.assign(input, input.limit);
+      if (input.cpu) config.limit.cpu = input.cpu;
+      if (input.mem) config.limit.mem = input.mem;
+      if (input.cache) config.limit.cache = input.cache;
+      if (input.disk) config.limit.disk = input.disk;
       break;
     case 'host':
     case 'psaux':

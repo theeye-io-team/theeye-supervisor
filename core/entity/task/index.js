@@ -1,11 +1,11 @@
 "use strict";
 
-var ObjectId = require('mongoose').Schema.Types.ObjectId;
-var lodash = require('lodash');
+const ObjectId = require('mongoose').Schema.Types.ObjectId;
+const lodash = require('lodash');
 var mongodb = require('../../lib/mongodb').db;
 var BaseSchema = require('./schema');
 var Template = require('./template').Entity;
-var Script = require('../script').Entity;
+var Script = require('../file').Script;
 var Host = require('../host').Entity;
 
 /**
@@ -109,12 +109,8 @@ Task.on('afterSave', function(model) {
   model.last_update = new Date();
   // do stuff
 });
-Task.on('afterUpdate',function(model){
-});
-Task.on('afterInsert',function(model){
-});
-Task.on('afterRemove',function(model){
-  // TODO: this is a good place to cancel any schedule on the task
-});
+Task.on('afterUpdate',function(model){ });
+Task.on('afterInsert',function(model){ });
+Task.on('afterRemove',function(model){ });
 
 exports.Entity = Task;

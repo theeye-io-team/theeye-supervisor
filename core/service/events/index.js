@@ -1,4 +1,4 @@
-"use strict";
+'use strict';
 
 const EventEmitter = require('events').EventEmitter;
 const util = require('util');
@@ -29,8 +29,8 @@ class EventDispatcher extends EventEmitter {
       next(null,user);
     } else {
       User.findOne(config.system.user,(err, user) => {
-        if(err) throw err;
-        if(!user) {
+        if (err) throw err;
+        if (!user) {
           this.user = new User(config.system.user);
           this.user.save( err => {
             if(err) throw err;
@@ -44,7 +44,9 @@ class EventDispatcher extends EventEmitter {
     }
   }
 
-  dispatch ( event ) {
+  dispatch (event, event_data) {
+    event_data||(event_data=null);
+
     logger.log(
       'new event id %s name %s , type %s , emitter %s',
       event._id, event.name, event._type, event.emitter
@@ -53,79 +55,91 @@ class EventDispatcher extends EventEmitter {
     Task.find({
       triggers: event._id
     },(err, tasks) => {
-      if( err ) return logger.error( err );
-      if( tasks.length == 0 ) return;
+      if (err) return logger.error( err );
+      if (tasks.length == 0) return;
 
-      tasks.forEach( task => this.createJob(task, event) );
+      tasks.forEach(task => createJob.call(this, {
+        task: task,
+        event: event,
+        event_data: event_data
+      }));
     });
 
     return this;
   }
+}
 
-  createJob ( task, event ) {
-    logger.log('preparing to run task %s', task._id);
-    task.populate([
-      {path:'customer_id'},
-      {path:'host'}
-    ],err => {
-      if(err) return logger.error(err);
+/**
+ * @author Facugon
+ * @param {Array options}
+ * @access private
+ */
+function createJob ( options ) {
+  var task = options.task,
+    event = options.event;
 
-      if( !task.customer_id ) return logger.error('FATAL. task %s does not has a customer', task._id);
-      if( !task.host ) return logger.error('WARNING. task %s does not has a host. cannot execute', task._id);
+  logger.log('preparing to run task %s', task._id);
 
-      var customer = task.customer_id; //after populate customer_id is a customer model
-      if(!customer){
-        return logger.error(
-          new Error('task customer is not set, %j', task)
-        );
-      }
+  task.populate([
+    {path:'customer_id'},
+    {path:'host'}
+  ],err => {
+    if (err) return logger.error(err);
+    if (!task.customer_id) return logger.error('FATAL. task %s does not has a customer', task._id);
+    if (!task.host) return logger.error('WARNING. task %s does not has a host. cannot execute', task._id);
 
-      var runDateMilliseconds =  Date.now() + task.grace_time * 1000 ;
+    var customer = task.customer_id; //after populate customer_id is a customer model
+    if (!customer) {
+      return logger.error(
+        new Error('task customer is not set, %j', task)
+      );
+    }
 
-      if( task.grace_time > 0 ){
-        // schedule the task
-        app.scheduler.scheduleTask({
-          event: event,
-          task: task,
-          user: this.user,
-          customer: customer,
-          schedule: {
-            runDate: runDateMilliseconds,
-          },
-          notify: true
-        },(err, agenda) => {
-          if(err) return logger.error(err);
+    var runDateMilliseconds =  Date.now() + task.grace_time * 1000 ;
 
-          CustomerService.getAlertEmails(customer.name,(err, emails)=>{
-            app.jobDispatcher.sendJobCancelationEmail({
-              task_secret: task.secret,
-              task_id: task.id,
-              schedule_id: agenda.attrs._id,
-              task_name: task.name,
-              hostname: task.host.hostname,
-              date: new Date(runDateMilliseconds).toISOString(),
-              grace_time_mins: task.grace_time / 60,
-              customer_name: customer.name,
-              to: emails.join(',')
-            });
+    if( task.grace_time > 0 ){
+      // schedule the task
+      app.scheduler.scheduleTask({
+        event: event,
+        task: task,
+        user: this.user,
+        customer: customer,
+        notify: true,
+        schedule: {
+          runDate: runDateMilliseconds,
+        }
+      },(err, agenda) => {
+        if (err) return logger.error(err);
+
+        CustomerService.getAlertEmails(customer.name,(err, emails)=>{
+          app.jobDispatcher.sendJobCancelationEmail({
+            task_secret: task.secret,
+            task_id: task.id,
+            schedule_id: agenda.attrs._id,
+            task_name: task.name,
+            hostname: task.host.hostname,
+            date: new Date(runDateMilliseconds).toISOString(),
+            grace_time_mins: task.grace_time / 60,
+            customer_name: customer.name,
+            to: emails.join(',')
           });
         });
-      } else {
-        app.jobDispatcher.create({
-          event: event,
-          task: task,
-          user: this.user,
-          customer: customer,
-          notify: true
-        }, (err, job) => {
-          if(err) return logger.error(err);
-          // job created
-          logger.log('automatic job created by event');
-        });
-      }
-    })
-  }
-
+      });
+    } else {
+      app.jobDispatcher.create({
+        event: event,
+        task: task,
+        user: this.user,
+        customer: customer,
+        notify: true
+      }, (err, job) => {
+        if (err) return logger.error(err);
+        // job created
+        logger.log('automatic job created by event');
+      });
+    }
+  });
 }
+
 
 module.exports = new EventDispatcher();

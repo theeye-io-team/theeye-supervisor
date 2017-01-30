@@ -7,7 +7,7 @@ var JobModels = require('../entity/job');
 var Job = JobModels.Job;
 var ScriptJob = JobModels.Script;
 var ScraperJob = JobModels.Scraper;
-var Script = require('../entity/script').Entity;
+var Script = require('../entity/file').Script;
 var TaskEvent = require('../entity/event').TaskEvent;
 var EventDispatcher = require('./events');
 
@@ -169,7 +169,7 @@ function ResultEvent (job) {
       return logger.error(err);
     }
 
-    app.eventDispatcher.dispatch(event);
+    EventDispatcher.dispatch(event);
   });
 }
 
@@ -226,8 +226,8 @@ function createScriptJob(input, done){
     job.script_id = script._id;
     job.user = input.user;
     job.user_id = input.user._id;
-    job.host_id = task.host_id ;
-    job.host = task.host_id ;
+    job.host_id = task.host_id;
+    job.host = task.host_id;
     job.name = task.name;
     job.customer_id = input.customer._id;
     job.customer_name = input.customer.name;

@@ -1,5 +1,7 @@
+'use strict';
+
 var mongodb = require('../../lib/mongodb').db;
-var Script = require('../script').Entity;
+var Script = require('../file').Script;
 var BaseSchema = require('./schema');
 
 var TemplateSchema = BaseSchema.extend({

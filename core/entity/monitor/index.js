@@ -32,7 +32,7 @@ MonitorSchema.methods.publish = function(options, next)
     Entity.populate(this, {
       path:'resource'
     }, function(error, monitor){
-      if(!monitor.resource) {
+      if (!monitor.resource) {
         logger.error('monitor.resource is null. could not populate');
         next(error);
       } else {

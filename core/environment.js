@@ -1,18 +1,15 @@
 var fs = require('fs');
-var debug = require('debug')('env');
 
 function setenv(next) {
 
-  if( ! process.env.NODE_ENV ) {
+  if (!process.env.NODE_ENV) {
     console.error('NODE_ENV is required');
     return process.exit(-1);
   }
 
   var config = require('config');
 
-  if( ! config.get("is_dev") ) {
-    debug('seting up aws config');
-    debug(config.get('aws'));
+  if (!config.get("is_dev")) {
     var AWS = require('aws-sdk'); 
     AWS.config.update( config.get('aws') );
   }

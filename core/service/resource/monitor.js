@@ -63,6 +63,10 @@ module.exports = {
           monitor = setMonitorForScript(input);
           next(null, monitor);
           break;
+        case 'file':
+          monitor = setMonitorForFile(input);
+          next(null, monitor);
+          break;
         case 'dstat':
           monitor = setMonitorForDstat(input);
           next(null, monitor);
@@ -104,17 +108,17 @@ module.exports = {
     input.name||(input.name=input.description);
 
     var data = _.assign({},input,{
-      'name': input.name,
-      'description': input.description,
-      'type': type,
-      'monitor_type': type,
-      'tags': router.filter.toArray(input.tags)
+      name: input.name,
+      description: input.description,
+      type: type,
+      monitor_type: type,
+      tags: router.filter.toArray(input.tags)
     });
 
     logger.log('setting up resource type & properties');
     logger.log(data);
 
-    switch(type) {
+    switch (type) {
       case 'scraper':
         var url = input.url;
         if( ! url ) errors.required('url',url);
@@ -140,18 +144,25 @@ module.exports = {
               errors.invalid('script',input.script);
             }
           }
-        }
+       }
         break;
       case 'process':
-        data.raw_search = input.raw_search || errors.required('raw_search');
-        data.psargs = input.psargs || 'aux';
+        data.raw_search = input.raw_search||errors.required('raw_search');
+        data.psargs = input.psargs||'aux';
         data.is_regexp = Boolean(input.is_regexp=='true'||input.is_regexp===true);
-        data.pattern = ( ! data.is_regexp ? RegExp.escape(data.raw_search) : data.raw_search );
+        data.pattern = (!data.is_regexp?RegExp.escape(data.raw_search):data.raw_search);
+        break;
+      case 'file':
+        data.path = (input.path||errors.required('path'));
+        data.permissions = (input.permissions||'0755');
+        data.owner = input.owner;
+        data.group = input.group;
+        data.file = (input.file||errors.required('file'));
         break;
       case 'script':
         var scriptArgs = router.filter.toArray(input.script_arguments);
         data.script_arguments = scriptArgs;
-        data.script_id = input.script_id || errors.required('script_id',input.script_id);
+        data.script_id = input.script_id||errors.required('script_id',input.script_id);
         if (input.script_runas) {
           if (/%script%/.test(input.script_runas)===false) {
             data.script_runas = errors.invalid('script_runas',input.script_runas);
@@ -163,10 +174,10 @@ module.exports = {
         }
         break;
       case 'dstat':
-        data.cpu = input.cpu || 60;
-        data.mem = input.mem || 60;
-        data.cache = input.cache || 60;
-        data.disk = input.disk || 60;
+        data.cpu = input.cpu||60;
+        data.mem = input.mem||60;
+        data.cache = input.cache||60;
+        data.disk = input.disk||60;
         break;
       case 'psaux': break;
       case 'host': break;
@@ -302,6 +313,26 @@ function setMonitorForScraper(input) {
       'parser': input.parser,
       'pattern': input.parser == 'pattern' ? input.pattern : null,
       'script': input.parser == 'script' ? input.script : null
+    }
+	};
+}
+
+function setMonitorForFile(input) {
+	return {
+    'tags': input.tags,
+    'customer_name': input.customer_name,
+		'host_id': input.host_id,
+		'host': input.host_id,
+		'name': input.name,
+		'type': 'file',
+		'looptime': input.looptime,
+    'config': {
+      'file': input.file,
+      'file_id': input.file._id,
+      'path': input.path,
+      'owner': input.owner,
+      'group': input.group,
+      'permissions': input.permissions
     }
 	};
 }

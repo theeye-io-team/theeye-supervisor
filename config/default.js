@@ -151,6 +151,9 @@ module.exports = {
       "script":{
         "crud":"crud-script"
       },
+      "file":{
+        "crud":"crud-file"
+      },
       "template":{
         "crud":"crud-template",
         "task":{"crud":"crud-task-template"},

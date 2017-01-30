@@ -1,21 +1,16 @@
+'use strict';
+
 var async = require('async');
 var md5 = require('md5');
 var fs = require('fs');
 var config = require('config');
 var path = require('path');
 var extend = require('util')._extend;
-var Script = require("../entity/script").Entity;
+var Script = require("../entity/file").Script;
 var Task = require("../entity/task").Entity;
 var logger = require('../lib/logger')('service:script');
-var S3Storage = require('../lib/store').S3;
-var LocalStorage = require('../lib/store').Local;
 var elastic = require('../lib/elastic');
-
-var storageMedia = (function getStorageMedia(){
-  return config.get("storage").driver == 'local' ?
-    LocalStorage : S3Storage ;
-})();
-
+var storage = require('../lib/storage').get();
 
 /**
  *
@@ -24,12 +19,11 @@ var storageMedia = (function getStorageMedia(){
  *
  */
 function updateScriptFile (file, script, doneFn) {
-  if(file)
-  {
-    if(file.name != script.filename) {
+  if (file) {
+    if (file.name != script.filename) {
       logger.log('new file uploaded. removing old one');
       file.keyname = getScriptKeyname(file.name);
-      storageMedia.remove(script);
+      storage.remove(script);
     } else {
       logger.log('replace old uploaded file');
       file.keyname = script.keyname;
@@ -39,9 +33,9 @@ function updateScriptFile (file, script, doneFn) {
     file.md5 = md5(buf) ;
 
     logger.log('saving file to media storage');
-    storageMedia.save({
-      'customer_name' : script.customer_name,
-      'script' : file
+    storage.save({
+      'customer_name': script.customer_name,
+      'script': file
     },function(error,data){
       if(error) {
         logger.error('cannot save script into storage');
@@ -54,8 +48,7 @@ function updateScriptFile (file, script, doneFn) {
   else doneFn();
 }
 
-function getScriptKeyname (filename)
-{
+function getScriptKeyname (filename) {
   return filename + '[ts:' + Date.now() + ']' ;
 }
 
@@ -65,18 +58,17 @@ function registerScriptCRUDOperation(customer,data) {
 }
 
 
-var Service = {
-  create:function(input,next) {
-    var service = this ;
+module.exports = {
+  create: function (input,next) {
+    var self = this;
+    var buf = fs.readFileSync(input.script.path);
 
     input.script.keyname = getScriptKeyname(input.script.name);
-
-    var buf = fs.readFileSync(input.script.path);
     input.script.md5 = md5(buf);
     input.customer_name = input.customer.name;
 
     logger.log('saving file to storage');
-    storageMedia.save(input,function(error,data){
+    storage.save(input,function(error,data){
       if(error) {
         logger.error('unable to storage files.');
         logger.error(error.message);
@@ -84,7 +76,7 @@ var Service = {
         next(error);
       } else {
         logger.log('creating file entity');
-        service.createEntity(input, function(error, entity){
+        self.createEntity(input, function(error, entity){
           if(next) next(error, entity);
         });
       }
@@ -165,7 +157,7 @@ var Service = {
 
     var script = input.script;
     var query ;
-    storageMedia.remove(script, function(error,data){
+    storage.remove(script, function(error,data){
       logger.log('script removed from storage');
 
       var filter = {_id:script._id};
@@ -173,11 +165,11 @@ var Service = {
         if(error) return next(error);
 
         registerScriptCRUDOperation(input.customer.name,{
-          'name':script.name,
-          'customer_name':input.customer.name,
-          'user_id':input.user.id,
-          'user_email':input.user.email,
-          'operation':'delete'
+          name: script.name,
+          customer_name: input.customer.name,
+          user_id: input.user.id,
+          user_email: input.user.email,
+          operation: 'delete'
         });
 
         next();
@@ -192,38 +184,11 @@ var Service = {
       });
     });
   },
-  fetchBy : function(input,next)
-  {
-    var publishedScripts = [];
-    Script.find(
-      input,{},{ sort: { description:1 } }, function(error,scripts){
-      var notFound = scripts === null || scripts instanceof Array && scripts.length === 0;
-      if( notFound ) next([]);
-    else
-    {
-      var asyncTasks = [];
-      scripts.forEach(function(script){
-        asyncTasks.push(function(callback){
-          script.publish(function(error, data){
-            publishedScripts.push(data);
-            callback();
-          });
-        });
-      });
-
-      async.parallel(asyncTasks,function(){
-        next(publishedScripts);
-      });
-    }
-    });
-  },
   getScriptStream: function(script,next) {
-    storageMedia.getStream(
+    storage.getStream(
       script.keyname,
       script.customer_name,
       next
     );
   }
 };
-
-module.exports = Service ;

@@ -47,8 +47,7 @@ module.exports = {
       });
     }
   },
-  sendEmailNotification : function(options)
-  {
+  sendEmailNotification : function(options) {
     mailer.sendMail({
       'customer_name': options.customer_name,
       'subject': options.subject,
