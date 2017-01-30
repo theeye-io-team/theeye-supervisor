@@ -1,122 +1,167 @@
-var debug = require('debug')('eye:supervisor:router:param-resolver-middleware');
+'use strict';
+
+var logger = require('../lib/logger')(':router:middleware:params-resolver');
 var Host = require('../entity/host').Entity;
 var User = require('../entity/user').Entity;
 var Customer = require('../entity/customer').Entity;
+var validator = require('validator');
+
+function firstToUpper(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
 
 module.exports = {
-  'idToEntity': idToEntity,
-  'hostnameToHost': hostnameToHost,
-  'customerNameToEntity': customerNameToEntity
-};
+  idToEntity (options) {
+    options||(options={});
 
-function idToEntity (options) {
+    if (!options.param) throw new Error('param name is required!');
+    var paramName = options.param;
+    var entityName = options.entity||options.param;
 
-  if(!options.param) throw new Error('param name is required!');
+    return function (req, res, next) {
+      var _id = req.params[paramName]||req.body[paramName]||req.query[paramName];
 
-  var paramName = options.param;
-  var entityName = options.entity || options.param;
+      if (!_id) {
+        if (options.required) {
+          var e = new Error(options.param + ' is required');
+          e.statusCode = 400;
+          return next(e);
+        }
 
-  return function(req, res, next) {
-    var _id = req.params[paramName] || req.body[paramName] || req.query[paramName];
+        logger.debug('no param "%s"', paramName);
+        req[paramName] = null;
+        return next();
+      }
 
-    if(!_id) {
-      debug('no param "%s"', paramName);
-      req[paramName] = null;
-      return next();
+      if (!validator.isMongoId(_id)) {
+        if (options.required) {
+          var e = new Error(options.param + ' id is invalid');
+          e.statusCode = 400;
+          return next(e);
+        }
+
+        req[paramName] = null;
+        return next();
+      }
+
+      logger.debug('resolving "%s" with id "%s"', paramName, _id);
+
+      var entityModule = require('../entity/' + entityName);
+      var Entity = (
+        entityModule.Entity || 
+        entityModule[ firstToUpper(entityName) ] || 
+        entityModule
+      );
+
+      Entity.findById( _id, (err, resource) => {
+        if (err) {
+          logger.error(err);
+          req[paramName] = null;
+          return next(err);
+        }
+
+        if (!resource) {
+          if (options.required) {
+            var e = new Error(options.param + ' not found');
+            e.statusCode = 404;
+            return next(e);
+          }
+
+          req[paramName] = null;
+          return next();
+        }
+
+        logger.debug('instances of "%s" found', options.param);
+        req[paramName] = resource;
+        next(null, resource);
+      });
     }
+  },
+  hostnameToHost (options) {
+    options||(options={});
 
-    debug('resolving "%s" with id "%s"', paramName, _id);
+    return function (req,res,next) {
+      var hostname = req.params.hostname||req.body.hostname||req.query.hostname;
+      var customer = req.customer;
 
-    if( ! validMongoId(_id) ) {
-      req[paramName] = null;
-      next();
-    } else {
-      var Entity = require('../entity/' + entityName).Entity;
-      Entity.findById(_id, function(queryError, resource){
-        if(queryError) {
-          debug(queryError);
-          req[paramName] = null;
-          next(queryError);
-        } else if(resource == null) {
-          req[paramName] = null;
-          next();
+      if (!customer) {
+        logger.debug('no customer yet present');
+        req.host = null;
+        return next();
+      }
+
+      if (!hostname) {
+        if (options.required) {
+          var e = new Error('hostname is required');
+          e.statusCode = 400;
+          return next(e);
+        }
+
+        logger.debug('no hostname');
+        req.host = null;
+        return next();
+      }
+
+      logger.debug('resolving host with hostname "%s"', hostname);
+
+      Host.findOne({
+        hostname: hostname,
+        customer_name: customer.name
+      },function(err,host){
+        if(err) {
+          logger.debug(err);
+          next(err);
+        } else if(host == null) {
+          req.host = null ;
+          return next();
         } else {
-          debug('entity match found');
-          req[paramName] = resource ;
-          next();
+          req.host = host ;
+          return next();
         }
       });
     }
-  }
-}
+  },
+  customerNameToEntity (options) {
+    options||(options={});
 
-function validMongoId (_id) {
-  return _id.match(/^[a-fA-F0-9]{24}$/) ;
-}
+    return function (req,res,next) {
+      var name = req.params.customer||req.body.customer||req.query.customer;
 
-function hostnameToHost (options) {
-  return function(req,res,next) {
-    var hostname = req.params.hostname || req.body.hostname || req.query.hostname;
-    var customer = req.customer;
+      if (!name) {
+        if (options.required) {
+          var error = new Error('organization is required');
+          error.statusCode = 403;
+          return next(error);
+        }
 
-    if(!customer) {
-      debug('no customer');
-      req.host = null;
-      return next();
-    }
-
-    if(!hostname) {
-      debug('no hostname');
-      req.host = null;
-      return next();
-    }
-
-    debug('resolving host with hostname "%s"', hostname);
-
-    var query = {
-      'hostname': hostname,
-      'customer_name': customer.name
-    };
-
-    Host.findOne(query,function(queryError,host){
-      if(queryError) {
-        debug(queryError);
-        next(queryError);
-      } else if(host == null) {
-        req.host = null ;
-        return next();
-      } else {
-        req.host = host ;
+        logger.debug('no customer');
+        req.customer = null;
         return next();
       }
-    });
-  }
-}
 
-function customerNameToEntity (options) {
-  return function(req,res,next) {
-    var name = req.params.customer || req.body.customer || req.query.customer;
+      logger.debug('resolving customer with name "%s"', name);
 
-    if(!name) {
-      debug('no customer');
-      req.customer = null;
-      return next();
-    }
+      var query = { name : name };
+      Customer.findOne(query, (err, customer) => {
+        if(err) {
+          logger.error(err);
+          return next(err);
+        }
 
-    debug('resolving customer with name "%s"', name);
+        if(!customer){
+          if(options.required){
+            var error = new Error('organization not found') ;
+            error.statusCode = 403;
+            return next(error);
+          }
 
-    var query = { name : name };
-    Customer.findOne(query, function(queryError, customer){
-      if(queryError) {
-        debug(queryError);
-        next(queryError);
-      } else if(customer == null) {
-        req.customer = null;
-        next();
-      } else {
+          req.customer = null;
+          return next();
+        }
+
         req.customer = customer ;
         next();
-      }
-    });
-  }
+      });
+    }
+  },
 }

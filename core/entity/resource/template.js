@@ -4,11 +4,10 @@ var ObjectId = require('mongoose').Schema.Types.ObjectId;
 var logger = require('../../lib/logger')('eye:entity:resource:template');
 
 var TemplateSchema = BaseSchema.EntitySchema.extend({
-  'base_resource': { type: ObjectId, ref: 'Resource', 'default': null }
+  base_resource: { type: ObjectId, ref: 'Resource', 'default': null }
 });
 
-TemplateSchema.methods.updateInstancesOfGroupHosts = function(done)
-{
+TemplateSchema.methods.updateInstancesOfGroupHosts = function(done) {
   var template = this;
   logger.log('updating template resource "%s"(%s) instances',
     template.description,
@@ -23,7 +22,6 @@ TemplateSchema.methods.values = function(){
     'name': template.name,
     'type': template.type,
     'description': template.description,
-    'attend_failure' : template.attend_failure,
     'failure_severity' : template.failure_severity,
   }
 }

@@ -7,9 +7,9 @@ var NotificationService = require("../notification");
 var CustomerService = require("../customer");
 var Handlebars = require("../../lib/handlebars");
 var ResourceService = require("../resource");
-var Job = require('../../entity/job').Entity;
 var HostGroupService = require('./group');
-var logger = require("../../lib/logger")("eye:supervisor:service:host") ;
+var AgentUpdateJob = require('../../entity/job').AgentUpdate;
+var logger = require("../../lib/logger")("service:host");
 
 var createMonitor = ResourceService.createResourceOnHosts;
 
@@ -19,17 +19,16 @@ function HostService(host) {
 }
 
 HostService.prototype = {
-  agentUnreachable: function()
-  {
+  agentUnreachable: function() {
     var self = this;
-    var vent = 'agent_unreachable' ;
+    var vent = 'agent_unreachable';
     var host = this.host;
 
     CustomerService.getCustomerConfig(
       host.customer_id,
       function(error,config){
         host.fails_count += 1;
-        var maxFails = config.fails_count_alert;
+        var maxFails = config.monitor.fails_count_alert;
         logger.log('fails count %d/%d', host.fails_count, maxFails);
 
         if( host.fails_count > maxFails ) {
@@ -112,11 +111,11 @@ function sendEventNotification (host,vent)
 */
 function createBaseMonitors (input, doneFn){
   logger.log('creating base monitors');
-  doneFn=doneFn||()=>{};
-  let dstat = Object.assign({},input,{'monitor_type':'dstat'});
-  let psaux = Object.assign({},input,{'monitor_type':'psaux'});
-  createMonitor([input.host],dstat);
-  createMonitor([input.host],psaux);
+  doneFn||(doneFn = ()=>{});
+  let dstat = Object.assign({},input,{'type':'dstat'});
+  let psaux = Object.assign({},input,{'type':'psaux'});
+  createMonitor([input.host._id],dstat);
+  createMonitor([input.host._id],psaux);
 }
 
 /**
@@ -142,18 +141,20 @@ HostService.register = function(input,next) {
   logger.log('registering new host "%s"', hostname);
 
   var data = {
-    'hostname'      : hostname,
-    'agent_version' : info.agent_version || 'not_informed',
-    'ip'            : info.ip || 'not_informed',
-    'os_name'       : info.os_name || 'not_informed',
-    'os_version'    : info.os_version || 'not_informed',
-    'state'         : info.state || 'not_informed'
+    'hostname': hostname,
+    'agent_version': info.agent_version || 'not_informed',
+    'ip': info.ip || 'not_informed',
+    'os_name': info.os_name || 'not_informed',
+    'os_version': info.os_version || 'not_informed',
+    'state': info.state || 'not_informed'
   };
 
   Host.create(
     data, 
     customer, 
     function(error, host){
+      if(error) throw new Error('host registration error. ' + error.message);
+
       logger.log('host registered. creating host resource');
 
       var data = {
@@ -178,17 +179,14 @@ HostService.register = function(input,next) {
 
         data.host = host;
         data.resource = resource;
-        HostGroupService.searchAndRegisterHostIntoGroup(
-          host,
-          (err,group)=>{
-            if(err) return logger.error(err);
-            if(!group) return createBaseMonitors(data);
+        HostGroupService.searchAndRegisterHostIntoGroup(host, (err,group)=>{
+          if(err) return logger.error(err);
+          if(!group) return createBaseMonitors(data);
 
-            resource.template = group;
-            resource.save();
-            Job.createAgentConfigUpdate(host._id);
-          }
-        );
+          resource.template = group;
+          resource.save();
+          AgentUpdateJob.create({ host_id: host._id });
+        });
       });
     }
   );

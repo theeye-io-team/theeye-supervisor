@@ -1,36 +1,26 @@
 "use strict";
+
+var extend = require('util')._extend;
+var debug = require('debug')('controller:agent-config');
+var async = require('async');
 var Script = require("../entity/script").Entity;
 var json = require("../lib/jsonresponse");
-var debug = require('debug')('eye:supervisor:controller:agent-config');
-var async = require('async');
-var paramsResolver = require('../router/param-resolver');
+var router = require('../router');
 var ResourceMonitorService = require("../service/resource/monitor");
 
-module.exports = function(server, passport) {
-	server.get('/agent/:hostname/config',[
+module.exports = function (server, passport) {
+  server.get('/:customer/agent/:hostname/config',[
     passport.authenticate('bearer', {session:false}),
-    paramsResolver.customerNameToEntity({}),
-    paramsResolver.hostnameToHost({})
+    router.requireCredential('agent'),
+    router.resolve.customerNameToEntity({}),
+    router.ensureCustomer,
+    router.resolve.hostnameToHost({})
   ],controller.fetch);
-
-  return {
-    routes: [
-      {
-        route: '/agent/:hostname/config',
-        method: 'get',
-        middleware: [ 
-          paramsResolver.customerNameToEntity({}),
-          paramsResolver.hostnameToHost({})
-        ],
-        action: controller.fetch
-      }
-    ]
-  };
 }
 
 /**
  *
- * @route /agent/:hostname/config
+ * @route /:customer/agent/:hostname/config
  * agent-config controller
  *
  */
@@ -39,22 +29,27 @@ var controller = {
    *
    * @author Facundo
    * @method get
-   * @path /agent/:hostname/config
+   * @path /:customer/agent/:hostname/config
    *
    */
-  fetch : function (req, res, next) {
+  fetch: function (req, res, next) {
     var user = req.user;
     var host = req.host;
+    var customer = req.customer;
+
+    if(!host) return res.send(400,'hostname required');
+    if(!customer) return res.send(400,'customer required');
+    if(!user) return res.send(400,'authentication required');
 
     ResourceMonitorService.findBy({
-      'enable': true,
-      'host_id': host._id
+      enable: true,
+      host_id: host._id,
+      customer_id: customer._id
     }, function(error, monitors){
       if(error) res.send(500);
       generateAgentConfig(monitors, function(config){
         if(!config) return res.send(500);
-
-        res.send(200, { 'config': config });
+        res.send(200,config);
       });
     })
   }
@@ -74,8 +69,7 @@ function generateAgentConfig(monitors,next) {
     (function(configDone){
       switch(monitor.type){
         case 'scraper':
-          config.pattern = monitor.config.pattern;
-          config.request_options = monitor.config.request_options;
+          config = extend(config,monitor.config);
           configDone(null, config);
           break;
         case 'process':
@@ -91,10 +85,12 @@ function generateAgentConfig(monitors,next) {
               throw error;
               configDone(error);
             } else {
-              config.script_id = script._id;
-              config.script_md5 = script.md5;
-              config.script_arguments = monitor.config.script_arguments || [];
-              configDone(null, config);
+              script.publish(function(err,data){
+                config.script = data;
+                config.script.arguments = monitor.config.script_arguments||[];
+                config.script.runas = monitor.config.script_runas||'';
+                configDone(null, config);
+              });
             }
           });
           break;

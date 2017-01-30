@@ -1,60 +1,69 @@
-"use strict";
+'use strict';
 
-var json = require("../lib/jsonresponse");
-var HostStats = require("../entity/host/stats").Entity;
+var json = require('../lib/jsonresponse');
+var HostStats = require('../entity/host/stats').Entity;
 var NotificationService = require('../service/notification');
-var debug = require("../lib/logger")('eye:supervisor:controller:psaux');
-var paramsResolver = require('../router/param-resolver');
-var ResourceManager = require("../service/resource");
+var logger = require('../lib/logger')('controller:dstat');
+var router = require('../router');
+var ResourceManager = require('../service/resource');
 
 module.exports = function(server, passport) {
-	server.post('/psaux/:hostname', [
-    passport.authenticate('bearer', {session:false}),
-    paramsResolver.customerNameToEntity({}),
-    paramsResolver.hostnameToHost({})
-  ], controller.create);
+  var middlewares = [
+    passport.authenticate('bearer',{session:false}),
+    router.requireCredential('agent',{exactMatch:true}),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer,
+    router.resolve.hostnameToHost({required:true})
+  ];
+
+	server.post('/:customer/psaux/:hostname',middlewares,controller.create);
+  /**
+   *
+   * KEEP ROUTE FOR OUTDATED AGENTS
+   *
+   */
+	server.post('/psaux/:hostname',middlewares,controller.create);
 }
 
 var controller = {
   create (req, res, next) {
-    var host = req.host ;
-    var stats = req.params.psaux ;
+    var host = req.host;
+    var stats = req.params.psaux;
 
-    if(!host) return res.send(404,'host not found');
-    if(!stats) return res.send(400,'psaux data required');
+    if (!stats) return res.send(400,'psaux data required');
 
-    debug.log('Handling host psaux data');
+    logger.log('Handling host psaux data');
 
-    HostStats.findOneByHostAndType(
-      host._id,
-      'psaux',
-      function(error,psaux){
-        if(error) {
-          debug.error(error);
-        } else if(psaux == null) {
-          debug.log('creating host psaux');
-          HostStats.create(host,'psaux',stats);
-        } else {
-          debug.log('updating host psaux');
+    HostStats.findOne({
+      host_id: host._id,
+      type: 'psaux'
+    },function(error,psaux){
+      if(error) {
+        logger.error(error);
+      } else if(psaux == null) {
+        logger.log('creating host psaux');
+        HostStats.create(host,'psaux',stats);
+      } else {
+        logger.log('updating host psaux');
 
-          var date = new Date();
-          psaux.last_update = date ;
-          psaux.last_update_timestamp = date.getTime() ;
-          psaux.stats = stats ;
-          psaux.save();
-        }
+        var date = new Date();
+        psaux.last_update = date ;
+        psaux.last_update_timestamp = date.getTime() ;
+        psaux.stats = stats ;
+        psaux.save();
       }
-    );
+    });
 
-    let options = {
-      'type':'psaux',
-      'ensureOne':true
-    };
-    ResourceManager
-    .findHostResources(host,options,(err,resource)=>{
+    ResourceManager.findHostResources(host,{
+      type:'psaux',
+      ensureOne:true
+    },(err,resource)=>{
       if(err||!resource)return;
       var handler = new ResourceManager(resource);
-      handler.handleState({ state:'normal' });
+      handler.handleState({
+        last_update: new Date(),
+        state: 'normal'
+      });
     });
 
     NotificationService.sendSNSNotification({

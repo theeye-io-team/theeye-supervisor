@@ -1,11 +1,9 @@
 var fs = require('fs');
-var debug = require('debug')('eye:supervisor:env');
+var debug = require('debug')('env');
 
-function setenv(env, next) {
-  process.env['BASE_PATH'] = __dirname  ;
-  process.env.NODE_PATH += ':' + __dirname  ;
+function setenv(next) {
 
-  if( ! env ) {
+  if( ! process.env.NODE_ENV ) {
     console.error('NODE_ENV is required');
     return process.exit(-1);
   }
@@ -16,7 +14,7 @@ function setenv(env, next) {
     debug('seting up aws config');
     debug(config.get('aws'));
     var AWS = require('aws-sdk'); 
-    AWS.config.update( config.get("aws") );
+    AWS.config.update( config.get('aws') );
   }
 
   /**

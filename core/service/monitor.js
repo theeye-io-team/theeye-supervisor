@@ -1,223 +1,191 @@
 "use strict";
 
+var config = require('config');
+var lodash = require('lodash');
 var Resource = require('../entity/resource').Entity;
 var ResourceMonitor = require('../entity/monitor').Entity;
 var Host = require('../entity/host').Entity;
 var ResourceService = require('./resource');
 var CustomerService = require('./customer');
 var HostService = require('./host');
-var logger = require('../lib/logger')('eye:supervisor:service:monitor');
-var config = require('config');
-var MonitorChecker = require('../entity/monitor/checker').Entity;
-var _ = require('lodash');
+var logger = require('../lib/logger')(':monitor');
+
+const Constants = require('../constants/monitors');
+const Scheduler = require('../service/scheduler');
 
 module.exports = {
-  start: function() {
-    var interval = config
-      .get('monitor')
-      .resources_check_failure_interval_milliseconds;
+  start: function () {
+    var mconfig = config.get('monitor');
+    // to seconds
+    var interval = mconfig.check_interval / 1000;
 
-    Checker.setup();
-    setInterval(checkResourcesState, interval);
+    Scheduler.agenda.define(
+      'monitoring',
+      { lockLifetime: (5 * 60 * 1000) }, // max lock
+      (job, done) => { checkResourcesState(done) }
+    );
+
+    Scheduler.agenda.every(`${interval} seconds`,'monitoring');
+    logger.log('monitoring started');
   }
 };
 
-var Checker = {
-  setup:function(){
-    MonitorChecker.find().exec(function(err,checker){
-      if(err) throw err;
-      if(Array.isArray(checker)){
-        if(checker.length == 0){
-          checker = new MonitorChecker();
-          checker.save(function(err){
-            if(err) logger.error(err);
-            else logger.log('monitoring job created');
-          });
-        }
-      }
+function checkResourcesState (done) {
+  logger.debug('***** CHECKING RESOURCES STATUS *****');
+  Resource
+  .find({ 'enable': true })
+  .exec(function(err,resources){
+    var total = resources.length;
+    logger.debug('running %s checks',total);
+    var completed = lodash.after(total,function(){
+      logger.log('releasing monitoring job');
+      done();
     });
-  },
-  getJob: function(next){
-    next||(next=function(){});
-    MonitorChecker.find({enabled:true}).exec(function(err,result){
-      if(err) throw err;
-      if(Array.isArray(result)){
-        if(result.length == 0){
-          logger.log('no checker enabled');
-          return next(null);
-        }
-        var checker = result[0];
-        next(checker);
-      }
-    });
-  }
-};
 
-
-
-function takeCheckerJob(next){
-  Checker.getJob(function(job){
-    if(!job) return;
-    if(!job.inProgress()){
-      logger.log('taking check job');
-      job.take(next);
-    } else {
-      logger.log('in progress');
-    }
-  });
-}
-
-function releaseCheckerJob(next){
-  Checker.getJob(function(job){
-    if(!job) return;
-    if(job.inProgress()){
-      logger.log('releasing check job');
-      job.release(function(){
-        logger.log('released!');
-      });
-    }
-  });
-}
-
-function checkResourcesState(){
-  logger.log('preparing monitoring cicle');
-  takeCheckerJob(function(){
-    logger.log('***** CHECKING RESOURCES STATUS *****');
-    var query = { 'enable': true };
-    Resource.find(query,function(err,resources){
-
-      var total = resources.length;
-      logger.log('running %s checks',total);
-      var completed = _.after(total,function(){
-        logger.log('releasing monitoring job');
-        releaseCheckerJob();
-      });
-
-      var count = 0;
-      for(var i=0; i<resources.length; i++){
-        var resource = resources[i];
-        runChecks(resource,function(){
-          logger.log('check completed %s',++count);
-          completed();
-        });
-      }
+    resources.forEach(resource => {
+      runChecks(resource,()=>completed());
     });
   });
 }
 
-function runChecks(resource,completed) {
+function runChecks (resource,done) {
   CustomerService.getCustomerConfig(
     resource.customer_id,
     function(error,cconfig) {
+      if(error){
+        logger.error('customer %s configuration fetch failed',resource.customer_name);
+        return done();
+      }
+
+      if(!cconfig){
+        logger.error('customer %s configuration unavailable',resource.customer_name);
+        return done();
+      }
+
       switch(resource.type){
         case 'host':
-          checkHostResourceStatus(resource,completed);
+          checkHostResourceStatus(resource, cconfig.monitor, done);
           break;
         case 'script':
         case 'scraper':
         case 'process':
         case 'dstat':
         case 'psaux':
-          checkResourceMonitorStatus(resource,cconfig,completed);
+          checkResourceMonitorStatus(resource, cconfig.monitor, done);
           break;
         case 'default':
           logger.error('unhandled resource %s', resource.type);
-          completed();
+          done();
           break;
       }
     }
   );
 }
 
-function checkResourceMonitorStatus(resource,cconfig,done)
-{
+function checkResourceMonitorStatus (resource,cconfig,done) {
   done||(done=function(){});
 
-  Resource.findOne({
-    'enable': true,
-    'resource_id': resource._id 
+  ResourceMonitor.findOne({
+    enable: true,
+    resource_id: resource._id 
   },function(error,monitor){
-
     if(error){
       logger.error('Resource monitor query error : %s', error.message);
       return done();
     }
 
     if(!monitor){
-      logger.log('resource has not got any monitor');
+      logger.debug('resource hasn\'t got any monitor');
       return done();
     }
 
-    logger.log('checking monitor "%s"', resource.name);
-    var last_update = resource.last_update.getTime();
+    logger.debug('checking monitor "%s"', resource.name);
 
-    validLastupdate({
-      'loop_duration': monitor.looptime,
-      'loop_threshold': cconfig.resources_alert_failure_threshold_milliseconds,
-      'last_update': last_update,
-      'fails_count': resource.fails_count
-    }, function(error,valid,failedLoops){
-      if(!valid){
-        resource.fails_count = (failedLoops - 1);
-        var manager = new ResourceService(resource);
-        manager.handleState({
-          'state':'updates_stopped',
-          'last_check':Date.now()
-        });
-      }
-      done();
-    });
-  });
-}
+    var trigger = triggerAlert(
+      resource.last_update,
+      monitor.looptime,
+      resource.fails_count,
+      cconfig.fails_count_alert
+    );
 
-function checkHostResourceStatus(resource,done)
-{
-  done||(done=function(){});
-
-  logger.log('checking host resource %s', resource.name);
-  validLastupdate({
-    'loop_duration':config.get('agent').core_workers.host_ping.looptime,
-    'loop_threshold':config.get('monitor').resources_alert_failure_threshold_milliseconds,
-    'last_update':resource.last_update.getTime(),
-    'fails_count':resource.fails_count
-  },function(error,valid,failedLoops){
-    if(!valid){
-      resource.fails_count = (failedLoops - 1);
+    if( trigger === true ) {
       var manager = new ResourceService(resource);
       manager.handleState({
-        'state':'updates_stopped',
-        'last_check':Date.now()
+        state: Constants.RESOURCE_STOPPED,
+        last_check: new Date()
       });
+    } else {
+      resource.last_check = new Date();
+      resource.save();
     }
+
     done();
   });
 }
 
-function validLastupdate(options,done)
-{
-  done||(done=()=>{});
-  logger.log(options);
-  var valid, nowTime = Date.now();
-  var loopDuration = options.loop_duration;
-  var loopThreshold = options.loop_threshold;
-  var failedLoopsCount = options.fails_count;
-  var lastUpdate = options.last_update;
-  var timeElapsed = nowTime - lastUpdate;
-  var updateThreshold = loopDuration + loopThreshold;
+function checkHostResourceStatus (resource, cconfig, done) {
+  done||(done=function(){});
 
-  var elapsedMinutes = Math.floor(timeElapsed/1000/60);
-  logger.log('last update time elapsed ' + elapsedMinutes + ' minutes');
+  logger.debug('checking host resource %s', resource.name);
+  var agentKeepAliveLoop = config.get('agent').core_workers.host_ping.looptime;
+  var trigger = triggerAlert(
+    resource.last_update,
+    agentKeepAliveLoop,
+    resource.fails_count,
+    cconfig.fails_count_alert
+  );
 
-  var failedLoops = Math.floor(timeElapsed / loopDuration);
-  logger.log('failed loops count %s', failedLoops);
-  if(timeElapsed > updateThreshold) {
-    if(failedLoops > failedLoopsCount) {
-      logger.log('last update check failed %s times',failedLoops);
-      done(null,valid=false,failedLoops);
-    } else {
-      done(null,valid=true,failedLoops);
-    }
+  if( trigger === true ) {
+    var manager = new ResourceService(resource);
+    manager.handleState({
+      state: Constants.RESOURCE_STOPPED,
+      last_check: new Date()
+    });
   } else {
-    done(null,valid=true);
+    resource.last_check = new Date();
+    resource.save();
   }
+
+  done();
+}
+
+/**
+ *
+ * @param {Date} lastUpdate
+ * @param {Number} loopDuration
+ * @param {Number} failsCount
+ * @param {Number} failsCountThreshold
+ * @return {Boolean}
+ *
+ */
+function triggerAlert (
+  lastUpdate,
+  loopDuration,
+  failsCount,
+  failsCountThreshold
+) {
+  // ensure parameters
+  if (!lastUpdate instanceof Date) return true;
+  if (isNaN(loopDuration = parseInt(loopDuration))) return true;
+  if (isNaN(failsCount = parseInt(failsCount))) return true;
+  if (isNaN(failsCountThreshold = parseInt(failsCountThreshold))) return true;
+
+  var timeElapsed = Date.now() - lastUpdate.getTime();
+  var loopsElapsed = Math.floor(timeElapsed / loopDuration);
+
+  logger.debug({
+    'fails count': failsCount,
+    'last update': lastUpdate,
+    'loops elapsed': loopsElapsed,
+    'loop duration': `${loopDuration} (${ (loopDuration/(60*1000)).toFixed(2) } mins)`,
+    'time elapsed (mins)': (timeElapsed/1000/60)
+  });
+
+  if (loopsElapsed >= 2) {
+    if (failsCount == 0) return true;
+    if (1 == (loopsElapsed - failsCount)) return true;
+    if (loopsElapsed > failsCountThreshold) return true;
+    return false;
+  }
+  return false;
 }

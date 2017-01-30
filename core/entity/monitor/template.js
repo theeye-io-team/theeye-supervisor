@@ -4,12 +4,13 @@ var ObjectId = require('mongoose').Schema.Types.ObjectId;
 var logger = require('../../lib/logger')('eye:entity:monitor:template');
 
 var TemplateSchema = BaseSchema.EntitySchema.extend({
-  'template_resource': { type : ObjectId, ref : 'ResourceTemplate' }
+  template_resource: {
+    type: ObjectId,
+    ref: 'ResourceTemplate'
+  }
 });
 
-TemplateSchema.methods.update = function(
-  input, next
-) {
+TemplateSchema.methods.update = function(input, next) {
   var monitor = this;
   monitor.setUpdates(input, function(err,updates){
     Entity.update(

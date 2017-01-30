@@ -1,10 +1,13 @@
-var mongoose = require('mongoose');
-var config = require("config" ).get("mongo");
-var debug = require('debug')('eye:supervisor:model:mongodb');
-var format = require('util').format;
+"use strinct";
 
-var singleton = function singleton() {
+const mongoose = require('mongoose');
+const config = require("config" ).get("mongo");
+const debug = require('debug')('lib:mongodb');
+const format = require('util').format;
+
+function connect () {
   var connection;
+  if(!config) throw new Error('no mongo db connection provided!');
   if(config.user && config.password) {
     connection = format(
       'mongodb://%s:%s@%s/%s',
@@ -13,43 +16,51 @@ var singleton = function singleton() {
       config.hosts,
       config.database
     );
-  }else{
+  } else {
     connection = format(
       'mongodb://%s/%s',
       config.hosts,
       config.database
     );
   }
-  
-  this.db = mongoose.createConnection(connection);
-  this.db.on('error', function (err) {
-    debug('MongoDB error encountered', err);
-    process.kill(process.pid);
-  });
-  this.db.once('close', function () {
-    debug('MongoDB closed the connection');
-    process.kill(process.pid);
-  });
-  this.db.once('connected', function () {
-    debug('MongoDB connected');
-  });
-  if(singleton.caller != singleton.getInstance) {
-    throw new Error("This object cannot be instanciated");
+
+  if(config.debug) mongoose.set("debug",true);
+
+  return mongoose.createConnection(connection, (config.options||{}) );
+}
+
+function Connection () {
+  var _db ;
+
+  this.connect = function (done) {
+    if( _db ) return done(); // already connected
+
+    _db = connect();
+
+    _db.on('error', function (err) {
+      debug('MongoDB error encountered', err);
+      process.kill(process.pid);
+    });
+
+    _db.once('close', function () {
+      debug('MongoDB closed the connection');
+      process.kill(process.pid);
+    });
+
+    _db.once('connected', function () {
+      debug('MongoDB connected');
+      done();
+    });
   }
-};
 
-/** singleton class definition **/
-singleton.instance = null;
+  Object.defineProperty(this, 'db', {
+    get: function() { return _db; }
+  });
 
-/**
- * Singleton getInstance definition
- * @return singleton class
- */
-singleton.getInstance = function(){
-  if(this.instance === null){
-    this.instance = new singleton();
-  }
-  return this.instance;
-};
+  // return this just for the name.
+  Object.defineProperty(this, 'connection', {
+    get: function() { return _db; }
+  });
+}
 
-module.exports = singleton.getInstance();
+module.exports = new Connection();

@@ -1,12 +1,14 @@
-var Script = require(process.env.BASE_PATH + "/entity/script").Entity;
-var Task = require(process.env.BASE_PATH + "/entity/task").Entity;
-var logger = require('../lib/logger')('eye:supervisor:service:script');
-var S3Storage = require('../lib/store').S3;
-var LocalStorage = require('../lib/store').Local;
 var async = require('async');
 var md5 = require('md5');
 var fs = require('fs');
 var config = require('config');
+var path = require('path');
+var extend = require('util')._extend;
+var Script = require("../entity/script").Entity;
+var Task = require("../entity/task").Entity;
+var logger = require('../lib/logger')('service:script');
+var S3Storage = require('../lib/store').S3;
+var LocalStorage = require('../lib/store').Local;
 var elastic = require('../lib/elastic');
 
 var storageMedia = (function getStorageMedia(){
@@ -94,7 +96,7 @@ var Service = {
     var options = {
       customer    : input.customer,
       user        : input.user,
-      description : input.description || input.script.name,
+      description : input.description||input.script.name,
       filename    : input.script.name,
       keyname     : input.script.keyname,
       mimetype    : input.script.mimetype,
@@ -110,7 +112,7 @@ var Service = {
 
       registerScriptCRUDOperation(customer_name,{
         'name':script.name,
-        'customer':customer_name,
+        'customer_name':customer_name,
         'user_id':input.user.id,
         'user_email':input.user.email,
         'operation':'create'
@@ -129,34 +131,33 @@ var Service = {
     var script = input.script;
     var file = input.file;
 
-    updateScriptFile(file,script,
-      function(error, data){
-        var updates = {
-          'description': input.description,
-          'keyname': data.keyname, // name.extension + [ts:########]
-          'md5': data.md5,
-          'name': file.name,
-          'mimetype': file.mimetype,
-          'size': file.size,
-          'extension': file.extension,
-          'public': input.public
-        };
+    updateScriptFile(file, script, (error, data) => {
+      var updates = extend(input,{
+        'keyname': data.keyname,
+        'md5': data.md5,
+        'filename': file.name,
+        'mimetype': file.mimetype,
+        'size': file.size,
+        'extension': file.extension,
+        'last_update': new Date()
+      });
 
-        logger.log('updating script data');
-        script.update(updates, function(error){
-          if(error) return next(error);
-          registerScriptCRUDOperation(input.customer.name,{
+      logger.log('updating script');
+      script.update(updates,error => {
+        if(error) return next(error);
+        registerScriptCRUDOperation(
+          input.customer.name, {
             'name':script.name,
-            'customer':input.customer.name,
+            'customer_name':input.customer.name,
             'user_id':input.user.id,
             'user_email':input.user.email,
             'operation':'update'
-          });
-          logger.log('script update completed');
-          next(null,script);
-        });
-      }
-    );
+          }
+        );
+        logger.log('script updated');
+        next(null,script);
+      });
+    });
   },
   remove : function(input,next)
   {
@@ -167,12 +168,13 @@ var Service = {
     storageMedia.remove(script, function(error,data){
       logger.log('script removed from storage');
 
-      Script.remove(script,function(error){
+      var filter = {_id:script._id};
+      Script.remove(filter,function(error){
         if(error) return next(error);
 
         registerScriptCRUDOperation(input.customer.name,{
           'name':script.name,
-          'customer':input.customer.name,
+          'customer_name':input.customer.name,
           'user_id':input.user.id,
           'user_email':input.user.email,
           'operation':'delete'

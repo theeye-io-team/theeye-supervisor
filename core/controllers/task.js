@@ -1,47 +1,42 @@
 "use strict";
 
-var debug = require('../lib/logger')('eye:supervisor:controller:task');
-var json = require(process.env.BASE_PATH + "/lib/jsonresponse");
-var Task = require(process.env.BASE_PATH + '/entity/task').Entity;
-var TaskService = require(process.env.BASE_PATH + '/service/task');
-var Script = require(process.env.BASE_PATH + '/entity/script').Entity;
-var Resource = require(process.env.BASE_PATH + '/entity/resource').Entity;
-var Host = require(process.env.BASE_PATH + '/entity/host').Entity;
-var resolver = require('../router/param-resolver');
-var filter = require('../router/param-filter');
+var extend = require('lodash/assign');
+var logger = require('../lib/logger')('controller:task');
+var json = require('../lib/jsonresponse');
+var TaskService = require('../service/task');
+var router = require('../router');
+var dbFilter = require('../lib/db-filter');
+var ACL = require('../lib/acl');
 
 module.exports = function(server, passport){
-  server.get('/task/:task',[
+  var middlewares = [
     passport.authenticate('bearer', {session:false}),
-    resolver.idToEntity({param:'task'}),
-  ],controller.get);
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer
+  ];
 
-  server.get('/task',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'host'})
-  ], controller.fetch);
+  server.get('/:customer/task',middlewares.concat([
+    router.requireCredential('user'),
+    router.resolve.idToEntity({param:'host'})
+  ]),controller.fetch);
 
-  server.patch('/task/:task',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'task'}),
-    resolver.idToEntity({param:'host'}),
-    resolver.idToEntity({param:'resource'}),
-    resolver.idToEntity({param:'script'}),
-  ],controller.patch);
+  server.get('/:customer/task/:task',middlewares.concat(
+    router.requireCredential('user'),
+    router.resolve.idToEntity({param:'task',required:true}),
+    router.ensureAllowed({entity:{name:'task'}})
+  ),controller.get);
 
-  server.post('/task',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'script'})
-  ],controller.create);
+  server.post('/:customer/task',middlewares.concat([
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({param:'script'})
+  ]),controller.create);
 
-  server.del('/task/:task',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'task'}),
-  ],controller.remove);
+  var mws = middlewares.concat(
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({param:'task',required:true})
+  );
+  server.patch('/:customer/task/:task',mws,controller.patch);
+  server.del('/:customer/task/:task',mws,controller.remove);
 };
 
 
@@ -49,35 +44,38 @@ var controller = {
   /**
    *
    * @method POST
-   * @author Facundo
+   * @author Facugon
    *
    */
-   create (req, res, next) {
-     var input = {
-       'customer': req.customer,
-       'user': req.user,
-       'script': req.script,
-       'description': req.body.description,
-       'name': req.body.name,
-       'hosts': req.body.hosts,
-       'public': false
-     };
+  create (req, res, next) {
+    var input = extend({},req.body,{
+      customer: req.customer,
+      user: req.user,
+      script: req.script
+    });
 
-     if(req.body.public){
-       input.public = filter.toBoolean(req.body.public);
-     }
+    input.hosts||(input.hosts=req.body.host);
 
-     var scriptArgs = filter.toArray(req.body.script_arguments);
-     input.script_arguments = scriptArgs;
+    if (!input.type) return res.send(400, json.error('type is required'));
+    if (!input.hosts) return res.send(400, json.error('a host is required'));
+    if (Array.isArray(input.hosts)) {
+      if (input.hosts.length===0) {
+        return res.send(400, json.error('a host is required'));
+      }
+    } else {
+      input.hosts = [ input.hosts ];
+    }
+    if (!input.name) return res.send(400, json.error('name is required'));
 
-     if(!input.script) return res.send(400, json.error('script is required'));
-     if(!input.customer) return res.send(400, json.error('customer is required'));
-     if(!input.hosts) return res.send(400, json.error('hosts are required'));
-     TaskService.createManyTasks(input, function(error, tasks) {
-       res.send(200, { tasks: tasks });
-       next();
-     });
-   },
+    TaskService.createManyTasks(input, function(error, tasks) {
+      if (error) {
+        logger.error(error);
+        return res.send(500, error);
+      }
+      res.send(200, tasks);
+      next();
+    });
+  },
   /**
    * @author Facundo
    * @method GET
@@ -87,14 +85,20 @@ var controller = {
     var host = req.host;
     var customer = req.customer;
 
-    var input = {};
-    if(customer) input.customer_id = customer._id;
-    if(host) input.host_id = host._id;
+    var input = req.query;
+    if (host) input.host_id = host._id;
 
-    debug.log('fetching tasks');
-    TaskService.fetchBy(input, function(error, tasks) {
-      if(error) return res.send(500);
-      res.send(200, { tasks: tasks });
+    var filter = dbFilter(input,{ /** default **/ });
+    filter.where.customer_id = customer.id;
+
+    if ( !ACL.hasAccessLevel(req.user.credential,'admin') ) {
+      // find what this user can access
+      filter.where.acl = req.user.email;
+    }
+
+    TaskService.fetchBy(filter, function(error, tasks) {
+      if (error) return res.send(500);
+      res.send(200, tasks);
     });
   },
   /**
@@ -107,10 +111,9 @@ var controller = {
    */
   get (req, res, next) {
     var task = req.task;
-    if(!task) return res.send(404);
 
-    task.publish(function(published) {
-      res.send(200, { task: published });
+    task.publish(function(data) {
+      res.send(200, data);
     });
   },
   /**
@@ -121,65 +124,44 @@ var controller = {
    * @param {String} :task , mongo ObjectId
    *
    */
-   remove (req,res,next) {
-     var task = req.task;
-     if(!task) return res.send(404);
+  remove (req,res,next) {
+    var task = req.task;
 
-     TaskService.remove({
-       task:task,
-       user:req.user,
-       customer:req.customer,
-       done:function(){
-         res.send(204);
-       },
-       fail:function(error){
-         res.send(500);
-       }
-     });
-   },
+    TaskService.remove({
+      task:task,
+      user:req.user,
+      customer:req.customer,
+      done:function(){
+        res.send(204);
+      },
+      fail:function(error){
+        res.send(500);
+      }
+    });
+  },
   /**
    *
    * @author Facundo
-   * @method PATCH 
+   * @method PATCH
    * @route /task/:task
    * @param {String} :task , mongo ObjectId
    * @param ...
    *
    */
-  patch (req, res, next) {
-    var task = req.task;
-    var input = {};
+  patch (req,res,next) {
+    var input = extend({},req.body);
 
-    if(!task) return res.send(404);
-
-    if(req.host) input.host_id = req.host._id;
-    if(req.script) input.script_id = req.script._id;
-    if(req.body.public){
-      input.public = filter.toBoolean(req.body.public);
-    }
-    if(req.body.description) input.description = req.body.description;
-    if(req.body.name) input.name = req.body.name;
-    if(req.resource) {
-      input.resource_id = req.resource._id;
-    }
-    // if it is set to something that it is not a resource
-    else if(typeof req.body.resource != 'undefined') {
-      input.resource_id = 0;
-    }
-
-    var scriptArgs = filter.toArray(req.body.script_arguments);
-    if( scriptArgs.length > 0 ) input.script_arguments = scriptArgs;
-
-    debug.log('updating task %j', input);
+    logger.log('updating task %j', input);
     TaskService.update({
-      user:req.user,
-      customer:req.customer,
-      task:task,
-      updates:input,
-      done:function(task){
-        res.send(200,{task:task});
+      user: req.user,
+      customer: req.customer,
+      task: req.task,
+      updates: input,
+      done: function(task){
+        res.send(200,task);
       },
-      fail:function(error){
+      fail: function(error){
+        logger.error(error);
         res.send(500);
       }
     });

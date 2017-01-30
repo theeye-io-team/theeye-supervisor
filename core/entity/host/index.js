@@ -1,41 +1,32 @@
+"use strict";
+
 var mongodb = require("../../lib/mongodb");
-var Schema = require('mongoose').Schema;
-var ObjectID = require('mongodb').ObjectID;
+var mongoose = require('mongoose');
+var Schema = mongoose.Schema;
 
 var properties = {
-  customer_name : { type : String },
-  customer_id   : { type : String, index : true },
-  ip            : { type : String },
-  hostname      : { type : String, index : true, unique : true, required : true, dropDups: true },
-  os_name       : { type : String },
-  os_version    : { type : String },
-  agent_version : { type : String },
-  creation_date : { type : Date, 'default' : Date.now },
-  last_update   : { type : Date, 'default' : null },
-  enable        : { type : Boolean, 'default' : true }
+  customer_name : { type:String, index:true },
+  customer_id   : { type:String },
+  hostname      : { type:String, index:true, required:true },
+  ip            : { type:String },
+  os_name       : { type:String },
+  os_version    : { type:String },
+  agent_version : { type:String },
+  creation_date : { type:Date, 'default':Date.now },
+  last_update   : { type:Date, 'default':null },
+  enable        : { type:Boolean, 'default':true }
 };
 
 var EntitySchema = Schema(properties);
 
 EntitySchema.methods.publish = function(next)
 {
-  var host = this;
-  var pub = {
-    id: host._id,
-    last_update: host.last_update,
-    customer_id: host.customer_id,
-    hostname: host.hostname,
-    os_name: host.os_name,
-    os_version: host.os_version,
-    agent_version: host.agent_version,
-    enable: host.enable
-  };
-  if(next) next(pub);
-  return pub;
+  var data = this.toObject();
+  if(next) next(data);
+  return data;
 }
 
-EntitySchema.statics.create = function(data,customer,next)
-{
+EntitySchema.statics.create = function(data,customer,next) {
   var options = {
     "customer_name" : customer.name ,
     "customer_id"   : customer._id ,
@@ -54,6 +45,24 @@ EntitySchema.statics.create = function(data,customer,next)
     next(null,host);
   });
 };
+
+// Duplicate the ID field.
+EntitySchema.virtual('id').get(function(){
+  return this._id.toHexString();
+});
+const specs = {
+	getters: true,
+	virtuals: true,
+	transform: function (doc, ret, options) {
+		// remove the _id of every document before returning the result
+		ret.id = ret._id;
+		delete ret._id;
+		delete ret.__v;
+	}
+}
+EntitySchema.set('toJSON', specs);
+EntitySchema.set('toObject', specs);
+
 
 var Entity = mongodb.db.model('Host', EntitySchema);
 Entity.ensureIndexes();

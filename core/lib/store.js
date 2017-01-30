@@ -2,7 +2,7 @@ var AWS = require('aws-sdk');
 var path = require('path');
 var fs = require('fs');
 var zlib = require('zlib');
-var debug = require('debug')('eye:supervisor:lib:store');
+var debug = require('debug')('lib:store');
 
 var config = require("config");
 var systemConfig = config.get('system');
@@ -94,17 +94,17 @@ var LocalStorage = {
         fs.exists(customerPath, function(exists) {
           if( ! exists ) {
             debug('customer %s directory created', customer_name);
-            fs.mkdirSync(customerPath, 0755);
+            fs.mkdirSync(customerPath, '0755');
 
             debug('customer %s scripts directory created', customer_name);
-            fs.mkdirSync(scriptsPath, 0755);
+            fs.mkdirSync(scriptsPath, '0755');
 
             next(scriptsPath);
           } else {
             fs.exists(scriptsPath, function(exists) {
               if( ! exists ) {
                 debug('customer %s scripts directory created', customer_name);
-                fs.mkdirSync(scriptsPath, 0755);
+                fs.mkdirSync(scriptsPath, '0755');
               }
               next(scriptsPath);
             });

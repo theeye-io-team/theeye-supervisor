@@ -1,9 +1,8 @@
-"use strict";
+'use strict';
 
-var rootPath = require('app-root-path');
-require('app-root-path').setPath(rootPath + '/core');
+var ErrorHandler = require('./lib/errorHandler');
 
-var logger = require('./lib/logger')('eye:supervisor:main');
+var logger = require('./lib/logger')('main');
 logger.log('initializing supervisor');
 
 process.on('SIGINT', function(){
@@ -24,22 +23,43 @@ process.on('exit', function(){ // always that the process ends, throws this even
 process.on('uncaughtException', function(error){
   logger.error('supervisor process on "uncaughtException"');
   logger.error(error);
-  //process.exit(0);
+
+  var handler = new ErrorHandler();
+  handler.sendExceptionAlert(error);
 });
 
-require("./environment").setenv(
-  process.env.NODE_ENV,
-  function() {
-    logger.log('initializing server');
-    var server = require("./server");
-    server.start();
+logger.log('setting environment');
+require('./environment').setenv(function(){
 
-    if( ! process.env.NO_MONITORING ) {
-      logger.log('initializing monitor');
-      var monitor = require('./service/monitor');
-      monitor.start();
-    }
+  logger.log('connecting mongo db');
+  require('./lib/mongodb').connect(function(){
 
-    logger.log('supervisor is running');
-  }
-);
+    logger.log('initializing scheduler');
+    var scheduler = require('./service/scheduler');
+    scheduler.initialize(function(){
+
+      logger.log('initializing events dispatcher');
+      var dispatcher = require('./service/events');
+      dispatcher.initialize(function(){
+
+        if (!process.env.NO_MONITORING) {
+          logger.log('initializing monitor');
+          var monitor = require('./service/monitor');
+          monitor.start();
+        }
+
+        logger.log('initializing server');
+        var app = require('./app');
+
+        app.jobDispatcher = require('./service/job');
+        app.eventDispatcher = dispatcher;
+        app.scheduler = scheduler;
+        app.customer = require('./service/customer');
+
+        app.start();
+
+        logger.log('supervisor is running');
+      });
+    });
+  });
+});

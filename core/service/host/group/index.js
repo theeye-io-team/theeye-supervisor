@@ -1,23 +1,23 @@
 "use strict";
 
-var appRoot = require('app-root-path');
-var Schema = require('mongoose').Schema;
-var _ = require('lodash');
-var logger = require(appRoot + '/lib/logger')('eye:service:host:group');
-
-var HostGroup = require(appRoot + '/entity/host/group').Entity;
-/** TEMPLATES **/
-var ResourceTemplate = require(appRoot + '/entity/resource/template').Entity;
-var MonitorTemplate = require(appRoot + '/entity/monitor/template').Entity;
-var TaskTemplate = require(appRoot + '/entity/task/template').Entity;
-/** NON TEMPLATES **/
-var Resource = require(appRoot + '/entity/resource').Entity;
-var Monitor = require(appRoot + '/entity/monitor').Entity;
-var Task = require(appRoot + '/entity/task').Entity;
-var Job = require(appRoot + '/entity/job').Entity;
+var lodash = require('lodash');
 var config = require('config');
+var logger = require('../../../lib/logger')('eye:service:host:group');
 
-var elastic = require(appRoot + '/lib/elastic');
+var HostGroup = require('../../../entity/host/group').Entity;
+/** TEMPLATES **/
+var ResourceTemplate = require('../../../entity/resource/template').Entity;
+var MonitorTemplate = require('../../../entity/monitor/template').Entity;
+var TaskTemplate = require('../../../entity/task/template').Entity;
+/** NON TEMPLATES **/
+var Resource = require('../../../entity/resource').Entity;
+var Monitor = require('../../../entity/monitor').Entity;
+var Task = require('../../../entity/task').Entity;
+var AgentUpdateJob = require('../../../entity/job').AgentUpdate;
+var elastic = require('../../../lib/elastic');
+
+var TaskService = require('../../../service/task');
+var ResourceService = require('../../../service/resource');
 
 exports.Monitor = require('./monitor');
 
@@ -49,7 +49,7 @@ exports.remove = function(input, doneFn){
 
     registerGroupCRUDOperation(group.customer_name,{
       'name':group.hostname_regex,
-      'customer':group.customer_name,
+      'customer_name':group.customer_name,
       'user_id':input.user.id,
       'user_email':input.user.email,
       'operation':'delete'
@@ -103,7 +103,7 @@ exports.create = function(input, done){
 
     registerGroupCRUDOperation(group.customer_name,{
       'name':group.hostname_regex,
-      'customer':group.customer_name,
+      'customer_name':group.customer_name,
       'user_id':input.user.id,
       'user_email':input.user.email,
       'operation':'create'
@@ -115,15 +115,16 @@ exports.create = function(input, done){
 exports.searchAndRegisterHostIntoGroup = function(host, next)
 {
   logger.log('searching group for host %s', host.hostname);
-  HostGroup.find({
-    'customer': host.customer_id
-  }).exec(function(err, groups){
+  HostGroup
+  .find({ 'customer': host.customer_id })
+  .populate('customer')
+  .exec(function(err, groups){
     for(var i=0; i<groups.length; i++){
       var group = groups[i];
       logger.log('trying group %s', group.hostname_regex);
       if( new RegExp( group.hostname_regex ).test( host.hostname ) === true ){
         logger.log('group found : %s', group.hostname_regex);
-        hostProvisioning(host, group, function(err){
+        hostProvisioning(host, group, group.customer, function(err){
           logger.log('provisioning completed');
           if(err) return next(err);
           next(null,group);
@@ -141,10 +142,11 @@ exports.searchAndRegisterHostIntoGroup = function(host, next)
  * @author Facundo
  * @param {object Host} host
  * @param {object Group} group
+ * @param {object Customer} customer
  * @param {Function} doneFn
  *
  */
-function hostProvisioning( host, group, doneFn )
+function hostProvisioning(host, group, customer, doneFn)
 {
   group.publish({}, function(err,data){
     logger.log('creating resource for host %s', host.hostname);
@@ -158,24 +160,28 @@ function hostProvisioning( host, group, doneFn )
       return doneFn();
     }
 
-    var completed = _.after(operations,function(){
-      Job.createAgentConfigUpdate(host._id);
+    var completed = lodash.after(operations,function(){
+      AgentUpdateJob.create({ host_id: host._id });
       doneFn();
     });
 
     for(var i=0; i<taskTpls.length; i++){
       var tpl = taskTpls[i];
-      logger.log('creating task %s', tpl.name);
-      Task.FromTemplate(tpl,{'host':host},(err)=>{
-        completed();
+      TaskService.createFromTemplate({
+        customer: customer,
+        templateData: tpl,
+        host: host,
+        done: completed
       });
     }
 
     for(var i=0; i<monitorTpls.length; i++){
       var tpl = monitorTpls[i];
       logger.log('creating monitor %s', tpl.name);
-      Monitor.FromTemplate(tpl,{'host':host},(err)=>{
-        completed();
+      ResourceService.createMonitorFromTemplate({
+        template: tpl,
+        host: host,
+        done: completed
       });
     }
   });

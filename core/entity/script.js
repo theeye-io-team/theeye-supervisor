@@ -3,6 +3,7 @@ var Schema = require('mongoose').Schema;
 var path = require('path');
 var config = require("config");
 var uploadFolderPath = config.get("system").file_upload_folder ;
+var update = require('./update.js');
 
 var EntitySchema = Schema({
   customer_id: { type: String },
@@ -17,7 +18,8 @@ var EntitySchema = Schema({
   last_update: { type: Date, 'default': Date.now },
   description: { type: String, 'default' : '' },
   md5: { type: String, 'default': null },
-  public : { type: Boolean, 'default': false }
+  public : { type: Boolean, 'default': false },
+  tags: { type:Array, 'default':[] }
 });
 
 EntitySchema.methods.getFullPath = function() {
@@ -34,38 +36,14 @@ EntitySchema.methods.getCleanFilename = function(next) {
 };
 
 EntitySchema.methods.publish = function(next) {
-  var script = this;
-  var data = {
-    id : script._id,
-    filename : script.filename,
-    description : script.description,
-    mimetype : script.mimetype,
-    extension : script.extension,
-    size : script.size,
-    md5 : script.md5,
-    public: script.public
-  };
+  var data = this.toObject();
+  next(null, data);
+  return data;
+}
 
-  return next(null, data);
-};
-
-EntitySchema.methods.update = function(input,next) {
-  var script = this;
-  script.last_update = new Date();
-  script.description = input.description;
-  script.keyname = input.keyname; // name.extension + [ts:########]
-  script.filename = input.name;
-  script.mimetype = input.mimetype;
-  script.size = input.size;
-  script.extension = input.extension;
-  script.md5 = input.md5;
-  script.public = input.public;
-
-  script.save(function(error){
-    if(error) return next(error);
-    if(next) return next(null,script);
-  });
-};
+EntitySchema.methods.update = function(props,next){
+  return update.call(this, props, next);
+}
 
 EntitySchema.statics.create = function(data,next)
 {
@@ -74,7 +52,7 @@ EntitySchema.statics.create = function(data,next)
     "customer_name" : data.customer.name,
     "user_id"       : data.user._id,
     "filename"      : data.filename,
-    "keyname"       : data.keyname, // name + [ts:########] + .extension
+    "keyname"       : data.keyname,
     "mimetype"      : data.mimetype,
     "extension"     : data.extension,
     "size"          : data.size,
@@ -90,6 +68,24 @@ EntitySchema.statics.create = function(data,next)
     next(error,script);
   });
 };
+
+
+// Duplicate the ID field.
+EntitySchema.virtual('id').get(function(){
+  return this._id.toHexString();
+});
+const specs = {
+	getters: true,
+	virtuals: true,
+	transform: function (doc, ret, options) {
+		// remove the _id of every document before returning the result
+		ret.id = ret._id;
+		delete ret._id;
+		delete ret.__v;
+	}
+}
+EntitySchema.set('toJSON', specs);
+EntitySchema.set('toObject', specs);
 
 var Entity = mongodb.db.model('Script', EntitySchema);
 Entity.ensureIndexes();

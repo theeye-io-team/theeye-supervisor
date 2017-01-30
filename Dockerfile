@@ -1,6 +1,11 @@
-FROM node:4.3.2
+FROM interactar/theeye-supervisor:15_09_16
+#FROM node:4.3.2
 MAINTAINER Javier Ailbirt <jailbirt@interactar.com>
 ENV destDir /src/theeye/supervisor
+# Temporary Move node_modules for avoiding packages reinstallation
+RUN mv ${destDir}/node_modules /tmp/
+# And remove that directory
+RUN rm -rf ${destDir}
 # Create app directory
 RUN mkdir -p ${destDir}
 # Install Supervisor
@@ -9,6 +14,8 @@ RUN mkdir -p ${destDir}
 WORKDIR ${destDir}
 # Bundle app source
 COPY . ${destDir}
+# Move packages
+RUN mv /tmp/node_modules ${destDir}
 # Install app dependencies
 RUN cd ${destDir}; npm install
 #Export and run.

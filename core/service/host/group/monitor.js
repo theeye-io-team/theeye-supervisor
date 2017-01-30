@@ -1,16 +1,16 @@
 "use strict";
 
-var appRoot = require('app-root-path');
-var Resource = require(appRoot + '/entity/resource').Entity;
-var Host = require(appRoot + '/entity/host').Entity;
-var Monitor = require(appRoot + '/entity/monitor').Entity;
-var Job = require(appRoot + '/entity/job').Entity;
-var logger = require(appRoot + '/lib/logger')('eye:service:group:monitor');
-var _ = require('lodash');
+var Resource = require('../../../entity/resource').Entity;
+var Host = require('../../../entity/host').Entity;
+var Monitor = require('../../../entity/monitor').Entity;
+var AgentUpdateJob = require('../../../entity/job').AgentUpdate;
+var logger = require('../../../lib/logger')('eye:service:group:monitor');
+var lodash = require('lodash');
+var ResourceService = require('../../../service/resource');
 
 exports.addTemplatesToGroup = function(group,templates,done){
-  done=done||()=>{};
-  var published = _.after(templates.length,()=>done());
+  done||(done=function(){});
+  var published = lodash.after(templates.length,()=>done());
   templates.forEach(template=>{
     group.addMonitorTemplate(template);
     addMonitorInstancesToGroupHosts(
@@ -38,7 +38,7 @@ exports.addTemplatesToGroup = function(group,templates,done){
 exports.removeMonitorTemplateInstancesFromGroupHosts = function(
   template, done
 ){
-  done=done||()=>{};
+  done||(done=function(){});
   logger.log('removing monitor instances');
 
   removeResourceTemplateInstancesFromGroupHosts(
@@ -53,6 +53,14 @@ exports.removeMonitorTemplateInstancesFromGroupHosts = function(
     if(!monitors||monitors.length==0){
       logger.log('no monitors were found');
       return done();
+    }
+
+    function removeMonitor(monitor){
+      monitor.remove( err => {
+        if(err) return logger.error(err);
+        // notify monitor host agent
+        AgentUpdateJob.create({ host_id: monitor.host_id });
+      });
     }
 
     for(var i=0; i<monitors.length; i++){
@@ -83,19 +91,25 @@ function addMonitorInstancesToGroupHosts(
   Resource.find({
     'type':'host',
     'template':group,
-  },(err,resources)=>{
+  },(err,resources) => {
     if(resources.length==0) return done();
-    var created = _.after(resources.length,()=>done());
+    var created = lodash.after(resources.length,()=>done());
     logger.log('creating %s monitors', resources.length);
     for(let i=0;i<resources.length;i++){
       let resource=resources[i];
       Host.findById(resource.host_id,(err,host)=>{
-        let opts = { 'host': host };
+        if (err) throw err;
+        if (!host) throw new Error('host not found');
+
         // ... and attach the new monitor to the host
-        Monitor.FromTemplate(template,opts,(err)=>{
-          logger.log('monitor created');
-          created();
-          Job.createAgentConfigUpdate(host._id);
+        ResourceService.createMonitorFromTemplate({
+          template: template.toObject(),
+          host: host,
+          done: function(){
+            logger.log('monitor created');
+            created();
+            AgentUpdateJob.create({ host_id: host._id });
+          }
         });
       });
     }
@@ -105,7 +119,7 @@ function addMonitorInstancesToGroupHosts(
 function removeResourceTemplateInstancesFromGroupHosts(
   template, done
 ){
-  done=done||()=>{};
+  done||(done=function(){});
   Resource.find(template).exec(function(err,resources){
     if(err){ logger.error(err); return done(err); }
 
@@ -123,12 +137,3 @@ function removeResourceTemplateInstancesFromGroupHosts(
     done();
   });
 };
-
-function removeMonitor(monitor){
-  monitor.remove(err=>{
-    if(err) return logger.error(err);
-    // notify monitor host agent
-    Job.createAgentConfigUpdate(monitor.host_id);
-  });
-}
-

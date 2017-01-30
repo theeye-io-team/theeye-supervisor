@@ -2,11 +2,10 @@
 var _ = require('lodash');
 var async = require('async');
 
-var resolver = require('../router/param-resolver');
-var validator = require('../router/param-validator');
+var router = require('../router');
 var logger = require('../lib/logger')('eye:controller:template');
 var TaskService = require('../service/task');
-var ResourceMonitorService = require('../service/resource/monitor');
+var TemplateMonitorService = require('../service/resource/template');
 var HostGroupService = require('../service/host/group');
 var TaskTemplate = require('../entity/task/template').Entity;
 var MonitorTemplate = require('../entity/monitor/template').Entity;
@@ -20,27 +19,23 @@ var HostGroup = require('../entity/host/group').Entity;
  *
  */
 module.exports = function(server, passport) {
-  server.get('/:customer/hostgroup/:group',[
+  var middleware = [
     passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-  ], controller.get);
+    router.requireCredential('admin'),
+    router.resolve.customerNameToEntity({}),
+    router.ensureCustomer,
+  ];
 
-  server.get('/:customer/hostgroup',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-  ], controller.fetch);
+  server.get('/:customer/hostgroup',middleware,controller.fetch);
+  server.post('/:customer/hostgroup',middleware,controller.create);
 
-  server.post('/:customer/hostgroup',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-  ], controller.create);
+  server.get('/:customer/hostgroup/:group', middleware.concat(
+    router.resolve.idToEntity({param:'group',entity:'host/group'})
+  ),controller.get);
 
-  server.del('/:customer/hostgroup/:group',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-  ], controller.remove);
+  server.del('/:customer/hostgroup/:group', middleware.concat(
+    router.resolve.idToEntity({param:'group',entity:'host/group'})
+  ),controller.remove);
 }
 
 /**
@@ -60,8 +55,8 @@ var controller = {
   get (req,res,next) {
     var group = req.group;
     if(!group) return res.send(400);
-    group.publish({}, (e,g) => {
-      res.send(200, { 'group':g });
+    group.publish({},(e,g) => {
+      res.send(200,g);
     });
   },
   /**
@@ -103,8 +98,7 @@ var controller = {
   create (req,res,next){
     logger.log('group data received %j', req.params);
 
-    var customer = req.customer;
-    if(!customer) return res.send(400,'customer required');
+    if(!req.customer) return res.send(400,'customer required');
 
     var group = req.params.group;
     if(!group) return res.send(400,'group data required');
@@ -152,7 +146,7 @@ var controller = {
         logger.log('processing group monitors & resources');
         let monitors = group.monitors || [];
 
-        ResourceMonitorService.resourceMonitorsToTemplates(
+        TemplateMonitorService.resourceMonitorsToTemplates(
           monitors,
           req.customer,
           req.user,

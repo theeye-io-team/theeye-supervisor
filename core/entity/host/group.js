@@ -9,12 +9,7 @@ var TaskTemplate = require('../task/template').Entity;
 var MonitorTemplate = require('../monitor/template').Entity;
 
 var properties = {
-  'customer': {
-    type: Schema.Types.ObjectId,
-    ref: 'Customer',
-    required: true,
-    index: true
-  },
+  'customer': { type: Schema.Types.ObjectId, ref: 'Customer', required: true, index: true },
   'customer_name': { type: String },
   'hostname_regex': { type: String, required: true },
   'task_templates': [{ type: Schema.Types.ObjectId, ref: 'TaskTemplate' }],
@@ -39,12 +34,8 @@ EntitySchema.methods.publish = function(options, nextFn) {
   var nextFn = nextFn || function(){};
 
   debug('publishing group');
-  Entity.populate(group, [
-    { path:'task_templates' },
-    { path:'resource_templates' },
-    { path:'monitor_templates' },
-    { path:'provisioning_task_templates' },
-  ],function(error, group){
+  this.populateAll(function(error){
+    if(error) throw error;
 
     var data = {
       'id' : group._id,
@@ -90,16 +81,13 @@ EntitySchema.methods.publish = function(options, nextFn) {
   });
 }
 
-EntitySchema.methods.populate = function(nextFn) {
-  var group = this;
-  Entity.populate(group, [
+EntitySchema.methods.populateAll = function(next) {
+  Entity.populate(this,[
     { path:'task_templates' },
     { path:'resource_templates' },
     { path:'monitor_templates' },
     { path:'provisioning_task_templates' },
-  ],function(error, group){
-    nextFn(error, group);
-  });
+  ],next);
 }
 
 /**
@@ -126,7 +114,7 @@ EntitySchema.methods.setTemplatesProperty = function(prop, tpls){
 
 EntitySchema.methods.detachTaskTemplate = function(template,done)
 {
-  done=done||()=>{};
+  done||(done=function(){});
 
   var task = template._id;
   Entity.update(this,{
@@ -137,7 +125,7 @@ EntitySchema.methods.detachTaskTemplate = function(template,done)
 }
 
 EntitySchema.methods.detachMonitorTemplate = function(template,done){
-  done=done||()=>{};
+  done||(done=function(){});
 
   function deleteMonitorTemplate(id,next){
     Entity.update(this,{
@@ -181,6 +169,5 @@ EntitySchema.methods.hasMonitorTemplate = function(monitor){
 var Entity = mongodb.db.model('HostGroup', EntitySchema)
 Entity.ensureIndexes();
 
-//exports.properties = properties;
 exports.EntitySchema = EntitySchema;
 exports.Entity = Entity;

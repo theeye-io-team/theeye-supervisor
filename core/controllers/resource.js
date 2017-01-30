@@ -1,124 +1,109 @@
-var _ = require('underscore');
-var debug = require('debug')('eye:supervisor:controller:resource');
+'use strict';
+
+var debug = require('debug')('eye:controller:resource');
 var json = require('../lib/jsonresponse');
 var ResourceManager = require('../service/resource');
-var StateHandler = require('../service/resource-state-handler');
+var MonitorManager = require('../service/resource/monitor');
 var Resource = require('../entity/resource').Entity;
-var ResourceMonitor = require('../entity/monitor').Entity;
+var Monitor = require('../entity/monitor').Entity;
 var Host = require('../entity/host').Entity;
-var Job = require('../entity/job').Entity;
-var resolver = require('../router/param-resolver');
-var filter = require('../router/param-filter');
+var Job = require('../entity/job').Job;
+var router = require('../router');
+var dbFilter = require('../lib/db-filter');
+var ACL = require('../lib/acl');
 
-module.exports = function(server, passport) {
-  server.get('/:customer/resource',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({param:'host'})
-  ], controller.fetch);
+module.exports = function (server, passport) {
+  // default middlewares
+  var middlewares = [
+    passport.authenticate('bearer',{session:false}),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer,
+  ];
 
-  server.get('/:customer/resource/:resource',[
-    resolver.customerNameToEntity({}),
-    passport.authenticate('bearer', {session:false}),
-    resolver.idToEntity({param:'resource'})
-  ], controller.get);
+  server.get('/:customer/resource',middlewares.concat([
+    router.requireCredential('viewer'),
+  ]),controller.fetch);
 
-  server.post('/:customer/resource',[
-    resolver.customerNameToEntity({}),
-    passport.authenticate('bearer', {session:false}),
-  ], controller.create);
+  server.get('/:customer/resource/:resource',middlewares.concat([
+    router.requireCredential('viewer'),
+    router.resolve.idToEntity({param:'resource',required:true}),
+    router.ensureAllowed({entity:{name:'resource'}})
+  ]),controller.get);
 
-  server.put('/:customer/resource/:resource',[
-    resolver.customerNameToEntity({}),
-    passport.authenticate('bearer', {session:false}),
-    resolver.idToEntity({param:'resource'})
-  ], controller.update);
+  server.put('/:customer/resource/:resource',middlewares.concat([
+    router.requireCredential('agent',{exactMatch:true}),
+    router.resolve.idToEntity({param:'resource',required:true})
+  ]),controller.update);
 
-  server.patch('/:customer/resource/:resource',[
-    resolver.customerNameToEntity({}),
-    passport.authenticate('bearer', {session:false}),
-    resolver.idToEntity({param:'host'}),
-    resolver.idToEntity({param:'resource'})
-  ], controller.patch);
+  server.post('/:customer/resource',middlewares.concat([
+    router.requireCredential('admin'),
+    router.filter.spawn({filter:'emailArray',param:'acl'})
+  ]),controller.create);
 
-  server.del('/:customer/resource/:resource',[
-    resolver.customerNameToEntity({}),
-    passport.authenticate('bearer', {session:false}),
-    resolver.idToEntity({param:'resource'})
-  ], controller.remove);
+  server.del('/:customer/resource/:resource',middlewares.concat([
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({param:'resource',required:true})
+  ]),controller.remove);
+
+  server.patch(
+    '/:customer/resource/:resource/alerts',
+    middlewares.concat([
+      router.requireCredential('admin'),
+      router.resolve.idToEntity({param:'resource',required:true})
+    ]),
+    controller.alerts
+  );
+
+  server.patch(
+    '/:customer/resource/:resource',
+    middlewares.concat([
+      router.requireCredential('admin'),
+      router.resolve.idToEntity({param:'resource',required:true}),
+      router.resolve.idToEntity({param:'host_id',entity:'host'}),
+      router.filter.spawn({filter:'emailArray',param:'acl'})
+    ]),
+    controller.patch
+  );
 }
 
 var controller = {
-  get : function(req,res,next) {
+  get (req,res,next) {
     var resource = req.resource;
-
-    if(!resource) return res.send(404,json.error('not found'));
-
-    resource.publish(function(err, pub){
-      res.send(200, { 'resource': pub });
-    });
+    Monitor
+      .findOne({ resource: resource._id })
+      .exec(function(err,monitor){
+        var data = resource.toObject();
+        data.monitor = monitor;
+        res.send(200, data);
+      });
   },
-  fetch : function(req,res,next) {
-    if(req.customer == null) return res.send(400,json.error('customer is required'));
+  fetch (req,res,next) {
 
-    var input = {
-      customer: req.customer,
-      host: req.host
-    };
-
-    if(req.query.type) input.type = req.query.type;
-
-    ResourceManager.fetchBy(input,function(error,resources){
-      if(error || resources == null) {
-        res.send(500,json.error('internal server error'));
-      } else {
-        res.send(200,{ resources : resources });
+    var filter = dbFilter(req.query,{
+      sort: {
+        fails_count: -1,
+        type: 1 
       }
     });
-  },
-  /**
-   *
-   *
-   */
-  create : function(req,res,next) {
-    var customer = req.customer;
-    var hosts = req.body.hosts;
 
-    if( !customer ) return res.send(400, json.error('customer is required'));
-    if( !hosts ) return res.send(400, json.error('hosts are required'));
-    if( !Array.isArray(hosts) ) hosts = [ hosts ];
-
-    var params = ResourceManager.setResourceMonitorData(req.body);
-
-    if( params.errors && params.errors.length > 0 ){
-      return res.send(400, params.errors);
+    filter.where.customer_id = req.customer._id;
+    if ( !ACL.hasAccessLevel(req.user.credential,'admin') ) {
+      // find what this user can access
+      filter.where.acl = req.user.email ;
     }
 
-    var input = params.data;
-    input.user = req.user;
-    input.customer = customer;
-    input.customer_id = customer.id;
-    input.customer_name = customer.name;
-
-    ResourceManager.createResourceOnHosts(hosts,input,function(error,results){
-      if(error) {
-        if(error.errors) {
-          var messages=[];
-          _.each(error.errors,function(e,i){
-            messages.push({field:e.path, type:e.kind});
-          });
-
-          return res.send(400, json.error(
-            error.message, 
-            {errors:messages} 
-          ));
-        } else {
-          debug(error);
-          return res.send(500, json.error('internal error', error));
-        }
+    ResourceManager.fetchBy(filter,function(error,resources){
+      if(error||!resources) {
+        res.send(500);
       } else {
-        debug('resources created');
-        return res.send(201, results);
+        resources.forEach( r => {
+          if (r.monitor) {
+            if (Array.isArray(r.monitor.tags)) {
+              r.monitor.tags.push(r.hostname);
+            }
+          }
+        });
+        res.send(200,resources);
       }
     });
   },
@@ -127,9 +112,8 @@ var controller = {
    *
    *
    */
-  remove : function(req,res,next) {
+  remove (req,res,next) {
     var resource = req.resource;
-    if(!resource) return res.send(404,json.error('not found'));
 
     if(resource.type == 'host') {
       debug('removing host resource');
@@ -148,30 +132,18 @@ var controller = {
       res.send(204);
     }
   },
-  update : function(req,res,next) {
+  update (req,res,next) {
     var resource = req.resource;
     var input = req.params;
-    var state = req.params.state ;
+    var state = req.params.state;
 
-    if(!resource) {
-      res.send(404,json.error('resource not found'));
-      return next();
-    }
-
-    if(!state) {
-      res.send(400,json.error('resource state is required'));
-      return next();
-    }
-
-    // NEW EVENT HANDLER STILL NOT IMPLEMENTED
-    //var handler = new StateHandler(resource, state);
-    //handler.handleState(function(error)
     var manager = new ResourceManager(resource);
+    input.last_update = new Date();
     manager.handleState(input,function(error){
       if(!error) {
-        res.send(200);
+        res.send(200,resource);
       } else {
-        res.send(500, json.error('internal server error'));
+        res.send(500,json.error('internal server error'));
       }
     });
   },
@@ -179,30 +151,106 @@ var controller = {
    *
    *
    */
-  patch : function(req,res,next)
-  {
-    var resource = req.resource;
+  create (req,res,next) {
+    var customer = req.customer;
+    var body = req.body,
+      hosts = (body.hosts||body.host);
+    body.acl = req.acl;
 
-    if(!resource) {
-      res.send(404,json.error('resource not found'));
-      return next();
+    if (!hosts) return res.send(400, json.error('hosts are required'));
+    if (!Array.isArray(hosts)) hosts = [ hosts ];
+
+    var params = MonitorManager.validateData(body);
+    if (params.errors && params.errors.hasErrors()) {
+      return res.send(400, params.errors);
     }
 
-    var input = _.extend({}, req.body);
-    if(req.body.script_arguments){
-      var args = req.body.script_arguments;
-      input.script_arguments = filter.toArray(args);
-    }
-    if(req.host) input.host = req.host;
+    var input = params.data;
+    input.user = req.user;
+    input.customer = customer;
+    input.customer_id = customer.id;
+    input.customer_name = customer.name;
 
-    ResourceManager.update({
-      resource:resource,
-      updates:input,
-      user:req.user
-    },function(error, result){
-      if(error) res.send(500,json.error('update error', error.message));
-      else res.send(204);
+    ResourceManager.createResourceOnHosts(hosts,input,function(error,results){
+      if (error) {
+        if (error.errors) {
+          var messages=[];
+          for(var err in error.errors){
+            var e = errors[err];
+            messages.push({
+              field: e.path,
+              type: e.kind
+            });
+          }
+
+          return res.send(400, json.error(
+            error.message,
+            { errors: messages }
+          ));
+        } else {
+          debug(error);
+          return res.send(500, json.error('internal error', error));
+        }
+      } else {
+        debug('resources created');
+        return res.send(201, results);
+      }
     });
   },
-};
+  /**
+   *
+   * this is PUT not PATCH !
+   * but PUT is taken above to update resource status.
+   *
+   * @author Facugon
+   *
+   */
+  patch (req,res,next) {
+    var updates,
+      resource = req.resource,
+      body = req.body;
 
+    body.host = req.host_id;
+    body.acl = req.acl;
+
+    var params = MonitorManager.validateData(body);
+    if (params.errors && params.errors.hasErrors()) {
+      return res.send(400, params.errors);
+    }
+
+    if (resource.type=='host') {
+      updates = {
+        acl: req.acl,
+        tags: body.tags
+      };
+    } else {
+      updates = params.data;
+    }
+
+    ResourceManager.update({
+      resource: resource,
+      updates: updates,
+      user: req.user
+    },function(error,resource){
+      if (error) {
+        res.send(500,json.error('update error',error.message));
+      } else {
+        res.send(200,resource);
+      }
+    });
+  },
+  /**
+   *
+   * change resource send alerts status.
+   * @author Facugon
+   *
+   */
+  alerts (req, res, next) {
+    var resource = req.resource;
+    resource.alerts = req.params.alerts;
+    resource.save(error => {
+      if(error) res.send(500);
+      else res.send(200, resource);
+    });
+  }
+};

@@ -1,15 +1,16 @@
 "use strict";
 
-var resolver = require('../router/param-resolver');
-var validator = require('../router/param-validator');
+var router = require('../router');
 var logger = require('../lib/logger')('eye:controller:template:task');
 var TaskService = require('../service/task');
 var Task = require('../entity/task').Entity;
 var Resource = require('../entity/resource').Entity;
 var Host = require('../entity/host').Entity;
-var Job = require('../entity/job').Entity;
 var config = require('config');
 var elastic = require('../lib/elastic');
+
+var Job = require('../entity/job').Job;
+var AgentUpdateJob = require('../entity/job').AgentUpdate;
 
 function registerCRUDOperation (customer,data){
   var key = config.elasticsearch.keys.template.task.crud;
@@ -24,38 +25,53 @@ function registerCRUDOperation (customer,data){
  *
  */
 module.exports = function(server, passport) {
-  server.get('/:customer/hostgroup/:group/tasktemplate/:tasktemplate',[
+  var middlewares = [
     passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-    resolver.idToEntity({ param: 'tasktemplate', entity: 'task/template' }),
-  ], controller.get);
+    router.requireCredential('admin'),
+    router.resolve.customerNameToEntity({}),
+    router.ensureCustomer,
+    router.resolve.idToEntity({
+      param: 'group',
+      entity: 'host/group',
+      required: true
+    })
+  ];
 
-  server.del('/:customer/hostgroup/:group/tasktemplate/:tasktemplate',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-    resolver.idToEntity({ param: 'tasktemplate', entity: 'task/template' }),
-  ], controller.remove);
-
-  server.put('/:customer/hostgroup/:group/tasktemplate/:tasktemplate',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-    resolver.idToEntity({ param: 'tasktemplate', entity: 'task/template' }),
-  ], controller.replace);
-
-  server.get('/:customer/hostgroup/:group/tasktemplate',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-  ], controller.fetch);
-
-  server.post('/:customer/hostgroup/:group/tasktemplate',[
-    passport.authenticate('bearer', {session:false}),
-    resolver.customerNameToEntity({}),
-    resolver.idToEntity({ param: 'group', entity: 'host/group' }),
-  ], controller.create);
+  server.get('/:customer/hostgroup/:group/tasktemplate',middlewares,controller.fetch);
+  server.post('/:customer/hostgroup/:group/tasktemplate',middlewares,controller.create);
+  server.get(
+    '/:customer/hostgroup/:group/tasktemplate/:tasktemplate',
+    middlewares.concat(
+      router.resolve.idToEntity({
+        param: 'tasktemplate',
+        entity: 'task/template',
+        required: true
+      })
+    ),
+    controller.get
+  );
+  server.del(
+    '/:customer/hostgroup/:group/tasktemplate/:tasktemplate',
+    middlewares.concat(
+      router.resolve.idToEntity({
+        param: 'tasktemplate',
+        entity: 'task/template',
+        required: true
+      })
+    ),
+    controller.remove
+  );
+  server.put(
+    '/:customer/hostgroup/:group/tasktemplate/:tasktemplate',
+    middlewares.concat(
+      router.resolve.idToEntity({
+        param: 'tasktemplate',
+        entity: 'task/template',
+        required: true
+      })
+    ),
+    controller.replace
+  );
 }
 
 function validateRequest (req,res) {
@@ -106,6 +122,7 @@ var controller = {
     if(!req.group) return res.send(404,'group not found');
     if(!req.body.task) return res.send(400,'tasks required');
     var group = req.group;
+    var customer = req.customer;
     var tasks = [ req.body.task ];
 
     function addTemplateToGroup(group,template,done){
@@ -116,14 +133,15 @@ var controller = {
         logger.log('task added to group');
         addTaskTemplateInstancesToGroupHosts(
           template,
+          customer,
           group,
           (err)=>{}
         );
-        return done(err);
+        return done(err, template);
       });
     }
 
-    TaskService.tasksToTemplates( 
+    TaskService.tasksToTemplates(
       tasks,
       req.customer,
       req.user,
@@ -134,7 +152,7 @@ var controller = {
         registerCRUDOperation(req.customer.name,{
           'template':group.hostname_regex,
           'name': template.name,
-          'customer':req.customer.name,
+          'customer_name':req.customer.name,
           'user_id':req.user.id,
           'user_email':req.user.email,
           'operation':'create'
@@ -159,6 +177,8 @@ var controller = {
     if(!req.tasktemplate) return res.send(404,'task not found');
     if(!req.body.task) return res.send(400,'invalid request. body task required');
 
+    var group = req.group;
+
     var template = req.tasktemplate;
     var updates = req.body.task;
     template.update(updates,(err)=>{
@@ -170,7 +190,7 @@ var controller = {
       registerCRUDOperation(req.customer.name,{
         'template':group.hostname_regex,
         'name':template.name,
-        'customer':req.customer.name,
+        'customer_name':req.customer.name,
         'user_id':req.user.id,
         'user_email':req.user.email,
         'operation':'update'
@@ -200,7 +220,7 @@ var controller = {
           registerCRUDOperation(req.customer.name,{
             'template':group.hostname_regex,
             'name':template.name,
-            'customer':req.customer.name,
+            'customer_name':req.customer.name,
             'user_id':req.user.id,
             'user_email':req.user.email,
             'operation':'delete'
@@ -216,7 +236,7 @@ var controller = {
 
 function removeTaskTemplateInstancesFromHostGroups(template,done)
 {
-  done=done||()=>{};
+  done||(done=()=>{});
   var query = { 'template': template._id };
   Task.find(query).exec(function(err, tasks){
     if(err){ logger.error(err); return done(err); }
@@ -231,15 +251,21 @@ function removeTaskTemplateInstancesFromHostGroups(template,done)
       task.remove(err=>{
         if(err) return logger.error(err);
         // notify monitor host agent
-        Job.createAgentConfigUpdate(task.host_id);
+        AgentUpdateJob.create({ host_id: task.host_id });
       });
     }
     done();
   });
 }
 
+/**
+ *
+ * create a new instance of the task on every host that belongs to this group
+ * @author Facugon
+ *
+ */
 function addTaskTemplateInstancesToGroupHosts(
-  template, group, done
+  template, customer, group, done
 ){
   Resource.find({
     'type':'host',
@@ -250,9 +276,13 @@ function addTaskTemplateInstancesToGroupHosts(
       let resource=resources[i];
       Host.findById(resource.host_id,(err,host)=>{
         // ... and attach the new task to the host
-        let options = { 'host': host };
-        Task.FromTemplate(template,options,(err)=>{
-          Job.createAgentConfigUpdate(host._id);
+        TaskService.createFromTemplate({
+          customer: customer,
+          templateData: template.toObject(),
+          host: host,
+          done: (err, task) => {
+            AgentUpdateJob.create({ host_id: host._id });
+          }
         });
       });
     }
@@ -261,7 +291,7 @@ function addTaskTemplateInstancesToGroupHosts(
 
 function updateTaskInstancesOnHostGroups(template, done)
 {
-  done=done||()=>{};
+  done||(done=()=>{});
   var query = { 'template': template._id };
   Task.find(query).exec(function(err,tasks){
     if(err){ logger.error(err); return done(err); }
@@ -273,7 +303,7 @@ function updateTaskInstancesOnHostGroups(template, done)
       var task = tasks[i];
       task.update(template.values(),err=>{
         if(err) return logger.error(err);
-        Job.createAgentConfigUpdate(task.host_id);
+        AgentUpdateJob.create({ host_id: task.host_id });
       });
     };
     done();

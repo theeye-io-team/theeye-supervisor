@@ -1,0 +1,105 @@
+/* global json */
+"use strict";
+
+var app = require('../app');
+var logger = require('../lib/logger')('controller:task-schedule');
+var router = require('../router');
+var resolver = router.resolve;
+
+module.exports = function (server, passport) {
+  var middlewares = [
+    passport.authenticate('bearer',{session:false}),
+    router.requireCredential('admin'),
+    resolver.customerNameToEntity({required:true}),
+    router.ensureCustomer,
+    resolver.idToEntity({param:'task'})
+  ];
+
+  //server.post('/:customer/task/:task/schedule',middlewares,controller.create);
+  server.post('/:customer/task/:task/schedule',middlewares,controller.create);
+  server.get('/:customer/task/:task/schedule',middlewares,controller.fetch);
+  server.del('/:customer/task/:task/schedule/:schedule',middlewares,controller.remove);
+
+  // this is for the email cancelation
+  // authenticate with a secret token
+  // only valid for this action
+  server.get('/:customer/task/:task/schedule/:schedule/secret/:secret',[
+    resolver.idToEntity({param:'task',required:true}),
+    router.requireSecret('task'),
+    resolver.customerNameToEntity({required:true}),
+  ], controller.remove);
+};
+
+var controller = {
+  /**
+   * Gets schedule data for a task
+   * @author cg
+   * @method GET
+   * @route /:customer/task/:task/schedule
+   * @param {String} :task , mongo ObjectId
+   *
+   */
+  fetch (req, res, next) {
+    var task = req.task;
+    app.scheduler.getTaskScheduleData(task._id, function (err, scheduleData) {
+      if (err) {
+        logger.error('Scheduler had an error retrieving data for %s',task._id);
+        logger.error(err);
+        return res.send(500);
+      }
+      else res.send(200, { scheduleData: scheduleData });
+    });
+  },
+  /**
+   *
+   * @method DELETE
+   * @route /:customer/task/:task/schedule/:schedule
+   *
+   */
+  remove (req, res, next) {
+    var task = req.task;
+
+    var scheduleId = req.params.schedule;
+    if (!scheduleId) res.send(400,'schedule id required');
+
+    app.scheduler.cancelTaskSchedule(task, scheduleId, function (err, qtyRemoved) {
+      if (err) {
+        logger.error('Scheduler had an error canceling schedule %s',scheduleId);
+        logger.error(err);
+        return res.send(500);
+      }
+      else res.send(200,{status:'done'});
+    });
+  },
+  /**
+   *
+   * @author cg
+   * @method POST
+   * @route /:customer/task/:task/schedule
+   *
+   */
+  create (req, res, next) {
+    var task = req.task;
+    var user = req.user;
+    var customer = req.customer;
+
+    var schedule = req.body.scheduleData;
+    if (!schedule||!schedule.runDate) {
+      return res.send(400,json.error('Must have a date'));
+    }
+
+    app.scheduler.scheduleTask({
+      task: task,
+      customer: customer,
+      user: user,
+      schedule: schedule
+    }, function (err) {
+      if(err) {
+        logger.error(err);
+        return res.send(500, err);
+      }
+
+      res.send(200, {nextRun : schedule.runDate});
+    });
+  }
+};

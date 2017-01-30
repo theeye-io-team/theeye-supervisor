@@ -1,34 +1,25 @@
 var json = require('../lib/jsonresponse');
-var debug = require('../lib/logger')('eye:supervisor:controller:host-stats');
-var paramResolver = require('../router/param-resolver');
+var debug = require('../lib/logger')('controller:host-stats');
+var router = require('../router');
 var HostStats = require('../entity/host/stats').Entity;
 
 module.exports = function(server, passport) {
-  server.get('/host/:host/stats',[
+  var middlewares = [
     passport.authenticate('bearer', {session:false}),
-    paramResolver.idToEntity({ param:'host' })
-  ],controller.fetch);
-
-  return {
-    routes: [
-      {
-        route: '/host/:host/stats',
-        method: 'get',
-        middleware: [
-          paramResolver.idToEntity({ param:'host' })
-        ],
-        action: controller.fetch
-      },
-    ]
-  };
+    router.requireCredential('viewer'),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer,
+    router.resolve.idToEntity({param:'host',required:true})
+  ];
+  server.get('/:customer/host/:host/stats',middlewares,controller.fetch);
 }
 
 var controller = {
-  fetch : function(req,res,next) {
+  fetch (req,res,next) {
     var host = req.host;
     var type = req.query.type;
 
-    var query = { host_id:host._id };
+    var query = { host_id: host._id };
     if(type) query.type = type;
 
     HostStats.find(query,function(error,stats){
@@ -36,11 +27,7 @@ var controller = {
         debug.error('error fetching host stats');
         res.send(500, json.failure('internal error'));
       } else {
-        var pubs = [];
-        stats.forEach(function(stat){
-          pubs.push(stat.publish());
-        });
-        res.send(200, { stats: pubs });
+        res.send(200, stats);
       }
     });
   }

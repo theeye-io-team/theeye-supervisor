@@ -7,67 +7,32 @@ var Template = require('./template').Entity;
 var ObjectId = require('mongoose').Schema.Types.ObjectId;
 
 var debug = require('debug')('eye:entity:resource');
-var _ = require('lodash');
+var extend = require('lodash/assign');
 
 var INITIAL_STATE = 'normal' ;
 
 /**
- * Exports all my properties
- */
-var properties = {
-  'host_id': { type:String },
-  'hostname': { type:String },
-  'fails_count': { type:Number, 'default':0 },
-  'state': { type:String, 'default':INITIAL_STATE },
-  'enable': { type:Boolean, 'default':true },
-  'last_check': { type:Date, 'default':null },
-  'creation_date': { type:Date, 'default':Date.now },
-  'last_update': { type:Date, 'default':Date.now },
-  'template': { type: ObjectId, ref: 'ResourceTemplate', 'default': null },
-}
-
-/**
  * Extended Schema. Includes non template attributes
  */
-var ResourceSchema = BaseSchema.EntitySchema.extend(properties);
-
-//exports.properties = _.extend({}, BaseSchema.properties, properties);
+var ResourceSchema = BaseSchema.EntitySchema.extend({
+  host_id: { type:String },
+  hostname: { type:String },
+  fails_count: { type:Number, 'default':0 },
+  state: { type:String, 'default':INITIAL_STATE },
+  enable: { type:Boolean, 'default':true },
+  template: { type: ObjectId, ref: 'ResourceTemplate', 'default': null },
+  creation_date: { type:Date, 'default': Date.now },
+  last_check: { type:Date, 'default':null },
+  last_update: { type:Date, 'default':Date.now },
+  last_event: { type: Object, 'default':{} }
+});
 
 ResourceSchema.statics.INITIAL_STATE = INITIAL_STATE ;
 
-ResourceSchema.methods.publish = function(next){
-  var publishFn = BaseSchema.EntitySchema.methods.publish;
-  var resource = this;
-  next = next || function(){};
-
-  debug('publishing resource');
-  publishFn.call(this, function(error, data){
-    if(error) return next(error);
-    data.state = resource.state;
-    data.enable = resource.enable;
-    data.host_id = resource.host_id;
-    data.hostname = resource.hostname;
-    data.last_update = resource.last_update;
-
-    next(null,data);
-  });
-}
-
-
-/**
- *
- *
- */
 ResourceSchema.statics.create = function(input, next){
   var data = {};
   next||(next=function(){});
 
-  //for(var propname in properties){
-  //  if(input[propname]){
-  //    data[propname] = input[propname];
-  //  }
-  //}
-  //var entity = new Entity(data);
   var entity = new Entity(input);
   entity.host_id = input.host_id;
   entity.hostname = input.hostname;
@@ -85,18 +50,9 @@ ResourceSchema.statics.create = function(input, next){
  */
 ResourceSchema.methods.patch = function(input, next){
   next||(next=function(){});
-  //var updates = {};
-  //for(let propName in properties){
-  //  if(input.hasOwnProperty(propName) && input[propName]){
-  //    updates[propName] = input[propName];
-  //  }
-  //}
-  //if(Object.keys(updates).length>0){
-  //  this.update(updates, function(error,result){
-    this.update(input, function(error,result){
-      next(error,result);
-    });
-  //} else next();
+  this.update(input, function(error,result){
+    next(error,result);
+  });
 }
 
 /**
@@ -131,7 +87,7 @@ ResourceSchema.statics.FromTemplate = function(
     'hostname': options.host.hostname,
     'template': template._id
   };
-  var input = _.extend( data, template.toObject() );
+  var input = extend( data, template.toObject() );
   input.description = input.description;
   input.name = input.name;
   delete input._id;
@@ -139,6 +95,7 @@ ResourceSchema.statics.FromTemplate = function(
 
   var model = new this(input);
   model.last_update = new Date();
+  model._type = 'Resource';
   model.save(function(err){
     if(err){
       debug('ERROR with %j',input);

@@ -1,17 +1,23 @@
-var ErrorHandler = module.exports = function(){
+var config = require('config');
+var notification = require('../service/notification');
+
+var ErrorHandler = function(){
   var errors = [];
 
-  function required(name){
+  this.required = function(name,value){
     var e = new Error(name + ' is required');
     e.statusCode = 400;
+    e.field = name;
+    e.value = value;
     errors.push( e );
 		return e;
   }
 
-  function invalid(name,value){
+  this.invalid = function(name,value){
     var e = new Error(name + ' is invalid');
     e.statusCode = 400;
-    e.extras = value;
+    e.field = name;
+    e.value = value;
     errors.push( e );
 		return e;
   }
@@ -22,26 +28,56 @@ var ErrorHandler = module.exports = function(){
    * Array knows how turn it self into string
    *
    */
-  function toString(){
+  this.toString = function(){
     var e = [];
     for(var i=0; i<errors.length; i++){
       e.push({
         'message': errors[i].message, 
-        'statusCode': errors[i].statusCode, 
-        'extras': errors[i].extras 
+        'status': errors[i].statusCode, 
+        'value': errors[i].value, 
+        'field': errors[i].field, 
       });
     }
     return e;
   }
 
-  function hasErrors(){
+  this.toJSON = this.toString;
+
+  function errorLine(error){
+    var message = error.message;
+    var statusCode = error.statusCode;
+
+    var html = '<h2>Exception</h2>' ;
+    html += '<pre>' + error.stack + '</pre>' + "\n" ;
+    if(statusCode){
+      html += `<p>status code : ${statusCode}</p>`;
+    }
+    return html;
+  }
+
+  this.toHtml = function(){
+    var e = [];
+    for(var i=0; i<errors.length; i++){
+      e.push( errorLine( errors[i] ) );
+    }
+    return e.join('<br/>');
+  }
+
+  this.hasErrors = function(){
     return errors.length > 0;
   }
 
-  return {
-    required: required,
-    invalid: invalid,
-    toString: toString,
-    hasErrors: hasErrors
+  this.sendExceptionAlert = function(error){
+    errors.push( error );
+    notification.sendEmailNotification({
+      customer_name:'theeye',
+      subject:'Supervisor Exception',
+      to: config.support,
+      content: this.toHtml()
+    });
   }
+
+  return this;
 }
+
+module.exports = ErrorHandler;

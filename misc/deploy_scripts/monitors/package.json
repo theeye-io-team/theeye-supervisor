@@ -1,0 +1,17 @@
+{
+  "name": "deploy-events",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "DEBUG=* NODE_ENV=localdev nodejs --harmony_proxies .",
+    "demo": "DEBUG=* NODE_ENV=demo nodejs --harmony_proxies .",
+    "prod": "DEBUG=* NODE_ENV=production nodejs --harmony_proxies ."
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "lodash": "~4.15.0",
+    "moment": "~2.15.2"
+  }
+}

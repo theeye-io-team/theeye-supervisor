@@ -1,29 +1,58 @@
 module.exports = {
-  "is_dev": false ,
-  "storage": {
-    "driver": "s3" // local or s3
+  "is_dev": false,
+  "server": {
+    "name": "TheEye",
+    "version": process.env.VERSION||undefined,
+    "port": process.env.PORT||60080,
+    "auth_strategy": "bearer"
   },
   "system": {
     "base_url": "",
     "web_url": "",
     "view_teamplates_path": __dirname + "/../core/view/template",
-    "file_upload_folder": "/tmp"
+    "file_upload_folder": "/tmp",
+    "secret": "b28d9f2a4d52ace6e5d3ac1dd3e5c2a0e7e66472ec7276ca501b8c4fa1f07679",
+    "user": {
+      "username": "theeye-automatic",
+      "email": "info@theeye.io",
+      "enabled": true,
+      "client_id": null,
+      "client_secret": null,
+      "token": null
+    }
+  },
+  "storage": {
+    "driver": "s3" // local or s3
+  },
+  "s3": {
+    "bucket":"theeye.scripts"
+  },
+  "mongo":{
+  /**
+    "options":{ // passed directly to the mongo-native driver
+      "replset": {
+        "socketOptions": {
+          "keepAlive": 30*1000,
+          "connectTimeoutMS": 60*1000,
+          "socketTimeoutMS": 60*1000
+        }
+      }
+    },
+    "user":"",
+    "password":"",
+    "hosts": "localhost:27017",
+    "database": "theeye"
+  */
   },
   "monitor": {
-    /* cantidad de fallas antes de emitir alertas */
     "fails_count_alert": 3,
-    /* cada cuanto tiempo chequear estado */
-    "agents_check_disconnected_interval_milliseconds": 20000,
-    /* cada cuanto tiempo chequear estado */
-    "resources_check_failure_interval_milliseconds": 10000,
-    /* despues de cuantos milisegundos de no actualizar estado entra en alerta */
-    "resources_alert_failure_threshold_milliseconds": 30000
+    "check_interval": 10000
   },
   "agent": {
     "core_workers": {
       "host_ping": {
-        "looptime":30000,
-        "type":"keepAlive"
+        "type":"keepAlive",
+        "looptime":30000
       }
     }
   },
@@ -32,21 +61,11 @@ module.exports = {
     "username":"",
     "accessKeyId": "",
     "secretAccessKey": "",
-    "region": "",
-  },
-  "s3": {
-    "bucket":"theeye.scripts"
-  },
-  "sns": {
-    "topicArn": {
-      "events": "",
-      "host-stats": "",
-      "jobs": ""
-    }
+    "region": ""
   },
   "mailer": {
     "from": "The Eye %customer% <%customer%@theeye.io>",
-    "reply_to": "Support <support@theeye.io>",
+    "reply_to": "Info <info@theeye.io>",
     "only_support": false,
     "include_support_bcc": false,
     "support": [],
@@ -96,7 +115,14 @@ module.exports = {
        */
     }
   },
-  // development no AWS-SNS endpoints
+  "sns": {
+    "topicArn": {
+      "events": "",
+      "host-stats": "",
+      "jobs": ""
+    }
+  },
+  // direct [ supervisor > web ] notifications - no AWS-SNS endpoints
   "web-sns":{
     "topicEndpoint": {
       "events": "/events/update",
@@ -107,8 +133,8 @@ module.exports = {
   "elasticsearch": {
     "enabled":false,
     "url":"",
-    "db":"",
     "keys":{
+      "prefix":null,
       "agent":{
         "version":"agent-version"
       },
@@ -119,7 +145,8 @@ module.exports = {
         "stats":"resource-stats",
       },
       "monitor":{
-        "crud":"crud-monitor"
+        "crud":"crud-monitor",
+        "execution":"monitor-execution"
       },
       "script":{
         "crud":"crud-script"
@@ -136,13 +163,14 @@ module.exports = {
       "task":{
         "crud":"crud-task",
         "execution":"task-execution",
+        "result":"task-result"
+      },
+      "webhook":{
+        "crud":"crud-webhook",
+        "triggered":"triggered-webhook"
       }
     }
   },
-  "server": {
-    "name": "TheEye",
-    "version": process.env.VERSION || "0.0.0",
-    "port": process.env.PORT || 60080,
-    "auth_strategy": "bearer",
-  },
+  "events": {
+  }
 }

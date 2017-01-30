@@ -1,16 +1,20 @@
-var debug = require('debug')('eye:supervisor:service:task');
+var debug = require('debug')('service:task');
 
+var Tag = require('../entity/tag').Entity;
 var Host = require('../entity/host').Entity;
 var Task = require('../entity/task').Entity;
+var ScraperTask = require('../entity/task/scraper').Entity;
 var Script = require('../entity/script').Entity;
 var TaskTemplate = require('../entity/task/template').Entity;
+var TaskEvent = require('../entity/event').TaskEvent;
 var async = require('async');
 var _ = require('lodash');
 
-var validator = require('../router/param-validator');
-var filter = require('../router/param-filter');
+var validator = require('validator');
+// var filter = require('../router/param-filter');
 var elastic = require('../lib/elastic');
 var config = require('config');
+var FetchBy = require('../lib/fetch-by');
 
 function registerTaskCRUDOperation(customer,data) {
   var key = config.elasticsearch.keys.task.crud;
@@ -19,26 +23,31 @@ function registerTaskCRUDOperation(customer,data) {
 
 var TaskService = {
   remove:function(options){
-    Task.remove(options.task,function(error){
-      if(error) {
-        return options.fail(error);
-      } else {
+    var task = options.task;
+    Task.remove({ _id: task._id }, err => {
+      if(err) return options.fail(err);
+
+      TaskEvent.remove({ emitter: task._id }, err => {
+        if(err) return options.fail(err);
+
         registerTaskCRUDOperation(
           options.customer.name,{
             'name':options.task.name,
-            'customer':options.customer.name,
+            'customer_name':options.customer.name,
             'user_id':options.user.id,
             'user_email':options.user.email,
             'operation':'delete'
           }
         );
-        options.done();
-      }
+      });
+      options.done();
     });
   },
   update:function(options){
     var task = options.task;
     var updates = options.updates;
+    updates.host = updates.host_id;
+
     task.update(updates, function(error){
       if(error){
         return options.fail(error);
@@ -48,7 +57,7 @@ var TaskService = {
           registerTaskCRUDOperation(
             options.customer.name,{
               'name':task.name,
-              'customer':options.customer.name,
+              'customer_name':options.customer.name,
               'user_id':options.user.id,
               'user_email':options.user.email,
               'operation':'update'
@@ -64,116 +73,145 @@ var TaskService = {
    * @author Facundo
    *
    */
-  fetchBy : function(input,next)
-  {
-    var publishedTasks = [];
-    Task.find(input, function(error,tasks){
-      if(error) {
-        debug('error %j', error);
-        return next(error);
-      }
+  fetchBy (filter,next) {
+    FetchBy.call(Task,filter,function(err,tasks){
+      if (err) return next(err);
+      if (tasks.length===0) return next(null,tasks);
 
-      var notFound = tasks == null || 
-        (tasks instanceof Array && tasks.length === 0);
-
-      if( notFound ) {
-        debug('cannot find task with that criteria');
-        next(null, []);
-      }
-      else {
-        debug('publishing tasks');
-
-        var asyncTasks = [];
-        tasks.forEach(function(task){
-          asyncTasks.push(function(callback){
-            task.publish(function(data){
-              publishedTasks.push(data);
-              callback();
-            });
+      var publishedTasks = [];
+      var asyncTasks = [];
+      tasks.forEach(function(task){
+        asyncTasks.push(function(callback){
+          task.publish(function(data){
+            publishedTasks.push(data);
+            callback();
           });
         });
+      });
 
-        async.parallel(asyncTasks,function(){
-          next(null, publishedTasks);
-        });
-      }
-    });
-  },
-  createResourceTask : function (input, doneFn){
-    var hostId = input.resource.host_id;
-    Host.findById(hostId, function(error, host){
-      input.host = host;
-      Task.create(input, function(error, task){
-
-        registerTaskCRUDOperation(input.customer.name,{
-          'name':task.name,
-          'customer':input.customer.name,
-          'user_id':input.user.id,
-          'user_email':input.user.email,
-          'operation':'create'
-        });
-
-        task.publish((published) => {
-          debug('host id %s task created', hostId);
-          doneFn(null, published);
-        });
+      async.parallel(asyncTasks,function(){
+        next(null, publishedTasks);
       });
     });
   },
-  createManyTasks : function (input, doneFn) {
+  createManyTasks (input, doneFn) {
     var create = [];
     debug('creating tasks');
-    var asyncTaskCreation = function(hostId) {
-      return function(asyncCb) {
-        debug('creating task with host id %s', hostId);
+
+    function asyncTaskCreation (hostId) {
+      return (function(asyncCb){
         if( hostId.match(/^[a-fA-F0-9]{24}$/) ) {
           Host.findById(hostId, function(error, host){
-            var props = _.extend({}, input, { host: host });
-            Task.create(props, function(err,task) {
-              debug('task created');
+            if(error) return asyncCb(error);
+            if(!host) return asyncCb(new Error('not found host id ' + hostId));
 
-              registerTaskCRUDOperation(input.customer.name,{
-                'name':task.name,
-                'customer':input.customer.name,
-                'user_id':input.user.id,
-                'user_email':input.user.email,
-                'operation':'create'
-              });
-
-              task.publish(function(published) {
-                debug('host id %s task created', hostId);
-                asyncCb(null, published);
-              });
-            });
+            TaskService.create(_.extend({}, input, {
+              host: host,
+              host_id: host._id,
+              customer_id: input.customer._id,
+              user_id: input.user._id
+            }), asyncCb );
           });
         } else {
-          debug('host id %s invalid', hostId);
-          var error = new Error('invalid host id ' + hostId);
-          asyncCb(error, null);
+          asyncCb(new Error('invalid host id ' + hostId), null);
         }
-      }
+      });
     }
 
-    var hosts;
-    if( ! (input.hosts instanceof Array) ) {
-      hosts = [ input.hosts ] ;
-    } else hosts = input.hosts ;
-
+    var hosts = input.hosts ;
     debug('creating task on hosts %j', hosts);
-
     for( var i in hosts ) {
       var hostId = hosts[i];
-      var createFn = asyncTaskCreation(hostId);
-      create.push( createFn );
+      create.push( asyncTaskCreation(hostId) );
     }
 
-    var endFn = function(error, results){
-      doneFn(null, results);
+    async.parallel(create, doneFn);
+  },
+  /**
+   *
+   * @author Facundo
+   * @param {Object} options
+   *
+   */
+  createFromTemplate (options) {
+    var template = options.templateData, // plain object
+      host = options.host,
+      customer = options.customer,
+      doneFn = options.done;
+
+    debug('creating task from template %j', template);
+
+    var tplId = (template._id||template.id);
+
+    this.create( _.extend(template,{
+      customer : customer,
+      host : host||null,
+      host_id : (host&&host._id)||null,
+      template : tplId,
+      id: null,
+      user_id : null,
+      _type : 'Task'
+    }), (err, task) => {
+      if(err) debug(err);
+      doneFn(err, task);
+    });
+  },
+  /**
+   *
+   * Create a task
+   *
+   * @author Facundo
+   * @param {Object} options
+   * @param {Object} options
+   *
+   */
+  create (input, done) {
+    function _created (task) {
+      debug('task type "%s" created %j',task.type, task);
+      registerTaskCRUDOperation(input.customer.name,{
+        'name':task.name,
+        'customer_name':input.customer.name,
+        'user_id':(input.user&&input.user.id)||null,
+        'user_email':(input.user&&input.user.email)||null,
+        'operation':'create'
+      });
+      task.publish(data => {
+        done(null,data);
+      });
     }
 
-    async.parallel(create, endFn);
+    debug('creating task with host id %s', input.host_id);
+    var task;
+    if( input.type == 'scraper' ){
+      task = new ScraperTask(input);
+    } else {
+      task = new Task(input);
+    }
+
+    task.save(err => {
+      if(err) {
+        debug(err);
+        return done(err);
+      }
+      _created(task);
+
+      if( input.tags && Array.isArray(input.tags) )
+        Tag.create(input.tags, input.customer);
+
+      TaskEvent.create({
+        name:'success',
+        customer: input.customer,
+        emitter: task
+      },{
+        name:'failure',
+        customer: input.customer,
+        emitter: task
+      },
+      err => debug(err));
+    });
   }
 };
+
 
 /**
  *
@@ -186,22 +224,23 @@ var TaskService = {
  * @param {Function} done
  *
  */
-TaskService.tasksToTemplates = function( 
-  tasks, 
+TaskService.tasksToTemplates = function(
+  tasks,
   customer,
   user,
-  done 
+  done
 ) {
+  var err;
   if(!tasks) {
-    var e = new Error('tasks definition required');
-    e.statusCode = 400;
-    return done(e);
+    err = new Error('tasks definition required');
+    err.statusCode = 400;
+    return done(err);
   }
 
   if(! Array.isArray(tasks)) {
-    var e = new Error('tasks must be an array');
-    e.statusCode = 400;
-    return done(e);
+    err = new Error('tasks must be an array');
+    err.statusCode = 400;
+    return done(err);
   }
 
   if(tasks.length == 0) {
@@ -223,9 +262,9 @@ TaskService.tasksToTemplates = function(
     debug('processing task %j', value);
 
     if( Object.keys( value ).length === 0 ) {
-      var e = new Error('invalid task definition');
-      e.statusCode = 400;
-      return done(e);
+      err = new Error('invalid task definition');
+      err.statusCode = 400;
+      return done(err);
     }
 
     // create template from existent task
@@ -239,18 +278,18 @@ TaskService.tasksToTemplates = function(
           templatized();
         });
       } else {
-        var e = new Error('invalid task id');
-        e.statusCode = 400;
-        return done(e);
+        err = new Error('invalid task id');
+        err.statusCode = 400;
+        return done(err);
       }
     } else {
       // validate, set & instantiate template with data
       validateTaskTemplateData(value, function(valErr, data) {
         if(valErr || !data) {
-          var e = new Error('invalid task data');
-          e.statusCode = 400;
-          e.data = valErr;
-          return done(e);
+          err = new Error('invalid task data');
+          err.statusCode = 400;
+          err.data = valErr;
+          return done(err);
         }
 
         data.customer = customer;
@@ -264,14 +303,13 @@ TaskService.tasksToTemplates = function(
       });
     }
   }
-}
+};
 
 /**
  * @author Facundo
  * @return null
  */
 function validateTaskTemplateData(input, done){
-  var scriptArgs = filter.toArray(input.script_arguments);
   if(!input.script_id) {
     var e = new Error('script is required');
     e.statusCode = 400;
@@ -286,12 +324,7 @@ function validateTaskTemplateData(input, done){
       return done(e, false);
     }
 
-    done(null, {
-      'name': input.name,
-      'description': input.description,
-      'script': script,
-      'script_arguments': scriptArgs,
-    });
+    done(null,input);
   });
 }
 
