@@ -235,6 +235,7 @@ function Service(resource) {
    *
    */
   function handleFileChangedStateEvent (resource,input,config) {
+    resource.last_event = input;
     input.failure_severity = getEventSeverity(input.event,resource);
     sendResourceEmailAlert(resource,input);
     dispatchResourceEvent(resource,Constants.FILE_MONITOR_CHANGED);
@@ -802,7 +803,7 @@ Service.createMonitorFromTemplate = function(options) {
  * @author Facugon
  *
  */
-function handleHostIdAndData(hostId, input, doneFn){
+function handleHostIdAndData (hostId, input, doneFn) {
   Host.findById(hostId, function(err,host){
     if(err) return doneFn(err);
 
@@ -824,7 +825,7 @@ function handleHostIdAndData(hostId, input, doneFn){
  * create entities
  *
  */
-function createResourceAndMonitor(input, done){
+function createResourceAndMonitor (input, done) {
   var monitor_data = input.monitor_data;
   var resource_data = input.resource_data;
 
@@ -860,8 +861,7 @@ function createResourceAndMonitor(input, done){
  * @return null
  *
  */
-function updateMonitorsWithDeletedScript (script,done)
-{
+function updateMonitorsWithDeletedScript (script,done) {
   done=done||function(){};
 
   logger.log('searching script "%s" resource-monitor', script._id);
@@ -885,8 +885,7 @@ function updateMonitorsWithDeletedScript (script,done)
   );
 }
 
-function detachMonitorScript (monitor, done)
-{
+function detachMonitorScript (monitor, done) {
   done=done||function(){};
   if(!monitor.resource._id) {
     var err = new Error('populate monitor first. resource object required');

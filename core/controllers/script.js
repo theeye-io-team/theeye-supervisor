@@ -44,8 +44,7 @@ module.exports = function(server, passport){
     router.ensureCustomer,
     router.resolve.idToEntity({param:'script',required:true,entity:'file'})
   ],controller.download);
-
-}
+};
 
 var controller = {
   /**

@@ -226,8 +226,8 @@ function createScriptJob(input, done){
     job.script_id = script._id;
     job.user = input.user;
     job.user_id = input.user._id;
-    job.host_id = task.host_id ;
-    job.host = task.host_id ;
+    job.host_id = task.host_id;
+    job.host = task.host_id;
     job.name = task.name;
     job.customer_id = input.customer._id;
     job.customer_name = input.customer.name;
