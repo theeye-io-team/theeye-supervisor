@@ -153,10 +153,11 @@ module.exports = {
         data.pattern = (!data.is_regexp?RegExp.escape(data.raw_search):data.raw_search);
         break;
       case 'file':
-        data.path = input.path||errors.required('path');
-        data.permissions = input.permissions||'0755';
+        data.path = (input.path||errors.required('path'));
+        data.permissions = (input.permissions||'0755');
         data.owner = input.owner;
         data.group = input.group;
+        data.file = (input.file||errors.required('file'));
         break;
       case 'script':
         var scriptArgs = router.filter.toArray(input.script_arguments);
@@ -326,6 +327,8 @@ function setMonitorForFile(input) {
 		'type': 'file',
 		'looptime': input.looptime,
     'config': {
+      'file': input.file,
+      'file_id': input.file._id,
       'path': input.path,
       'owner': input.owner,
       'group': input.group,

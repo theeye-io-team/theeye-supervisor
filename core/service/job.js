@@ -169,7 +169,7 @@ function ResultEvent (job) {
       return logger.error(err);
     }
 
-    app.eventDispatcher.dispatch(event);
+    EventDispatcher.dispatch(event);
   });
 }
 

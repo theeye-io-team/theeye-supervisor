@@ -29,8 +29,8 @@ class EventDispatcher extends EventEmitter {
       next(null,user);
     } else {
       User.findOne(config.system.user,(err, user) => {
-        if(err) throw err;
-        if(!user) {
+        if (err) throw err;
+        if (!user) {
           this.user = new User(config.system.user);
           this.user.save( err => {
             if(err) throw err;
@@ -53,10 +53,10 @@ class EventDispatcher extends EventEmitter {
     Task.find({
       triggers: event._id
     },(err, tasks) => {
-      if( err ) return logger.error( err );
-      if( tasks.length == 0 ) return;
+      if (err) return logger.error( err );
+      if (tasks.length == 0) return;
 
-      tasks.forEach( task => this.createJob(task, event) );
+      tasks.forEach(task => this.createJob(task, event));
     });
 
     return this;
@@ -68,13 +68,13 @@ class EventDispatcher extends EventEmitter {
       {path:'customer_id'},
       {path:'host'}
     ],err => {
-      if(err) return logger.error(err);
+      if (err) return logger.error(err);
 
-      if( !task.customer_id ) return logger.error('FATAL. task %s does not has a customer', task._id);
-      if( !task.host ) return logger.error('WARNING. task %s does not has a host. cannot execute', task._id);
+      if (!task.customer_id) return logger.error('FATAL. task %s does not has a customer', task._id);
+      if (!task.host) return logger.error('WARNING. task %s does not has a host. cannot execute', task._id);
 
       var customer = task.customer_id; //after populate customer_id is a customer model
-      if(!customer){
+      if (!customer) {
         return logger.error(
           new Error('task customer is not set, %j', task)
         );
@@ -94,7 +94,7 @@ class EventDispatcher extends EventEmitter {
           },
           notify: true
         },(err, agenda) => {
-          if(err) return logger.error(err);
+          if (err) return logger.error(err);
 
           CustomerService.getAlertEmails(customer.name,(err, emails)=>{
             app.jobDispatcher.sendJobCancelationEmail({
@@ -118,7 +118,7 @@ class EventDispatcher extends EventEmitter {
           customer: customer,
           notify: true
         }, (err, job) => {
-          if(err) return logger.error(err);
+          if (err) return logger.error(err);
           // job created
           logger.log('automatic job created by event');
         });

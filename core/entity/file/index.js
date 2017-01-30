@@ -39,8 +39,9 @@ File.on('afterSave', function(model) {
   // do more stuff
 });
 
-//File.on('afterUpdate',function(model){ });
+// create event
 //File.on('afterInsert',function(model){ });
+//File.on('afterUpdate',function(model){ });
 //File.on('afterRemove',function(model){ });
 
 exports.File = File;

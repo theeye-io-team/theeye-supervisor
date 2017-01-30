@@ -1,8 +1,11 @@
-var Schema = require('mongoose').Schema;
-var debug = require('debug')('eye:entity:monitor');
-var _ = require('lodash');
+'use strict';
 
-if(!RegExp.escape){
+const Schema = require('mongoose').Schema;
+const ObjectId = Schema.Types.ObjectId;
+const debug = require('debug')('eye:entity:monitor');
+const _ = require('lodash');
+
+if (!RegExp.escape) {
   RegExp.escape = function(s){
     return String(s).replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
   };
@@ -85,7 +88,7 @@ EntitySchema.statics.publishAll = function(entities, next){
  * resource/monitor.js
  *
  *
- * UGLY I KNOW....
+ * UGLY LIKE SHIT I KNOW....
  *
  *
  *
@@ -143,9 +146,10 @@ EntitySchema.methods.setUpdates = function(input, next) {
       break;
     case 'file':
       config.path = input.path;
-      config.permissions = input.permissions||'0755';
+      config.permissions = (input.permissions||'0755');
       config.owner = input.owner;
       config.group = input.group;
+      config.file = input.file;
       break;
     case 'script':
       if (input.script_id) config.script_id = input.script_id;

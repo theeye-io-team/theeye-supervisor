@@ -32,7 +32,8 @@ module.exports = function (server, passport) {
 
   server.post('/:customer/resource',middlewares.concat([
     router.requireCredential('admin'),
-    router.filter.spawn({filter:'emailArray',param:'acl'})
+    router.filter.spawn({filter:'emailArray',param:'acl'}),
+    router.resolve.idToEntity({param:'file'}),
   ]),controller.create);
 
   server.del('/:customer/resource/:resource',middlewares.concat([
@@ -149,6 +150,10 @@ var controller = {
       res.send(204);
     }
   },
+  /**
+   *
+   *
+   */
   create (req,res,next) {
     var customer = req.customer;
     var body = req.body,
@@ -195,6 +200,10 @@ var controller = {
       }
     });
   },
+  /**
+   *
+   *
+   */
   update (req,res,next) {
     var updates,
       resource = req.resource,

@@ -3,7 +3,7 @@
 var extend = require('util')._extend;
 var debug = require('debug')('controller:agent-config');
 var async = require('async');
-var Script = require("../entity/file").Script;
+var File = require("../entity/file").File;
 var json = require("../lib/jsonresponse");
 var router = require('../router');
 var ResourceMonitorService = require("../service/resource/monitor");
@@ -37,9 +37,9 @@ var controller = {
     var host = req.host;
     var customer = req.customer;
 
-    if(!host) return res.send(400,'hostname required');
-    if(!customer) return res.send(400,'customer required');
-    if(!user) return res.send(400,'authentication required');
+    if (!host) return res.send(400,'hostname required');
+    if (!customer) return res.send(400,'customer required');
+    if (!user) return res.send(400,'authentication required');
 
     ResourceMonitorService.findBy({
       enable: true,
@@ -47,28 +47,55 @@ var controller = {
       customer_id: customer._id
     }, function(error, monitors){
       if(error) res.send(500);
-      generateAgentConfig(monitors, function(config){
-        if(!config) return res.send(500);
+      generateAgentConfig(monitors, function(err, config){
+        if (err) return next(err);
+        if (!config) {
+          var err = new Error('unexpected error');
+          err.statusCode = 500;
+          return next(err);
+        }
+
         res.send(200,config);
+        next();
       });
     })
   }
 };
 
-function generateAgentConfig(monitors,next) {
+function generateAgentConfig (monitors,next) {
   var workers = [];
   async.each(monitors,function(monitor,doneIteration){
     var config = {
-      "type" : monitor.type,
-      "name" : monitor.name,
-      "looptime" : monitor.looptime,
-      "resource_id" : monitor.resource_id
+      type: monitor.type,
+      name: monitor.name,
+      looptime: monitor.looptime,
+      resource_id: monitor.resource_id
     }
 
     debug('setting up monitor configuration');
     (function(configDone){
       switch(monitor.type){
         case 'file':
+          var fileId = monitor.config.file;
+          File.findById(fileId,function(err,file){
+            if (err) {
+              configDone(err);
+            } else if (file===null) {
+              var error = new Error('Invalid or not present file id in worker config. File specification not available');
+              error.statusCode = 500;
+              throw error;
+              configDone(error);
+            } else {
+              monitor.publish({},(err,m) => {
+                file.publish((err,f) => {
+                  config = extend(config, m.config);
+                  config.file = f;
+                  configDone(null,config);
+                });
+              });
+            }
+          });
+          break;
         case 'scraper':
           config = extend(config,monitor.config);
           configDone(null, config);
@@ -78,9 +105,10 @@ function generateAgentConfig(monitors,next) {
           configDone(null, config);
           break;
         case 'script':
-          Script.findById(monitor.config.script_id, function(err,script){
-            if(err) return configDone(err);
-            else if(script==null) {
+          File.findById(monitor.config.script_id, function(err,script){
+            if (err) {
+              return configDone(err);
+            } else if (script==null) {
               var error = new Error('invalid script id for worker config. script not available');
               error.statusCode = 500;
               throw error;
@@ -104,7 +132,7 @@ function generateAgentConfig(monitors,next) {
           break;
         case 'host':
           configDone();
-        break;
+          break;
         default:
           let msg=`unhandled monitor type ${monitor.type}`;
           let error = new Error();
@@ -116,14 +144,12 @@ function generateAgentConfig(monitors,next) {
       if(!error && config) workers.push(config);
       doneIteration();
     });
-
   },function(err){
     debug('completed');
-    if(err){
-      debug('some monitor produces an error');
-      debug(err.message);
-      next(null);
+    if (err) {
+      debug('some monitor produces an error. %s', err);
+      next(err);
     }
-    else next({ workers : workers });
+    else next(null,{ workers : workers });
   });
 }
