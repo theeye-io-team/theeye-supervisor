@@ -140,15 +140,15 @@ EntitySchema.methods.setUpdates = function(input, next) {
       break;
     case 'process':
       config.ps.raw_search = input.raw_search;
-      config.ps.is_regexp = Boolean(input.is_regexp=='true'||input.is_regexp===true);
-      config.ps.pattern = (!config.ps.is_regexp?RegExp.escape(input.raw_search):input.raw_search);
+      config.ps.is_regexp = Boolean(input.is_regexp=='true' || input.is_regexp===true);
+      config.ps.pattern = (!config.ps.is_regexp) ? RegExp.escape(input.raw_search) : input.raw_search;
       config.ps.psargs = input.psargs;
       break;
     case 'file':
       config.path = input.path;
       config.permissions = (input.permissions||'0755');
-      config.owner = input.owner;
-      config.group = input.group;
+      config.uid = input.uid;
+      config.gid = input.gid;
       config.file = input.file;
       break;
     case 'script':

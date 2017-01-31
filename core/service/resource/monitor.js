@@ -155,8 +155,8 @@ module.exports = {
       case 'file':
         data.path = (input.path||errors.required('path'));
         data.permissions = (input.permissions||'0755');
-        data.owner = input.owner;
-        data.group = input.group;
+        data.uid = input.uid;
+        data.gid = input.gid;
         data.file = (input.file||errors.required('file'));
         break;
       case 'script':
@@ -330,8 +330,8 @@ function setMonitorForFile(input) {
       'file': input.file,
       'file_id': input.file._id,
       'path': input.path,
-      'owner': input.owner,
-      'group': input.group,
+      'uid': input.uid,
+      'gid': input.gid,
       'permissions': input.permissions
     }
 	};
