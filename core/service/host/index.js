@@ -158,17 +158,17 @@ HostService.register = function(input,next) {
       logger.log('host registered. creating host resource');
 
       var data = {
-        'user':input.user,
-        'host_id': host._id,
-        'hostname': host.hostname,
-        'customer': customer,
-        'customer_id': customer._id,
-        'customer_name': customer.name,
-        'name': host.hostname,
-        'type': 'host',
-        'monitor_type':'host',
-        'enable': true,
-        'description': host.hostname
+        user: input.user,
+        host_id: host._id,
+        hostname: host.hostname,
+        customer: customer,
+        customer_id: customer._id,
+        customer_name: customer.name,
+        name: host.hostname,
+        type: 'host',
+        monitor_type:'host',
+        enable: true,
+        description: (host.hostname||'')
       };
 
       ResourceService.create(data,function(error, result){

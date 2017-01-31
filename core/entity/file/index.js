@@ -17,7 +17,7 @@ ScriptSchema.statics.create = function(data,next) {
     size: data.size,
     creation_date: new Date(),
     last_update: new Date(),
-    description: (data.description||data.filename),
+    description: (data.description||''),
     md5: data.md5,
     public: data.public
   };

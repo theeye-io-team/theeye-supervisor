@@ -123,7 +123,7 @@ function Service(resource) {
     resource.fails_count++;
     logger.log(
       'resource %s[%s] failure event count %s/%s', 
-      resource.description, 
+      resource.name, 
       resource._id,
       resource.fails_count,
       failure_threshold
@@ -200,7 +200,7 @@ function Service(resource) {
     resource.fails_count++;
     logger.log(
       'resource %s[%s] notifications stopped count %s/%s',
-      resource.description,
+      resource.name,
       resource._id,
       resource.fails_count,
       failure_threshold
@@ -368,9 +368,11 @@ Service.create = function (input, next) {
   logger.log('creating resource for host %j', input);
   var type = (input.type||input.monitor_type);
 
-  ResourceMonitorService.setMonitorData(type, input, function(error,monitor_data){
-    if(error) return next(error);
-    if(!monitor_data) {
+  ResourceMonitorService.setMonitorData(type,input,function(error,monitor_data){
+    if (error) {
+      return next(error);
+    }
+    if (!monitor_data) {
       var e = new Error('invalid resource data');
       e.statusCode = 400;
       return next(e);

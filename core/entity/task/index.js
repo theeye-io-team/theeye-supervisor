@@ -94,7 +94,7 @@ TaskSchema.statics.create = function(input,next) {
   instance.public = (input.public||false);
   instance.name = (input.name||null);
   instance.template = (input.template_id||null);
-  instance.description = (input.description||null);
+  instance.description = (input.description||'');
   instance.tags = input.tags;
   instance.save(function(err,entity){
     next(err, entity);

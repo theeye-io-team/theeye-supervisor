@@ -129,8 +129,7 @@ function updateMonitorInstancesOnHostGroups(template, done)
 /**
  * 
  */
-function updateResourceInstancesOnHostGroups(template, done)
-{
+function updateResourceInstancesOnHostGroups(template, done) {
   logger.log('updating template resource "%s"(%s) instances',
     template.description,
     template._id
@@ -141,12 +140,12 @@ function updateResourceInstancesOnHostGroups(template, done)
  Resource 
   .find(query)
   .exec(function(err, resources){
-    if(err){
+    if (err) {
       logger.error(err);
       return done(err);
     }
 
-    if(!resources || resources.length==0){
+    if (!resources||resources.length==0) {
       logger.log('no resources were found');
       return done();
     }
@@ -251,9 +250,6 @@ var controller = {
     if(!req.group) return res.send(404,'group not found');
     if(!req.monitortemplate) return res.send(404,'monitor not found');
     if(!req.body.monitor) return res.send(400,'invalid request. monitor required');
-
-    input.name||(input.name=input.description);
-    input.description||(input.description=input.name);
 
     monitortemplate.update(input, function(err,qr){
       monitortemplate.populate(function(err){

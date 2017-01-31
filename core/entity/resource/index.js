@@ -81,11 +81,11 @@ ResourceSchema.statics.FromTemplate = function(
   doneFn
 ) {
   var data = {
-    'host_id': options.host._id,
-    'hostname': options.host.hostname,
-    'template': template._id
+    host_id: options.host._id,
+    hostname: options.host.hostname,
+    template: template._id
   };
-  var input = extend( data, template.toObject() );
+  var input = extend(data,template.toObject());
   input.description = input.description;
   input.name = input.name;
   delete input._id;

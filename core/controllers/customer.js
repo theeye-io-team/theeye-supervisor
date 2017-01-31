@@ -127,8 +127,8 @@ var controller = {
     var customer = req.customer;
     var updates = req.params;
 
-    if (updates.description) { customer.description = updates.description; }
-    if (Array.isArray(updates.emails)) { customer.emails = updates.emails; }
+    if (updates.description) customer.description = updates.description;
+    if (Array.isArray(updates.emails)) customer.emails = updates.emails;
     if (updates.config) {
       var config = lodash.merge({},customer.config,updates.config);
       customer.config = config;

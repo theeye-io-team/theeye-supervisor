@@ -103,14 +103,12 @@ EntitySchema.methods.setUpdates = function(input, next) {
   debug('updating resource monitor type "%s"', type);
 
   /** set common properties **/
-  if(input.looptime) monitor.looptime = input.looptime ;
-  if(typeof input.enable == 'boolean') monitor.enable = input.enable;
-  if(input.host_id) monitor.host_id = input.host_id;
-  if(input.tags) monitor.tags = input.tags;
-  if(input.name || input.description){
-    monitor.name = input.name || input.description;
-    monitor.description = input.description || input.name;
-  }
+  if (input.looptime) monitor.looptime = input.looptime;
+  if (typeof input.enable == 'boolean') monitor.enable = input.enable;
+  if (input.host_id) monitor.host_id = input.host_id;
+  if (input.tags) monitor.tags = input.tags;
+  if (input.name) monitor.name = input.name;
+  if (input.description) monitor.description = input.description;
 
   var config = monitor.config;
   if(input.config) _.assign(input, input.config);

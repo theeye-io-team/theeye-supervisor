@@ -88,7 +88,7 @@ module.exports = {
     var options = {
       customer    : input.customer,
       user        : input.user,
-      description : input.description||input.script.name,
+      description : (input.description||''),
       filename    : input.script.name,
       keyname     : input.script.keyname,
       mimetype    : input.script.mimetype,

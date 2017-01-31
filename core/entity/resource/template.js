@@ -10,7 +10,7 @@ var TemplateSchema = BaseSchema.EntitySchema.extend({
 TemplateSchema.methods.updateInstancesOfGroupHosts = function(done) {
   var template = this;
   logger.log('updating template resource "%s"(%s) instances',
-    template.description,
+    template.name,
     template._id
   )
   done()
@@ -19,10 +19,10 @@ TemplateSchema.methods.updateInstancesOfGroupHosts = function(done) {
 TemplateSchema.methods.values = function(){
   var template = this
   return {
-    'name': template.name,
-    'type': template.type,
-    'description': template.description,
-    'failure_severity' : template.failure_severity,
+    name: template.name,
+    type: template.type,
+    description: template.description,
+    failure_severity: template.failure_severity,
   }
 }
 

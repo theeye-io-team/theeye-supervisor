@@ -123,10 +123,10 @@ function defaultTypeEvent(event_name){
       spec = {
         severity: 'HIGH',
         message: function(resource, event_data) {
-          return `${resource.hostname} ${resource.description} checks failed.`
+          return `${resource.hostname} ${resource.name} checks failed.`
         } ,
         subject: function(resource, event_data) {
-          return `[${this.severity}] ${resource.description} failure`
+          return `[${this.severity}] ${resource.name} failure`
         }
       };
       break;
@@ -134,10 +134,10 @@ function defaultTypeEvent(event_name){
       spec = {
         severity: 'HIGH',
         message: function(resource, event_data) {
-          return `${resource.hostname} ${resource.description} checks recovered.`
+          return `${resource.hostname} ${resource.name} checks recovered.`
         } ,
         subject: function(resource, event_data) {
-          return `[${this.severity}] ${resource.description} recovered`
+          return `[${this.severity}] ${resource.name} recovered`
         }
       };
       break;
@@ -145,10 +145,10 @@ function defaultTypeEvent(event_name){
       spec = {
         severity: 'HIGH',
         message: function(resource, event_data) {
-          return `${resource.hostname} ${resource.description} start reporting updates again.`
+          return `${resource.hostname} ${resource.name} start reporting updates again.`
         } ,
         subject: function(resource, event_data) {
-          return `[${this.severity}] ${resource.description} recovered`
+          return `[${this.severity}] ${resource.name} recovered`
         }
       };
       break;
@@ -156,10 +156,10 @@ function defaultTypeEvent(event_name){
       spec = {
         severity: 'HIGH',
         message: function(resource, event_data) {
-          return `${resource.hostname} ${resource.description} stopped reporting updates.`
+          return `${resource.hostname} ${resource.name} stopped reporting updates.`
         } ,
         subject: function(resource, event_data) {
-          return `[${this.severity}] ${resource.description} unreachable`
+          return `[${this.severity}] ${resource.name} unreachable`
         }
       };
       break;
@@ -178,10 +178,10 @@ function defaultTypeEvent(event_name){
       spec = {
         severity: 'HIGH',
         message: function(resource, event_data) {
-          return `${resource.hostname} ${resource.description} reported an error event "${event_name}".`
+          return `${resource.hostname} ${resource.name} reported an error event "${event_name}".`
         } ,
         subject: function(resource, event_data) {
-          return `[${this.severity}] ${resource.description} error`
+          return `[${this.severity}] ${resource.name} error`
         }
       };
       break;

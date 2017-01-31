@@ -23,8 +23,8 @@ TemplateSchema.statics.create = function (input,next) {
   instance.script_id = input.script_id||input.script._id;
   instance.script_arguments = input.script_arguments;
   instance.script_runas = input.script_runas;
-  instance.name = input.name || null;
-  instance.description = input.description || null;
+  instance.name = input.name;
+  instance.description = (input.description||'');
   instance.tags = input.tags;
   instance.save(function(error,entity){
     next(null, entity);
@@ -34,10 +34,10 @@ TemplateSchema.statics.create = function (input,next) {
 TemplateSchema.methods.values = function () {
   var template = this
   return {
-		'name': template.name,
-		'description': template.description,
-		'script_id': template.script_id,
-		'script_arguments': template.script_arguments,
+		name: template.name,
+		description: template.description,
+		script_id: template.script_id,
+		script_arguments: template.script_arguments,
   }
 }
 

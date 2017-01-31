@@ -84,7 +84,7 @@ var controller = {
     var query = req.query;
 
     var filter = dbFilter(query,{
-      sort: { description: 1 }
+      sort: { filename: 1 }
     });
     filter.where.customer_id = customer.id;
 
@@ -138,7 +138,7 @@ var controller = {
           mimetype: source.mimetype,
           extension: source.extension,
           size: source.size,
-          description: (description||source.name),
+          description: description,
           user_id: user._id,
           keyname: storeData.keyname,
           md5: md5(buf),
@@ -191,7 +191,7 @@ var controller = {
           mimetype: source.mimetype,
           extension: source.extension,
           size: source.size,
-          description: (description||source.name),
+          description: description,
           customer: customer,
           customer_id: customer._id,
           customer_name: customer.name,

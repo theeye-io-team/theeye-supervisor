@@ -56,7 +56,7 @@ var controller = {
     var input = req.query;
 
     var filter = dbFilter(input,{
-      sort: { description: 1 }
+      sort: { filename: 1 }
     });
     filter.where.customer_id = customer.id;
 

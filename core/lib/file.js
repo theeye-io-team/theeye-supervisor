@@ -2,7 +2,7 @@
 
 const logger = require('./logger')('lib:file');
 const storage = require('./storage').get();
-const filenameRegexp = /^[a-z0-9._][0-9a-zA-Z-_.]*$/;
+const filenameRegexp = /^[A-Za-z0-9._][0-9a-zA-Z-_.]*$/;
 
 function isValidFilename (filename) {
   if (!filename) return false;

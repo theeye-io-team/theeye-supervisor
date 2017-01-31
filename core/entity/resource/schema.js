@@ -6,7 +6,7 @@ const Constants = require('../../constants/monitors');
 var properties = exports.properties = {
   customer_id: { type:String, required:true },
   customer_name: { type:String, required:true },
-  description: { type:String, required:true },
+  description: { type:String, default:'' },
   name: { type:String, required:true },
   type: { type:String, required:true },
   user_id: { type:String, 'default': null }, // owner/creator
