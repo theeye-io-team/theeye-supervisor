@@ -78,6 +78,31 @@ var S3Storage = {
   }
 };
 
+
+function copyFile(source, target, cb) {
+  var cbCalled = false;
+
+  var rd = fs.createReadStream(source);
+  rd.on("error", function(err) {
+    done(err);
+  });
+  var wr = fs.createWriteStream(target);
+  wr.on("error", function(err) {
+    done(err);
+  });
+  wr.on("close", function(ex) {
+    done();
+  });
+  rd.pipe(wr);
+
+  function done(err) {
+    if (!cbCalled) {
+      cb(err);
+      cbCalled = true;
+    }
+  }
+}
+
 var LocalStorage = {
   createLocalStorage : function(name, next) {
     debug('creating local storage');
@@ -123,7 +148,8 @@ var LocalStorage = {
       storeName,
       function(storagePath) {
         targetPath = path.join(storagePath, filename);
-        fs.rename(currentPath,targetPath,function(error){
+
+        copyFile(currentPath,targetPath,function(error){
           if (error) {
             debug(error);
             next(error,null);
@@ -171,6 +197,6 @@ var LocalStorage = {
 module.exports = {
   get () {
     var driver = config.get('storage').driver;
-    return driver == 'local' ? LocalStorage : S3Storage ;
+    return driver === 'local' ? LocalStorage : S3Storage ;
   }
 }

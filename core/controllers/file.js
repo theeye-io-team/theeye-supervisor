@@ -131,7 +131,7 @@ var controller = {
         return next(err);
       } else {
 
-        var buf = fs.readFileSync(storeData.path);
+        var buf = fs.readFileSync(source.path);
 
         var data = {
           filename: source.name,
@@ -184,7 +184,7 @@ var controller = {
         return next(err);
       } else {
 
-        var buf = fs.readFileSync(storeData.path);
+        var buf = fs.readFileSync(source.path);
 
         var data = {
           filename: source.name,
