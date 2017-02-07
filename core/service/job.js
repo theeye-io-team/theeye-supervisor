@@ -24,6 +24,10 @@ const STATE_FAILURE = 'failure';
 const STATE_NEW = 'new';
 
 var service = {
+  /**
+   * @param {Object} input
+   * @param {Function} next
+   */
   fetchBy (input,next) {
     var query = {};
 
@@ -34,6 +38,12 @@ var service = {
       next( jobs );
     });
   },
+  /**
+   *
+   * @param {Object} input
+   * @param {Function} next
+   *
+   */
   getNextPendingJob(input,next) {
     var query = {};
     query.state = STATE_NEW;
@@ -52,41 +62,43 @@ var service = {
   },
   /**
    * @author Facugon
-   * @param {Object[
-   *  Task task,
-   *  User user,
-   *  Customer customer,
-   *  Boolean notify
-   *  ]} input
+   * @param {Object[Task task, User user, Customer customer, Boolean notify, Event event]} input in any order
    * @param {Function(error,job)} done
    */
-  create (input,done) {
-    var task = input.task;
-    var type = task.type;
+  create (input, done) {
+    var type, task = input.task;
+
+    type = task.type;
 
     function afterCreate (err, job) {
-      if(err) done(err);
+      if (err) done(err);
       else done(null, job);
     }
 
     task.populate('host', err => {
-      if(err) return done(err);
+      if (err) return done(err);
 
-      if( !task.host ){
+      if (!task.host) {
         var err = new Error('invalid task ' + task._id  + ' does not has a host assigned');
         return done(err);
       }
 
-      if( type == 'script' ){
+      if (type == 'script') {
         createScriptJob(input, afterCreate);
-      } else if( type == 'scraper' ){
+      } else if (type == 'scraper') {
         createScraperJob(input, afterCreate);
       } else {
         done( new Error('invalid or undefined task type ' + task.type) );
       }
-
     });
   },
+  /**
+   *
+   * @param {Job} job
+   * @param {Object} result
+   * @param {Function} done
+   *
+   */
   update ( job, result, done ) {
     var state = (result.state||STATE_FAILURE);
     job.state = state;

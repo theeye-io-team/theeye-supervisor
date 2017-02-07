@@ -44,6 +44,10 @@ class EventDispatcher extends EventEmitter {
     }
   }
 
+  /**
+   * @param {Event} event an event entity to dispatch
+   * @param {Object} event_data event extra data generated
+   */
   dispatch (event, event_data) {
     event_data||(event_data=null);
 

@@ -150,6 +150,11 @@ function Service(resource) {
     }
   }
 
+  function needToSendUpdatesStoppedEmail (resource) {
+    return resource.type === Constants.RESOURCE_TYPE_HOST ||
+      resource.failure_severity === Constants.MONITOR_SEVERITY_CRITICAL;
+  }
+
   function handleNormalState (resource,input,config) {
     logger.log('resource "%s" "%s" state is normal', resource.type, resource.name);
 
@@ -178,7 +183,14 @@ function Service(resource) {
 
         input.failure_severity = getEventSeverity(input.event,resource);
 
-        sendResourceEmailAlert(resource,input);
+        if (!isRecoveredFromFailure) {
+          if (needToSendUpdatesStoppedEmail(resource)) {
+            sendResourceEmailAlert(resource,input);
+          }
+        } else {
+          sendResourceEmailAlert(resource,input);
+        }
+
         logStateChange(resource,input);
         dispatchResourceEvent(resource,Constants.RESOURCE_RECOVERED);
         dispatchStateChangeSNS(resource,{
@@ -216,7 +228,9 @@ function Service(resource) {
 
         resource.state = newState;
 
-        sendResourceEmailAlert(resource,input);
+        if (needToSendUpdatesStoppedEmail(resource)) {
+          sendResourceEmailAlert(resource,input);
+        }
         logStateChange(resource,input);
         dispatchResourceEvent(resource,Constants.RESOURCE_STOPPED);
         dispatchStateChangeSNS(resource,{
@@ -238,7 +252,7 @@ function Service(resource) {
     resource.last_event = input;
     input.failure_severity = getEventSeverity(input.event,resource);
     sendResourceEmailAlert(resource,input);
-    dispatchResourceEvent(resource,Constants.FILE_MONITOR_CHANGED);
+    dispatchResourceEvent(resource,Constants.RESOURCE_CHANGED);
     logStateChange(resource,input);
     dispatchStateChangeSNS(resource,{
       message: 'file changed',
@@ -287,7 +301,7 @@ function Service(resource) {
         var monitorConfig = config.monitor;
 
         switch (input.state) {
-          case Constants.FILE_MONITOR_CHANGED:
+          case Constants.RESOURCE_CHANGED:
             handleFileChangedStateEvent(resource,input,monitorConfig);
             break;
           // monitoring update event. detected stop
@@ -424,7 +438,7 @@ Service.createDefaultEvents = function(monitor,customer,done){
     MonitorEvent.create({
       customer: customer,
       emitter: monitor,
-      name: Constants.FILE_MONITOR_CHANGED
+      name: Constants.RESOURCE_CHANGED
     }, err => {
       if (err) logger.error(err);
     });

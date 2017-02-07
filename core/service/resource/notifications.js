@@ -50,11 +50,10 @@ const ResourceTypes = {
   },
 };
 
-module.exports = function (specs, done){
-
+module.exports = function (specs, done) {
   var resource = specs.resource,
     event_name = specs.event,
-    event_data = specs.data,
+    event_data = specs.data||{},
     severity = specs.failure_severity,
     type = resource.type;
 
@@ -74,20 +73,25 @@ module.exports = function (specs, done){
   });
 }
 
-function searchTypeEvent(type,event_name) {
-  var typeEvent;
+/**
+ * @param String type
+ * @param String event_name
+ * @return {Object} {String severity, String message, String subject}
+ */
+function searchTypeEvent (type,event_name) {
+  var typeEvent = undefined;
 
-  if( ! ResourceTypes.hasOwnProperty(type) ) {
+  if (!ResourceTypes.hasOwnProperty(type)) {
     throw new Error('resource type "' + type + '" is invalid or not defined');
   }
 
-  if(
+  if (
     type == Constants.RESOURCE_TYPE_DSTAT ||
     type == Constants.RESOURCE_TYPE_PSAUX
-  ){
-    if(
-      event_name == Constants.RESOURCE_STOPPED ||
-      event_name == Constants.RESOURCE_RECOVERED ||
+  ) {
+    if (
+      event_name === Constants.RESOURCE_STOPPED ||
+      event_name === Constants.RESOURCE_RECOVERED ||
       !event_name
     ) {
       throw new Error(type + '/' + event_name + ' event ignored.');
@@ -97,8 +101,8 @@ function searchTypeEvent(type,event_name) {
   var resourceType = ResourceTypes[type];
   var typeEvents = resourceType.events;
 
-  if( typeEvents.length !== 0 ) {
-    for(var i=0; i<typeEvents.length; i++){
+  if (typeEvents.length !== 0) {
+    for (var i=0; i<typeEvents.length; i++) {
       typeEvent = typeEvents[i];
       if (typeEvent.name == event_name) {
         return Object.create(typeEvent);
@@ -116,9 +120,9 @@ function searchTypeEvent(type,event_name) {
  * except dstat/psaux
  *
  */
-function defaultTypeEvent(event_name){
+function defaultTypeEvent (event_name) {
   var spec ;
-  switch(event_name){
+  switch (event_name) {
     case Constants.RESOURCE_FAILURE:
       spec = {
         severity: 'HIGH',
@@ -174,11 +178,24 @@ function defaultTypeEvent(event_name){
         }
       };
       break;
+    case Constants.WORKERS_ERROR_EVENT:
     default:
       spec = {
         severity: 'HIGH',
         message: function(resource, event_data) {
-          return `${resource.hostname} ${resource.name} reported an error event "${event_name}".`
+          var message, data = event_data;
+
+          if (data.error) {
+            if (typeof data.error === 'string') {
+              message = data.error;
+            } else if (typeof data.error.message === 'string') {
+              message = data.error.message;
+            }
+          } else {
+            message = event_name;
+          }
+
+          return `${resource.hostname} ${resource.name} reported an error "${message}".`
         } ,
         subject: function(resource, event_data) {
           return `[${this.severity}] ${resource.name} error`

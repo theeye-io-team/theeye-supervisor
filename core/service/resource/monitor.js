@@ -9,11 +9,26 @@ var router = require('../../router');
 var MonitorEntity = require('../../entity/monitor').Entity;
 var Job = require('../../entity/job').Job;
 
-if(!RegExp.escape){
-  RegExp.escape = function(s){
+if (!RegExp.escape) {
+  RegExp.escape = function (s) {
     return String(s).replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
   };
 }
+
+/**
+ * given a mode string validates it.
+ * returns it if valid or null if invalid
+ * @param {string} mode
+ * @return {string|null}
+ */
+function validateUnixOctalModeString (mode) {
+  if (!mode||typeof mode != 'string') return null;
+  if (mode.length != 4) return null;
+  if (['0','1','2','4'].indexOf(mode[0]) === -1) return null;
+  if (parseInt(mode.substr(1,mode.length)) > 777) return null;
+  return mode;
+}
+
 
 /**
  * Monitor object namespace for manipulating resources monitor
@@ -155,11 +170,15 @@ module.exports = {
         data.pattern = (!data.is_regexp?RegExp.escape(data.raw_search):data.raw_search);
         break;
       case 'file':
+        var mode = validateUnixOctalModeString(input.permissions);
+        data.permissions = (mode||errors.invalid('mode'));
+        data.is_manual_path = Boolean(input.is_manual_path);
         data.path = (input.path||errors.required('path'));
-        data.permissions = (input.permissions||'0755');
+        data.dirname = (input.dirname||errors.required('dirname'));
+        data.basename = input.basename;
+        data.file = (input.file||errors.required('file'));
         data.uid = input.uid;
         data.gid = input.gid;
-        data.file = (input.file||errors.required('file'));
         break;
       case 'script':
         var scriptArgs = router.filter.toArray(input.script_arguments);
@@ -331,7 +350,10 @@ function setMonitorForFile(input) {
     'config': {
       'file': input.file,
       'file_id': input.file._id,
+      'is_manual_path': input.is_manual_path,
       'path': input.path,
+      'basename': input.basename,
+      'dirname': input.dirname,
       'uid': input.uid,
       'gid': input.gid,
       'permissions': input.permissions

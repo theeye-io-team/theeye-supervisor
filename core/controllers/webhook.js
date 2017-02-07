@@ -172,13 +172,10 @@ var controller = {
     WebhookEvent.findOne({
       emitter: webhook._id
     },(err, event) => {
+      if (err) return res.send(500, err);
+      if (!event) return res.send(500);
 
-      if( err ){
-        return res.send(500, err);
-      }
-      if( ! event ) return res.send(500);
-
-      EventDispatcher.dispatch( event );
+      EventDispatcher.dispatch(event);
       res.send(200,{ message: 'success' });
       next();
     });
