@@ -15,6 +15,7 @@ var validator = require('validator');
 var elastic = require('../lib/elastic');
 var config = require('config');
 var FetchBy = require('../lib/fetch-by');
+var SchedulerService = require('./scheduler');
 
 function registerTaskCRUDOperation(customer,data) {
   var key = config.elasticsearch.keys.task.crud;
@@ -26,6 +27,8 @@ var TaskService = {
     var task = options.task;
     Task.remove({ _id: task._id }, err => {
       if(err) return options.fail(err);
+
+      SchedulerService.unscheduleTask(task);
 
       TaskEvent.remove({ emitter: task._id }, err => {
         if(err) return options.fail(err);
