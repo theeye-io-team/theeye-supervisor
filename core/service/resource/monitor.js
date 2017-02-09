@@ -172,13 +172,13 @@ module.exports = {
       case 'file':
         var mode = validateUnixOctalModeString(input.permissions);
         data.permissions = (mode||errors.invalid('mode'));
+        data.uid = Number.isInteger(parseInt(input.uid)) ? input.uid : errors.invalid('uid');
+        data.gid = Number.isInteger(parseInt(input.gid)) ? input.gid : errors.invalid('gid');
         data.is_manual_path = Boolean(input.is_manual_path);
         data.path = (input.path||errors.required('path'));
         data.dirname = (input.dirname||errors.required('dirname'));
         data.basename = input.basename;
         data.file = (input.file||errors.required('file'));
-        data.uid = input.uid;
-        data.gid = input.gid;
         break;
       case 'script':
         var scriptArgs = router.filter.toArray(input.script_arguments);

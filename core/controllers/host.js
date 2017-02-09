@@ -56,7 +56,7 @@ module.exports = function(server, passport) {
 var controller = {
   get (req,res,next) {
     var host = req.host;
-    res.send(200, { host: host.toObject() });
+    res.send(200, host.toObject());
   },
   /**
    *
@@ -68,7 +68,7 @@ var controller = {
       customer_name: customer.name
     }, (error,hosts) => {
       if(error) res.send(500);
-      else res.send(200,{ hosts: hosts });
+      else res.send(200, hosts);
     });
   },
   /**
@@ -102,12 +102,12 @@ var controller = {
       var response = _.extend({
         resource_id: resource?resource._id:null,
         host_id: host._id
-      },config.get("agent.core_workers.host_ping"));
+      },config.get('agent.core_workers.host_ping'));
 
       res.send(200, response); 
       next();
     });
-  },
+  }
 }
 
 /**
