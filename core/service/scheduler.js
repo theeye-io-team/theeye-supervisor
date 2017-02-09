@@ -120,7 +120,7 @@ Scheduler.prototype = {
   tagThatTask: function(task, callback) {
     var tags = [].concat(task.tags);
 
-    if (tags.indexOf("scheduled")==-1) {
+    if (tags.indexOf("scheduled") === -1) {
       tags.push("scheduled");
       task.update({tags:tags}, callback);
     } else {
@@ -131,7 +131,7 @@ Scheduler.prototype = {
   untagTask: function(task, callback) {
     var tags = [].concat(task.tags);
 
-    if(tags.indexOf("scheduled") != -1) {
+    if(tags.indexOf("scheduled") !== -1) {
       tags.splice(tags.indexOf("scheduled"),1);
       task.update({tags:tags}, callback);
     }else{
@@ -204,7 +204,8 @@ Scheduler.prototype = {
       return callback(err, err ? 0 : schedules.length);
     });
   },
-  //Cancels a specific scheduleId. Task if provided for further processing
+
+  //Cancels a specific scheduleId. Task is provided for further processing
   cancelTaskSchedule: function(task, scheduleId, callback) {
     if(!scheduleId) return callback(new Error('schedule id must be provided'));
 
@@ -222,6 +223,17 @@ Scheduler.prototype = {
       self.handleScheduledTag(task,function(){});
     });
   },
+
+  // deletes ALL schedules for a given task
+  unscheduleTask: function (task, callback) {
+    this.agenda.cancel({
+      $and: [
+        { name: 'task' },
+        { "data.task_id": task._id }
+      ]
+    }, callback);
+  },
+
   taskProcessor: function(agendaJob, done) {
     logger.log('////////////////////////////////////////');
     logger.log('////////////////////////////////////////');
