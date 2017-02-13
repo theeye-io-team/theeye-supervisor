@@ -170,10 +170,28 @@ module.exports = {
         data.pattern = (!data.is_regexp?RegExp.escape(data.raw_search):data.raw_search);
         break;
       case 'file':
-        var mode = validateUnixOctalModeString(input.permissions);
-        data.permissions = (mode||errors.invalid('mode'));
-        data.uid = Number.isInteger(parseInt(input.uid)) ? input.uid : errors.invalid('uid');
-        data.gid = Number.isInteger(parseInt(input.gid)) ? input.gid : errors.invalid('gid');
+        var mode = validateUnixOctalModeString(input.permissions),
+          uid = input.uid,
+          gid = input.gid;
+
+        if (!mode) {
+          data.permissions = undefined;
+        } else {
+          data.permissions = (mode||errors.invalid('mode'));
+        }
+
+        if (!uid) {
+          data.uid = undefined;
+        } else {
+          data.uid = Number.isInteger(parseInt(uid)) ? uid : errors.invalid('uid');
+        }
+
+        if (!gid) {
+          data.gid = undefined;
+        } else {
+          data.gid = Number.isInteger(parseInt(gid)) ? gid : errors.invalid('gid');
+        }
+
         data.is_manual_path = Boolean(input.is_manual_path);
         data.path = (input.path||errors.required('path'));
         data.dirname = (input.dirname||errors.required('dirname'));
