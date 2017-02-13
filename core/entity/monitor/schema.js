@@ -105,7 +105,10 @@ EntitySchema.methods.setUpdates = function(input, next) {
   /** set common properties **/
   if (input.looptime) monitor.looptime = input.looptime;
   if (typeof input.enable == 'boolean') monitor.enable = input.enable;
-  if (input.host_id) monitor.host_id = input.host_id;
+  if (input.host_id) {
+    monitor.host = input.host_id;
+    monitor.host_id = input.host_id;
+  }
   if (input.tags) monitor.tags = input.tags;
   if (input.name) monitor.name = input.name;
   if (input.description) monitor.description = input.description;
@@ -114,7 +117,8 @@ EntitySchema.methods.setUpdates = function(input, next) {
   if(input.config) _.assign(input, input.config);
   switch(type) {
     case 'scraper':
-      monitor.host_id = input.external_host_id || input.host_id;
+      //monitor.host_id = input.external_host_id || input.host_id;
+      monitor.host_id = input.host_id;
       config.external = Boolean(input.external_host_id);
       config.url = input.url;
       config.timeout = input.timeout;

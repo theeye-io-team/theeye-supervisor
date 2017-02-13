@@ -138,26 +138,27 @@ module.exports = {
     switch (type) {
       case 'scraper':
         var url = input.url;
-        if( ! url ) errors.required('url',url);
-        else if( !validator.isURL(url,{require_protocol:true}) ) errors.invalid('url',url);
+        if (!url) errors.required('url',url);
+        else if (!validator.isURL(url,{require_protocol:true})) errors.invalid('url',url);
         else data.url = url;
 
         data.timeout = input.timeout||10000;
-        data.external_host_id = input.external_host_id;
-        if( !input.external_host_id ) data.external = false;
+        //data.external_host_id = input.external_host_id;
+        //if (!input.external_host_id) data.external = false;
+        data.external = false;
 
-        if(!input.parser) input.parser=null;
-        else if(input.parser != 'script' && input.parser != 'pattern')
+        if (!input.parser) input.parser=null;
+        else if (input.parser != 'script' && input.parser != 'pattern')
           errors.invalid('parser',input.parser);
 
         // identify how to parse api response selected option by user
-        if(!input.status_code&&!input.pattern&&!input.script){
+        if (!input.status_code&&!input.pattern&&!input.script){
           errors.required('status code or parser');
         } else {
-          if(input.parser){
-            if(input.parser=='pattern' && !input.pattern){
+          if (input.parser) {
+            if (input.parser=='pattern' && !input.pattern) {
               errors.invalid('pattern',input.pattern);
-            } else if(input.parser=='script' && !input.script){
+            } else if (input.parser=='script' && !input.script) {
               errors.invalid('script',input.script);
             }
           }
@@ -329,9 +330,11 @@ module.exports = {
  * @author Facundo
  *
  */
-function setMonitorForScraper(input) {
-	var host_id = input.external_host_id ? input.external_host_id : input.host_id;
-	var external = Boolean(input.external_host_id);
+function setMonitorForScraper (input) {
+	//var host_id = input.external_host_id ? input.external_host_id : input.host_id;
+	//var external = Boolean(input.external_host_id);
+
+  var host_id = input.host_id;
 	return {
     'tags': input.tags,
     'customer_name': input.customer_name,
@@ -341,7 +344,7 @@ function setMonitorForScraper(input) {
 		'type': 'scraper',
 		'looptime': input.looptime,
     'config': {
-      'external': external,
+      'external': false,
       'url': input.url,
       'timeout': input.timeout,
       'method': input.method,

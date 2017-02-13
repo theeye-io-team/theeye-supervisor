@@ -719,6 +719,10 @@ Service.disableResourcesByCustomer = function(customer, doneFn){
  *
  * API to create multiple resource and monitor linked to a host
  * @author Facugon
+ * @param Array hosts
+ * @param Object input
+ * @param Function doneFn
+ * @return null
  *
  */
 Service.createResourceOnHosts = function(hosts,input,doneFn) {

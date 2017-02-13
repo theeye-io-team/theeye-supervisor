@@ -32,8 +32,7 @@ module.exports = function (server, passport) {
 
   server.post('/:customer/resource',middlewares.concat([
     router.requireCredential('admin'),
-    router.filter.spawn({filter:'emailArray',param:'acl'}),
-    router.resolve.idToEntity({param:'file'}),
+    router.filter.spawn({filter:'emailArray',param:'acl'})
   ]),controller.create);
 
   server.del('/:customer/resource/:resource',middlewares.concat([
@@ -45,7 +44,7 @@ module.exports = function (server, passport) {
   var updateMiddlewares = middlewares.concat([
     router.requireCredential('agent'),
     router.resolve.idToEntity({param:'resource',required:true}),
-    router.resolve.idToEntity({param:'host_id',entity:'host'}),
+    router.resolve.idToEntity({param:'host_id',entity:'host',into:'host'}),
     router.filter.spawn({filter:'emailArray',param:'acl'})
   ]);
   server.patch('/:customer/resource/:resource', updateMiddlewares, controller.update);
@@ -85,6 +84,11 @@ module.exports = function (server, passport) {
 }
 
 var controller = {
+  /**
+   *
+   * @method GET
+   *
+   */
   get (req,res,next) {
     var resource = req.resource;
     Monitor
@@ -95,8 +99,12 @@ var controller = {
         res.send(200, data);
       });
   },
+  /**
+   *
+   * @method GET
+   *
+   */
   fetch (req,res,next) {
-
     var filter = dbFilter(req.query,{
       sort: {
         fails_count: -1,
@@ -127,7 +135,7 @@ var controller = {
   },
   /**
    *
-   *
+   * @method DELETE
    *
    */
   remove (req,res,next) {
@@ -152,15 +160,17 @@ var controller = {
   },
   /**
    *
+   * @method POST
    *
    */
   create (req,res,next) {
     var customer = req.customer;
     var body = req.body,
-      hosts = (body.hosts||body.host);
+      hosts = body.hosts;
+
     body.acl = req.acl;
 
-    if (!hosts) return res.send(400, json.error('hosts are required'));
+    if (!hosts) return res.send(400, json.error('a host is required'));
     if (!Array.isArray(hosts)) hosts = [hosts];
 
     var params = MonitorManager.validateData(body);
@@ -202,6 +212,7 @@ var controller = {
   },
   /**
    *
+   * @method PATCH
    *
    */
   update (req,res,next) {
@@ -209,7 +220,7 @@ var controller = {
       resource = req.resource,
       body = req.body;
 
-    body.host = req.host_id;
+    body.host = req.host;
     body.acl = req.acl;
 
     var params = MonitorManager.validateData(body);

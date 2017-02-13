@@ -33,7 +33,7 @@ module.exports = function(server, passport){
     router.resolve.idToEntity({param:'script',required:true,entity:'file'})
   );
   server.get('/:customer/script/:script',mws,controller.get);
-  server.patch('/:customer/script/:script',mws,controller.update);
+  server.patch('/:customer/script/:script',mws,controller.patch);
   server.del('/:customer/script/:script',mws,controller.remove);
 
   // users can download scripts
@@ -55,14 +55,12 @@ var controller = {
     var customer = req.customer;
     var input = req.query;
 
-    var filter = dbFilter(input,{
-      sort: { filename: 1 }
-    });
+    var filter = dbFilter(input,{ sort: { filename: 1 } });
     filter.where.customer_id = customer.id;
 
     Script.fetchBy(filter, function(error,scripts){
       if (!scripts) scripts = [];
-      res.send(200, { scripts : scripts });
+      res.send(200, scripts);
       next();
     });
   },
@@ -73,7 +71,7 @@ var controller = {
   get (req, res, next) {
     var script = req.script;
     script.publish(function(error, data){
-      res.send(200, { 'script' : data });
+      res.send(200, data);
     });
     next();
   },
@@ -101,12 +99,10 @@ var controller = {
     },function(error,script){
       if(error) {
         debug.error(error);
-        res.send(500, json.error('internal server error',{
-          error: error.message
-        }) );
+        res.send(500, json.error('internal server error',{ error: error.message }) );
       } else {
         script.publish(function(error, data){
-          res.send( 200, data );
+          res.send(200, data);
         });
       }
     });
@@ -135,9 +131,10 @@ var controller = {
   },
   /**
    *
+   * @method PATCH
    *
    */
-  update (req, res, next) {
+  patch (req, res, next) {
     var script = req.script;
     var file = req.files.script;
     var params = req.body;
@@ -157,7 +154,7 @@ var controller = {
       if(error) return res.send(500);
       ResourceService.onScriptUpdated(script);
       script.publish(function(error, data){
-        res.send(200,{ 'script': data });
+        res.send(200, data);
       });
     });
   },
