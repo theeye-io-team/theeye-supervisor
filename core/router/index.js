@@ -10,7 +10,6 @@ module.exports = {
     logger.log('loading controllers');
     // avoiding dynamic linker
     require('../controllers/index')(server,passport);
-    require('../controllers/agent-config')(server,passport);
     require('../controllers/agent')(server,passport);
     require('../controllers/auth')(server);
     require('../controllers/customer')(server,passport);
@@ -25,8 +24,8 @@ module.exports = {
     require('../controllers/psaux')(server,passport);
     require('../controllers/monitor')(server,passport);
     require('../controllers/resource')(server,passport);
-    require('../controllers/script-download')(server,passport);
     require('../controllers/script')(server,passport);
+    require('../controllers/file')(server,passport);
     require('../controllers/schedule')(server,passport);
     require('../controllers/tags')(server,passport);
     require('../controllers/task-schedule')(server,passport);

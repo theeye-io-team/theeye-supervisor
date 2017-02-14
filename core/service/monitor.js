@@ -62,21 +62,10 @@ function runChecks (resource,done) {
         return done();
       }
 
-      switch(resource.type){
-        case 'host':
-          checkHostResourceStatus(resource, cconfig.monitor, done);
-          break;
-        case 'script':
-        case 'scraper':
-        case 'process':
-        case 'dstat':
-        case 'psaux':
-          checkResourceMonitorStatus(resource, cconfig.monitor, done);
-          break;
-        case 'default':
-          logger.error('unhandled resource %s', resource.type);
-          done();
-          break;
+      if (resource.type==='host') {
+        checkHostResourceStatus(resource, cconfig.monitor, done);
+      } else {
+        checkResourceMonitorStatus(resource, cconfig.monitor, done);
       }
     }
   );

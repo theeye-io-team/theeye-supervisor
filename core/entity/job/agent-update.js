@@ -2,11 +2,12 @@
 
 const BaseSchema = require('./schema');
 const Job = require('./index');
+const logger = require('../../lib/logger');
 
 var AgentUpdateJobSchema = new BaseSchema({
-  name: { type: String, 'default': 'agent:config:update' },
-  state: { type: String, 'default': 'new' },
-  notify: { type: Boolean, 'default': false },
+  name: { type: String, default: 'agent:config:update' },
+  state: { type: String, default: 'new' },
+  notify: { type: Boolean, default: false },
 });
 
 /**
@@ -28,7 +29,7 @@ AgentUpdateJobSchema.statics.create = function(specs,next) {
     var job = new Job(specs);
     job.host = specs.host_id;
     job.save(err => {
-      if(err) debug.error(err);
+      if(err) logger.error(err);
       next(err,job);
     });
   });

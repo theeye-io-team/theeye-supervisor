@@ -16,7 +16,8 @@ module.exports = {
 
     if (!options.param) throw new Error('param name is required!');
     var paramName = options.param;
-    var entityName = options.entity||options.param;
+    var entityName = (options.entity||options.param);
+    var targetName = (options.into||paramName);
 
     return function (req, res, next) {
       var _id = req.params[paramName]||req.body[paramName]||req.query[paramName];
@@ -28,8 +29,8 @@ module.exports = {
           return next(e);
         }
 
-        logger.debug('no param "%s"', paramName);
-        req[paramName] = null;
+        logger.debug('no param "%s"', targetName);
+        req[targetName] = null;
         return next();
       }
 
@@ -40,11 +41,11 @@ module.exports = {
           return next(e);
         }
 
-        req[paramName] = null;
+        req[targetName] = null;
         return next();
       }
 
-      logger.debug('resolving "%s" with id "%s"', paramName, _id);
+      logger.debug('resolving "%s" with id "%s"', targetName, _id);
 
       var entityModule = require('../entity/' + entityName);
       var Entity = (
@@ -56,7 +57,7 @@ module.exports = {
       Entity.findById( _id, (err, resource) => {
         if (err) {
           logger.error(err);
-          req[paramName] = null;
+          req[targetName] = null;
           return next(err);
         }
 
@@ -67,12 +68,12 @@ module.exports = {
             return next(e);
           }
 
-          req[paramName] = null;
+          req[targetName] = null;
           return next();
         }
 
         logger.debug('instances of "%s" found', options.param);
-        req[paramName] = resource;
+        req[targetName] = resource;
         next(null, resource);
       });
     }

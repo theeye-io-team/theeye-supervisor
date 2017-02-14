@@ -30,11 +30,6 @@ module.exports = function (server, passport) {
     router.ensureAllowed({entity:{name:'resource'}})
   ]),controller.get);
 
-  server.put('/:customer/resource/:resource',middlewares.concat([
-    router.requireCredential('agent',{exactMatch:true}),
-    router.resolve.idToEntity({param:'resource',required:true})
-  ]),controller.update);
-
   server.post('/:customer/resource',middlewares.concat([
     router.requireCredential('admin'),
     router.filter.spawn({filter:'emailArray',param:'acl'})
@@ -45,28 +40,55 @@ module.exports = function (server, passport) {
     router.resolve.idToEntity({param:'resource',required:true})
   ]),controller.remove);
 
+
+  var updateMiddlewares = middlewares.concat([
+    router.requireCredential('agent'),
+    router.resolve.idToEntity({param:'resource',required:true}),
+    router.resolve.idToEntity({param:'host_id',entity:'host',into:'host'}),
+    router.filter.spawn({filter:'emailArray',param:'acl'})
+  ]);
+  server.patch('/:customer/resource/:resource', updateMiddlewares, controller.update);
+
+  //
+  // KEEP BACKWARD COMPATIBILITY WITH OLDER AGENT VERSIONS.
+  // SUPPORTED FROM VERSION v0.9.3-beta-11-g8d1a93b
+  //
+  server.put('/:customer/resource/:resource', updateMiddlewares, function(req,res,next){
+    // some older version of agent keep updating state to this URL.
+    if (req.user.credential==='agent') {
+      controller.update_state.apply(controller, arguments);
+    } else {
+      controller.update.apply(controller, arguments);
+    }
+  });
+
+  /**
+   *
+   * update single properties with custom behaviour
+   *
+   */
   server.patch(
     '/:customer/resource/:resource/alerts',
     middlewares.concat([
       router.requireCredential('admin'),
       router.resolve.idToEntity({param:'resource',required:true})
     ]),
-    controller.alerts
+    controller.update_alerts
   );
 
-  server.patch(
-    '/:customer/resource/:resource',
-    middlewares.concat([
-      router.requireCredential('admin'),
-      router.resolve.idToEntity({param:'resource',required:true}),
-      router.resolve.idToEntity({param:'host_id',entity:'host'}),
-      router.filter.spawn({filter:'emailArray',param:'acl'})
-    ]),
-    controller.patch
-  );
+  server.patch('/:customer/resource/:resource/state',middlewares.concat([
+    router.requireCredential('agent',{exactMatch:true}),
+    router.resolve.idToEntity({param:'resource',required:true})
+  ]),controller.update_state);
+
 }
 
 var controller = {
+  /**
+   *
+   * @method GET
+   *
+   */
   get (req,res,next) {
     var resource = req.resource;
     Monitor
@@ -77,8 +99,12 @@ var controller = {
         res.send(200, data);
       });
   },
+  /**
+   *
+   * @method GET
+   *
+   */
   fetch (req,res,next) {
-
     var filter = dbFilter(req.query,{
       sort: {
         fails_count: -1,
@@ -109,7 +135,7 @@ var controller = {
   },
   /**
    *
-   *
+   * @method DELETE
    *
    */
   remove (req,res,next) {
@@ -132,33 +158,20 @@ var controller = {
       res.send(204);
     }
   },
-  update (req,res,next) {
-    var resource = req.resource;
-    var input = req.params;
-    var state = req.params.state;
-
-    var manager = new ResourceManager(resource);
-    input.last_update = new Date();
-    manager.handleState(input,function(error){
-      if(!error) {
-        res.send(200,resource);
-      } else {
-        res.send(500,json.error('internal server error'));
-      }
-    });
-  },
   /**
    *
+   * @method POST
    *
    */
   create (req,res,next) {
     var customer = req.customer;
     var body = req.body,
-      hosts = (body.hosts||body.host);
+      hosts = body.hosts;
+
     body.acl = req.acl;
 
-    if (!hosts) return res.send(400, json.error('hosts are required'));
-    if (!Array.isArray(hosts)) hosts = [ hosts ];
+    if (!hosts) return res.send(400, json.error('a host is required'));
+    if (!Array.isArray(hosts)) hosts = [hosts];
 
     var params = MonitorManager.validateData(body);
     if (params.errors && params.errors.hasErrors()) {
@@ -199,18 +212,15 @@ var controller = {
   },
   /**
    *
-   * this is PUT not PATCH !
-   * but PUT is taken above to update resource status.
-   *
-   * @author Facugon
+   * @method PATCH
    *
    */
-  patch (req,res,next) {
+  update (req,res,next) {
     var updates,
       resource = req.resource,
       body = req.body;
 
-    body.host = req.host_id;
+    body.host = req.host;
     body.acl = req.acl;
 
     var params = MonitorManager.validateData(body);
@@ -241,16 +251,39 @@ var controller = {
   },
   /**
    *
-   * change resource send alerts status.
+   * change the alert level
    * @author Facugon
+   * @method PATCH
+   * @route /:customer/resource/:id/alerts
    *
    */
-  alerts (req, res, next) {
+  update_alerts (req, res, next) {
     var resource = req.resource;
     resource.alerts = req.params.alerts;
     resource.save(error => {
-      if(error) res.send(500);
+      if (error) res.send(500);
       else res.send(200, resource);
     });
-  }
+  },
+  /**
+   *
+   * @author Facugon
+   * @method PATCH
+   * @route /:customer/resource/:id/state
+   *
+   */
+  update_state (req,res,next) {
+    var resource = req.resource;
+    var input = req.params;
+    var state = req.params.state;
+    var manager = new ResourceManager(resource);
+    input.last_update = new Date();
+    manager.handleState(input,function(error){
+      if (!error) {
+        res.send(200,resource);
+      } else {
+        res.send(500,json.error('internal server error'));
+      }
+    });
+  },
 };

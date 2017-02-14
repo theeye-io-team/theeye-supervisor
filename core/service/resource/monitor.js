@@ -9,11 +9,26 @@ var router = require('../../router');
 var MonitorEntity = require('../../entity/monitor').Entity;
 var Job = require('../../entity/job').Job;
 
-if(!RegExp.escape){
-  RegExp.escape = function(s){
+if (!RegExp.escape) {
+  RegExp.escape = function (s) {
     return String(s).replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
   };
 }
+
+/**
+ * given a mode string validates it.
+ * returns it if valid or null if invalid
+ * @param {string} mode
+ * @return {string|null}
+ */
+function validateUnixOctalModeString (mode) {
+  if (!mode||typeof mode != 'string') return null;
+  if (mode.length != 4) return null;
+  if (['0','1','2','4'].indexOf(mode[0]) === -1) return null;
+  if (parseInt(mode.substr(1,mode.length)) > 777) return null;
+  return mode;
+}
+
 
 /**
  * Monitor object namespace for manipulating resources monitor
@@ -63,6 +78,10 @@ module.exports = {
           monitor = setMonitorForScript(input);
           next(null, monitor);
           break;
+        case 'file':
+          monitor = setMonitorForFile(input);
+          next(null, monitor);
+          break;
         case 'dstat':
           monitor = setMonitorForDstat(input);
           next(null, monitor);
@@ -95,63 +114,95 @@ module.exports = {
     var errors = new ErrorHandler();
     var type = (input.type||input.monitor_type);
 
-    input.description||(input.description=input.name);
-    input.name||(input.name=input.description);
-
-    if (!type) errors.required('type',type);
-    if (!input.looptime||!parseInt(input.looptime)) errors.required('looptime',input.looptime);
-    if (!input.description) errors.required('description',input.description);
-    input.name||(input.name=input.description);
+    if (!input.name) {
+      errors.required('name',input.name);
+    }
+    if (!type) {
+      errors.required('type',type);
+    }
+    if (!input.looptime||!parseInt(input.looptime)) {
+      errors.required('looptime',input.looptime);
+    }
 
     var data = _.assign({},input,{
-      'name': input.name,
-      'description': input.description,
-      'type': type,
-      'monitor_type': type,
-      'tags': router.filter.toArray(input.tags)
+      name: input.name,
+      description: input.description,
+      type: type,
+      monitor_type: type,
+      tags: router.filter.toArray(input.tags)
     });
 
     logger.log('setting up resource type & properties');
     logger.log(data);
 
-    switch(type) {
+    switch (type) {
       case 'scraper':
         var url = input.url;
-        if( ! url ) errors.required('url',url);
-        else if( !validator.isURL(url,{require_protocol:true}) ) errors.invalid('url',url);
+        if (!url) errors.required('url',url);
+        else if (!validator.isURL(url,{require_protocol:true})) errors.invalid('url',url);
         else data.url = url;
 
         data.timeout = input.timeout||10000;
-        data.external_host_id = input.external_host_id;
-        if( !input.external_host_id ) data.external = false;
+        //data.external_host_id = input.external_host_id;
+        //if (!input.external_host_id) data.external = false;
+        data.external = false;
 
-        if(!input.parser) input.parser=null;
-        else if(input.parser != 'script' && input.parser != 'pattern')
+        if (!input.parser) input.parser=null;
+        else if (input.parser != 'script' && input.parser != 'pattern')
           errors.invalid('parser',input.parser);
 
         // identify how to parse api response selected option by user
-        if(!input.status_code&&!input.pattern&&!input.script){
+        if (!input.status_code&&!input.pattern&&!input.script){
           errors.required('status code or parser');
         } else {
-          if(input.parser){
-            if(input.parser=='pattern' && !input.pattern){
+          if (input.parser) {
+            if (input.parser=='pattern' && !input.pattern) {
               errors.invalid('pattern',input.pattern);
-            } else if(input.parser=='script' && !input.script){
+            } else if (input.parser=='script' && !input.script) {
               errors.invalid('script',input.script);
             }
           }
-        }
+       }
         break;
       case 'process':
-        data.raw_search = input.raw_search || errors.required('raw_search');
-        data.psargs = input.psargs || 'aux';
+        data.raw_search = input.raw_search||errors.required('raw_search');
+        data.psargs = input.psargs||'aux';
         data.is_regexp = Boolean(input.is_regexp=='true'||input.is_regexp===true);
-        data.pattern = ( ! data.is_regexp ? RegExp.escape(data.raw_search) : data.raw_search );
+        data.pattern = (!data.is_regexp?RegExp.escape(data.raw_search):data.raw_search);
+        break;
+      case 'file':
+        var mode = validateUnixOctalModeString(input.permissions),
+          uid = input.uid,
+          gid = input.gid;
+
+        if (!mode) {
+          data.permissions = undefined;
+        } else {
+          data.permissions = (mode||errors.invalid('mode'));
+        }
+
+        if (!uid) {
+          data.uid = undefined;
+        } else {
+          data.uid = Number.isInteger(parseInt(uid)) ? uid : errors.invalid('uid');
+        }
+
+        if (!gid) {
+          data.gid = undefined;
+        } else {
+          data.gid = Number.isInteger(parseInt(gid)) ? gid : errors.invalid('gid');
+        }
+
+        data.is_manual_path = Boolean(input.is_manual_path);
+        data.path = (input.path||errors.required('path'));
+        data.dirname = (input.dirname||errors.required('dirname'));
+        data.basename = input.basename;
+        data.file = (input.file||errors.required('file'));
         break;
       case 'script':
         var scriptArgs = router.filter.toArray(input.script_arguments);
         data.script_arguments = scriptArgs;
-        data.script_id = input.script_id || errors.required('script_id',input.script_id);
+        data.script_id = input.script_id||errors.required('script_id',input.script_id);
         if (input.script_runas) {
           if (/%script%/.test(input.script_runas)===false) {
             data.script_runas = errors.invalid('script_runas',input.script_runas);
@@ -163,10 +214,10 @@ module.exports = {
         }
         break;
       case 'dstat':
-        data.cpu = input.cpu || 60;
-        data.mem = input.mem || 60;
-        data.cache = input.cache || 60;
-        data.disk = input.disk || 60;
+        data.cpu = input.cpu||60;
+        data.mem = input.mem||60;
+        data.cache = input.cache||60;
+        data.disk = input.disk||60;
         break;
       case 'psaux': break;
       case 'host': break;
@@ -279,9 +330,11 @@ module.exports = {
  * @author Facundo
  *
  */
-function setMonitorForScraper(input) {
-	var host_id = input.external_host_id ? input.external_host_id : input.host_id;
-	var external = Boolean(input.external_host_id);
+function setMonitorForScraper (input) {
+	//var host_id = input.external_host_id ? input.external_host_id : input.host_id;
+	//var external = Boolean(input.external_host_id);
+
+  var host_id = input.host_id;
 	return {
     'tags': input.tags,
     'customer_name': input.customer_name,
@@ -291,7 +344,7 @@ function setMonitorForScraper(input) {
 		'type': 'scraper',
 		'looptime': input.looptime,
     'config': {
-      'external': external,
+      'external': false,
       'url': input.url,
       'timeout': input.timeout,
       'method': input.method,
@@ -302,6 +355,29 @@ function setMonitorForScraper(input) {
       'parser': input.parser,
       'pattern': input.parser == 'pattern' ? input.pattern : null,
       'script': input.parser == 'script' ? input.script : null
+    }
+	};
+}
+
+function setMonitorForFile(input) {
+	return {
+    'tags': input.tags,
+    'customer_name': input.customer_name,
+		'host_id': input.host_id,
+		'host': input.host_id,
+		'name': input.name,
+		'type': 'file',
+		'looptime': input.looptime,
+    'config': {
+      'file': input.file,
+      'file_id': input.file._id,
+      'is_manual_path': input.is_manual_path,
+      'path': input.path,
+      'basename': input.basename,
+      'dirname': input.dirname,
+      'uid': input.uid,
+      'gid': input.gid,
+      'permissions': input.permissions
     }
 	};
 }

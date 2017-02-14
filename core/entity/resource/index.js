@@ -5,10 +5,8 @@ var mongodb = require('../../lib/mongodb').db;
 var BaseSchema = require('./schema');
 var Template = require('./template').Entity;
 var ObjectId = require('mongoose').Schema.Types.ObjectId;
-
 var debug = require('debug')('eye:entity:resource');
 var extend = require('lodash/assign');
-
 var INITIAL_STATE = 'normal' ;
 
 /**
@@ -83,11 +81,11 @@ ResourceSchema.statics.FromTemplate = function(
   doneFn
 ) {
   var data = {
-    'host_id': options.host._id,
-    'hostname': options.host.hostname,
-    'template': template._id
+    host_id: options.host._id,
+    hostname: options.host.hostname,
+    template: template._id
   };
-  var input = extend( data, template.toObject() );
+  var input = extend(data,template.toObject());
   input.description = input.description;
   input.name = input.name;
   delete input._id;

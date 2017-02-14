@@ -35,10 +35,7 @@ module.exports = function (server, passport) {
   server.get(
     '/:customer/webhook/:webhook',
     middlewares.concat(
-      router.resolve.idToEntity({
-        param:'webhook',
-        required:true
-      })
+      router.resolve.idToEntity({ param:'webhook', required:true })
     ),
     controller.get
   );
@@ -47,10 +44,7 @@ module.exports = function (server, passport) {
     '/:customer/webhook/:webhook',
     middlewares.concat(
       router.requireCredential('admin'),
-      router.resolve.idToEntity({
-        param:'webhook',
-        required: true
-      })
+      router.resolve.idToEntity({ param:'webhook', required: true })
     ),
     controller.update,
     audit.afterUpdate('webhook',{display:'name'})
@@ -60,10 +54,7 @@ module.exports = function (server, passport) {
     '/:customer/webhook/:webhook',
     middlewares.concat(
       router.requireCredential('admin'),
-      router.resolve.idToEntity({
-        param:'webhook',
-        required: true
-      })
+      router.resolve.idToEntity({ param:'webhook', required: true })
     ),
     controller.remove,
     audit.afterRemove('webhook',{display:'name'})
@@ -78,8 +69,8 @@ module.exports = function (server, passport) {
     '/:customer/webhook/:webhook/trigger',
     middlewares.concat(
       router.requireCredential('user'),
-      router.resolve.idToEntity({param:'webhook',required:true}),
-      router.ensureAllowed({entity:{name:'webhook'}})
+      router.resolve.idToEntity({ param:'webhook', required:true }),
+      router.ensureAllowed({ entity:{name:'webhook'} })
     ),
     controller.trigger
   );
@@ -181,13 +172,10 @@ var controller = {
     WebhookEvent.findOne({
       emitter: webhook._id
     },(err, event) => {
+      if (err) return res.send(500, err);
+      if (!event) return res.send(500);
 
-      if( err ){
-        return res.send(500, err);
-      }
-      if( ! event ) return res.send(500);
-
-      EventDispatcher.dispatch( event );
+      EventDispatcher.dispatch(event);
       res.send(200,{ message: 'success' });
       next();
     });

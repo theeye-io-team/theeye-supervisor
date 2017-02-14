@@ -54,12 +54,12 @@ function Service(resource) {
 
     var specs = _.assign({},input,{ resource: resource });
 
-    ResourcesNotifications(specs,(error, emailDetails) => {
+    ResourcesNotifications(specs,(error,details) => {
       if (error) {
         if ( /event ignored/.test(error.message) === false ) {
           logger.error(error);
         }
-        logger.log('alerts email not send');
+        logger.log('email alerts not sent.');
         return;
       }
 
@@ -69,8 +69,10 @@ function Service(resource) {
         (error,emails) => {
           var mailTo, extraEmail=[];
 
-          if ( Array.isArray(resource.acl) && resource.acl.length>0 ) {
-            extraEmail = resource.acl.filter(email => emails.indexOf(email) === -1);
+          if (Array.isArray(resource.acl) && resource.acl.length>0) {
+            extraEmail = resource.acl.filter(email => {
+              emails.indexOf(email) === -1
+            });
           }
 
           mailTo = (extraEmail.length>0) ? emails.concat(extraEmail) : emails;
@@ -78,8 +80,8 @@ function Service(resource) {
           NotificationService.sendEmailNotification({
             to: mailTo.join(','),
             customer_name: resource.customer_name,
-            subject: emailDetails.subject,
-            content: emailDetails.content
+            subject: details.subject,
+            content: details.content
           });
         }
       );
@@ -90,7 +92,7 @@ function Service(resource) {
     MonitorEntity.findOne({
       resource_id: resource._id
     },function(err,monitor){
-      if(!monitor){
+      if (!monitor) {
         logger.error('resource monitor not found %j', resource);
         return;
       }
@@ -102,8 +104,8 @@ function Service(resource) {
         enable: true,
         name: eventName
       },function(err, event){
-        if(err) return logger.error(err);
-        else if(!event) return;
+        if (err) return logger.error(err);
+        else if (!event) return;
 
         EventDispatcher.dispatch(event);
       });
@@ -113,7 +115,6 @@ function Service(resource) {
 
   function handleFailureState (resource,input,config) {
     var newState = Constants.RESOURCE_FAILURE;
-
     var failure_threshold = config.fails_count_alert;
     logger.log('resource "%s" check fails.', resource.name);
 
@@ -122,46 +123,49 @@ function Service(resource) {
     resource.fails_count++;
     logger.log(
       'resource %s[%s] failure event count %s/%s', 
-      resource.description, 
+      resource.name, 
       resource._id,
       resource.fails_count,
       failure_threshold
     );
 
     // current resource state
-    if(resource.state != newState) {
+    if (resource.state != newState) {
       // is it time to start sending failure alerts?
-      if(resource.fails_count >= failure_threshold) {
+      if (resource.fails_count >= failure_threshold) {
         logger.log('resource "%s" state failure', resource.name);
 
-        input.failure_severity = getEventSeverity(input.event,resource);
         input.event||(input.event=input.state);
+        input.failure_severity = getEventSeverity(input.event,resource);
         resource.state = newState;
 
         sendResourceEmailAlert(resource,input);
         logStateChange(resource,input);
-        dispatchResourceEvent(resource,newState);
         dispatchStateChangeSNS(resource,{
           message:'monitor failure',
           data:input
         });
+        dispatchResourceEvent(resource,Constants.RESOURCE_FAILURE);
       }
     }
+  }
+
+  function needToSendUpdatesStoppedEmail (resource) {
+    return resource.type === Constants.RESOURCE_TYPE_HOST ||
+      resource.failure_severity === Constants.MONITOR_SEVERITY_CRITICAL;
   }
 
   function handleNormalState (resource,input,config) {
     logger.log('resource "%s" "%s" state is normal', resource.type, resource.name);
 
     var failure_threshold = config.fails_count_alert;
-    var isRecoveredFromFailure = Boolean(resource.state==Constants.RESOURCE_FAILURE);
+    var isRecoveredFromFailure = Boolean(resource.state===Constants.RESOURCE_FAILURE);
 
     resource.last_event = input;
 
     // failed at least once
-    if (resource.fails_count!=0||resource.state!=Constants.RESOURCE_NORMAL) {
+    if (resource.fails_count!==0||resource.state!==Constants.RESOURCE_NORMAL) {
       resource.state = Constants.RESOURCE_NORMAL;
-
-      logger.log('resource has failed');
       // resource failure was alerted ?
       if (resource.fails_count >= failure_threshold) {
         logger.log(
@@ -179,7 +183,14 @@ function Service(resource) {
 
         input.failure_severity = getEventSeverity(input.event,resource);
 
-        sendResourceEmailAlert(resource,input);
+        if (!isRecoveredFromFailure) {
+          if (needToSendUpdatesStoppedEmail(resource)) {
+            sendResourceEmailAlert(resource,input);
+          }
+        } else {
+          sendResourceEmailAlert(resource,input);
+        }
+
         logStateChange(resource,input);
         dispatchResourceEvent(resource,Constants.RESOURCE_RECOVERED);
         dispatchStateChangeSNS(resource,{
@@ -188,27 +199,28 @@ function Service(resource) {
         });
       }
 
+      logger.log('resource state restarted');
       // reset state
       resource.fails_count = 0;
     }
   }
 
   function handleUpdatesStoppedState (resource,input,config) {
-    var newState = input.state;
+    var newState = Constants.RESOURCE_STOPPED;
     var failure_threshold = config.fails_count_alert;
 
     resource.fails_count++;
     logger.log(
       'resource %s[%s] notifications stopped count %s/%s',
-      resource.description,
+      resource.name,
       resource._id,
       resource.fails_count,
       failure_threshold
     );
 
     // current resource state
-    if( resource.state != newState ) {
-      if( resource.fails_count >= failure_threshold ) {
+    if (resource.state != newState) {
+      if (resource.fails_count >= failure_threshold) {
         logger.log('resource "%s" notifications stopped', resource.name);
 
         input.event||(input.event=input.state); // state = agent or resource stopped
@@ -216,9 +228,11 @@ function Service(resource) {
 
         resource.state = newState;
 
-        sendResourceEmailAlert(resource,input);
+        if (needToSendUpdatesStoppedEmail(resource)) {
+          sendResourceEmailAlert(resource,input);
+        }
         logStateChange(resource,input);
-        dispatchResourceEvent(resource,newState);
+        dispatchResourceEvent(resource,Constants.RESOURCE_STOPPED);
         dispatchStateChangeSNS(resource,{
           message:'updates stopped',
           data:input
@@ -227,13 +241,30 @@ function Service(resource) {
     }
   }
 
+  /**
+   *
+   * espeshial case of monitor state changed.
+   * the file is updated or changed or not present and currently created.
+   * the monitor trigger the changed event and the supervisor emmit the event internally
+   *
+   */
+  function handleFileChangedStateEvent (resource,input,config) {
+    resource.last_event = input;
+    input.failure_severity = getEventSeverity(input.event,resource);
+    sendResourceEmailAlert(resource,input);
+    dispatchResourceEvent(resource,Constants.RESOURCE_CHANGED);
+    logStateChange(resource,input);
+    dispatchStateChangeSNS(resource,{
+      message: 'file changed',
+      data: input
+    });
+  }
+
   function isSuccess (state) {
-    return Constants.SUCCESS_STATES
-      .indexOf( state.toLowerCase() ) != -1 ;
+    return Constants.SUCCESS_STATES.indexOf( state.toLowerCase() ) != -1 ;
   }
   function isFailure (state) {
-    return Constants.FAILURE_STATES
-      .indexOf( state.toLowerCase() ) != -1 ;
+    return Constants.FAILURE_STATES.indexOf( state.toLowerCase() ) != -1 ;
   }
 
   function filterStateEvent(state){
@@ -269,10 +300,13 @@ function Service(resource) {
         }
         var monitorConfig = config.monitor;
 
-        switch(input.state) {
+        switch (input.state) {
+          case Constants.RESOURCE_CHANGED:
+            handleFileChangedStateEvent(resource,input,monitorConfig);
+            break;
           // monitoring update event. detected stop
-          case Constants.AGENT_STOPPED :
-          case Constants.RESOURCE_STOPPED :
+          case Constants.AGENT_STOPPED:
+          case Constants.RESOURCE_STOPPED:
             handleUpdatesStoppedState(resource,input,monitorConfig);
             break;
           case Constants.RESOURCE_NORMAL:
@@ -286,7 +320,7 @@ function Service(resource) {
             break;
         }
 
-        resource.save( err => {
+        resource.save(err => {
           if(err){
             logger.error('error saving resource %j', resource);
             logger.error(err, err.errors);
@@ -348,9 +382,11 @@ Service.create = function (input, next) {
   logger.log('creating resource for host %j', input);
   var type = (input.type||input.monitor_type);
 
-  ResourceMonitorService.setMonitorData(type, input, function(error,monitor_data){
-    if(error) return next(error);
-    if(!monitor_data) {
+  ResourceMonitorService.setMonitorData(type,input,function(error,monitor_data){
+    if (error) {
+      return next(error);
+    }
+    if (!monitor_data) {
       var e = new Error('invalid resource data');
       e.statusCode = 400;
       return next(e);
@@ -393,11 +429,20 @@ Service.createDefaultEvents = function(monitor,customer,done){
     { customer: customer, emitter: monitor, name: Constants.RESOURCE_RECOVERED } ,
     { customer: customer, emitter: monitor, name: Constants.RESOURCE_STOPPED } ,
     { customer: customer, emitter: monitor, name: Constants.RESOURCE_FAILURE } ,
-    (err, result) => {
-      if(err) logger.error(err);
-      if(done) done(err, result);
+    err => {
+      if (err) logger.error(err);
     }
   );
+
+  if (monitor.type === Constants.RESOURCE_TYPE_FILE) {
+    MonitorEvent.create({
+      customer: customer,
+      emitter: monitor,
+      name: Constants.RESOURCE_CHANGED
+    }, err => {
+      if (err) logger.error(err);
+    });
+  }
 }
 
 /**
@@ -674,10 +719,13 @@ Service.disableResourcesByCustomer = function(customer, doneFn){
  *
  * API to create multiple resource and monitor linked to a host
  * @author Facugon
+ * @param Array hosts
+ * @param Object input
+ * @param Function doneFn
+ * @return null
  *
  */
-Service.createResourceOnHosts = function(hosts,input,doneFn)
-{
+Service.createResourceOnHosts = function(hosts,input,doneFn) {
   doneFn||(doneFn=function(){});
   logger.log('preparing to create resources');
   logger.log(input);
@@ -690,8 +738,8 @@ Service.createResourceOnHosts = function(hosts,input,doneFn)
   });
 
   var hostProcessed = function(hostId, error, data){
-    if(error){
-      errors = errors || {};
+    if (error) {
+      errors = errors||{};
       logger.log('there are some error %o', error);
       errors[ hostId ] = error.message;
     } else {
@@ -701,7 +749,7 @@ Service.createResourceOnHosts = function(hosts,input,doneFn)
     completed();
   }
 
-  for(var i=0; i<hosts.length; i++) {
+  for (var i=0; i<hosts.length; i++) {
     var hostId = hosts[i];
     handleHostIdAndData(hostId,input,function(error,result){
       hostProcessed(hosts[i], error, result);
@@ -775,7 +823,7 @@ Service.createMonitorFromTemplate = function(options) {
  * @author Facugon
  *
  */
-function handleHostIdAndData(hostId, input, doneFn){
+function handleHostIdAndData (hostId, input, doneFn) {
   Host.findById(hostId, function(err,host){
     if(err) return doneFn(err);
 
@@ -797,7 +845,7 @@ function handleHostIdAndData(hostId, input, doneFn){
  * create entities
  *
  */
-function createResourceAndMonitor(input, done){
+function createResourceAndMonitor (input, done) {
   var monitor_data = input.monitor_data;
   var resource_data = input.resource_data;
 
@@ -833,8 +881,7 @@ function createResourceAndMonitor(input, done){
  * @return null
  *
  */
-function updateMonitorsWithDeletedScript (script,done)
-{
+function updateMonitorsWithDeletedScript (script,done) {
   done=done||function(){};
 
   logger.log('searching script "%s" resource-monitor', script._id);
@@ -858,8 +905,7 @@ function updateMonitorsWithDeletedScript (script,done)
   );
 }
 
-function detachMonitorScript (monitor, done)
-{
+function detachMonitorScript (monitor, done) {
   done=done||function(){};
   if(!monitor.resource._id) {
     var err = new Error('populate monitor first. resource object required');

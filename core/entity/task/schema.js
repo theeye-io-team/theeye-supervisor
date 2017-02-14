@@ -15,7 +15,7 @@ var EntitySchema = new BaseSchema({
   tags: { type: Array, default:[] },
   type: { type: String, required: true },
   name: { type: String },
-  description : { type: String },
+  description : { type: String, default: '' },
   triggers: [{
     type: Schema.Types.ObjectId,
     ref: 'Event',
