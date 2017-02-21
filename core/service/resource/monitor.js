@@ -4,7 +4,7 @@ var validator = require('validator');
 var _ = require('lodash');
 
 var logger = require('../../lib/logger')('service:resource:monitor');
-var ErrorHandler = require('../../lib/errorHandler');
+var ErrorHandler = require('../../lib/error-handler');
 var router = require('../../router');
 var MonitorEntity = require('../../entity/monitor').Entity;
 var Job = require('../../entity/job').Job;

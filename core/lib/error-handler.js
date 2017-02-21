@@ -9,6 +9,7 @@ var ErrorHandler = function(){
     e.statusCode = 400;
     e.field = name;
     e.value = value;
+    e.code = 'EREQ';
     errors.push( e );
 		return e;
   }
@@ -18,6 +19,7 @@ var ErrorHandler = function(){
     e.statusCode = 400;
     e.field = name;
     e.value = value;
+    e.code = 'EVALID';
     errors.push( e );
 		return e;
   }
@@ -30,13 +32,10 @@ var ErrorHandler = function(){
    */
   this.toString = function(){
     var e = [];
-    for(var i=0; i<errors.length; i++){
-      e.push({
-        'message': errors[i].message, 
-        'status': errors[i].statusCode, 
-        'value': errors[i].value, 
-        'field': errors[i].field, 
-      });
+    for (var i=0; i<errors.length; i++) {
+      var err = errors[i];
+      delete err.stack;
+      e.push(err);
     }
     return e;
   }
