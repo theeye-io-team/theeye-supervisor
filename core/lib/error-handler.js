@@ -11,7 +11,7 @@ var ErrorHandler = function(){
     e.value = value;
     e.code = 'EREQ';
     errors.push( e );
-		return e;
+		return this;
   }
 
   this.invalid = function(name,value){
@@ -21,7 +21,7 @@ var ErrorHandler = function(){
     e.value = value;
     e.code = 'EVALID';
     errors.push( e );
-		return e;
+		return this;
   }
 
   /**

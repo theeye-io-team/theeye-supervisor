@@ -267,26 +267,37 @@ function Service(resource) {
     return Constants.FAILURE_STATES.indexOf( state.toLowerCase() ) != -1 ;
   }
 
-  function filterStateEvent(state){
-    if (typeof state == 'string' && isSuccess(state)) {
-      return Constants.RESOURCE_NORMAL;
-    }
-    if (typeof state == 'string' && isFailure(state)) {
-      return Constants.RESOURCE_FAILURE;
-    }
-    if (!state) {
-      return Constants.RESOURCE_FAILURE;
-    }
-    return state;
+  /**
+   *
+   * @private
+   * @param String state
+   * @return String
+   *
+   */
+  function filterStateEvent (state) {
+    if (!state||typeof state != 'string') return Constants.RESOURCE_ERROR;
+
+    // is a recognized state
+    if (Constants.MONITOR_STATES.indexOf(state) !== -1) return state;
+    if (isSuccess(state)) return Constants.RESOURCE_NORMAL;
+    if (isFailure(state)) return Constants.RESOURCE_FAILURE;
+    // if no state is defined , return error
+    return Constants.RESOURCE_ERROR;
   }
 
-
+  /**
+   * @public
+   * @param Object input
+   * @param Function next
+   * @return null
+   */
   this.handleState = function (input,next) {
     next||(next=function(){});
     var resource = _resource;
 
     var state = filterStateEvent(input.state);
     input.state = state;
+
     if (input.last_update) resource.last_update = input.last_update;
     if (input.last_check) resource.last_check = input.last_check;
 
