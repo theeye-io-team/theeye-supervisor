@@ -1,12 +1,13 @@
 "use strict";
 
-var extend = require('lodash/assign');
-var logger = require('../lib/logger')('controller:task');
-var json = require('../lib/jsonresponse');
-var TaskService = require('../service/task');
-var router = require('../router');
-var dbFilter = require('../lib/db-filter');
-var ACL = require('../lib/acl');
+const extend = require('lodash/assign');
+const logger = require('../lib/logger')('controller:task');
+const json = require('../lib/jsonresponse');
+const TaskService = require('../service/task');
+const router = require('../router');
+const dbFilter = require('../lib/db-filter');
+const ACL = require('../lib/acl');
+const ErrorHandler = require('../lib/error-handler');
 
 module.exports = function(server, passport){
   var middlewares = [
@@ -33,12 +34,13 @@ module.exports = function(server, passport){
 
   var mws = middlewares.concat(
     router.requireCredential('admin'),
-    router.resolve.idToEntity({param:'task',required:true})
+    router.resolve.idToEntity({param:'task'}),
+    router.resolve.idToEntity({param:'host_id',entity:'host',into:'host'})
   );
-  server.patch('/:customer/task/:task',mws,controller.patch);
+  server.patch('/:customer/task/:task',mws,controller.update);
+  server.put('/:customer/task/:task',mws,controller.update);
   server.del('/:customer/task/:task',mws,controller.remove);
 };
-
 
 var controller = {
   /**
@@ -48,6 +50,7 @@ var controller = {
    *
    */
   create (req, res, next) {
+    var errors = new ErrorHandler();
     var input = extend({},req.body,{
       customer: req.customer,
       user: req.user,
@@ -56,18 +59,19 @@ var controller = {
 
     input.hosts||(input.hosts=req.body.host);
 
-    if (!input.type) return res.send(400, json.error('type is required'));
-    if (!input.hosts) return res.send(400, json.error('a host is required'));
+    if (!input.type) return res.send(400, errors.required('type', input.type));
+    if (!input.hosts) return res.send(400, errors.required('hosts', input.hosts));
     if (Array.isArray(input.hosts)) {
       if (input.hosts.length===0) {
-        return res.send(400, json.error('a host is required'));
+        return res.send(400, errors.required('hosts', input.hosts));
       }
     } else {
       input.hosts = [ input.hosts ];
     }
-    if (!input.name) return res.send(400, json.error('name is required'));
 
-    TaskService.createManyTasks(input, function(error, tasks) {
+    if (!input.name) return res.send(400, errors.required('name', input.name));
+
+    TaskService.createManyTasks(input, function(error, tasks){
       if (error) {
         logger.error(error);
         return res.send(500, error);
@@ -132,24 +136,29 @@ var controller = {
       user:req.user,
       customer:req.customer,
       done:function(){
-        res.send(204);
+        res.send(200,{});
       },
       fail:function(error){
-        res.send(500);
+        res.send(500,error);
       }
     });
   },
   /**
    *
    * @author Facundo
-   * @method PATCH
+   * @method PATCH/PUT
    * @route /task/:task
    * @param {String} :task , mongo ObjectId
    * @param ...
    *
    */
-  patch (req,res,next) {
+  update (req,res,next) {
+    var errors = new ErrorHandler();
     var input = extend({},req.body);
+
+    if (!req.task) return res.send(400, errors.required('task'));
+    if (!req.host) return res.send(400, errors.required('host'));
+    if (!input.name) return res.send(400, errors.required('name'));
 
     logger.log('updating task %j', input);
     TaskService.update({

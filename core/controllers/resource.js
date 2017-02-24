@@ -147,7 +147,7 @@ var controller = {
         resource:resource,
         user:req.user
       });
-      res.send(204);
+      res.send(200,{});
     } else {
       debug('removing resource');
       ResourceManager.remove({
@@ -155,7 +155,7 @@ var controller = {
         notifyAgents:true,
         user:req.user
       });
-      res.send(204);
+      res.send(200,{});
     }
   },
   /**
@@ -170,7 +170,13 @@ var controller = {
 
     body.acl = req.acl;
 
-    if (!hosts) return res.send(400, json.error('a host is required'));
+    if (!hosts) return res.send(400, [{
+      field:'hosts',
+      message:'a host is required',
+      value:hosts,
+      code:'EREQ'
+    }]);
+
     if (!Array.isArray(hosts)) hosts = [hosts];
 
     var params = MonitorManager.validateData(body);
@@ -196,10 +202,7 @@ var controller = {
             });
           }
 
-          return res.send(400, json.error(
-            error.message,
-            { errors: messages }
-          ));
+          return res.send(400, error.errors);
         } else {
           debug(error);
           return res.send(500, json.error('internal error', error));

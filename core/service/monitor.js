@@ -159,6 +159,8 @@ function triggerAlert (
   if (isNaN(failsCount = parseInt(failsCount))) return true;
   if (isNaN(failsCountThreshold = parseInt(failsCountThreshold))) return true;
 
+  if (!lastUpdate) return true;
+
   var timeElapsed = Date.now() - lastUpdate.getTime();
   var loopsElapsed = Math.floor(timeElapsed / loopDuration);
 

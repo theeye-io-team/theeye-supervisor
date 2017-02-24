@@ -52,7 +52,7 @@ var TaskService = {
     updates.host = updates.host_id;
 
     task.update(updates, function(error){
-      if(error){
+      if (error) {
         return options.fail(error);
       } else {
         debug('publishing task');

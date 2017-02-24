@@ -1,10 +1,23 @@
 # CHANGELOG
 
+### 0.8.1 - 2017-02-24
+
+* remove Windows end of line
+
+* use body instead of param
+
+* improve resource state parser
+
+* add error handler and improve responses
+
+
 ### 0.8.0 - 2017-02-13    
 
-> file monitor added     
-> change api Host response payload     
-> change route to update resources state
+* file monitor added     
+
+* change api Host response payload     
+
+* change route to update resources state
 
 use a custom route to update resources state and trigger events
 
@@ -16,50 +29,83 @@ this route will be only available to agent users
 
 ### 0.7.0 - 2016-12-04      
 
-> every route with security
->> added customer validation       
->> added credentiales validation       
->> added security access level       
->> added access control via credentials       
->> added restrictions to modify resources       
->> users are allowed to view by default       
+* every route with security
+
+> added customer validation       
+
+> added credentiales validation       
+
+> added security access level       
+
+> added access control via credentials       
+
+> added restrictions to modify resources       
+
+> users are allowed to view by default       
 
 
-> validate viewer, user, admin, owner, root credentials       
-> improve filtering and querying data on some routes (code improved) and query via querystring       
-> standarize some routes response            
-> add some fixes and improvements in routes and source     
-> added end ejecution of script by killing the process. log and register     
-> unify the information that is being sent to elasticsearch      
-> send full resource and monitor information via SNS to socket     
-> always accept resource status update (assuming failure)       
-> added remote method to get customer information      
-> create monitors with acl's       
+* validate viewer, user, admin, owner, root credentials       
+
+* improve filtering and querying data on some routes (code improved) and query via querystring       
+
+* standarize some routes response            
+
+* add some fixes and improvements in routes and source     
+
+* added end ejecution of script by killing the process. log and register     
+
+* unify the information that is being sent to elasticsearch      
+
+* send full resource and monitor information via SNS to socket     
+
+* always accept resource status update (assuming failure)       
+
+* added remote method to get customer information      
+
+* create monitors with acl's       
+
 
 ### 0.6.4 - 2016-11-03
 
-> clean code       
-> force to add last_update when handling resource state update     
-> add ._id when query events by customer (which is a ObjectId reference)        
-> added secret word in the url to cancel task scheduls via email        
-> created a randomeSecret method to use . return a random sha256 string (used in webhooks, events & tasks)       
-> added more options to mongo native driver via config           
-> moved events.user config key to system.user           
-> refactor monitor logic. now seems to be working better        
-> fix scheduler service creation return callback, created job was removed from callback      
-> add deploy script for tasks , events and monitors
-> elastic search config is set via customer.config in database. set global config by default if not provided       
-> general bug fixing          
-> scheduler refactor , add tags to scheduled tasks             
+* clean code       
+
+* force to add last_update when handling resource state update     
+
+* add ._id when query events by customer (which is a ObjectId reference)        
+
+* added secret word in the url to cancel task scheduls via email        
+
+* created a randomeSecret method to use . return a random sha256 string (used in webhooks, events & tasks)       
+
+* added more options to mongo native driver via config           
+
+* moved events.user config key to system.user           
+
+* refactor monitor logic. now seems to be working better        
+
+* fix scheduler service creation return callback, created job was removed from callback      
+
+* add deploy script for tasks , events and monitors
+
+* elastic search config is set via customer.config in database. set global config by default if not provided       
+
+* general bug fixing          
+
+* scheduler refactor , add tags to scheduled tasks             
 
 ### 0.6.3 - 2016-10-18
 
-> workflow controller         
-> workflow lib . create a workflow from current events & task attached triggers       
-> workflow schemas . some schemas to persiste workflows in the feature . there are still not in use , because of the complexity to maintain the workflow       
-> scheduler controller       
-> change controllers initialization. trying to improve code to build with browserify (further improvements required)         
-> some minor bug fixing
+* workflow controller         
+
+* workflow lib . create a workflow from current events & task attached triggers       
+
+* workflow schemas . some schemas to persiste workflows in the feature . there are still not in use , because of the complexity to maintain the workflow       
+
+* scheduler controller       
+
+* change controllers initialization. trying to improve code to build with browserify (further improvements required)         
+
+* some minor bug fixing
 
 ### 0.6.2 - 2016-10-13
 
