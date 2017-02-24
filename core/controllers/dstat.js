@@ -35,7 +35,7 @@ var controller = {
 
     var host = req.host,
       customer = req.customer,
-      stats = parseStats(req.params.dstat);
+      stats = parseStats(req.body.dstat);
 
     if (!host) return res.send(404,'host not found');
     if (!stats) return res.send(400,'no stats supplied');
@@ -77,7 +77,7 @@ var controller = {
       'date': (new Date()).toISOString(),
       'customer_name': customer.name,
       'hostname': host.hostname,
-      'stats': req.params.dstat,
+      'stats': req.body.dstat,
       'type': 'host-stats'
     };
 
