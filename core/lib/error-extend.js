@@ -1,5 +1,5 @@
 
-Error.prototype.toJSON = {
+Error.prototype.toJSON = function () {
   var alt = {};
   var storeKey = function(key) {
     alt[key] = this[key];
