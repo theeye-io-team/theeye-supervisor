@@ -44,7 +44,7 @@ module.exports = {
         if (elastic.enabled===true) {
           request.post(specs,(err,respose,body) => {
             if (err) {
-              logger.error('ERROR %s',err);
+              logger.error('Request Error : %j', err);
               logger.error(arguments);
               return;
             }

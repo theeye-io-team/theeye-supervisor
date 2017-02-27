@@ -1,5 +1,4 @@
 var fs = require('fs');
-require('./lib/error-extend');
 
 function setenv(next) {
 
