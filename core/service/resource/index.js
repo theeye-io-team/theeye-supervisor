@@ -156,7 +156,7 @@ function Service(resource) {
   }
 
   function handleNormalState (resource,input,config) {
-    logger.log('resource "%s" "%s" state is normal', resource.type, resource.name);
+    logger.log('"%s"("%s") state is normal', resource.name, resource.type);
 
     var failure_threshold = config.fails_count_alert;
     var isRecoveredFromFailure = Boolean(resource.state===Constants.RESOURCE_FAILURE);
@@ -168,11 +168,7 @@ function Service(resource) {
       resource.state = Constants.RESOURCE_NORMAL;
       // resource failure was alerted ?
       if (resource.fails_count >= failure_threshold) {
-        logger.log(
-          'resource "%s" "%s" has been restored',
-          resource.type,
-          resource.name
-        );
+        logger.log('"%s" has been restored', resource.name);
 
         if (isRecoveredFromFailure) {
           input.event||(input.event=input.state);
@@ -199,7 +195,7 @@ function Service(resource) {
         });
       }
 
-      logger.log('resource state restarted');
+      logger.log('state restarted');
       // reset state
       resource.fails_count = 0;
     }
@@ -333,7 +329,7 @@ function Service(resource) {
 
         resource.save(err => {
           if(err){
-            logger.error('error saving resource %j', resource);
+            logger.error('error saving resource state');
             logger.error(err, err.errors);
           }
         });

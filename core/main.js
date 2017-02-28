@@ -1,6 +1,7 @@
 'use strict';
 
 var ErrorHandler = require('./lib/error-handler');
+require('./lib/error-extend');
 
 var logger = require('./lib/logger')('main');
 logger.log('initializing supervisor');

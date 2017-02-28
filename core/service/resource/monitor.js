@@ -171,9 +171,9 @@ module.exports = {
         data.pattern = (!data.is_regexp?RegExp.escape(data.raw_search):data.raw_search);
         break;
       case 'file':
-        var mode = validateUnixOctalModeString(input.permissions),
-          uid = input.uid,
-          gid = input.gid;
+        var mode = validateUnixOctalModeString(input.permissions);
+        var user = input.user;
+        var group = input.group;
 
         if (!mode) {
           data.permissions = undefined;
@@ -181,16 +181,16 @@ module.exports = {
           data.permissions = (mode||errors.invalid('mode'));
         }
 
-        if (!uid) {
-          data.uid = undefined;
+        if (!user) {
+          data.user = undefined;
         } else {
-          data.uid = Number.isInteger(parseInt(uid)) ? uid : errors.invalid('uid');
+          data.user = user;
         }
 
-        if (!gid) {
-          data.gid = undefined;
+        if (!group) {
+          data.group = undefined;
         } else {
-          data.gid = Number.isInteger(parseInt(gid)) ? gid : errors.invalid('gid');
+          data.group = group;
         }
 
         data.is_manual_path = Boolean(input.is_manual_path);
@@ -375,8 +375,8 @@ function setMonitorForFile(input) {
       'path': input.path,
       'basename': input.basename,
       'dirname': input.dirname,
-      'uid': input.uid,
-      'gid': input.gid,
+      'user': input.user,
+      'group': input.group,
       'permissions': input.permissions
     }
 	};

@@ -18,8 +18,8 @@ module.exports = {
     CustomerService.getCustomerConfig(
       { name: customerName },
       function(err,config){
-        var url, specs,
-          elastic = config.elasticsearch;
+        var specs;
+        var elastic = config.elasticsearch;
 
         if (err||!config) {
           return logger.error('FATAL - no config found. elasticsearch submit will fail');
@@ -44,11 +44,11 @@ module.exports = {
         if (elastic.enabled===true) {
           request.post(specs,(err,respose,body) => {
             if (err) {
-              logger.error('ERROR %s',err);
+              logger.error('Request Error : %j', err);
               logger.error(arguments);
               return;
             }
-            logger.log('submit done to %s', url);
+            logger.log('submit done to %s', specs.url);
           });
         } else {
           logger.log('elasticsearch is not enabled');
