@@ -147,14 +147,14 @@ EntitySchema.methods.setUpdates = function(input, next) {
       config.ps.psargs = input.psargs;
       break;
     case 'file':
-      config.is_manual_path = input.is_manual_path;
-      config.path = input.path;
-      config.basename = input.basename;
-      config.dirname = input.dirname;
-      config.permissions = (input.permissions||'0755');
-      config.uid = input.uid;
-      config.gid = input.gid;
-      config.file = input.file;
+      config.is_manual_path = input.is_manual_path
+      config.path = input.path
+      config.basename = input.basename
+      config.dirname = input.dirname
+      config.permissions = input.permissions
+      config.uid = input.uid
+      config.gid = input.gid
+      config.file = input.file
       break;
     case 'script':
       if (input.script_id) config.script_id = input.script_id;
