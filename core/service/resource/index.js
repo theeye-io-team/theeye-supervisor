@@ -240,11 +240,11 @@ function Service(resource) {
   /**
    *
    * espeshial case of monitor state changed.
-   * the file is updated or changed or not present and currently created.
+   * the resource was updated or changed or was not present and currently created.
    * the monitor trigger the changed event and the supervisor emmit the event internally
    *
    */
-  function handleFileChangedStateEvent (resource,input,config) {
+  function handleChangedStateEvent (resource,input,config) {
     resource.last_event = input;
     input.failure_severity = getEventSeverity(input.event,resource);
     sendResourceEmailAlert(resource,input);
@@ -309,7 +309,7 @@ function Service(resource) {
 
         switch (input.state) {
           case Constants.RESOURCE_CHANGED:
-            handleFileChangedStateEvent(resource,input,monitorConfig);
+            handleChangedStateEvent(resource,input,monitorConfig);
             break;
           // monitoring update event. detected stop
           case Constants.AGENT_STOPPED:
