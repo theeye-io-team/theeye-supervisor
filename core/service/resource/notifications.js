@@ -51,16 +51,21 @@ const ResourceTypes = {
 };
 
 module.exports = function (specs, done) {
-  var resource = specs.resource,
-    event_name = specs.event,
-    event_data = specs.data||{},
-    severity = specs.failure_severity,
-    type = resource.type;
+  var typeEvent ;
+  var resource = specs.resource;
+  var event_name = specs.event;
+  var event_data = specs.data||{};
+  var severity = specs.failure_severity;
+  var type = resource.type;
 
   try {
-    var typeEvent = searchTypeEvent(type, event_name);
-  } catch(error) {
+    typeEvent = searchTypeEvent(type, event_name);
+  } catch (error) {
     return done(error,null);
+  }
+
+  if (!typeEvent) {
+    typeEvent = Object.create(defaultTypeEvent(specs.resource.state));
   }
 
   if (specs.failure_severity) {
@@ -110,8 +115,7 @@ function searchTypeEvent (type,event_name) {
     }
   }
 
-  typeEvent = defaultTypeEvent(event_name);
-  return Object.create(typeEvent);
+  return typeEvent;
 }
 
 /**

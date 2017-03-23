@@ -179,8 +179,8 @@ module.exports = {
         break;
       case 'file':
         var mode = input.permissions
-        var uid = input.uid
-        var gid = input.gid
+        var user = input.user
+        var group = input.group
 
         if (!mode) {
           data.permissions = null
@@ -188,22 +188,22 @@ module.exports = {
           data.permissions = parseUnixOctalModeString(mode)||errors.invalid('mode')
         }
 
-        if (!uid) {
-          data.uid = null
+        if (!user) {
+          data.user = null
         } else {
-          data.uid = parseUnixId(uid)||errors.invalid('uid')
+          data.user = user
         }
 
-        if (!gid) {
-          data.gid = null
+        if (!group) {
+          data.group = null
         } else {
-          data.gid = parseUnixId(gid)||errors.invalid('gid')
+          data.group = group
         }
 
-        data.basename = input.basename
         data.is_manual_path = Boolean(input.is_manual_path)
         data.path = (input.path||errors.required('path'))
         data.dirname = (input.dirname||errors.required('dirname'))
+        data.basename = input.basename
         data.file = (input.file||errors.required('file'))
         break;
       case 'script':
@@ -382,8 +382,8 @@ function setMonitorForFile(input) {
       'path': input.path,
       'basename': input.basename,
       'dirname': input.dirname,
-      'uid': input.uid,
-      'gid': input.gid,
+      'user': input.user,
+      'group': input.group,
       'permissions': input.permissions
     }
 	};
