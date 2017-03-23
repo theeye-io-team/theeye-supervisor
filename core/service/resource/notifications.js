@@ -45,7 +45,7 @@ const ResourceTypes = {
       severity: 'LOW',
       name: 'monitor:file:changed',
       message: function(resource, event_data) { return `${resource.hostname} file stats has been changed or was not present in the filesystem. It was replaced with the saved version.`; },
-      subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} file was restored`; }
+      subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} file has changed`; }
     }]
   },
 };
