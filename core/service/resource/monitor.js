@@ -15,18 +15,25 @@ if (!RegExp.escape) {
   };
 }
 
+function parseUnixId (id) {
+  var _id = parseInt(id)
+  if (!Number.isInteger(_id) || id < 0) return null
+  return _id
+}
+
 /**
  * given a mode string validates it.
  * returns it if valid or null if invalid
  * @param {string} mode
  * @return {string|null}
  */
-function validateUnixOctalModeString (mode) {
-  if (!mode||typeof mode != 'string') return null;
-  if (mode.length != 4) return null;
-  if (['0','1','2','4'].indexOf(mode[0]) === -1) return null;
-  if (parseInt(mode.substr(1,mode.length)) > 777) return null;
-  return mode;
+function parseUnixOctalModeString (mode) {
+  if (!mode||typeof mode != 'string') return null
+  if (mode.length != 4) return null
+  if (['0','1','2','4'].indexOf(mode[0]) === -1) return null
+  var num = parseInt(mode.substr(1,mode.length))
+  if (num > 777 || num <= 0) return null
+  return mode
 }
 
 
@@ -171,33 +178,33 @@ module.exports = {
         data.pattern = (!data.is_regexp?RegExp.escape(data.raw_search):data.raw_search);
         break;
       case 'file':
-        var mode = validateUnixOctalModeString(input.permissions);
-        var user = input.user;
-        var group = input.group;
+        var mode = input.permissions
+        var user = input.user
+        var group = input.group
 
         if (!mode) {
-          data.permissions = undefined;
+          data.permissions = null
         } else {
-          data.permissions = (mode||errors.invalid('mode'));
+          data.permissions = parseUnixOctalModeString(mode)||errors.invalid('mode')
         }
 
         if (!user) {
-          data.user = undefined;
+          data.user = null
         } else {
-          data.user = user;
+          data.user = user
         }
 
         if (!group) {
-          data.group = undefined;
+          data.group = null
         } else {
-          data.group = group;
+          data.group = group
         }
 
-        data.is_manual_path = Boolean(input.is_manual_path);
-        data.path = (input.path||errors.required('path'));
-        data.dirname = (input.dirname||errors.required('dirname'));
-        data.basename = input.basename;
-        data.file = (input.file||errors.required('file'));
+        data.is_manual_path = Boolean(input.is_manual_path)
+        data.path = (input.path||errors.required('path'))
+        data.dirname = (input.dirname||errors.required('dirname'))
+        data.basename = input.basename
+        data.file = (input.file||errors.required('file'))
         break;
       case 'script':
         var scriptArgs = router.filter.toArray(input.script_arguments);
