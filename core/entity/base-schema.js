@@ -12,6 +12,7 @@ function BaseSchema (props,specs) {
     last_update: { type: Date, 'default': null },
     enable: { type: Boolean, 'default': true },
     customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
+    customer_id: { type: Schema.Types.ObjectId }
   }, props),{
     collection: specs.collection,
     discriminatorKey: '_type'

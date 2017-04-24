@@ -113,7 +113,8 @@ var controller = {
    */
   create (req, res, next) {
     var input = extend({},req.body,{
-      customer: req.customer
+      customer: req.customer,
+      customer_id: req.customer._id
     });
 
     var webhook = new Webhook(input);
@@ -134,6 +135,7 @@ var controller = {
   update (req, res, next) {
     var webhook = req.webhook;
     var input = extend({},req.body,{
+      customer_id: req.customer._id,
       customer: req.customer
     });
 
