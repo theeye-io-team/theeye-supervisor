@@ -1,6 +1,6 @@
 "use strict";
 
-const _ = require('lodash');
+const lodash = require('lodash');
 const globalconfig = require('config');
 const logger = require('../../lib/logger')('service:resource');
 const elastic = require('../../lib/elastic');
@@ -52,40 +52,45 @@ function Service(resource) {
   function sendResourceEmailAlert (resource,input) {
     if (resource.alerts===false) return;
 
-    var specs = _.assign({},input,{ resource: resource });
+    MonitorEntity
+      .findOne({ resource_id: resource._id })
+      .exec(function(err,monitor){
+        resource.monitor = monitor
+        var specs = lodash.assign({},input,{ resource: resource });
 
-    ResourcesNotifications(specs,(error,details) => {
-      if (error) {
-        if ( /event ignored/.test(error.message) === false ) {
-          logger.error(error);
-        }
-        logger.log('email alerts not sent.');
-        return;
-      }
-
-      logger.log('sending email alerts');
-      CustomerService.getAlertEmails(
-        resource.customer_name,
-        (error,emails) => {
-          var mailTo, extraEmail=[];
-
-          if (Array.isArray(resource.acl) && resource.acl.length>0) {
-            extraEmail = resource.acl.filter(email => {
-              emails.indexOf(email) === -1
-            });
+        ResourcesNotifications(specs,(error,details) => {
+          if (error) {
+            if ( /event ignored/.test(error.message) === false ) {
+              logger.error(error);
+            }
+            logger.log('email alerts not sent.');
+            return;
           }
 
-          mailTo = (extraEmail.length>0) ? emails.concat(extraEmail) : emails;
+          logger.log('sending email alerts');
+          CustomerService.getAlertEmails(
+            resource.customer_name,
+            (error,emails) => {
+              var mailTo, extraEmail=[];
 
-          NotificationService.sendEmailNotification({
-            to: mailTo.join(','),
-            customer_name: resource.customer_name,
-            subject: details.subject,
-            content: details.content
-          });
-        }
-      );
-    });
+              if (Array.isArray(resource.acl) && resource.acl.length>0) {
+                extraEmail = resource.acl.filter(email => {
+                  emails.indexOf(email) === -1
+                });
+              }
+
+              mailTo = (extraEmail.length>0) ? emails.concat(extraEmail) : emails;
+
+              NotificationService.sendEmailNotification({
+                to: mailTo.join(','),
+                customer_name: resource.customer_name,
+                subject: details.subject,
+                content: details.content
+              });
+            }
+          );
+        });
+      })
   }
 
   function dispatchResourceEvent (resource,eventName){
@@ -400,7 +405,7 @@ Service.create = function (input, next) {
     }
 
     createResourceAndMonitor({
-      resource_data: _.extend({},input,{
+      resource_data: lodash.extend({},input,{
         name: input.name,
         type: type,
       }),
@@ -532,36 +537,27 @@ function getEventSeverity (event,resource) {
  * static methods
  *
  */
-Service.fetchBy = function(filter,next) {
-  var query = Resource.find( filter.where );
-  if (filter.sort) query.sort( filter.sort );
-  if (filter.limit) query.limit( filter.limit );
+Service.fetchBy = function (filter,next) {
+  Resource.fetchBy(filter,function (err,resources) {
+    var pub = []
+    var fetched = lodash.after(resources.length,function(){
+      next(null,pub)
+    })
 
-  query.exec(function(error,resources){
-    if(error) {
-      logger.error('unable to fetch resources from database');
-      logger.error(error);
-      return next(error,null);
-    }
-
-    if(resources===null||resources.length===0) return next(null,[]);
-
-    var pub = [];
-    var fetched = _.after(resources.length,() => next(null,pub));
-
-    resources.forEach(function(resource){
+    resources.forEach(resource => {
       resource.publish(function(error, data){
-        MonitorEntity.findOne(
-          { resource_id: resource._id },
-          (error,monitor) => {
-            data.monitor = monitor;
-            pub.push(data); 
-            fetched();
-          }
-        );
-      });
-    });
-  });
+        MonitorEntity
+          .findOne({ resource_id: resource._id })
+          .exec((err,monitor) => {
+            if (err) return fetched()
+
+            data.monitor = monitor
+            pub.push(data)
+            fetched()
+          })
+      })
+    })
+  })
 }
 
 /**
@@ -615,7 +611,7 @@ Service.removeHostResource = function (input,done) {
     .exec(function(err, resources){
       if(resources.length != 0){
 
-        var doneResourceRemoval = _.after(resources.length, function(){
+        var doneResourceRemoval = lodash.after(resources.length, function(){
           // all resource & monitors removed
         });
 
@@ -739,7 +735,7 @@ Service.createResourceOnHosts = function(hosts,input,doneFn) {
   var errors = null;
   var monitors = [];
 
-  var completed = _.after(hosts.length, function(){
+  var completed = lodash.after(hosts.length, function(){
     logger.log('all hosts processed');
     doneFn(errors, monitors);
   });
@@ -791,7 +787,7 @@ Service.createMonitorFromTemplate = function(options) {
           return doneFn(err);
         }
 
-        var props = _.extend( template, {
+        var props = lodash.extend( template, {
           host: options.host,
           host_id: options.host._id,
           resource: resource._id,
