@@ -4,6 +4,7 @@ var mongodb = require('../../lib/mongodb').db;
 var ObjectId = require('mongoose').Schema.Types.ObjectId;
 var BaseSchema = require('./schema');
 var Host = require('../host').Entity;
+const extend = require('lodash/assign')
 
 /** Schema **/
 var Schema = BaseSchema.extend({
@@ -36,7 +37,22 @@ Schema.methods.publish = function(next) {
       }
     });
   }
-};
+}
+
+Schema.methods.templateProperties = function () {
+  var values = BaseSchema.methods.templateProperties.apply(this,arguments)
+  values.url = this.url 
+  values.method = this.method 
+  values.external = this.external 
+  values.timeout = this.timeout 
+  values.body = this.body 
+  values.gzip = this.gzip 
+  values.json = this.json 
+  values.status_code = this.status_code 
+  values.parser = this.parser 
+  values.pattern = this.pattern 
+  return values
+}
 
 var Entity = mongodb.model('ScraperTask', Schema);
 Entity.ensureIndexes();

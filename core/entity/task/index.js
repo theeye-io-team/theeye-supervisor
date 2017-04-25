@@ -1,12 +1,10 @@
 "use strict";
 
 const ObjectId = require('mongoose').Schema.Types.ObjectId;
-const lodash = require('lodash');
+const lodash = require('lodash')
 var mongodb = require('../../lib/mongodb').db;
 var BaseSchema = require('./schema');
 var Template = require('./template').Entity;
-var Script = require('../file').Script;
-var Host = require('../host').Entity;
 
 /**
  * Extended Schema. Includes non template attributes
@@ -23,59 +21,25 @@ var TaskSchema = BaseSchema.extend({
 
 /**
  *
- *
- */
-TaskSchema.methods.publish = function(next) {
-  var task = this;
-
-  function preparePublish (options) {
-    options||(options={});
-
-    var data = task.toObject();
-
-    if(options.host){
-      data.host_id = options.host.id;
-      data.hostname = options.host.hostname;
-    }
-    if(options.script){
-      data.script_id = options.script.id;
-      data.script_name = options.script.filename;
-    }
-
-    next(data);
-  }
-
-  var options = { host: null, script: null };
-
-  var doneFn = lodash.after(2, () => preparePublish(options));
-
-  if( ! task.host_id ) doneFn();
-  else Host.findById(task.host_id, function(err,host){
-    if( ! err || host != null ) options.host = host;
-    doneFn();
-  });
-
-  if( ! task.script_id ) doneFn();
-  else Script.findById(task.script_id, function(err,script){
-    if( ! err || script != null ) options.script = script;
-    doneFn();
-  });
-};
-
-
-/**
- *
  * extract any non particular entity property.
  * @author Facundo
  *
  */
 TaskSchema.methods.toTemplate = function(doneFn) {
-  var values = this.toObject();
-  var template = new Template(values);
+  var values = this.toObject()
+  var template = new Template(values)
   template.save(function(error){
-    doneFn(error, template);
+    doneFn(error, template)
   });
-};
+}
+
+TaskSchema.methods.templateProperties = function () {
+  var values = BaseSchema.methods.templateProperties.apply(this,arguments)
+  values.script_arguments = this.script_arguments 
+  values.script_runas = this.script_runas
+  values.script_id = this.script_id
+  return values
+}
 
 /**
  *

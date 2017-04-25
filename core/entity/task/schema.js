@@ -1,14 +1,16 @@
-"use strict";
+"use strict"
 
-require('mongoose-schema-extend');
-const debug = require('debug')('entity:task');
-const Schema = require('mongoose').Schema;
-const lodash = require('lodash');
+const debug = require('debug')('entity:task')
+const Schema = require('mongoose').Schema
+const lodash = require('lodash')
+const async = require('async')
 const randomSecret = require('../../lib/random-secret');
+const FetchBy = require('../../lib/fetch-by');
+require('mongoose-schema-extend')
 
 var BaseSchema = require('../base-schema');
 
-var EntitySchema = new BaseSchema({
+const properties = {
   user_id: { type: String, default: null },
   customer_id: { type: String, ref: 'Customer' },
   public: { type: Boolean, default: false },
@@ -19,13 +21,17 @@ var EntitySchema = new BaseSchema({
   triggers: [{
     type: Schema.Types.ObjectId,
     ref: 'Event',
-    default:function(){return [];}
+    default: function(){return [];}
   }],
   acl: [{ type: String }],
   // one way hash
   secret: { type:String, default:randomSecret },
   grace_time: { type:Number, default: 0 }
-},{
+}
+
+exports.properties = properties
+
+var EntitySchema = new BaseSchema(properties,{
   collection: 'tasks',
   discriminatorKey: '_type'
 });
@@ -58,6 +64,21 @@ EntitySchema.statics.publishAll = function(entities, next){
       donePublish();
     });
   }
+}
+
+EntitySchema.statics.fetchBy = function (filter,next) {
+  FetchBy.call(this,filter,next)
+}
+
+EntitySchema.methods.templateProperties = function () {
+  const values = {}
+  var key
+  for (key in properties) {
+    values[key] = this[key]
+  }
+  values.secret = undefined
+  values.user_id = undefined
+  return values
 }
 
 module.exports = EntitySchema;

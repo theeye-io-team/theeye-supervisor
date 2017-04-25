@@ -11,15 +11,19 @@ if (!RegExp.escape) {
   };
 }
 
-/** Schema **/
-var EntitySchema = Schema({
+const properties = {
   customer_name: { type: String, required: true },
   looptime: { type: Number },
   config: { type: Object, 'default': {} },
   name: { type: String },
   type: { type: String },
   tags: { type: Array, 'default': [] }
-},{
+}
+
+exports.properties = properties
+
+/** Schema **/
+var EntitySchema = Schema(properties,{
   discriminatorKey : '_type'
 });
 exports.EntitySchema = EntitySchema;
@@ -42,7 +46,6 @@ const specs = {
 EntitySchema.set('toJSON', specs);
 EntitySchema.set('toObject', specs);
 
-
 /**
  *
  */
@@ -51,7 +54,6 @@ EntitySchema.methods.publish = function(options, next) {
   if(next) next(null, data);
   return data;
 }
-
 
 EntitySchema.statics.publishAll = function(entities, next){
   if(!entities || entities.length == 0) return next([]);

@@ -85,7 +85,8 @@ var controller = {
       host_id: host._id,
       customer_id: customer._id
     }, function(error, monitors){
-      if(error) res.send(500);
+      if (error) return res.send(500);
+
       generateAgentConfig(monitors, function(err, config){
         if (err) return next(err);
         if (!config) {

@@ -7,8 +7,8 @@ var ScraperTask = require('../entity/task/scraper').Entity;
 var Script = require('../entity/file').Script;
 var TaskTemplate = require('../entity/task/template').Entity;
 var TaskEvent = require('../entity/event').TaskEvent;
-var async = require('async');
-var _ = require('lodash');
+const async = require('async');
+const lodash = require('lodash');
 
 var validator = require('validator');
 // var filter = require('../router/param-filter');
@@ -46,7 +46,8 @@ var TaskService = {
       options.done();
     });
   },
-  update:function(options){
+  update: function(options){
+    const self = this
     var task = options.task;
     var updates = options.updates;
     updates.host = updates.host_id;
@@ -56,7 +57,7 @@ var TaskService = {
         return options.fail(error);
       } else {
         debug('publishing task');
-        task.publish(function(pub){
+        self.publish(task,function(pub){
           registerTaskCRUDOperation(
             options.customer.name,{
               'name':task.name,
@@ -77,6 +78,7 @@ var TaskService = {
    *
    */
   fetchBy (filter,next) {
+    const self = this
     FetchBy.call(Task,filter,function(err,tasks){
       if (err) return next(err);
       if (tasks.length===0) return next(null,tasks);
@@ -85,7 +87,7 @@ var TaskService = {
       var asyncTasks = [];
       tasks.forEach(function(task){
         asyncTasks.push(function(callback){
-          task.publish(function(data){
+          self.publish(task,function(data){
             publishedTasks.push(data);
             callback();
           });
@@ -108,7 +110,7 @@ var TaskService = {
             if(error) return asyncCb(error);
             if(!host) return asyncCb(new Error('not found host id ' + hostId));
 
-            TaskService.create(_.extend({}, input, {
+            TaskService.create(lodash.extend({}, input, {
               host: host,
               host_id: host._id,
               customer_id: input.customer._id,
@@ -146,7 +148,7 @@ var TaskService = {
 
     var tplId = (template._id||template.id);
 
-    this.create( _.extend(template,{
+    this.create( lodash.extend(template,{
       customer : customer,
       host : host||null,
       host_id : (host&&host._id)||null,
@@ -169,6 +171,7 @@ var TaskService = {
    *
    */
   create (input, done) {
+    const self = this
     function _created (task) {
       debug('task type "%s" created %j',task.type, task);
       registerTaskCRUDOperation(input.customer.name,{
@@ -178,7 +181,7 @@ var TaskService = {
         'user_email':(input.user&&input.user.email)||null,
         'operation':'create'
       });
-      task.publish(data => {
+      self.publish(task, data => {
         done(null,data);
       });
     }
@@ -212,8 +215,38 @@ var TaskService = {
       },
       err => debug(err));
     });
+  },
+  publish (task, next) {
+    function preparePublish (options) {
+      options||(options={})
+      var data = task.toObject()
+      if (options.host) {
+        data.host_id = options.host.id;
+        data.hostname = options.host.hostname;
+      }
+      if (options.script) {
+        data.script_id = options.script.id;
+        data.script_name = options.script.filename;
+      }
+      next(data);
+    }
+
+    var options = { host: null, script: null };
+    var doneFn = lodash.after(2, () => preparePublish(options))
+
+    if (!task.host_id) doneFn();
+    else Host.findById(task.host_id, function(err,host){
+      if( ! err || host != null ) options.host = host;
+      doneFn();
+    });
+
+    if (!task.script_id) doneFn();
+    else Script.findById(task.script_id, function(err,script){
+      if( ! err || script != null ) options.script = script;
+      doneFn();
+    });
   }
-};
+}
 
 
 /**
@@ -253,7 +286,7 @@ TaskService.tasksToTemplates = function(
 
   var templates = [];
 
-  var templatized = _.after( tasks.length, function(){
+  var templatized = lodash.after( tasks.length, function(){
     debug('all tasks templates processed');
     done(null, templates);
   });

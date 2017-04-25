@@ -8,7 +8,6 @@ var Template = require('./template').Entity;
 var Resource = require('../resource').Entity;
 var logger = require('../../lib/logger')('eye:entity:monitor');
 
-
 /** Extended Schema. Includes non template attributes **/
 var MonitorSchema = BaseSchema.EntitySchema.extend({
   host_id: { type: String, required: true },
@@ -58,6 +57,15 @@ MonitorSchema.methods.toTemplate = function(doneFn)
   template.save(function(error){
     doneFn(error, template);
   });
+}
+
+MonitorSchema.methods.templateProperties = function() {
+  var values = {}
+  var key
+  for (key in BaseSchema.properties) {
+    values[key] = this[key]
+  }
+  return values
 }
 
 MonitorSchema.methods.update = function(input,next) {

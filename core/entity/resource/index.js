@@ -60,26 +60,25 @@ ResourceSchema.methods.patch = function(input, next){
  *
  */
 ResourceSchema.methods.toTemplate = function(doneFn) {
-  var entity = this;
-  var values = {};
-
-  for(var key in BaseSchema.properties){
-    values[ key ] = entity[ key ];
-  }
-
-  values.base_resource = entity;
+  const values = this.templateProperties()
+  values.base_resource = this
   
-  var template = new Template(values);
+  const template = new Template(values)
   template.save(function(error){
-    doneFn(error, template);
+    doneFn(error, template)
   });
 }
 
-ResourceSchema.statics.FromTemplate = function(
-  template, 
-  options, 
-  doneFn
-) {
+ResourceSchema.methods.templateProperties = function() {
+  const values = {}
+  var key
+  for (key in BaseSchema.properties) {
+    values[key] = this[key]
+  }
+  return values
+}
+
+ResourceSchema.statics.FromTemplate = function(template, options, doneFn) {
   var data = {
     host_id: options.host._id,
     hostname: options.host.hostname,

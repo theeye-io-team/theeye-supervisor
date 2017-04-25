@@ -1,9 +1,10 @@
 'use strict';
 
-const Schema = require('mongoose').Schema;
-const Constants = require('../../constants/monitors');
+const Schema = require('mongoose').Schema
+const Constants = require('../../constants/monitors')
+const FetchBy = require('../../lib/fetch-by')
 
-var properties = exports.properties = {
+const properties = {
   customer_id: { type:String, required:true },
   customer_name: { type:String, required:true },
   description: { type:String, default:'' },
@@ -13,7 +14,9 @@ var properties = exports.properties = {
   acl: [{ type: String }],
   failure_severity: { type: String, default: Constants.MONITOR_SEVERITY_HIGH },
   alerts: { type: Boolean, default: true }
-};
+}
+
+exports.properties = properties
 
 /**
  *
@@ -42,7 +45,11 @@ EntitySchema.set('toJSON', specs);
 EntitySchema.set('toObject', specs);
 EntitySchema.statics.DEFAULT_TYPE = Constants.RESOURCE_TYPE_DEFAULT ;
 
-EntitySchema.methods.publish = function(next) {
+EntitySchema.statics.fetchBy = function (filter, next) {
+  FetchBy.call(this,filter,next)
+}
+
+EntitySchema.methods.publish = function (next) {
   var data = this.toObject();
   if(next) next(null,data);
   return data;

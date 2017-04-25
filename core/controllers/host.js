@@ -1,34 +1,38 @@
-"use strict";
+"use strict"
 
-var debug = require('debug')('controller:host');
-var config = require('config');
-var _ = require('underscore');
-var json = require("../lib/jsonresponse");
+const debug = require('debug')('controller:host')
+const config = require('config')
+const lodash = require('lodash')
+var elastic = require('../lib/elastic');
+var router = require('../router');
+
 var Host = require("../entity/host").Entity;
 var Resource = require('../entity/resource').Entity;
+var Monitor = require('../entity/monitor').Entity;
+var Task = require('../entity/task').Entity
+
 var HostService = require('../service/host');
-var router = require('../router');
 var NotificationService = require('../service/notification');
-var elastic = require('../lib/elastic');
 
 module.exports = function(server, passport) {
   var middlewares = [
     passport.authenticate('bearer',{session:false}),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,
-  ];
+  ]
 
   /**
    * NEW ROUTES WITH CUSTOMER , TO KEEP IT GENERIC
    */
-  server.post(
-    '/:customer/host/:hostname',
+  server.post('/:customer/host/:hostname',
     middlewares.concat(
       router.requireCredential('agent',{exactMatch:true}) // only agents can create hosts
     ),
     controller.create
-  );
-  server.get('/:customer/host',middlewares,controller.fetch);
+  )
+
+  server.get('/:customer/host',middlewares,controller.fetch)
+
   server.get('/:customer/host/:host',
     middlewares.concat(
       router.resolve.idToEntity({
@@ -37,23 +41,36 @@ module.exports = function(server, passport) {
       })
     ),
     controller.get
-  );
+  )
+
+  server.get('/:customer/host/:host/config',
+    middlewares.concat(
+      router.resolve.idToEntity({
+        param: 'host',
+        required: true
+      })
+    ),
+    controller.config
+  )
 
   /**
-   * KEEP OLD ROUTE FOR BACKWARD COMPATIBILITY WITH OLD AGENTS
+   * KEEP OLD ROUTE FOR BACKWARD COMPATIBILITY WITH OLDER AGENTS
    *
    * AGENTS VERSION <= v0.9.1
    */
-  server.post(
-    '/host/:hostname',
+  server.post('/host/:hostname',
     middlewares.concat(
       router.requireCredential('agent',{exactMatch:true}) // only agents can create hosts
     ),
     controller.create
-  );
+  )
 }
 
 var controller = {
+  /**
+   *
+   *
+   */
   get (req,res,next) {
     var host = req.host;
     res.send(200, host.toObject());
@@ -99,14 +116,62 @@ var controller = {
 
       debug('host "%s" registration completed.', hostname);
 
-      var response = _.extend({
-        resource_id: resource?resource._id:null,
-        host_id: host._id
-      },config.get('agent.core_workers.host_ping'));
+      const response = lodash.assign(
+        {
+          resource_id: resource ? resource._id : null,
+          host_id: host._id
+        },
+        config.get('agent.core_workers.host_ping')
+      )
 
       res.send(200, response); 
       next();
     });
+  },
+  /**
+   *
+   *
+   */
+  config (req, res, next) {
+    const customer = req.customer
+    const host = req.host
+    var data = {}
+
+    const done = lodash.after(2, () => {
+      res.send(200,data)
+    })
+
+    Resource.find({
+      enable: true,
+      host_id: host._id,
+      customer_id: customer._id
+    }).exec(function(err,resources){
+      if (err) return done()
+
+      const next = lodash.after(resources.length,() => done())
+      data.monitors = []
+
+      resources.forEach(resource => {
+        var template = resource.templateProperties()
+        Monitor.findOne({
+          resource_id: resource._id
+        }).exec(function(err,monitor){
+          template.monitor = monitor.templateProperties()
+          data.monitors.push(template)
+          next()
+        })
+      })
+    })
+
+    Task.find({
+      enable: true,
+      host: host._id,
+      customer_id: customer._id
+    }).exec(function(err,tasks){
+      if (err) return done()
+      data.tasks = tasks.map(task => task.templateProperties())
+      done()
+    })
   }
 }
 

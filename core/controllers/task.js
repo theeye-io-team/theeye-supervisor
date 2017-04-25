@@ -114,11 +114,10 @@ var controller = {
    *
    */
   get (req, res, next) {
-    var task = req.task;
-
-    task.publish(function(data) {
-      res.send(200, data);
-    });
+    TaskService.publish(
+      req.task,
+      data => res.send(200, data)
+    )
   },
   /**
    *
