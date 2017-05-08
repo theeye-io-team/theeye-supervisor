@@ -537,27 +537,36 @@ function getEventSeverity (event,resource) {
  * static methods
  *
  */
-Service.fetchBy = function (filter,next) {
-  Resource.fetchBy(filter,function (err,resources) {
-    var pub = []
-    var fetched = lodash.after(resources.length,function(){
-      next(null,pub)
-    })
+Service.fetchBy = function(filter,next) {
+	var query = Resource.find( filter.where );
+	if (filter.sort) query.sort( filter.sort );
+	if (filter.limit) query.limit( filter.limit );
 
-    resources.forEach(resource => {
-      resource.publish(function(error, data){
-        MonitorEntity
-          .findOne({ resource_id: resource._id })
-          .exec((err,monitor) => {
-            if (err) return fetched()
+	query.exec(function(error,resources){
+		if(error) {
+			logger.error('unable to fetch resources from database');
+			logger.error(error);
+			return next(error,null);
+		}
 
-            data.monitor = monitor
-            pub.push(data)
-            fetched()
-          })
-      })
-    })
-  })
+		if(resources===null||resources.length===0) return next(null,[]);
+
+		var pub = [];
+		var fetched = lodash.after(resources.length,() => next(null,pub));
+
+		resources.forEach(function(resource){
+			resource.publish(function(error, data){
+				MonitorEntity.findOne(
+					{ resource_id: resource._id },
+					(error,monitor) => {
+						data.monitor = monitor;
+						pub.push(data); 
+						fetched();
+					}
+				);
+			});
+		});
+	});
 }
 
 /**
