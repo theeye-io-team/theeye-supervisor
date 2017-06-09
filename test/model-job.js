@@ -30,7 +30,6 @@ mongodb.connect(function(){
       });
     });
 
-
     it('create Scraper Job', function(done){
       scraper = new ScraperJob({ });
       scraper.save( err => {
