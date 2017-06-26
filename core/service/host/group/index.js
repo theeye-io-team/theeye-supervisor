@@ -365,8 +365,8 @@ const generateTasksTriggersTemplates = (templates, triggers, next) => {
   var events
   var taskTemplate
 
-  if (!Array.isArray(tasks) || tasks.length===0) return done(err,[])
-  if (!Array.isArray(triggers) || triggers.length===0) return done(err,[])
+  if (!Array.isArray(tasks) || tasks.length===0) return next(err,[])
+  if (!Array.isArray(triggers) || triggers.length===0) return next(err,[])
 
   for (var i=0; i<triggers.length; i++) {
     task_id = triggers[i].task_id
