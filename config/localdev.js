@@ -5,6 +5,7 @@
 var join = require('path').join;
 module.exports = {
   "is_dev": true,
+  "monitoring": false,
   "system": {
     "base_url": "http://localhost:60080",
     "web_url": "http://localhost:6080",

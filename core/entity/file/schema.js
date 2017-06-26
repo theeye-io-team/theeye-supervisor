@@ -12,9 +12,7 @@ const config = require('config');
 function FileSchema (props) {
   props||(props={});
 
-  var specs = {
-    collection:'files'
-  };
+  var specs = { collection: 'files' };
   var properties = {
     customer_id: { type: String },
     customer_name: { type: String },
@@ -86,6 +84,6 @@ function FileSchema (props) {
   return this;
 }
 
-util.inherits(FileSchema,BaseSchema);
+util.inherits(FileSchema, BaseSchema);
 
 module.exports = FileSchema;

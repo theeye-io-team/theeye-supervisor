@@ -7,8 +7,8 @@ const format = require('util').format;
 
 function connect () {
   var connection;
-  if(!config) throw new Error('no mongo db connection provided!');
-  if(config.user && config.password) {
+  if (!config) throw new Error('no mongo db connection provided!');
+  if (config.user && config.password) {
     connection = format(
       'mongodb://%s:%s@%s/%s',
       config.user,
@@ -24,7 +24,7 @@ function connect () {
     );
   }
 
-  if(config.debug) mongoose.set("debug",true);
+  if (config.debug) mongoose.set("debug",true);
 
   return mongoose.createConnection(connection, (config.options||{}) );
 }

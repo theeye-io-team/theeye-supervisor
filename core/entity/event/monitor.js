@@ -7,8 +7,7 @@ const BaseSchema = require('./schema');
 var EventSchema = new BaseSchema({
   emitter: {
     type: Schema.Types.ObjectId,
-    ref: 'ResourceMonitor',
-    'default': null
+    ref: 'ResourceMonitor'
   }
 });
 

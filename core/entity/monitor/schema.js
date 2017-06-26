@@ -12,12 +12,15 @@ if (!RegExp.escape) {
 }
 
 const properties = {
-  customer_name: { type: String, required: true },
   looptime: { type: Number },
-  config: { type: Object, 'default': {} },
   name: { type: String },
   type: { type: String },
-  tags: { type: Array, 'default': [] }
+  config: { type: Object, default: {} },
+  tags: { type: Array, default: [] },
+  customer_id: { type: ObjectId },
+  customer_name: { type: String },
+  // RELATIONS
+  customer: { type: ObjectId, ref: 'Customer' }, // belongs to
 }
 
 exports.properties = properties

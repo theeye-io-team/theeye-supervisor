@@ -6,6 +6,7 @@ module.exports = {
     "port": process.env.PORT||60080,
     "auth_strategy": "bearer"
   },
+  "monitoring": true,
   "system": {
     "base_url": "",
     "web_url": "",

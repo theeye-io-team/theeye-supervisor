@@ -17,9 +17,8 @@ module.exports = {
     require('../controllers/event')(server,passport);
     require('../controllers/host-stats')(server,passport);
     require('../controllers/host')(server,passport);
-    // will be deprecated
-    require('../controllers/hostgroup-monitor')(server,passport);
-    require('../controllers/hostgroup-task')(server,passport);
+    //require('../controllers/hostgroup-monitor')(server,passport); // deprecated
+    //require('../controllers/hostgroup-task')(server,passport); // deprecated
     require('../controllers/hostgroup')(server,passport);
     //require('../controllers/template')(server,passport);
     require('../controllers/job')(server,passport);

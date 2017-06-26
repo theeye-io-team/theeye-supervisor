@@ -114,9 +114,9 @@ var controller = {
    *
    */
   get (req, res, next) {
-    TaskService.publish(
+    TaskService.populate(
       req.task,
-      data => res.send(200, data)
+      (err,data) => res.send(200, data)
     )
   },
   /**

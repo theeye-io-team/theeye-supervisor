@@ -12,7 +12,7 @@ exports.addTemplatesToGroup = function(group,templates,done){
   done||(done=function(){});
   var published = lodash.after(templates.length,()=>done());
   templates.forEach(template=>{
-    group.addMonitorTemplate(template);
+    group.resource_templates.push(template.resource_template);
     addMonitorInstancesToGroupHosts(
       template.monitor_template,
       group,

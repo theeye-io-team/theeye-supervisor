@@ -170,7 +170,7 @@ var service = {
  */
 function ResultEvent (job) {
   TaskEvent.findOne({
-    emitter: job.task.id,
+    emitter_id: job.task.id,
     enable: true,
     name: job.state
   }, (err, event) => {

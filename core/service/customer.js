@@ -57,35 +57,39 @@ module.exports = {
   },
   /**
    *
+   * @param {Mixed} filters, string or query
    *
    */
-  getCustomerConfig (customer,next) {
-    if (!next) return;
+  getCustomerConfig (filters,next) {
+    if (!next) return
+    if (!filters) return
 
-    var query = (typeof customer == 'string') ? { _id : customer } : customer;
+    const query = (typeof filters == 'string') ? { _id : filters } : filters
 
-    Customer.findOne(query, function(error,customer){
-      if(error){
-        logger.error(error);
-        return next(error);
+    Customer.findOne(query, (error, customer) => {
+      if (error) {
+        logger.error(error)
+        return next(error)
       }
 
-      if(!customer){
-        logger.error('customer %s not found', customer_id);
-        return next(error);
+      if (!customer) {
+        const err = new Error('customer not found')
+        err.query = query
+        logger.error(err)
+        return next(err)
       }
 
-      var basecfg = {
+      const basecfg = {
         monitor: config.get('monitor')||{},
         elasticsearch: config.get('elasticsearch')||{enabled:false} // no config available
-      };
+      }
 
       // deep replace objects properties
-      var ccfg = merge({}, basecfg, (customer.config||{}));
+      var ccfg = merge({}, basecfg, (customer.config||{}))
 
       // extend default config options with customer defined options
-      if(next) return next(null,ccfg);
-    });
+      if(next) return next(null,ccfg)
+    })
   },
   fetch (filter, next) {
     Customer.find({}, function(err, customers) {

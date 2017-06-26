@@ -1,55 +1,38 @@
-"use strict";
+'use strict'
 
-var mongodb = require("../../lib/mongodb");
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
+const mongodb = require('../../lib/mongodb')
+const mongoose = require('mongoose')
+const Schema = mongoose.Schema
+const ObjectId = Schema.Types.ObjectId
 
-var properties = {
-  customer_name : { type:String, index:true },
-  customer_id   : { type:String },
-  hostname      : { type:String, index:true, required:true },
-  ip            : { type:String },
-  os_name       : { type:String },
-  os_version    : { type:String },
-  agent_version : { type:String },
-  creation_date : { type:Date, 'default':Date.now },
-  last_update   : { type:Date, 'default':null },
-  enable        : { type:Boolean, 'default':true }
-};
-
-var EntitySchema = Schema(properties);
-
-EntitySchema.methods.publish = function(next)
-{
-  var data = this.toObject();
-  if(next) next(data);
-  return data;
+const properties = {
+  hostname: { type: String, index: true, required: true },
+  customer_name: { type: String, index: true },
+  customer_id: { type: String },
+  ip: { type: String },
+  os_name: { type: String },
+  os_version: { type: String },
+  agent_version: { type: String },
+  creation_date: { type: Date, default: Date.now },
+  last_update: { type: Date, default: Date.now },
+  enable: { type: Boolean, default: true },
+  customer: { type: ObjectId },
+  templates: [{ type: ObjectId, ref: 'HostGroup' }] // can belongs to many hostgroups templates
 }
 
-EntitySchema.statics.create = function(data,customer,next) {
-  var options = {
-    "customer_name" : customer.name ,
-    "customer_id"   : customer._id ,
-    "creation_date" : new Date() ,
-    "last_update"   : new Date() ,
-    "hostname"      : data.hostname ,
-    "ip"            : data.ip ,
-    "os_name"       : data.os_name ,
-    "os_version"    : data.os_version ,
-    "agent_version" : data.agent_version ,
-    "state"         : data.state
-  };
+const EntitySchema = new Schema(properties)
 
-  var host = new Entity(options);
-  host.save(function(){
-    next(null,host);
-  });
-};
+EntitySchema.methods.publish = (next) => {
+  var data = this.toObject()
+  if (next) next(data)
+  return data
+}
 
 // Duplicate the ID field.
 EntitySchema.virtual('id').get(function(){
-  return this._id.toHexString();
-});
+  return this._id.toHexString()
+})
+
 const specs = {
 	getters: true,
 	virtuals: true,
@@ -60,11 +43,11 @@ const specs = {
 		delete ret.__v;
 	}
 }
-EntitySchema.set('toJSON', specs);
-EntitySchema.set('toObject', specs);
 
+EntitySchema.set('toJSON', specs)
+EntitySchema.set('toObject', specs)
 
-var Entity = mongodb.db.model('Host', EntitySchema);
-Entity.ensureIndexes();
+const Entity = mongodb.db.model('Host', EntitySchema)
+Entity.ensureIndexes()
 
-exports.Entity = Entity;
+exports.Entity = Entity

@@ -1,17 +1,12 @@
-'use strict';
+'use strict'
 
-var _ = require('lodash');
-var async = require('async');
+const lodash = require('lodash')
+const async = require('async')
+const router = require('../router')
+const logger = require('../lib/logger')('eye:controller:template')
 
-var router = require('../router');
-var logger = require('../lib/logger')('eye:controller:template');
-var TaskService = require('../service/task');
-var TemplateMonitorService = require('../service/resource/template');
-var HostGroupService = require('../service/host/group');
-var TaskTemplate = require('../entity/task/template').Entity;
-var MonitorTemplate = require('../entity/monitor/template').Entity;
-var ResourceTemplate = require('../entity/resource/template').Entity;
-var HostGroup = require('../entity/host/group').Entity;
+const HostGroup = require('../entity/host/group').Entity
+const HostGroupService = require('../service/host/group')
 
 /**
  *
@@ -20,23 +15,45 @@ var HostGroup = require('../entity/host/group').Entity;
  *
  */
 module.exports = function(server, passport) {
-  var middleware = [
+  const middleware = [
     passport.authenticate('bearer', {session:false}),
     router.requireCredential('admin'),
     router.resolve.customerNameToEntity({}),
     router.ensureCustomer,
-  ];
+  ]
 
-  server.get('/:customer/hostgroup',middleware,controller.fetch);
-  server.post('/:customer/hostgroup',middleware,controller.create);
+  server.get('/:customer/hostgroup',middleware,controller.fetch)
+  server.post('/:customer/hostgroup',middleware,controller.create)
 
-  server.get('/:customer/hostgroup/:group', middleware.concat(
-    router.resolve.idToEntity({param:'group',entity:'host/group'})
-  ),controller.get);
+  server.get('/:customer/hostgroup/:group',
+    middleware.concat(
+      router.resolve.idToEntity({
+        param: 'group',
+        entity: 'host/group',
+        required: true
+      })
+    ), controller.get
+  )
 
-  server.del('/:customer/hostgroup/:group', middleware.concat(
-    router.resolve.idToEntity({param:'group',entity:'host/group'})
-  ),controller.remove);
+  server.put('/:customer/hostgroup/:group',
+    middleware.concat(
+      router.resolve.idToEntity({
+        param: 'group',
+        entity: 'host/group',
+        required: true
+      })
+    ), controller.replace
+  )
+
+  server.del('/:customer/hostgroup/:group',
+    middleware.concat(
+      router.resolve.idToEntity({
+        param: 'group',
+        entity: 'host/group',
+        required: true
+      })
+    ), controller.remove
+  )
 }
 
 /**
@@ -46,7 +63,7 @@ module.exports = function(server, passport) {
  * @author Facundo
  *
  */
-var controller = {
+const controller = {
   /**
    *
    * @author Facundo
@@ -54,11 +71,10 @@ var controller = {
    *
    */
   get (req,res,next) {
-    var group = req.group;
-    if(!group) return res.send(400);
-    group.publish({},(e,g) => {
-      res.send(200,g);
-    });
+    const group = req.group
+    HostGroupService.populate(group,(error,data) => {
+      res.send(200,data)
+    })
   },
   /**
    *
@@ -67,106 +83,32 @@ var controller = {
    *
    */
   fetch (req,res,next) {
-    var customer = req.customer;
-
-    if(!customer) return res.send(400, 'customer required');
+    const customer = req.customer
 
     HostGroup.find({
       customer_name: customer.name
-    }).exec(function(err,groups){
-      if(groups.length == 0){
-        return res.send(200,{'groups':[]});
+    }).exec(function (err,groups) {
+
+      if (groups.length === 0) {
+        return res.send(200,[])
       }
-      var pubdata = [];
-      var published = _.after(groups.length, function(){
-        res.send(200,{ groups: pubdata });
-      });
-      for(var i=0;i<groups.length;i++){
-        var group = groups[i];
-        group.publish({},function(err,data){
-          pubdata.push( data );
-          published();
-        });
+
+      var result = []
+      var done = lodash.after(
+        groups.length,
+        () => res.send(200, result)
+      )
+
+      for (var i=0; i<groups.length; i++) {
+        HostGroupService.populate(
+          groups[i],
+          function (err,data) {
+            result.push(data)
+            done()
+          }
+        )
       }
     })
-  },
-  create (req, res, next) {
-    // should get a host and create a template of it
-    return res.send(400,'yet not implemented')
-  },
-  create (req,res,next){
-    logger.log('group data received %j', req.params);
-
-    if(!req.customer) return res.send(400,'customer required');
-
-    var group = req.params.group;
-    if(!group) return res.send(400,'group data required');
-
-    var hostnameregex = group.hostname_regex;
-    if(!hostnameregex) return res.send(400,'hostname regexp required');
-
-    try {
-      new RegExp(hostnameregex);
-    } catch(e) {
-      return res.send(406,'Invalid regular expression');
-    }
-
-    var responseError = (e) => {
-      let errorRes = {
-        "error": e.message,
-        "info": []
-      };
-      if(e.info) errorRes.info.push( e.info.toString() );
-      res.send( e.statusCode, errorRes );
-    }
-
-    async.parallel({
-      'tasks': (callback) => {
-        logger.log('processing group tasks');
-        let tasks = group.tasks || [];
-        TaskService.tasksToTemplates(
-          tasks,
-          req.customer,
-          req.user,
-          callback
-        );
-      },
-      'provtasks': (callback) => {
-        logger.log('processing group provisioning tasks');
-        let provtasks = group.provtasks || [];
-        TaskService.tasksToTemplates(
-          provtasks,
-          req.customer,
-          req.user,
-          callback
-        );
-      },
-      'resourcemonitors': (callback) => {
-        logger.log('processing group monitors & resources');
-        let monitors = group.monitors || [];
-
-        TemplateMonitorService.resourceMonitorsToTemplates(
-          monitors,
-          req.customer,
-          req.user,
-          callback
-        );
-      }
-    }, (error, templates) => {
-      if(error) return responseError(error);
-      HostGroupService.create({
-        'user':req.user,
-        'regex': hostnameregex,
-        'tasks': templates.tasks,
-        'resourcemonitors': templates.resourcemonitors,
-        'provisioningtasks': templates.provtasks,
-        'customer': req.customer,
-      },function(error, group){
-        if(error) return responseError(error);
-        logger.log('group created');
-        res.send(200,{ 'group': group });
-      });
-    });
   },
   /**
    *
@@ -175,11 +117,99 @@ var controller = {
    *
    */
   remove (req,res,next) {
-    var group = req.group;
-    if(!group) return res.send(400);
+    const group = req.group
     HostGroupService.remove({
-      group:group,
-      user:req.user,
-    },()=>res.send(204));
+      group: group,
+      user: req.user
+    },() => res.send(200))
+  },
+  /**
+   *
+   * @author Facugon
+   * @method POST
+   *
+   * @param {Object[]} req.body.hosts , hosts to add to the group
+   * @param {Object[]} req.body.resources , resources/monitors templates definitions
+   * @param {Object[]} req.body.tasks , tasks templates definitions
+   * @param {Object[]} req.body.triggers , link monitors and tasks to anothe tasks view events
+   * @todo req.body.triggers[] need validation here !
+   * @param {String} req.body.triggers[].task_id , the id of the task for this trigger
+   * @param {String[]} req.body.triggers[].events , array of event ids which belongs to the same host as the tasks host (can be triggered by tasks and monitors)
+   *
+   */
+  create (req, res, next) {
+    const body = req.body
+    const hostname_regex = body.hostname_regex
+
+    if (typeof hostname_regex === 'string') {
+      try {
+        new RegExp(hostname_regex)
+      } catch(e) {
+        return res.send(400, 'Invalid regular expression')
+      }
+    }
+
+    HostGroupService.create({
+      //user_id: req.user._id,
+      //customer_id: req.customer._id,
+      //customer_name: req.customer.name,
+      user: req.user,
+      customer: req.customer,
+      name: body.name,
+      description: body.description,
+      hostname_regex: hostname_regex,
+      hosts: body.hosts || [], // Array of valid Host ids
+      tasks: body.tasks || [], // Array of Objects with task definition
+      triggers: body.triggers || [], // Array of Objects with a task id and related triggers ids
+      resources: body.resources || [] // Array of Objects with resources and monitors definition, all mixed
+    }, (err, group) => {
+      if (err) return responseError(err, res)
+      res.send(200, group)
+      next()
+    })
+  },
+  /**
+   *
+   * @author Facundo
+   * @method PUT
+   *
+   */
+  replace (req, res, next) {
+    const body = req.body
+
+    const hostname_regex = body.hostname_regex
+    if (typeof hostname_regex === 'string') {
+      try {
+        new RegExp(hostname_regex)
+      } catch(e) {
+        return res.send(400, 'Invalid regular expression')
+      }
+    }
+
+    HostGroupService.replace({
+      group: req.group,
+      name: body.name,
+      description: body.description,
+      hostname_regex: hostname_regex,
+      hosts: body.hosts || [], // Array of valid Host ids
+      tasks: body.tasks || [], // Array of Objects with task definition
+      resources: body.resources || [] // Array of Objects with resources and monitors definition, all mixed
+    }, (err, group) => {
+      if (err) return responseError(err, res)
+      res.send(200, group)
+      next()
+    })
   }
+}
+
+const responseError = (e,res) => {
+  logger.error('%o',e)
+  const errorRes = {
+    error: e.message,
+    info: []
+  }
+  if (e.info) {
+    errorRes.info.push( e.info.toString() )
+  }
+  res.send( e.statusCode || 500, errorRes )
 }

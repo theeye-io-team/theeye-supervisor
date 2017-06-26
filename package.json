@@ -5,7 +5,7 @@
   "author": "Facundo S. Gonzalez <facugon@interactar.com>",
   "dependencies": {
     "agenda": "~0.9.0",
-    "async": "~1.5.2",
+    "async": "2.4.1",
     "aws-sdk": "~2.3.19",
     "config": "~1.20.4",
     "debug": "~1.0.4",
@@ -41,14 +41,16 @@
     "start": "node --harmony_proxies $PWD/core/main.js",
     "devel": "/bin/bash ./run.debug.sh",
     "core": "DEBUG='theeye:*,eye:*' NODE_TLS_REJECT_UNAUTHORIZED=0 ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' core/main.js",
-    "local": "NODE_ENV=localdev DEBUG='theeye:*,eye:*' NODE_TLS_REJECT_UNAUTHORIZED=0 ./node_modules/.bin/nodemon --inspect --harmony_proxies --ignore 'uploads/*' `pwd`/core/main.js",
-    "elastic_tunnel": "ssh -L 9200:elasticsearch.theeye.io:9200 awsnodep02.theeye.io "
+    "local": "NODE_ENV=localdev NODE_TLS_REJECT_UNAUTHORIZED=0 ./node_modules/.bin/nodemon --inspect --harmony_proxies --ignore 'uploads/*' `pwd`/core/main.js",
+    "elastic_tunnel": "ssh -L 9200:elasticsearch.theeye.io:9200 awsnodep02.theeye.io ",
+    "inspector": "NODE_ENV=localdev DEBUG='theeye:*,eye:*' NODE_TLS_REJECT_UNAUTHORIZED=0 ./node_modules/.bin/nodemon --harmony_proxies --inspect --ignore 'uploads/*' `pwd`/core/main.js"
   },
   "engines": {
     "node": ">=4.*"
   },
   "devDependencies": {
     "chai": "^3.5.0",
+    "jsdoc": "~3.4.3",
     "mocha": "^3.0.2",
     "nodemon": "^1.7.1"
   }

@@ -1,28 +1,28 @@
-"use strict";
+'use strict'
 
-var mongodb = require('../../lib/mongodb').db;
-var ObjectId = require('mongoose').Schema.Types.ObjectId;
-var BaseSchema = require('./schema');
-var Host = require('../host').Entity;
-const extend = require('lodash/assign')
+const mongodb = require('../../lib/mongodb').db
+const ObjectId = require('mongoose').Schema.Types.ObjectId
+const BaseSchema = require('./schema')
+const Host = require('../host').Entity
 
-/** Schema **/
 var Schema = BaseSchema.extend({
-  host_id: { type: String, 'default': null },
-  host: { type: ObjectId, ref: 'Host', 'default': null },
-  template: { type: ObjectId, ref: 'TaskTemplate', 'default': null },
-  type: { type: String, 'default': 'scraper' },
-  url: { type: String, 'default': null, required:true },
-  method: { type: String, 'default': null, required:true },
-  external: { type: Boolean, 'default': null },
-  timeout: { type: Number, 'default': null },
-  body: { type: String, 'default': null },
-  gzip: { type: Boolean, 'default': null },
-  json: { type: Boolean, 'default': null },
-  status_code: { type: Number, 'default': null },
-  parser: { type: String, 'default': null },
-  pattern: { type: String, 'default': null },
-});
+  host_id: { type: String },
+  template_id: { type: ObjectId },
+  type: { type: String, default: 'scraper' },
+  // scraper properties
+  url: { type: String, required: true },
+  method: { type: String, required: true },
+  body: { type: String },
+  parser: { type: String },
+  pattern: { type: String },
+  timeout: { type: Number },
+  status_code: { type: Number },
+  gzip: { type: Boolean },
+  json: { type: Boolean },
+  // relations
+  host: { type: ObjectId, ref: 'Host' },
+  template: { type: ObjectId, ref: 'TaskTemplate' },
+})
 
 Schema.methods.publish = function(next) {
   var data = this.toObject();
@@ -43,7 +43,6 @@ Schema.methods.templateProperties = function () {
   var values = BaseSchema.methods.templateProperties.apply(this,arguments)
   values.url = this.url 
   values.method = this.method 
-  values.external = this.external 
   values.timeout = this.timeout 
   values.body = this.body 
   values.gzip = this.gzip 

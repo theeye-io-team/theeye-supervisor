@@ -12,8 +12,8 @@ const ResourcesNotifications = require('./notifications');
 const Job = require('../../entity/job').Job;
 const AgentUpdateJob = require('../../entity/job').AgentUpdate;
 const MonitorEvent = require('../../entity/event').MonitorEvent;
-const Resource = require('../../entity/resource').Entity;
-const MonitorEntity = require('../../entity/monitor').Entity;
+const ResourceModel = require('../../entity/resource').Entity;
+const MonitorModel = require('../../entity/monitor').Entity;
 const MonitorTemplate = require('../../entity/monitor/template').Entity;
 const Host = require('../../entity/host').Entity;
 const Task = require('../../entity/task').Entity;
@@ -52,7 +52,7 @@ function Service(resource) {
   function sendResourceEmailAlert (resource,input) {
     if (resource.alerts===false) return;
 
-    MonitorEntity
+    MonitorModel
       .findOne({ resource_id: resource._id })
       .exec(function(err,monitor){
         resource.monitor = monitor
@@ -94,7 +94,7 @@ function Service(resource) {
   }
 
   function dispatchResourceEvent (resource,eventName){
-    MonitorEntity.findOne({
+    MonitorModel.findOne({
       resource_id: resource._id
     },function(err,monitor){
       if (!monitor) {
@@ -105,7 +105,8 @@ function Service(resource) {
       logger.log('searching monitor %s event %s ', monitor.name, eventName);
 
       MonitorEvent.findOne({
-        emitter: monitor._id,
+        emitter_id: monitor._id,
+        //emitter: monitor._id,
         enable: true,
         name: eventName
       },function(err, event){
@@ -359,11 +360,31 @@ function registerResourceCRUDOperation(customer,data) {
   elastic.submit(customer,key,data);
 }
 
+Service.populate = function (resource,done) {
+  return resource.populate({},done)
+}
+
+Service.populateAll = function (resources,next) {
+  var result = []
+  if (!Array.isArray(resources) || resources.length === 0) {
+    return next(null,result)
+  }
+
+  const populated = lodash.after(resources.length,() => next(null,result))
+
+  for (var i=0;i<resources.length;i++) {
+    const resource = resources[i]
+    this.populate(resource,() => {
+      result.push(resource) // populated resource
+      populated()
+    })
+  }
+}
 
 Service.findHostResources = function(host,options,done) {
   var query = { 'host_id': host._id };
   if(options.type) query.type = options.type;
-  Resource.find(query,(err,resources)=>{
+  ResourceModel.find(query,(err,resources)=>{
     if(err){
       logger.error(err);
       return done(err);
@@ -387,6 +408,7 @@ Service.findHostResources = function(host,options,done) {
  *
  * create entities
  * @author Facugon
+ * @param {Object} input
  *
  */
 Service.create = function (input, next) {
@@ -419,30 +441,37 @@ Service.create = function (input, next) {
           name: monitor.name,
           type: resource.type,
           customer_name: monitor.customer_name,
-          user_id: input.user.id,
-          user_email: input.user.email,
+          user_id: input.user_id,
+          user_email: input.user_email,
           operation: 'create'
         }
       );
 
-      Service.createDefaultEvents(monitor,input.customer);
+      Service.createDefaultEvents(monitor,input.customer)
       Tag.create(input.tags,input.customer);
       AgentUpdateJob.create({ host_id: monitor.host_id });
       next(null,result);
     });
   });
-};
+}
 
-Service.createDefaultEvents = function(monitor,customer,done){
+Service.createDefaultEvents = (monitor,customer,done) => {
   // CREATE DEFAULT EVENT
+  const base = {
+    customer_id: customer._id,
+    customer: customer,
+    emitter: monitor, 
+    emitter_id: monitor._id
+  }
+
   MonitorEvent.create(
     // NORMAL state does not trigger EVENT
     //{ customer: customer, emitter: monitor, name: Constants.RESOURCE_NORMAL } ,
-    { customer: customer, emitter: monitor, name: Constants.RESOURCE_RECOVERED } ,
-    { customer: customer, emitter: monitor, name: Constants.RESOURCE_STOPPED } ,
-    { customer: customer, emitter: monitor, name: Constants.RESOURCE_FAILURE } ,
-    err => {
-      if (err) logger.error(err);
+    Object.assign({}, base, { name: Constants.RESOURCE_RECOVERED }) ,
+    Object.assign({}, base, { name: Constants.RESOURCE_STOPPED }) ,
+    Object.assign({}, base, { name: Constants.RESOURCE_FAILURE }) ,
+    (err) => {
+      if (err) logger.error(err)
     }
   );
 
@@ -450,6 +479,7 @@ Service.createDefaultEvents = function(monitor,customer,done){
     MonitorEvent.create({
       customer: customer,
       emitter: monitor,
+      emitter_id: monitor._id,
       name: Constants.RESOURCE_CHANGED
     }, err => {
       if (err) logger.error(err);
@@ -467,11 +497,17 @@ Service.update = function(input,next) {
   var resource = input.resource;
 
   if (updates.host) {
-    updates.host_id = updates.host._id;
-    updates.hostname = updates.host.hostname;
+    updates.host = updates.host._id
+    updates.host_id = updates.host._id
+    updates.hostname = updates.host.hostname
   }
 
   logger.log('updating monitor %j',updates);
+
+  // remove from updates if present. cant be changed
+  delete updates.monitor
+  delete updates.customer
+  delete updates.template
 
   resource.update(updates,function(error){
     if (error) {
@@ -479,11 +515,11 @@ Service.update = function(input,next) {
       return next(error);
     }
 
-    MonitorEntity.findOne({
+    MonitorModel.findOne({
       resource_id: resource._id
     },function(error,monitor){
-      if(error) return next(error);
-      if(!monitor) return next(new Error('resource monitor not found'), null);
+      if (error) return next(error);
+      if (!monitor) return next(new Error('resource monitor not found'), null);
 
       var previous_host_id = monitor.host_id;
       monitor.update(updates,function(error){
@@ -494,8 +530,8 @@ Service.update = function(input,next) {
             name: monitor.name,
             type: resource.type,
             customer_name: monitor.customer_name,
-            user_id: input.user.id,
-            user_email: input.user.email,
+            user_id: input.user_id,
+            user_email: input.user_email,
             operation: 'update'
           }
         );
@@ -538,7 +574,7 @@ function getEventSeverity (event,resource) {
  *
  */
 Service.fetchBy = function (filter,next) {
-  Resource.fetchBy(filter,function (err,resources) {
+  ResourceModel.fetchBy(filter,function (err,resources) {
     var pub = []
     var fetched = lodash.after(resources.length,function(){
       next(null,pub)
@@ -546,7 +582,7 @@ Service.fetchBy = function (filter,next) {
 
     resources.forEach(resource => {
       resource.publish(function(error, data){
-        MonitorEntity
+        MonitorModel
           .findOne({ resource_id: resource._id })
           .exec((err,monitor) => {
             if (err) return fetched()
@@ -606,7 +642,7 @@ Service.removeHostResource = function (input,done) {
     });
   }
 
-  Resource
+  ResourceModel
     .find({ 'host_id': hid })
     .exec(function(err, resources){
       if(resources.length != 0){
@@ -660,7 +696,7 @@ Service.remove = function (input, done) {
 
   logger.log('removing resource "%s" monitors', resource.name);
 
-  MonitorEntity.find({
+  MonitorModel.find({
     'resource_id': resource._id
   },function(error,monitors){
     if(monitors.length !== 0){
@@ -668,7 +704,9 @@ Service.remove = function (input, done) {
       monitor.remove(function(err){
         if(err) return logger.error(err);
 
-        MonitorEvent.remove({ emitter: monitor._id }, err => logger.error(err));
+        MonitorEvent.remove({
+          emitter_id: monitor._id
+        }, (err) => logger.error(err))
 
         logger.log('monitor %s removed', monitor.name);
         if(notifyAgents) {
@@ -699,7 +737,7 @@ Service.remove = function (input, done) {
 }
 
 Service.disableResourcesByCustomer = function(customer, doneFn){
-  Resource
+  ResourceModel
     .find({ 'customer_id': customer._id })
     .exec(function(error, resources){
       if(resources.length != 0){
@@ -765,59 +803,83 @@ Service.createResourceOnHosts = function(hosts,input,doneFn) {
  * @author Facundo
  * @param {object MonitorTemplate} template
  * @param {Object} options
- * @param {Function} doneFn
+ * @param {Host} options.host
+ * @param {Customer} options.customer
+ * @param {ResourceTemplate} options.template
+ * @param {Function(Error,Resource)} options.done
  *
  */
-Service.createMonitorFromTemplate = function(options) {
-  var doneFn = ( options.done||(function(){}) ),
-    template = options.template,
-    host = options.host;
+Service.createFromTemplate = function(options) {
+  const done = options.done || (() => {})
+  const template = options.template
+  const host = options.host
+  const customer = options.customer
 
-  MonitorTemplate.populate(template,{
-    path: 'template_resource' 
-  },function(err,monitorTemplate){
-    var resourceTemplate = monitorTemplate.template_resource;
-    var options = { 'host': host };
-    Resource.FromTemplate(
-      resourceTemplate,
-      options,
-      function(err,resource){
-        if(err) {
-          logger.log('Resorce creation error %s', err.message);
-          return doneFn(err);
-        }
+  const generateResourceModel = () => {
+    const input = lodash.extend(template.toObject(), {
+      host: host._id,
+      host_id: host._id,
+      hostname: host.hostname,
+      template: template._id,
+      template_id: template._id,
+      last_update: new Date(),
+      last_event: {},
+      _type: 'Resource'
+    })
+    // remove template _id
+    delete input.id
+    delete input._id
+    logger.log('creating resource from template %j', input)
+    return new ResourceModel(input)
+  }
 
-        var props = lodash.extend( template, {
-          host: options.host,
-          host_id: options.host._id,
-          resource: resource._id,
-          resource_id: resource._id,
-          template: monitorTemplate.id,
-          id: null,
-          customer_name: resource.customer_name,
-          _type: 'ResourceMonitor'
-        });
+  const generateMonitorModel = () => {
+    const input = lodash.extend(template.monitor_template.toObject(), {
+      host: host,
+      host_id: host._id,
+      template: template.monitor_template_id,
+      template_id: template.monitor_template_id,
+      customer: resource.customer_id,
+      customer_id: resource.customer_id,
+      customer_name: resource.customer_name,
+      _type: 'ResourceMonitor'
+    })
+    // remove template _id
+    delete input._id
+    delete input.id
+    logger.log('creating monitor from template %j', input)
+    return new MonitorModel(input)
+  }
 
-        logger.log('creating monitor from template');
-        logger.data('monitor %j', props);
-        var monitor = new MonitorEntity(props);
-        monitor.save(function(err, instance){
-          if(err) {
-            logger.error(err.errors);
-            logger.error(err);
-            return doneFn(err);
-          }
+  var resource = generateResourceModel(template)
+  var monitor = generateMonitorModel(template)
 
-          Service.createDefaultEvents(monitor,resource.customer_id)
+  // the ids are generated as soon as the models are created.
+  // dont need to save them before
+  resource.monitor_id = monitor._id
+  resource.monitor = monitor._id
 
-          doneFn(null,{
-            'monitor': instance,
-            'resource': resource
-          });
-        });
+  monitor.resource_id = resource._id
+  monitor.resource = resource._id
+
+  resource.save(err => {
+    if (err) {
+      logger.error('%o',err)
+      return done(err)
+    }
+
+    monitor.save(err => {
+      if(err) {
+        logger.error('%o',err)
+        return done(err);
       }
-    );
-  });
+
+      Service.createDefaultEvents(monitor, customer)
+
+      resource.monitor = monitor
+      done(null,resource)
+    })
+  })
 }
 
 /**
@@ -853,7 +915,7 @@ function createResourceAndMonitor (input, done) {
   var resource_data = input.resource_data;
 
   logger.log('creating resource');
-  Resource.create(resource_data, function(error,resource){
+  ResourceModel.create(resource_data, function(error,resource){
     if(error) throw error;
     else {
       logger.log('creating resource %s monitor', resource._id);
@@ -863,7 +925,7 @@ function createResourceAndMonitor (input, done) {
       monitor_data.resource = resource._id;
       monitor_data.resource_id = resource._id;
 
-      MonitorEntity.create(
+      MonitorModel.create(
         monitor_data,
         function(error, monitor){
           if(error) throw error;

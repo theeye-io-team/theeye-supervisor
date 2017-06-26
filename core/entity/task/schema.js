@@ -2,39 +2,19 @@
 
 const debug = require('debug')('entity:task')
 const Schema = require('mongoose').Schema
-const lodash = require('lodash')
+const after = require('lodash/after')
 const async = require('async')
-const randomSecret = require('../../lib/random-secret');
-const FetchBy = require('../../lib/fetch-by');
 require('mongoose-schema-extend')
 
-var BaseSchema = require('../base-schema');
+const BaseSchema = require('../base-schema')
+const properties = require('./base-properties')
 
-const properties = {
-  user_id: { type: String, default: null },
-  customer_id: { type: String, ref: 'Customer' },
-  public: { type: Boolean, default: false },
-  tags: { type: Array, default:[] },
-  type: { type: String, required: true },
-  name: { type: String },
-  description : { type: String, default: '' },
-  triggers: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Event',
-    default: function(){return [];}
-  }],
-  acl: [{ type: String }],
-  // one way hash
-  secret: { type:String, default:randomSecret },
-  grace_time: { type:Number, default: 0 }
-}
-
-exports.properties = properties
+//exports.properties = properties
 
 var EntitySchema = new BaseSchema(properties,{
   collection: 'tasks',
   discriminatorKey: '_type'
-});
+})
 
 const def = {
   getters: true,
@@ -48,27 +28,8 @@ const def = {
   }
 }
 
-EntitySchema.set('toJSON', def);
-EntitySchema.set('toObject', def);
-
-EntitySchema.statics.publishAll = function(entities, next){
-  if(!entities||entities.length==0) return next([]);
-
-  var published = [];
-  var donePublish = lodash.after(entities.length, () => next(null, published));
-
-  for (var i = 0; i<entities.length; i++) {
-    var entity = entities[i];
-    entity.publish(function(data){
-      published.push(data);
-      donePublish();
-    });
-  }
-}
-
-EntitySchema.statics.fetchBy = function (filter,next) {
-  FetchBy.call(this,filter,next)
-}
+EntitySchema.set('toJSON', def)
+EntitySchema.set('toObject', def)
 
 EntitySchema.methods.templateProperties = function () {
   const values = {}
@@ -79,6 +40,30 @@ EntitySchema.methods.templateProperties = function () {
   values.secret = undefined
   values.user_id = undefined
   return values
+}
+
+EntitySchema.methods.populateTriggers = function (done) {
+  const task = this
+  task.populate('triggers',(err) => {
+    if (err) return done(err)
+    if (Array.isArray(task.triggers) && task.triggers.length > 0) {
+      // call after task triggers async populate is completed
+      const populated = after(task.triggers.length, done)
+      task.triggers.forEach((event) => {
+        event.populate({
+          path: 'emitter',
+          populate: {
+            path: 'host',
+            model: 'Host'
+          }
+        },(err) => {
+          populated()
+        })
+      })
+    } else { // task hasn't got any triggers
+      done()
+    }
+  })
 }
 
 module.exports = EntitySchema;

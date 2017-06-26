@@ -15,51 +15,53 @@ var request = require("request").defaults({
 
 module.exports = {
   submit (customerName,key,data) {
-    CustomerService.getCustomerConfig(
-      { name: customerName },
-      function(err,config){
-        var specs;
-        var elastic = config.elasticsearch;
+    const query = { name: customerName }
+    CustomerService.getCustomerConfig(query, (err,config) => {
+      var specs
+      var elastic
 
-        if (err||!config) {
-          return logger.error('FATAL - no config found. elasticsearch submit will fail');
-        }
-
-        if (!elastic) {
-          return logger.error('FATAL - no config. elasticsearch config key not set');
-        }
-
-        if (!elastic.url) {
-          return logger.error('ERROR - invalid elasticsearch url configuration.');
-        }
-
-        data.type = key;
-        data.timestamp||(data.timestamp = (new Date()).getTime());
-        data.date||(data.date = (new Date()).toISOString());
-        specs = {
-          url: elastic.url + '/' + path.join(customerName,key),
-          body: data
-        }
-
-        if (elastic.enabled===true) {
-          request.post(specs,(err,respose,body) => {
-            if (err) {
-              logger.error('Request Error : %j', err);
-              logger.error(arguments);
-              return;
-            }
-            logger.log('submit done to %s', specs.url);
-          });
-        } else {
-          logger.log('elasticsearch is not enabled');
-        }
-
-        if (elastic.debug===true) {
-          logger.log('elasticsearch debug enabled');
-          debug(elastic.debug_file,specs);
-        }
+      if (err||!config) {
+        logger.error('FATAL - no config found. elasticsearch submit will fail');
+        return
       }
-    );
+
+      if (!config.elasticsearch) {
+        logger.error('FATAL - no config. elasticsearch config key not set');
+        return
+      }
+
+      elastic = config.elasticsearch
+      if (!elastic.url) {
+        logger.error('ERROR - invalid elasticsearch url configuration.');
+        return
+      }
+
+      data.type = key
+      data.timestamp || (data.timestamp = (new Date()).getTime())
+      data.date || (data.date = (new Date()).toISOString())
+      specs = {
+        url: elastic.url + '/' + path.join(customerName,key),
+        body: data
+      }
+
+      if (elastic.enabled===true) {
+        request.post(specs,(err,respose,body) => {
+          if (err) {
+            logger.error('Request Error : %j', err);
+            logger.error('Error data sent: %j', specs);
+            return;
+          }
+          logger.log('submit done to %s', specs.url);
+        });
+      } else {
+        logger.log('elasticsearch is not enabled');
+      }
+
+      if (elastic.debug===true) {
+        logger.log('elasticsearch debug enabled');
+        debug(elastic.debug_file,specs);
+      }
+    })
   }
 }
 

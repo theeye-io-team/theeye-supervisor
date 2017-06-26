@@ -13,3 +13,4 @@ dump*
 bundle/
 uploads/*
 *.orig
+out

@@ -1,23 +1,25 @@
-"use strict";
+'use strict';
 
-const ObjectId = require('mongoose').Schema.Types.ObjectId;
-const lodash = require('lodash')
-var mongodb = require('../../lib/mongodb').db;
-var BaseSchema = require('./schema');
-var Template = require('./template').Entity;
+const mongodb = require('../../lib/mongodb').db
+const ObjectId = require('mongoose').Schema.Types.ObjectId
+const BaseSchema = require('./schema')
+const Template = require('./template').Entity
 
 /**
  * Extended Schema. Includes non template attributes
  */
-var TaskSchema = BaseSchema.extend({
-  host_id: { type: String, 'default': null },
-  host: { type: ObjectId, ref: 'Host', 'default': null },
-  template: { type: ObjectId, ref: 'TaskTemplate', 'default': null },
-  type: { type: String, 'default':'script' },
-  script_arguments: { type: Array, 'default': [] },
-  script_runas: { type: String, 'default':'' },
-  script_id: { type: String, ref: 'Script' },
-});
+const TaskSchema = BaseSchema.extend({
+  template_id: { type: ObjectId },
+  host_id: { type: String },
+  script_id: { type: String },
+  script_runas: { type: String },
+  script_arguments: { type: Array },
+  type: { type: String, default: 'script' },
+  // relations
+  host: { type: ObjectId, ref: 'Host' },
+  script: { type: ObjectId, ref: 'Script' },
+  template: { type: ObjectId, ref: 'TaskTemplate' },
+})
 
 /**
  *
@@ -30,7 +32,7 @@ TaskSchema.methods.toTemplate = function(doneFn) {
   var template = new Template(values)
   template.save(function(error){
     doneFn(error, template)
-  });
+  })
 }
 
 TaskSchema.methods.templateProperties = function () {
@@ -47,23 +49,24 @@ TaskSchema.methods.templateProperties = function () {
  *
  */
 TaskSchema.statics.create = function(input,next) {
-  var instance = new this();
-  instance.host = (input.host||null);
-  instance.host_id = (input.host?input.host._id:null);
+  var instance = new this()
+  const host_id = input.host ? input.host._id : null
+
+  instance.host = host_id
+  instance.host_id = host_id
   instance.customer_id = input.customer._id;
   instance.script_id = input.script._id;
   instance.script_arguments = input.script_arguments;
   instance.script_runas = input.script_runas;
   instance.user_id = input.user._id;
-  instance.public = (input.public||false);
-  instance.name = (input.name||null);
-  instance.template = (input.template_id||null);
-  instance.description = (input.description||'');
   instance.tags = input.tags;
-  instance.save(function(err,entity){
-    next(err, entity);
-  });
-};
+  instance.public = input.public || false
+  instance.name = input.name || null
+  instance.template = input.template_id || null
+  instance.template_id = input.template_id || null
+  instance.description = input.description || ''
+  instance.save(next)
+}
 
 var Task = mongodb.model('Task', TaskSchema);
 Task.ensureIndexes();

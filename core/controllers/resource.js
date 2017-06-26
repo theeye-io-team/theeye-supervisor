@@ -139,23 +139,23 @@ var controller = {
    *
    */
   remove (req,res,next) {
-    var resource = req.resource;
+    const resource = req.resource
 
-    if(resource.type == 'host') {
-      debug('removing host resource');
+    if (resource.type == 'host') {
+      debug('removing host resource')
       ResourceManager.removeHostResource({
-        resource:resource,
-        user:req.user
-      });
-      res.send(200,{});
+        resource: resource,
+        user: req.user
+      })
+      res.send(200,{})
     } else {
-      debug('removing resource');
+      debug('removing resource')
       ResourceManager.remove({
-        resource:resource,
-        notifyAgents:true,
-        user:req.user
-      });
-      res.send(200,{});
+        resource: resource,
+        notifyAgents: true,
+        user: req.user
+      })
+      res.send(200,{})
     }
   },
   /**
@@ -164,31 +164,34 @@ var controller = {
    *
    */
   create (req,res,next) {
-    var customer = req.customer;
-    var body = req.body,
-      hosts = body.hosts;
+    const customer = req.customer
+    const body = req.body
+    const hosts = body.hosts
 
     body.acl = req.acl;
 
-    if (!hosts) return res.send(400, [{
-      field:'hosts',
-      message:'a host is required',
-      value:hosts,
-      code:'EREQ'
-    }]);
-
-    if (!Array.isArray(hosts)) hosts = [hosts];
-
-    var params = MonitorManager.validateData(body);
-    if (params.errors && params.errors.hasErrors()) {
-      return res.send(400, params.errors);
+    if (!hosts) {
+      return res.send(400, [{
+        field: 'hosts',
+        message: 'a host is required',
+        value: hosts,
+        code: 'EREQ'
+      }])
     }
 
-    var input = params.data;
-    input.user = req.user;
-    input.customer = customer;
-    input.customer_id = customer.id;
-    input.customer_name = customer.name;
+    if (!Array.isArray(hosts)) hosts = [hosts]
+
+    var params = MonitorManager.validateData(body)
+    if (params.errors && params.errors.hasErrors()) {
+      return res.send(400, params.errors)
+    }
+
+    var input = params.data
+    input.user_id = req.user._id
+    input.user_email = req.user.email
+    input.customer = customer
+    input.customer_id = customer.id
+    input.customer_name = customer.name
 
     ResourceManager.createResourceOnHosts(hosts,input,function(error,results){
       if (error) {
@@ -219,12 +222,12 @@ var controller = {
    *
    */
   update (req,res,next) {
-    var updates,
-      resource = req.resource,
-      body = req.body;
+    var updates
+    const resource = req.resource
+    const body = req.body
 
-    body.host = req.host;
-    body.acl = req.acl;
+    body.host = req.host
+    body.acl = req.acl
 
     var params = MonitorManager.validateData(body);
     if (params.errors && params.errors.hasErrors()) {
@@ -241,9 +244,9 @@ var controller = {
     }
 
     ResourceManager.update({
+      user_id: req.user._id,
       resource: resource,
-      updates: updates,
-      user: req.user
+      updates: updates
     },function(error,resource){
       if (error) {
         res.send(500,json.error('update error',error.message));

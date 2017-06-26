@@ -9,8 +9,10 @@ module.exports = function (webhook) {
   var event = new WebhookEvent({
     name: 'trigger',
     customer: webhook.customer,
-    emitter: webhook
+    emitter: webhook,
+    emitter_id: webhook._id,
   });
+
   event.save(err => {});
 
 }
