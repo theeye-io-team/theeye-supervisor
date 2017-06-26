@@ -128,6 +128,7 @@ const TaskService = {
               host: host,
               host_id: host._id,
               customer_id: input.customer._id,
+              customer: input.customer._id,
               user_id: input.user._id
             })
 
@@ -172,7 +173,8 @@ const TaskService = {
     logger.log('creating task from template %j', template);
 
     data = lodash.assign({}, template.toObject(),{
-      customer: customer,
+      customer_id: customer._id,
+      customer: customer._id,
       host: host._id,
       host_id: host._id,
       template_id: template._id,
@@ -217,9 +219,9 @@ const TaskService = {
 
     var task;
     if (input.type == 'scraper') {
-      task = new ScraperTask(input);
+      task = new ScraperTask(input)
     } else {
-      task = new Task(input);
+      task = new Task(input)
     }
 
     task.save(err => {

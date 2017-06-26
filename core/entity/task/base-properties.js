@@ -13,5 +13,6 @@ module.exports = {
   acl: [{ type: String }],
   // one way hash
   secret: { type: String, default: randomSecret },
-  grace_time: { type: Number, default: 0 }
+  grace_time: { type: Number, default: 0 },
+  customer: { type: ObjectId, ref: 'Customer' },
 }

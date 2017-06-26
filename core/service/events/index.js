@@ -21,20 +21,21 @@ class EventDispatcher extends EventEmitter {
 
   initialize (done) {
     const next = () => {
-      logger.log('started')
+      logger.log('events dispatcher is ready')
       done()
     }
 
     if (this.user) {
-      next(null,user)
+      return next(null,user)
     } else {
       User.findOne(config.system.user,(err, user) => {
         if (err) throw err;
         if (!user) {
+          // system user not found. create one
           this.user = new User(config.system.user)
           this.user.save( err => {
-            if(err) throw err
-            else next(null, user)
+            if (err) throw err
+            else next(null, this.user)
           });
         } else {
           this.user = user
@@ -60,13 +61,14 @@ class EventDispatcher extends EventEmitter {
       if (err) return logger.error( err );
       if (tasks.length == 0) return;
 
-      const args = {
-        task: task,
-        event: event,
-        event_data: event_data
+      for (var i=0; i<tasks.length; i++) {
+        createJob({
+          user: this.user,
+          task: tasks[i],
+          event: event,
+          event_data: event_data
+        })
       }
-
-      tasks.forEach(task => createJob.call(this, args))
     })
 
     return this
@@ -82,25 +84,29 @@ module.exports = new EventDispatcher()
  */
 const createJob = (options) => {
   const task = options.task
+  const user = options.user
   const event = options.event
 
   logger.log('preparing to run task %s', task._id);
 
   task.populate([
-    {path:'customer_id'},
-    {path:'host'}
-  ],err => {
-    if (err) return logger.error(err);
-    if (!task.customer_id) return logger.error('FATAL. task %s does not has a customer', task._id);
-    if (!task.host) return logger.error('WARNING. task %s does not has a host. cannot execute', task._id);
-
-    const customer = task.customer_id; //after populate customer_id is a customer model
-    if (!customer) {
-      return logger.error(
-        new Error('task customer is not set, %j', task)
-      );
+    { path: 'customer' },
+    { path: 'host' }
+  ], err => {
+    if (err) {
+      logger.error(err)
+      return
+    }
+    if (!task.customer) {
+      logger.error('FATAL. Task %s does not has a customer', task._id)
+      return
+    }
+    if (!task.host) {
+      logger.error('WARNING. Task %s does not has a host. Cannot execute', task._id)
+      return
     }
 
+    const customer = task.customer
     const runDateMilliseconds =  Date.now() + task.grace_time * 1000
 
     if (task.grace_time > 0) {
@@ -108,7 +114,7 @@ const createJob = (options) => {
       App.scheduler.scheduleTask({
         event: event,
         task: task,
-        user: this.user,
+        user: user,
         customer: customer,
         notify: true,
         schedule: {
@@ -135,7 +141,7 @@ const createJob = (options) => {
       App.jobDispatcher.create({
         event: event,
         task: task,
-        user: this.user,
+        user: user,
         customer: customer,
         notify: true
       }, (err, job) => {

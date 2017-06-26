@@ -4,6 +4,7 @@ const lodash = require('lodash');
 const globalconfig = require('config');
 const logger = require('../../lib/logger')('service:resource');
 const elastic = require('../../lib/elastic');
+const Constants = require('../../constants/monitors');
 const CustomerService = require('../customer');
 const NotificationService = require('../notification');
 const ResourceMonitorService = require('./monitor');
@@ -16,10 +17,10 @@ const ResourceModel = require('../../entity/resource').Entity;
 const MonitorModel = require('../../entity/monitor').Entity;
 const MonitorTemplate = require('../../entity/monitor/template').Entity;
 const Host = require('../../entity/host').Entity;
-const Task = require('../../entity/task').Entity;
+const HostGroup = require('../../entity/host/group').Entity;
 const HostStats = require('../../entity/host/stats').Entity;
+const Task = require('../../entity/task').Entity;
 const Tag = require('../../entity/tag').Entity;
-const Constants = require('../../constants/monitors');
 
 function Service(resource) {
   var _resource = resource;
@@ -599,88 +600,129 @@ Service.fetchBy = function (filter,next) {
 /**
  *
  * @author Facundo
+ * @param {Object} input
+ * @param {Resource} input.resource the resource to be removed
+ * @param {User} input.user requesting user
+ * @param {Function(Error)} done
  *
  */
-Service.removeHostResource = function (input,done) {
-  var hid = input.resource.host_id;
-  var rid = input.resource._id;
+Service.removeHostResource = function (input, done) {
+  const host_id = input.resource.host_id
+  const resource_id = input.resource._id
 
-  logger.log('removing host "%s" resource "%s" resources', hid, rid);
+  logger.log('removing host "%s" resource "%s" resources', host_id, resource_id);
 
+  // find and remove host
   Host
-    .findById(hid)
+    .findById(host_id)
     .exec(function(err, item){
-      if(err) return logger.error(err);
-      if(!item) return;
-      item.remove(function(err){
-        if(err) logger.error(err);
+      if (err) {
+        logger.error(err);
+        return
+      }
+      if (!item) return
+      item.remove((err) => {
+        if (err) logger.error(err)
       });
     });
 
   logger.log('removing host stats');
+  // find and remove saved cached host stats
   HostStats
-    .find({ host_id: hid })
+    .find({ host_id: host_id })
     .exec(function(err, items){
-      if(items && items.length != 0) {
-        for(var i=0; i<items.length; i++){
-          items[i].remove(function(err){ });
-        }
+      if (err) {
+        logger.error(err);
+        return
       }
-    }
-  );
+      if (!Array.isArray(items)||items.length===0) return
+      for (var i=0; i<items.length; i++) {
+        items[i].remove((err) => {})
+      }
+    })
 
-  function removeResource(resource, done){
+  // find and remove resources
+  const removeResource = (resource, done) => {
     logger.log('removing host resource "%s"', resource.name);
     Service.remove({
-      resource:resource,
-      notifyAgents:false,
-      user:input.user
-    },function(err){
-      if(err) return done(err);
-      logger.log('resource "%s" removed', resource.name);
-      done();
+      resource: resource,
+      notifyAgents: false,
+      user: input.user
+    },(err) => {
+      if (err) {
+        logger.error(err);
+        return
+      }
+      else logger.log('resource "%s" removed', resource.name)
+      done(err)
     });
   }
 
   ResourceModel
-    .find({ 'host_id': hid })
+    .find({ host_id: host_id })
     .exec(function(err, resources){
-      if(resources.length != 0){
-
-        var doneResourceRemoval = lodash.after(resources.length, function(){
-          // all resource & monitors removed
-        });
-
-        for(var i=0; i<resources.length; i++){
-          var resource = resources[i];
-          removeResource(resource, function(){
-            doneResourceRemoval();
-          });
-        }
+      if (err) {
+        logger.error(err);
+        return
       }
-    });
+      if (!Array.isArray(resources)||resources.length===0) return
+      const resourceRemoved = lodash.after(resources.length, () => {
+        // all resources && monitors removed
+      })
 
-  logger.log('removing host jobs history');
+      for (var i=0; i<resources.length; i++) {
+        removeResource(resources[i], resourceRemoved)
+      }
+    })
+
+  // find and remove host jobs
   Job
-    .find({ host_id: hid })
+    .find({ host_id: host_id })
     .exec(function(err, items){
-      if(items && items.length != 0) {
-        for(var i=0; i<items.length; i++){
-          items[i].remove(function(err){ });
-        }
+      if (err) {
+        logger.error(err);
+        return
+      }
+      if (!Array.isArray(items)||items.length===0) return
+      for (var i=0; i<items.length; i++) {
+        items[i].remove((err) => {})
+      }
+    })
+
+  // find and remove host tasks
+  Task
+    .find({ host_id: host_id })
+    .exec(function(err, items){
+      if (err) {
+        logger.error(err);
+        return
+      }
+      if (!Array.isArray(items)||items.length===0) return
+      for (var i=0; i<items.length; i++) {
+        items[i].host_id = null
+        items[i].save()
       }
     });
 
-  Task
-    .find({ host_id: hid })
-    .exec(function(err, items){
-      if(items && items.length != 0) {
-        for(var i=0; i<items.length; i++){
-          items[i].host_id = null;
-          items[i].save();
-        }
+  const removeFromGroup = (group) => {
+    const idx = group.hosts.indexOf(host_id)
+    if (idx === -1) return
+    group.hosts.splice(idx,1)
+    group.save()
+  }
+
+  HostGroup
+    .find({ hosts: host_id })
+    .exec((err,groups) => {
+      if (err) {
+        logger.error(err);
+        return
       }
-    });
+      if (!Array.isArray(groups) || groups.length===0) return
+      for (var i=0; i<groups.length; i++) {
+        removeFromGroup(groups[i])
+      }
+    })
 }
 
 /**
@@ -697,7 +739,7 @@ Service.remove = function (input, done) {
   logger.log('removing resource "%s" monitors', resource.name);
 
   MonitorModel.find({
-    'resource_id': resource._id
+    resource_id: resource._id
   },function(error,monitors){
     if(monitors.length !== 0){
       var monitor = monitors[0];
