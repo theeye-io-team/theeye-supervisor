@@ -37,6 +37,7 @@ var EntitySchema = new BaseSchema(properties,{
 
 EntitySchema.methods.populateAll = function(next) {
   Entity.populate(this,[
+    { path: 'customer' },
     { path: 'hosts' },
     { path: 'tasks' },
     { path: 'resources' },

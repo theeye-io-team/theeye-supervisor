@@ -18,29 +18,29 @@ module.exports = function(server, passport){
 
   server.get('/:customer/task',middlewares.concat([
     router.requireCredential('user'),
-    router.resolve.idToEntity({param:'host'})
+    router.resolve.idToEntity({ param: 'host' })
   ]),controller.fetch);
 
   server.get('/:customer/task/:task',middlewares.concat(
     router.requireCredential('user'),
-    router.resolve.idToEntity({param:'task',required:true}),
-    router.ensureAllowed({entity:{name:'task'}})
+    router.resolve.idToEntity({ param: 'task', required: true }),
+    router.ensureAllowed({ entity:{ name: 'task' } })
   ),controller.get);
 
   server.post('/:customer/task',middlewares.concat([
     router.requireCredential('admin'),
-    router.resolve.idToEntity({param:'script',entity:'file'})
+    router.resolve.idToEntity({ param: 'script', entity: 'file' })
   ]),controller.create);
 
   var mws = middlewares.concat(
     router.requireCredential('admin'),
-    router.resolve.idToEntity({param:'task'}),
-    router.resolve.idToEntity({param:'host_id',entity:'host',into:'host'})
+    router.resolve.idToEntity({ param: 'task', required: true }),
+    router.resolve.idToEntity({ param: 'host_id', entity: 'host', into: 'host' })
   );
-  server.patch('/:customer/task/:task',mws,controller.update);
-  server.put('/:customer/task/:task',mws,controller.update);
-  server.del('/:customer/task/:task',mws,controller.remove);
-};
+  server.patch('/:customer/task/:task', mws, controller.update)
+  server.put('/:customer/task/:task', mws, controller.update)
+  server.del('/:customer/task/:task', mws, controller.remove)
+}
 
 var controller = {
   /**

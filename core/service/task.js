@@ -195,10 +195,10 @@ const TaskService = {
    * @author Facugon
    * @summary Create a task
    * @param {Object} input
-   * @param {Customer} input.customer
-   * @param {User} input.user
-   * @param {Host} input.host
-   * @param {TaskTemplate} input.template
+   * @property {Customer} input.customer
+   * @property {User} input.user
+   * @property {Host} input.host
+   * @property {TaskTemplate} input.template
    * @param {Function(Error,)} done
    */
   create (input, done) {

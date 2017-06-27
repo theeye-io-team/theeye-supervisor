@@ -22,7 +22,7 @@ var ResourceSchema = BaseSchema.EntitySchema.extend({
   enable: { type: Boolean, default: true },
   creation_date: { type: Date, default: Date.now },
   last_update: { type: Date, default: Date.now },
-  last_event: { type: Object, default: {} },
+  last_event: { type: Object, default: () => { return {} } },
   last_check: { type: Date },
   // relations
   monitor: { type: ObjectId, ref: 'ResourceMonitor' }, // has one

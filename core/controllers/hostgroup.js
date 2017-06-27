@@ -187,6 +187,7 @@ const controller = {
     }
 
     HostGroupService.replace({
+      customer: req.customer,
       group: req.group,
       name: body.name,
       description: body.description,

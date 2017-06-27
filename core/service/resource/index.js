@@ -335,7 +335,7 @@ function Service(resource) {
         }
 
         resource.save(err => {
-          if(err){
+          if (err) {
             logger.error('error saving resource state');
             logger.error(err, err.errors);
           }
@@ -497,12 +497,6 @@ Service.update = function(input,next) {
   var updates = input.updates;
   var resource = input.resource;
 
-  if (updates.host) {
-    updates.host = updates.host._id
-    updates.host_id = updates.host._id
-    updates.hostname = updates.host.hostname
-  }
-
   logger.log('updating monitor %j',updates);
 
   // remove from updates if present. cant be changed
@@ -576,22 +570,27 @@ function getEventSeverity (event,resource) {
  */
 Service.fetchBy = function (filter,next) {
   ResourceModel.fetchBy(filter,function (err,resources) {
-    var pub = []
-    var fetched = lodash.after(resources.length,function(){
-      next(null,pub)
+    if (resources.length===0) return next(null,[])
+
+    const pub = []
+    const fetched = lodash.after(resources.length,() => {
+      next(null, pub)
     })
 
     resources.forEach(resource => {
-      resource.publish(function(error, data){
-        MonitorModel
-          .findOne({ resource_id: resource._id })
-          .exec((err,monitor) => {
-            if (err) return fetched()
+      var data = resource.toObject()
 
-            data.monitor = monitor
-            pub.push(data)
-            fetched()
-          })
+      MonitorModel.findOne({
+        resource_id: resource._id
+      }).exec((err,monitor) => {
+        if (err) {
+          logger.error('%o',err)
+          return fetched()
+        }
+
+        data.monitor = monitor.toObject()
+        pub.push(data)
+        fetched()
       })
     })
   })
@@ -932,18 +931,19 @@ Service.createFromTemplate = function(options) {
  */
 function handleHostIdAndData (hostId, input, doneFn) {
   Host.findById(hostId, function(err,host){
-    if(err) return doneFn(err);
+    if (err) return doneFn(err);
 
-    if(!host) {
+    if (!host) {
       var e = new Error('invalid host id ' + hostId);
       e.statusCode = 400;
       return doneFn(e);
     }
 
-    input.host_id = host._id;
-    input.hostname = host.hostname;
+    input.host_id = host._id
+    input.host = host._id
+    input.hostname = host.hostname
 
-    Service.create(input, doneFn);
+    Service.create(input, doneFn)
   });
 }
 

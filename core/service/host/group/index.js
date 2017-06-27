@@ -1,7 +1,5 @@
 'use strict'
 
-const mongoose = require('mongoose')
-const Schema = mongoose.Schema
 const lodash = require('lodash')
 const config = require('config')
 const async = require('async')
@@ -36,6 +34,7 @@ const Service = module.exports = {
   /**
    * Remove all group template entities, and
    * unlink all the resources and tasks from the templates.
+   * Also remove task and monitors events
    *
    * @author Facundo
    * @param {Object} input
@@ -53,11 +52,15 @@ const Service = module.exports = {
       const tasks = group.tasks.map(t => t._id)
       const resources = group.resources.map(r => r._id)
       const monitors = group.resources.map(r => r.monitor_template_id)
-      removeTemplateEntities(tasks, TaskTemplate, Task, false)
-      removeTemplateEntities(resources, ResourceTemplate, Resource, false)
-      removeTemplateEntities(monitors, MonitorTemplate, Monitor, false)
+      // remove in series
+      removeTemplateEntities(tasks, TaskTemplate, Task, false, () => {
+        removeTemplateEntities(resources, ResourceTemplate, Resource, false, () => {
+          removeTemplateEntities(monitors, MonitorTemplate, Monitor, false, () => {
+          })
+        })
+      })
 
-      group.remove(function(err){
+      group.remove((err) => {
         if (err) return done(err)
 
         registerGroupCRUDOperation(group.customer_name,{
@@ -157,14 +160,23 @@ const Service = module.exports = {
   },
 
   /**
-   * replace host template configuration
    * @author Facugon
+   * @summary Replace host template configuration
    * @param {Object} input
-   * @param {Function} done
+   * @property {Customer} input.customer
+   * @property {HostGroup} input.group
+   * @property {String} input.name
+   * @property {String} input.description
+   * @property {String} input.hostname_regex a valid RegExp Pattern
+   * @property {String[]} input.hosts valid ObjectId string array
+   * @property {Object[]} input.tasks valid ObjectId string array
+   * @property {Object[]} input.resources valid ObjectId string array
+   * @param {Function(Error,HostGroup)} done
    */
   replace (input, done) {
     const self = this
     const group = input.group
+    const customer = input.customer
 
     // host elements only present in group.hosts.
     // group.hosts is an array of mongo ObjectID
@@ -201,7 +213,7 @@ const Service = module.exports = {
           for (var i=0; i < newHosts.length; i++) {
             findHost(newHosts[i],(err,host) => {
               if (err || !host) return
-              copyTemplateToHost(host, group, group.customer)
+              copyTemplateToHost(host, group, customer)
             })
           }
         }
@@ -466,41 +478,63 @@ const findHost = (id, next) => {
  * @param {Function} next
  */
 const unlinkHostFromTemplate = (host, template, next) => {
-  // remove all attached tasks to the host for the given template
+
+  const removeEntity = (entity, done) => {
+    entity.remove((e) => {
+      if (e) {
+        logger.error('Error removing entity')
+        return done(e)
+      }
+
+      // remove all events attached to the entity
+      Event.remove({
+        emitter_id: entity._id
+      }).exec((e) => {
+        if (e) {
+          logger.error('Error removing entity events')
+          return done(e)
+        }
+
+        logger.log('All entities and events removed')
+        return done()
+      })
+    })
+  }
+
+  /**
+   * @param {Mongoose.Schema} Schema
+   * @param {Object} entityTemplate
+   * @param {Function} done
+   */
+  const removeSchemaEntities = (Schema, entityTemplate, done) => {
+    Schema.find({
+      host_id: host._id.toString(),
+      template_id: entityTemplate._id
+    }).exec((err, entities) => {
+      if (!entities||entities.length===0) return
+
+      for (var i=0; i<entities.length; i++) {
+        removeEntity(entities[i], done)
+      }
+    })
+  }
 
   // in all cases :
   // * host_id (old property) is a mongo db string id.
   // * template_id (new property) is a native ObjectID mongo type
+
+  // remove all attached tasks to the host for the given template
   for (var t=0; t<template.tasks.length; t++) {
     const tplTask = template.tasks[t]
-    Task.remove({
-      host_id: host._id.toString(),
-      template_id: tplTask._id
-    }, (err, count) => {
-      if (err) logger.error('task remove error %o',err)
-      else logger.log('tasks removed count %s',count)
-    })
+    removeSchemaEntities(Task, tplTask, () => {})
   }
 
   // remove all attached resources (and its monitor) to the host for the given template
   for (var r=0; r<template.resources.length; r++) {
     const tplResource = template.resources[r]
 
-    Resource.remove({
-      host_id: host._id.toString(),
-      template_id: tplResource._id
-    }, (err, count) => {
-      if (err) logger.error('resource remove error %o',err)
-      else logger.log('resources removed count %s',count)
-    })
-
-    Monitor.remove({
-      host_id: host._id.toString(),
-      template_id: tplResource.monitor_template_id
-    }, (err, count) => {
-      if (err) logger.error('monitor remove error %o',err)
-      else logger.log('monitors removed count %s',count)
-    })
+    removeSchemaEntities(Resource, tplResource, () => {})
+    removeSchemaEntities(Task, tplResource.monitor_template_id, () => {})
   }
 }
 
@@ -509,6 +543,7 @@ const unlinkHostFromTemplate = (host, template, next) => {
  * @summary Given a host, copy task and monitor templates to it
  * @param {Host} host
  * @param {HostGroup} template
+ * @param {Customer} customer
  * @param {Function} next
  */
 const copyTemplateToHost = (host, template, customer, next) => {
@@ -595,58 +630,70 @@ const copyResourcesToHost = (host, templates, customer, next) => {
 /**
  * @author Facugon
  * @summary Remove template entity and all the clones of it
- * @param {Array} templates
+ * @param {String[]} templates
  * @param {Mongoose.Schema} TemplateSchema template schema
  * @param {Mongoose.Schema} LinkedSchema non template schema clone
- * @param {Boolean} keep to keep template instances instead of remove them from the host
+ * @param {Boolean} keepClones to keep template instances instead of removing them completely
  */
-const removeTemplateEntities = (templates, TemplateSchema, LinkedSchema, keep) => {
+const removeTemplateEntities = (templates, TemplateSchema, LinkedSchema, keepClones, next) => {
   if (!Array.isArray(templates)||templates.length===0) {
-    return
+    return next()
   }
 
-  for (var i=0; i<templates.length; i++) {
-    const id = templates[i]
+  const removeEntityTemplateClone = (entity,done) => {
+    entity.remove(err => {
+      if (err) return logger.error('%o',err)
+      logger.log('removing entity %s [%s] events', entity._type, entity._id)
+      Event.remove({ emitter_id: entity._id }).exec(err => {
+        if (err) return logger.error('%o',err)
+      })
+    })
+  }
 
+  const updateEntityTemplateClone = (entity,done) => {
+    // update entities , removing parent template
+    entity.template = null
+    entity.template_id = null
+    entity.last_update = new Date()
+    entity.save(err => {
+      if (err) logger.error('%o',err)
+      done(err)
+    })
+  }
+
+  const removeEntityTemplate = () => {
+  }
+
+  async.eachSeries(templates, (id, done) => {
     // remove templates
-    TemplateSchema
-      .remove({ _id: id })
-      .exec((err) => {
-        if (err) {
-          logger.error(err)
-          return
+    TemplateSchema.remove({ _id: id }).exec(err => {
+      if (err) return logger.error('%o',err)
+
+      // remove template from linked entities
+      LinkedSchema.find({ template_id: id }).exec((err,entities) => {
+        if (err) return done(err)
+        if (!Array.isArray(entities)||entities.length===0) {
+          return done()
         }
 
-        // remove template from linked entities
-        if (keep === false) {
-          LinkedSchema.remove({ template_id: id }).exec(err => {
-            if (err) logger.error('%o',err)
-          })
+        if (keepClones === true) {
+          for (var i=0; i<entities.length; i++) {
+            updateEntityTemplateClone(entities[i],()=>{})
+          }
+          // do not wait until all entities are updated
+          return done()
         } else {
-          LinkedSchema
-            .find({ template_id: id })
-            .exec((err, entities) => {
-              if (err) {
-                logger.error('%o',err)
-                return
-              }
-
-              if (!Array.isArray(entities) || entities.length===0) {
-                return
-              }
-
-              for (var i=0; i<entities.length; i++) {
-                var entity = entities[i];
-                entity.template = null
-                entity.template_id = null
-                entity.save(function(err){
-                  if (err) logger.error('%o',err)
-                })
-              }
-            })
+          // remove all
+          for (var i=0; i<entities.length; i++) {
+            removeEntityTemplateClone(entities[i],()=>{})
+          }
         }
       })
-  }
+    })
+  }, (err) => {
+    if (err) logger.error(err)
+    next(err)
+  })
 }
 
 /**
