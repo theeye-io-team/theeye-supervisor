@@ -7,14 +7,19 @@ const logger = require('./logger')(':elastic');
 const config = require('config');
 const fs = require('fs');
 
-var request = require("request").defaults({
+const request = require("request").defaults({
   timeout: 5000,
   json: true,
   gzip: true
-});
+})
 
 module.exports = {
-  submit (customerName,key,data) {
+  /**
+   * @param {String} customerName
+   * @param {String} key
+   * @param {Object} data
+   */
+  submit (customerName, key, data) {
     const query = { name: customerName }
     CustomerService.getCustomerConfig(query, (err,config) => {
       var specs
@@ -52,7 +57,7 @@ module.exports = {
             return;
           }
           logger.log('submit done to %s', specs.url);
-        });
+        })
       } else {
         logger.log('elasticsearch is not enabled');
       }
@@ -65,9 +70,18 @@ module.exports = {
   }
 }
 
-function debug (filename, data) {
-  if (!filename) return logger.error('no filename provided');
-  fs.appendFile(filename, JSON.stringify(data) + "\n", (err) => {
-    if (err) { logger.error(err); }
-  }); 
+const debug = (filename, data) => {
+  if (!filename) {
+    return logger.error('no filename provided')
+  }
+
+  fs.appendFile(
+    filename,
+    JSON.stringify(data) + "\n",
+    (err) => {
+      if (err) {
+        logger.error(err)
+      }
+    }
+  )
 }

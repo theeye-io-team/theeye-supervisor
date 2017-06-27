@@ -236,7 +236,13 @@ const Service = module.exports = {
     })
   },
 
-  orchestrate (host, next) {
+  /**
+   *
+   * @param {Host} host
+   * @param {Function(Error,Group[])}
+   *
+   */
+  searchGroupsForHost (host, next) {
     logger.log('searching group for host %s', host.hostname);
     /**
      * @param {HostGroup[]} groups
@@ -253,25 +259,36 @@ const Service = module.exports = {
       return matches
     }
 
-    const query = HostGroup.find({
+    HostGroup.find({
       customer: host.customer_id,
       hostname_regex: {
         $exists: true,
         $ne: null
       }
-    })
-    query.populate('customer').exec((err, items) => {
+    }).populate('customer').exec((err, items) => {
       if (err) {
         logger.error(err)
-        return next(err)
+        return next(err,[])
+      }
+
+      if (!Array.isArray(items)||items.length===0) {
+        return next(null,[])
       }
 
       const groups = matchGroups(host.hostname, items)
 
-      if (!Array.isArray(groups)||groups.length===0) {
+      if (groups.length===0) {
         logger.log('not found any group')
         return next(null,[])
       }
+
+      next(null, groups)
+    })
+  },
+
+  orchestrate (host, next) {
+    this.searchGroupsForHost(host,(err, groups) => {
+      if (err||!groups||groups.length===0) return next(err,null)
 
       const customer = groups[0].customer // @todo all the same customer. populate.customer may not be necessary. improve somehow
 
@@ -661,7 +678,6 @@ const supplyHostWithTemplate = (host, group, customer, done) => {
  * @param {Function} next callback
  */
 const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
-
   const searchTriggerEmitter = (trigger) => {
     var emitter
     // search current emitter id

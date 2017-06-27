@@ -1,7 +1,6 @@
 'use strict';
 
 const util = require('util');
-const Schema = require('mongoose').Schema;
 const async = require('async');
 const path = require('path');
 const BaseSchema = require('../base-schema');

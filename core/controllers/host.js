@@ -4,14 +4,13 @@ const logger = require('../lib/logger')('controller:host');
 //const debug = require('debug')('controller:host')
 const config = require('config')
 const lodash = require('lodash')
-var elastic = require('../lib/elastic');
-var router = require('../router');
-
-var Host = require("../entity/host").Entity;
-var Resource = require('../entity/resource').Entity;
-
-var HostService = require('../service/host');
-var NotificationService = require('../service/notification');
+const elastic = require('../lib/elastic');
+const router = require('../router');
+const Host = require("../entity/host").Entity;
+const Resource = require('../entity/resource').Entity;
+const HostService = require('../service/host');
+const NotificationService = require('../service/notification');
+const dbFilter = require('../lib/db-filter');
 
 module.exports = function(server, passport) {
   var middlewares = [
@@ -65,7 +64,7 @@ module.exports = function(server, passport) {
   )
 }
 
-var controller = {
+const controller = {
   /**
    *
    *
@@ -80,18 +79,18 @@ var controller = {
    */
   fetch (req,res,next) {
     const customer = req.customer
+    const query = req.query // query string
 
-    logger.log('fetching hosts by customer %s', customer.name)
+    var filter = dbFilter(query.filter||{},{ /** default filters here **/})
+    filter.where.customer_id = customer._id.toString()
 
-    Host.find({
-      customer_name: customer.name
-    }, (err,hosts) => {
+    Host.fetchBy(filter, function (err,hosts) {
       if (err) {
         logger.error(err)
         return res.send(500, err)
       }
-
-      res.send(200, hosts)
+      res.send(200, hosts || [])
+      next()
     })
   },
   /**

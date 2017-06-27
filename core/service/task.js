@@ -20,7 +20,7 @@ var FetchBy = require('../lib/fetch-by')
 var SchedulerService = require('./scheduler')
 
 const registerTaskCRUDOperation = (customer,data) => {
-  var key = config.elasticsearch.keys.task.crud
+  const key = config.elasticsearch.keys.task.crud
   elastic.submit(customer,key,data)
 }
 
@@ -172,13 +172,13 @@ const TaskService = {
 
     logger.log('creating task from template %j', template);
 
-    data = lodash.assign({}, template.toObject(),{
+    data = lodash.assign({}, template.toObject(), {
       customer_id: customer._id,
-      customer: customer._id,
-      host: host._id,
+      customer: customer,
+      host: host,
       host_id: host._id,
       template_id: template._id,
-      template: template._id,
+      template: template,
       _type: 'Task'
     })
 
@@ -195,19 +195,26 @@ const TaskService = {
    * @author Facugon
    * @summary Create a task
    * @param {Object} input
+   * @param {Customer} input.customer
+   * @param {User} input.user
+   * @param {Host} input.host
+   * @param {TaskTemplate} input.template
    * @param {Function(Error,)} done
    */
   create (input, done) {
     const self = this
+    const customer = input.customer
+    const user = input.user
+
     const created = (task) => {
       logger.log('creating task type "%s"', task.type)
       logger.data('%j', task)
 
-      registerTaskCRUDOperation(input.customer.name,{
+      registerTaskCRUDOperation(customer.name,{
         name: task.name,
-        customer_name: input.customer.name,
-        user_id: (input.user && input.user.id) || null,
-        user_email: (input.user && input.user.email) || null,
+        customer_name: customer.name,
+        user_id: (user && user.id) || null,
+        user_email: (user && user.email) || null,
         operation: 'create'
       })
 
@@ -226,31 +233,35 @@ const TaskService = {
 
     task.save(err => {
       if (err) {
-        logger.log(err);
-        return done(err);
+        logger.error(err)
+        return done(err)
       }
       created(task);
 
       if (input.tags && Array.isArray(input.tags)) {
-        Tag.create(input.tags, input.customer)
+        Tag.create(input.tags, customer)
       }
 
       TaskEvent.create(
         {
           name: 'success',
-          customer: input.customer,
-          customer_id: input.customer._id,
+          customer: customer,
+          customer_id: customer._id,
           emitter: task,
           emitter_id: task._id,
         },
         {
           name: 'failure',
-          customer: input.customer,
-          customer_id: input.customer._id,
+          customer: customer,
+          customer_id: customer._id,
           emitter: task,
           emitter_id: task._id,
         },
-        (err) => logger.log(err)
+        (err) => {
+          if (err) {
+            logger.error(err)
+          }
+        }
       )
     })
   },
