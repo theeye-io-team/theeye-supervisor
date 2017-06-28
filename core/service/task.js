@@ -179,7 +179,7 @@ const TaskService = {
       host_id: host._id,
       template_id: template._id,
       template: template,
-      _type: 'Task'
+      _type: template._type // force _type
     })
 
     delete data._id
