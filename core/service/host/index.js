@@ -238,18 +238,23 @@ const createHostResources = (host, data, next) => {
     next(null, { host: host, resource: resource })
 
     HostGroupService.orchestrate(host, (err, groups) => {
-      if (err) return logger.error(err)
+      if (err) {
+        logger.error(err)
+        return
+      }
+
       if (!groups||!Array.isArray(groups)||groups.length===0) {
+        // create resources and notify agent
         createBaseMonitors(
           Object.assign({}, data, {
             host: host,
             resource: resource
-          })
+          }),
+          () => {
+            AgentUpdateJob.create({ host_id: host._id })
+          }
         )
       } else {
-        //host.templates = groups
-        //host.save()
-
         AgentUpdateJob.create({ host_id: host._id })
       }
     })
@@ -342,15 +347,22 @@ const sendEventNotification = (host,vent) => {
 }
 
 /**
-* create a dstats and psaux monitoring workers
-*/
-const createBaseMonitors = (input, doneFn) => {
-  logger.log('creating base monitors');
-  doneFn||(doneFn = ()=>{});
-  let dstat = Object.assign({},input,{'type':'dstat'});
-  let psaux = Object.assign({},input,{'type':'psaux'});
-  createMonitor([input.host._id],dstat);
-  createMonitor([input.host._id],psaux);
+ * create a dstats and psaux monitoring workers
+ * @param {Object} input
+ * @param {Function} next
+ */
+const createBaseMonitors = (input, next) => {
+  logger.log('creating base monitors')
+  next||(next = ()=>{})
+  const dstat = Object.assign({},input,{type:'dstat'})
+  const psaux = Object.assign({},input,{type:'psaux'})
+  createMonitor([input.host._id], dstat, (err) => {
+    if (err) logger.error(err)
+    createMonitor([input.host._id], psaux, (err) => {
+      if (err) logger.error(err)
+      next()
+    })
+  })
 }
 
 /**

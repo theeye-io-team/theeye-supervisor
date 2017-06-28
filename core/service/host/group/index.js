@@ -52,10 +52,18 @@ const Service = module.exports = {
       const tasks = group.tasks.map(t => t._id)
       const resources = group.resources.map(r => r._id)
       const monitors = group.resources.map(r => r.monitor_template_id)
+      const hosts = group.hosts
       // remove in series
+      logger.log('removing templated tasks')
       removeTemplateEntities(tasks, TaskTemplate, Task, false, () => {
+        logger.log('removing templated resources')
         removeTemplateEntities(resources, ResourceTemplate, Resource, false, () => {
+          logger.log('removing templated monitors')
           removeTemplateEntities(monitors, MonitorTemplate, Monitor, false, () => {
+            logger.log('all removed')
+            hosts.forEach(host => {
+              AgentUpdateJob.create({ host_id: host._id })
+            })
           })
         })
       })
@@ -149,7 +157,7 @@ const Service = module.exports = {
               if (group.hosts.length > 0) {
                 /** copy template configs to the attached hosts **/
                 for (var i=0; i<group.hosts.length; i++) {
-                  copyTemplateToHost(group.hosts[i], group, customer)
+                  copyTemplateToHost(group.hosts[i], group, customer, (err) => { })
                 }
               }
             })
@@ -213,7 +221,7 @@ const Service = module.exports = {
           for (var i=0; i < newHosts.length; i++) {
             findHost(newHosts[i],(err,host) => {
               if (err || !host) return
-              copyTemplateToHost(host, group, customer)
+              copyTemplateToHost(host, group, customer, () => { })
             })
           }
         }
@@ -222,7 +230,9 @@ const Service = module.exports = {
           for (var i=0; i < delHosts.length; i++) {
             findHost(delHosts[i], (err,host) => {
               if (err || !host) return
-              unlinkHostFromTemplate(host, group)
+              unlinkHostFromTemplate(host, group, (err) => {
+                AgentUpdateJob.create({ host_id: host._id })
+              })
             })
           }
         }
@@ -478,6 +488,7 @@ const findHost = (id, next) => {
  * @param {Function} next
  */
 const unlinkHostFromTemplate = (host, template, next) => {
+  next || (next = () => {})
 
   const removeEntity = (entity, done) => {
     entity.remove((e) => {
@@ -485,6 +496,8 @@ const unlinkHostFromTemplate = (host, template, next) => {
         logger.error('Error removing entity')
         return done(e)
       }
+
+      logger.log('entity %s removed', entity._type)
 
       // remove all events attached to the entity
       Event.remove({
@@ -495,47 +508,76 @@ const unlinkHostFromTemplate = (host, template, next) => {
           return done(e)
         }
 
-        logger.log('All entities and events removed')
+        logger.log('All entity events removed')
         return done()
       })
     })
   }
 
   /**
+   * In all cases :
+   * host_id (old property) is a mongo db string id.
+   * template_id (new property) is a native ObjectID mongo type
+   *
+   * @summary Remove all Schema intances cloned from the template
    * @param {Mongoose.Schema} Schema
    * @param {Object} entityTemplate
    * @param {Function} done
    */
-  const removeSchemaEntities = (Schema, entityTemplate, done) => {
+  const removeSchemaTemplatedInstances = (Schema, template_id, done) => {
     Schema.find({
       host_id: host._id.toString(),
-      template_id: entityTemplate._id
+      template_id: template_id
     }).exec((err, entities) => {
-      if (!entities||entities.length===0) return
+      if (err) return done(err)
+
+      if (!entities||entities.length===0) return done()
+
+      const removed = lodash.after(entities.length, done)
 
       for (var i=0; i<entities.length; i++) {
-        removeEntity(entities[i], done)
+        removeEntity(entities[i], removed)
       }
     })
   }
 
-  // in all cases :
-  // * host_id (old property) is a mongo db string id.
-  // * template_id (new property) is a native ObjectID mongo type
+  // remove from the host all the attached tasks with the given template_id
+  //
+  // the NEST !
+  async.eachSeries(
+    template.tasks,
+    (taskTemplate,callback) => removeSchemaTemplatedInstances(
+      Task,
+      taskTemplate._id,
+      callback
+    ),
+    (err) => {
+      if (err) return next(err)
 
-  // remove all attached tasks to the host for the given template
-  for (var t=0; t<template.tasks.length; t++) {
-    const tplTask = template.tasks[t]
-    removeSchemaEntities(Task, tplTask, () => {})
-  }
-
-  // remove all attached resources (and its monitor) to the host for the given template
-  for (var r=0; r<template.resources.length; r++) {
-    const tplResource = template.resources[r]
-
-    removeSchemaEntities(Resource, tplResource, () => {})
-    removeSchemaEntities(Task, tplResource.monitor_template_id, () => {})
-  }
+      // remove from the host all the attached resources
+      // (and its monitor) with the given template
+      async.eachSeries(
+        template.resources,
+        (resourceTemplate,callback) => {
+          removeSchemaTemplatedInstances(
+            Resource,
+            resourceTemplate._id,
+            (err) => {
+              if (err) return callback(err)
+              removeSchemaTemplatedInstances(
+                Monitor,
+                resourceTemplate.monitor_template_id,
+                callback
+              )
+            }
+          )
+        },
+        (err) => {
+          if (err) return next(err)
+        }
+      )
+    }
+  )
 }
 
 /**
@@ -559,6 +601,9 @@ const copyTemplateToHost = (host, template, customer, next) => {
         }
         logger.log('all entities processed')
         logger.log(tasks)
+
+        AgentUpdateJob.create({ host_id: host._id })
+
         next()
       })
     })
@@ -642,10 +687,17 @@ const removeTemplateEntities = (templates, TemplateSchema, LinkedSchema, keepClo
 
   const removeEntityTemplateClone = (entity,done) => {
     entity.remove(err => {
-      if (err) return logger.error('%o',err)
+      if (err) {
+        logger.error('%o',err)
+        return done(err)
+      }
       logger.log('removing entity %s [%s] events', entity._type, entity._id)
       Event.remove({ emitter_id: entity._id }).exec(err => {
-        if (err) return logger.error('%o',err)
+        if (err) {
+          logger.error('%o',err)
+          return done(err)
+        }
+        done()
       })
     })
   }
@@ -659,9 +711,6 @@ const removeTemplateEntities = (templates, TemplateSchema, LinkedSchema, keepClo
       if (err) logger.error('%o',err)
       done(err)
     })
-  }
-
-  const removeEntityTemplate = () => {
   }
 
   async.eachSeries(templates, (id, done) => {
@@ -684,8 +733,12 @@ const removeTemplateEntities = (templates, TemplateSchema, LinkedSchema, keepClo
           return done()
         } else {
           // remove all
+          const removed = lodash.after(entities.length, () => {
+            logger.log('all entities removed')
+            return done()
+          })
           for (var i=0; i<entities.length; i++) {
-            removeEntityTemplateClone(entities[i],()=>{})
+            removeEntityTemplateClone(entities[i],removed)
           }
         }
       })

@@ -747,7 +747,9 @@ Service.remove = function (input, done) {
 
         MonitorEvent.remove({
           emitter_id: monitor._id
-        }, (err) => logger.error(err))
+        }, (err) => {
+          if (err) logger.error(err)
+        })
 
         logger.log('monitor %s removed', monitor.name);
         if(notifyAgents) {
@@ -803,12 +805,12 @@ Service.disableResourcesByCustomer = function(customer, doneFn){
  * @author Facugon
  * @param Array hosts
  * @param Object input
- * @param Function doneFn
+ * @param Function done
  * @return null
  *
  */
-Service.createResourceOnHosts = function(hosts,input,doneFn) {
-  doneFn||(doneFn=function(){});
+Service.createResourceOnHosts = function(hosts,input,done) {
+  done||(done=()=>{});
   logger.log('preparing to create resources');
   logger.log(input);
   var errors = null;
@@ -816,7 +818,7 @@ Service.createResourceOnHosts = function(hosts,input,doneFn) {
 
   var completed = lodash.after(hosts.length, function(){
     logger.log('all hosts processed');
-    doneFn(errors, monitors);
+    done(errors, monitors);
   });
 
   var hostProcessed = function(hostId, error, data){
@@ -1014,7 +1016,7 @@ function updateMonitorsWithDeletedScript (script,done) {
 
 function detachMonitorScript (monitor, done) {
   done=done||function(){};
-  if(!monitor.resource._id) {
+  if (!monitor.resource._id) {
     var err = new Error('populate monitor first. resource object required');
     logger.error(err);
     return done(err);
@@ -1023,12 +1025,12 @@ function detachMonitorScript (monitor, done) {
   var resource = monitor.resource;
   resource.enable = false;
   resource.save(function(error){
-    if(error) return logger.error(error);
+    if (error) return logger.error(error);
     monitor.enable = false;
     monitor.config.script_id = null;
     monitor.config.script_arguments = [];
     monitor.save(function(error){
-      if(error) return logger.error(error);
+      if (error) return logger.error(error);
       logger.log('monitor changes saved');
       logger.log('notifying "%s"', monitor.host_id);
       AgentUpdateJob.create({ host_id: monitor.host_id });
