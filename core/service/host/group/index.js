@@ -61,16 +61,17 @@ const Service = module.exports = {
           logger.log('removing templated monitors')
           removeTemplateEntities(monitors, MonitorTemplate, Monitor, false, () => {
             logger.log('all removed')
-            hosts.forEach(host => {
-              AgentUpdateJob.create({ host_id: host._id })
-            })
+            if (hosts.length>0) {
+              hosts.forEach(host => {
+                AgentUpdateJob.create({ host_id: host._id })
+              })
+            }
           })
         })
       })
 
       group.remove((err) => {
         if (err) return done(err)
-
         registerGroupCRUDOperation(group.customer_name,{
           name: group.hostname_regex,
           customer_name: group.customer_name,
@@ -273,9 +274,11 @@ const Service = module.exports = {
       const matches = []
       for (var i=0; i<groups.length; i++) {
         var group = groups[i]
-        var regex = new RegExp(group.hostname_regex)
-        if (regex.test(name) === true) {
-          matches.push(group)
+        if (Boolean(group.hostname_regex) !== false ) {
+          var regex = new RegExp(group.hostname_regex)
+          if (regex.test(name) === true) {
+            matches.push(group)
+          }
         }
       }
       return matches
@@ -285,7 +288,7 @@ const Service = module.exports = {
       customer: host.customer_id,
       hostname_regex: {
         $exists: true,
-        $ne: null
+        $nin: [ null, "" ]
       }
     }).populate('customer').exec((err, items) => {
       if (err) {
@@ -714,11 +717,11 @@ const removeTemplateEntities = (templates, TemplateSchema, LinkedSchema, keepClo
   }
 
   async.eachSeries(templates, (id, done) => {
-    // remove templates
+    // remove template
     TemplateSchema.remove({ _id: id }).exec(err => {
       if (err) return logger.error('%o',err)
 
-      // remove template from linked entities
+      // remove entities linked to the template
       LinkedSchema.find({ template_id: id }).exec((err,entities) => {
         if (err) return done(err)
         if (!Array.isArray(entities)||entities.length===0) {
