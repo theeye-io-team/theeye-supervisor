@@ -50,6 +50,11 @@ EntitySchema.methods.populateTriggers = function (done) {
       // call after task triggers async populate is completed
       const populated = after(task.triggers.length, done)
       task.triggers.forEach((event) => {
+        if (!event) {
+          // empty elements could be present inside triggers
+          return populated()
+        }
+
         event.populate({
           path: 'emitter',
           populate: {
@@ -57,6 +62,10 @@ EntitySchema.methods.populateTriggers = function (done) {
             model: 'Host'
           }
         },(err) => {
+          if (err) {
+            logger.error('could not populate event %o', event)
+            logger.error(err)
+          }
           populated()
         })
       })

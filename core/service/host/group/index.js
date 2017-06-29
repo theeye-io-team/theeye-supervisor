@@ -372,6 +372,7 @@ const generateHostGroupTemplates = (group,tasks,resources,triggers,customer,user
       templates,
       triggers,
       (err, triggersTemplates) => {
+        if (triggersTemplates.length===0) logger.log('no triggers to bind.')
         templates.triggers = triggersTemplates
         logger.log('triggers binding completed')
         return done(err, templates)
@@ -407,8 +408,8 @@ const generateTasksTriggersTemplates = (templates, triggers, next) => {
   var events
   var taskTemplate
 
-  if (!Array.isArray(tasks) || tasks.length===0) return next(err,[])
-  if (!Array.isArray(triggers) || triggers.length===0) return next(err,[])
+  if (!Array.isArray(tasks) || tasks.length===0) return next(null,[])
+  if (!Array.isArray(triggers) || triggers.length===0) return next(null,[])
 
   for (var i=0; i<triggers.length; i++) {
     task_id = triggers[i].task_id

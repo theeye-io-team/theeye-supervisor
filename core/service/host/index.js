@@ -116,7 +116,18 @@ HostService.config = (host, customer, next) => {
       tasks.forEach(task => {
         task.populateTriggers(() => {
           logger.log('processing triggers')
-          detectTaskTriggersOfSameHost(task, host, (err,triggers) => {
+          logger.data('triggers %j', task.triggers)
+
+          if (
+            ! task.triggers ||
+            ! Array.isArray(task.triggers) ||
+            task.triggers.length===0
+          ) {
+            // if no triggers
+            return completed()
+          }
+
+          detectTaskTriggersOfSameHost(task.triggers, host, (err,triggers) => {
             if (triggers.length>0) {
               data.triggers.push({
                 task_id: task._id,
@@ -373,21 +384,28 @@ const createBaseMonitors = (input, next) => {
  * A trigger belongs to a host, if the monitor or task that emit
  * the trigger belongs to the host.
  *
- * @param {Task} task, populate triggers first
+ * @param {Event[]} triggers array of task triggers, Event entities
  * @param {Host} host
- * @param {Function} next
+ * @param {Function(Error,Object)} next
  * @return null
  *
  */
-const detectTaskTriggersOfSameHost = (task, host, next) => {
+const detectTaskTriggersOfSameHost = (triggers, host, next) => {
   const asyncOps = []
-  const triggers = task.triggers
 
-  if (!Array.isArray(triggers) || triggers.length === 0) return next(null,[])
+  // pre-filter triggers data.
+  const filteredTriggers = triggers.filter((event) => {
+    return !(!event||!event._id)
+  },[])
+
+  if (filteredTriggers.length === 0) return next(null,[])
 
   async.filterSeries(
-    triggers,
-    (trigger, done) => { isHostEvent(trigger._id, host, done) },
+    filteredTriggers,
+    (trigger, done) => {
+      // if not valid object
+      isHostEvent(trigger._id, host, done)
+    },
     (err, hostTriggers) => {
       const data = hostTriggers.map(trigger => {
         return {
