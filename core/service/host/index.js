@@ -128,7 +128,7 @@ HostService.config = (host, customer, next) => {
           }
 
           detectTaskTriggersOfSameHost(task.triggers, host, (err,triggers) => {
-            if (triggers.length>0) {
+            if (!err && triggers.length>0) {
               data.triggers.push({
                 task_id: task._id,
                 events: triggers
@@ -386,27 +386,39 @@ const createBaseMonitors = (input, next) => {
  *
  * @param {Event[]} triggers array of task triggers, Event entities
  * @param {Host} host
- * @param {Function(Error,Object)} next
+ * @param {Function(Error,Array)} next
  * @return null
  *
  */
 const detectTaskTriggersOfSameHost = (triggers, host, next) => {
   const asyncOps = []
 
-  // pre-filter triggers data.
+  // pre-filter triggers data. should has been previously populated
+  // if not valid object, skip
   const filteredTriggers = triggers.filter((event) => {
     return !(!event||!event._id)
   },[])
 
-  if (filteredTriggers.length === 0) return next(null,[])
+  if (filteredTriggers.length === 0) {
+    return next(null,[])
+  }
 
+  // now get those of the same host
   async.filterSeries(
     filteredTriggers,
     (trigger, done) => {
-      // if not valid object
-      isHostEvent(trigger._id, host, done)
+      isHostEvent(trigger._id, host._id, (err,result) => {
+        // on error report and ignore
+        if (err) return done(null, false)
+        done(null, result)
+      })
     },
     (err, hostTriggers) => {
+      if (err) return next(err,[])
+
+      if (!Array.isArray(hostTriggers)||hostTriggers.length===0) {
+        return next(null,[])
+      }
       const data = hostTriggers.map(trigger => {
         return {
           id: trigger._id,
@@ -423,24 +435,35 @@ const detectTaskTriggersOfSameHost = (triggers, host, next) => {
 /**
  * is host trigger
  *
- * @param {String} eventId, Event mongodb string id
- * @param {Host} host, a host entity
- * @param {Function} next, callback
+ * @param {ObjectId} event_id Event mongodb id
+ * @param {ObjectId} host_id Host mongodb id
+ * @param {Function} next callback
  *
  */
-const isHostEvent = (eventId, host, next) => {
-  logger.log('fetching event %s', eventId)
-  Event.fetch({ _id: eventId }, (err,events) => {
+const isHostEvent = (event_id, host_id, next) => {
+  logger.log('fetching event %s', event_id)
+
+  // use fetch instead of findById because fetch also populate
+  // the correct emitter
+  Event.fetch({ _id: event_id }, (err,events) => {
     if (err) return next(err)
-    if (!events) return next()
+    if (!events) return next(null, false)
+    if (!Array.isArray(events)||events.length===0)
+      return next(null, false)
 
     const event = events[0]
-    if (event.emitter) {
-      next(null, Boolean(event.emitter.host_id == host._id))
-    } else {
+    if (!event.emitter) {
       var err = new Error('the event doesn\'t has an emitter')
       err.event = event
-      next(err)
+      logger.error(err)
+      next(err, false)
+    } else {
+      if (!event.emitter.host_id) { // webhooks
+        next(null,false)
+      } else {
+        // emitter.host_id and host_id are ObjectId's 
+        next(null, Boolean(event.emitter.host_id.toString() === host_id.toString()))
+      }
     }
   })
 }

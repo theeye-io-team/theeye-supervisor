@@ -44,7 +44,7 @@ require('./environment').setenv(function(){
       dispatcher.initialize(function(){
 
         var config = require('config');
-        if (config.monitoring!==false) {
+        if (config.monitor.enabled!==false) {
           logger.log('initializing monitor');
           var monitor = require('./service/monitor');
           monitor.start();

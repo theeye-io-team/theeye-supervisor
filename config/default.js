@@ -6,7 +6,6 @@ module.exports = {
     "port": process.env.PORT||60080,
     "auth_strategy": "bearer"
   },
-  "monitoring": true,
   "system": {
     "base_url": "",
     "web_url": "",
@@ -46,6 +45,7 @@ module.exports = {
   */
   },
   "monitor": {
+    "enabled": false,
     "fails_count_alert": 3,
     "check_interval": 10000
   },
