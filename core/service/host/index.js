@@ -130,6 +130,11 @@ HostService.config = (host, customer, next) => {
           detectTaskTriggersOfSameHost(task.triggers, host, (err,triggers) => {
             if (!err && triggers.length>0) {
               data.triggers.push({
+                task: {
+                  _id: task._id,
+                  _type: task._type,
+                  name: task.name,
+                },
                 task_id: task._id,
                 events: triggers
               })
@@ -425,6 +430,11 @@ const detectTaskTriggersOfSameHost = (triggers, host, next) => {
           _type: trigger._type,
           name: trigger.name,
           emitter_id: trigger.emitter._id,
+          emitter: {
+            _id: trigger.emitter._id,
+            _type: trigger.emitter._type,
+            name: trigger.emitter.name,
+          }
         }
       })
       next(err, data)
