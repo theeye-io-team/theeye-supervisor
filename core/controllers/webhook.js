@@ -172,7 +172,7 @@ var controller = {
     var webhook = req.webhook;
 
     WebhookEvent.findOne({
-      emitter: webhook._id
+      emitter_id: webhook._id
     },(err, event) => {
       if (err) return res.send(500, err);
       if (!event) return res.send(500);

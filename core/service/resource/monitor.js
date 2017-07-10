@@ -1,7 +1,7 @@
 "use strict";
 
-var validator = require('validator');
-var _ = require('lodash');
+const validator = require('validator')
+const assign = require('lodash/assign')
 
 var logger = require('../../lib/logger')('service:resource:monitor');
 var ErrorHandler = require('../../lib/error-handler');
@@ -70,7 +70,8 @@ module.exports = {
    */
   setMonitorData (type, input, next){
     var monitor;
-    logger.log('setting up monitor data %j',input);
+    logger.log('setting up monitor data');
+    logger.data('%j', input);
     try {
       switch(type) {
         case 'scraper':
@@ -105,10 +106,11 @@ module.exports = {
           throw new Error(`monitor type ${type} is invalid`);
           break;
       }
-    } catch(e) {
-      logger.log('error processing monitor data');
-      e.statusCode = 400;
-      return next(e, input);
+    } catch (e) {
+      logger.error('failure processing monitor data')
+      logger.error(e)
+      e.statusCode = 400
+      return next(e, input)
     }
   },
   /**
@@ -122,16 +124,16 @@ module.exports = {
     var type = (input.type||input.monitor_type);
 
     if (!input.name) {
-      errors.required('name',input.name);
+      errors.required('name', input.name);
     }
     if (!type) {
-      errors.required('type',type);
+      errors.required('type', type);
     }
-    if (!input.looptime||!parseInt(input.looptime)) {
-      errors.required('looptime',input.looptime);
+    if (!input.looptime || !parseInt(input.looptime)) {
+      errors.required('looptime', input.looptime);
     }
 
-    var data = _.assign({},input,{
+    var data = assign({},input,{
       name: input.name,
       description: input.description,
       type: type,
@@ -140,7 +142,7 @@ module.exports = {
     });
 
     logger.log('setting up resource type & properties');
-    logger.log(data);
+    logger.data(data);
 
     switch (type) {
       case 'scraper':
@@ -172,10 +174,11 @@ module.exports = {
        }
         break;
       case 'process':
-        data.raw_search = input.raw_search||errors.required('raw_search');
-        data.psargs = input.psargs||'aux';
-        data.is_regexp = Boolean(input.is_regexp=='true'||input.is_regexp===true);
-        data.pattern = (!data.is_regexp?RegExp.escape(data.raw_search):data.raw_search);
+        const values = assign({},input,input.ps||{})
+        data.raw_search = values.raw_search || errors.required('raw_search');
+        data.psargs = values.psargs || 'aux';
+        data.is_regexp = Boolean(values.is_regexp=='true'||values.is_regexp===true);
+        data.pattern = !values.is_regexp ? RegExp.escape(values.raw_search) : values.raw_search;
         break;
       case 'file':
         var mode = input.permissions
@@ -241,37 +244,35 @@ module.exports = {
   createMonitor (type, input, next) {
     next||(next=function(){});
     logger.log('processing monitor %s creation data', type);
-    this.setMonitorData(type, input,
-      function(error,monitor){
-        if(error) {
-          logger.log(error);
-          return next(error, monitor);
-        } else if(monitor==null) {
-          var msg = 'invalid resource data';
-          logger.log(msg);
-          var error = new Error(msg);
-          error.statusCode = 400;
-          return next(error,data);
-        } else {
-          logger.log('creating monitor type %s', type);
-          logger.log(monitor);
+    this.setMonitorData(type, input, (error,monitor) => {
+      if (error) {
+        logger.log(error);
+        return next(error, monitor);
+      } else if(monitor==null) {
+        var msg = 'invalid resource data';
+        logger.error(msg);
+        var error = new Error(msg);
+        error.statusCode = 400;
+        return next(error,data);
+      } else {
+        logger.log('creating monitor type %s', type);
+        logger.data(monitor);
 
-          monitor.resource = monitor.resource_id = input.resource._id;
-          MonitorEntity.create(
-            monitor,
-            function(error,monitor){
-              if(error) {
-                logger.log(error);
-                return next(error);
-              }
-
-              logger.log('monitor %s created', monitor.name);
-              return next(null, monitor);
+        monitor.resource = monitor.resource_id = input.resource._id;
+        MonitorEntity.create(
+          monitor,
+          function(error,monitor){
+            if (error) {
+              logger.error(error);
+              return next(error);
             }
-          );
-        }
+
+            logger.log('monitor %s created', monitor.name);
+            return next(null, monitor);
+          }
+        )
       }
-    );
+    })
   },
   /**
    *
@@ -286,7 +287,7 @@ module.exports = {
     var query = {};
     filters = filters || {};
 
-    if(typeof options == 'function'){
+    if (typeof options == 'function') {
       doneFn = options;
       options = {};
     } else {
@@ -294,9 +295,9 @@ module.exports = {
       doneFn = doneFn || function(){};
     }
 
-    for(var prop in filters) {
+    for (var prop in filters) {
       var value = filters[prop];
-      switch(prop){
+      switch (prop) {
         case 'enable':
         case 'host_id':
         case 'type': 
@@ -310,7 +311,7 @@ module.exports = {
 
     function doneExec (err, monitors) {
       logger.log('done searching');
-      if(err) {
+      if (err) {
         logger.error(err);
         return doneFn(err);
       }
@@ -318,7 +319,7 @@ module.exports = {
     }
 
     logger.log('running query %j', query);
-    if( options.populate ){
+    if (options.populate) {
       logger.log('populating monitors');
       MonitorEntity
         .find(query)
@@ -338,140 +339,107 @@ module.exports = {
  *
  */
 function setMonitorForScraper (input) {
-	//var host_id = input.external_host_id ? input.external_host_id : input.host_id;
-	//var external = Boolean(input.external_host_id);
-
-  var host_id = input.host_id;
-	return {
-    'tags': input.tags,
-    'customer_name': input.customer_name,
-		'host': host_id,
-		'host_id': host_id,
-		'name': input.name || 'scraper',
-		'type': 'scraper',
-		'looptime': input.looptime,
-    'config': {
-      'external': false,
-      'url': input.url,
-      'timeout': input.timeout,
-      'method': input.method,
-      'body': input.body,
-      'gzip': input.gzip,
-      'json': input.json,
-      'status_code': input.status_code,
-      'parser': input.parser,
-      'pattern': input.parser == 'pattern' ? input.pattern : null,
-      'script': input.parser == 'script' ? input.script : null
+	return assign({},input,{
+		name: input.name || 'scraper',
+		type: 'scraper',
+    config: {
+      external: false,
+      url: input.url,
+      timeout: input.timeout,
+      method: input.method,
+      body: input.body,
+      gzip: input.gzip,
+      json: input.json,
+      status_code: input.status_code,
+      parser: input.parser,
+      pattern: (input.parser == 'pattern') ? input.pattern : null,
+      script: (input.parser == 'script') ? input.script : null
     }
-	};
+	})
 }
 
 function setMonitorForFile(input) {
-	return {
-    'tags': input.tags,
-    'customer_name': input.customer_name,
-		'host_id': input.host_id,
-		'host': input.host_id,
-		'name': input.name,
-		'type': 'file',
-		'looptime': input.looptime,
-    'config': {
-      'file': input.file,
-      'file_id': input.file._id,
-      'is_manual_path': input.is_manual_path,
-      'path': input.path,
-      'basename': input.basename,
-      'dirname': input.dirname,
-      'user': input.user,
-      'group': input.group,
-      'permissions': input.permissions
+	return assign({},input,{
+    name: input.name || 'file',
+		type: 'file',
+    config: {
+      file: input.file,
+      file_id: input.file._id,
+      is_manual_path: input.is_manual_path,
+      path: input.path,
+      basename: input.basename,
+      dirname: input.dirname,
+      user: input.user,
+      group: input.group,
+      permissions: input.permissions
     }
-	};
+	})
 }
 
 function setMonitorForProcess(input) {
   var is_regexp = Boolean(input.is_regexp=='true'||input.is_regexp===true);
-	return {
-    'tags': input.tags,
-    'customer_name': input.customer_name,
-		'host_id': input.host_id,
-		'host': input.host_id,
-		'name': input.name || 'process',
-		'type': 'process',
-		'looptime': input.looptime,
-		'config': {
-			'ps': {
-        'is_regexp': is_regexp,
-				'pattern': ( ! is_regexp ? RegExp.escape(input.raw_search) : input.raw_search ),
-				'raw_search': input.raw_search,
-				'psargs': input.psargs,
-			}
-		}
-	};
+  return assign({},input,{
+    name: input.name || 'process',
+    type: 'process',
+    config: {
+      ps: {
+        is_regexp: is_regexp,
+        pattern: ( !is_regexp ? RegExp.escape(input.raw_search) : input.raw_search ),
+        raw_search: input.raw_search,
+        psargs: input.psargs,
+      }
+    }
+  })
 }
 
 function setMonitorForScript(input) {
-	return {
-    'tags': input.tags,
-    'customer_name': input.customer_name,
-		'host': input.host_id,
-		'host_id': input.host_id,
-		'name': input.name || 'script',
-		'type': 'script',
-		'looptime': input.looptime,
-		'config': {
-			'script_id': input.script_id,
-			'script_arguments': input.script_arguments,
-			'script_runas': input.script_runas
+	return assign({},input,{
+		name: (input.name || 'script'),
+		type: 'script',
+		config: {
+			script_id: input.script_id,
+			script_arguments: input.script_arguments,
+			script_runas: input.script_runas
 		}
-	};
+	})
 }
 
 function setMonitorForHost(input){
-	var looptime = input.looptime || 10000 ;
 	return {
-    'tags': input.tags,
-    'customer_name':input.customer_name,
-		'host': input.host_id,
-		'host_id':input.host_id,
-		'type':'host',
-		'name': input.name || 'host',
-		'looptime':looptime,
-		'config':{ }
+    tags: input.tags,
+    customer_name: input.customer_name,
+		host: input.host_id,
+		host_id: input.host_id,
+		type:'host',
+		name: (input.name || 'host'),
+		looptime: (input.looptime || 10000),
+		config: { }
 	};
 }
 
 function setMonitorForDstat(input){
-	var looptime = input.looptime ? input.looptime : 10000 ;
-	return {
-    'tags': input.tags,
-    'customer_name': input.customer_name,
-		'host': input.host_id,
-		'host_id': input.host_id,
-		'type': 'dstat',
-		'name': input.name || 'dstat',
-		'looptime': looptime,
-		'config': {
-			'limit': {
-				'cpu': input.cpu || 50,
-				'disk': input.disk || 90,
-				'mem': input.mem || 70,
-				'cache': input.cache || 70
+	return assign({},input,{
+		host: input.host_id,
+		type: 'dstat',
+		name: (input.name || 'dstat'),
+		looptime: (input.looptime || 10000),
+		config: {
+			limit: {
+				cpu: input.cpu || 50,
+				disk: input.disk || 90,
+				mem: input.mem || 70,
+				cache: input.cache || 70
 			}
 		}
-	};
+	})
 }
 
 function setMonitorForPsaux(input){
-	var looptime = input.looptime ? input.looptime : 15000 ;
-	return {
-    'tags': input.tags,
-    'customer_name': input.customer_name,
-		'host': input.host_id,
-		'host_id': input.host_id,
-		'name': input.name || 'psaux',
-		'type': 'psaux',
-		'looptime': looptime,
-		'config': {}
-	};
+	return assign({},input,{
+		host: input.host_id,
+		name: (input.name || 'psaux'),
+		type: 'psaux',
+		looptime: (input.looptime || 15000),
+		config: {}
+	})
 }

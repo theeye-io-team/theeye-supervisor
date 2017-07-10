@@ -2,8 +2,8 @@ module.exports = {
   "is_dev": false,
   "server": {
     "name": "TheEye",
-    "version": process.env.VERSION||undefined,
-    "port": process.env.PORT||60080,
+    "version": process.env.VERSION || undefined,
+    "port": process.env.PORT || 60080,
     "auth_strategy": "bearer"
   },
   "system": {
@@ -45,6 +45,7 @@ module.exports = {
   */
   },
   "monitor": {
+    "enabled": false,
     "fails_count_alert": 3,
     "check_interval": 10000
   },

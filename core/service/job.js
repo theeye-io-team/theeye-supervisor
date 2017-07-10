@@ -62,35 +62,40 @@ var service = {
   },
   /**
    * @author Facugon
-   * @param {Object[Task task, User user, Customer customer, Boolean notify, Event event]} input in any order
-   * @param {Function(error,job)} done
+   * @param {Object} input
+   * @property {Event} input.event
+   * @property {Task} input.task
+   * @property {User} input.user
+   * @property {Customer} input.customer
+   * @property {Boolean} input.notify
+   * @param {Function(Error,Job)} done
    */
   create (input, done) {
-    var type, task = input.task;
+    const task = input.task
+    const type = task.type
 
-    type = task.type;
-
-    function afterCreate (err, job) {
-      if (err) done(err);
-      else done(null, job);
+    const afterCreate = (err, job) => {
+      if (err) done(err)
+      else done(null, job)
     }
 
     task.populate('host', err => {
       if (err) return done(err);
 
       if (!task.host) {
-        var err = new Error('invalid task ' + task._id  + ' does not has a host assigned');
-        return done(err);
+        err = new Error('invalid task ' + task._id  + ' does not has a host assigned');
+        return done(err)
       }
 
       if (type == 'script') {
-        createScriptJob(input, afterCreate);
+        createScriptJob(input, afterCreate)
       } else if (type == 'scraper') {
-        createScraperJob(input, afterCreate);
+        createScraperJob(input, afterCreate)
       } else {
-        done( new Error('invalid or undefined task type ' + task.type) );
+        err = new Error('invalid or undefined task type ' + task.type)
+        done(err)
       }
-    });
+    })
   },
   /**
    *
@@ -170,7 +175,7 @@ var service = {
  */
 function ResultEvent (job) {
   TaskEvent.findOne({
-    emitter: job.task.id,
+    emitter_id: job.task.id,
     enable: true,
     name: job.state
   }, (err, event) => {
@@ -227,11 +232,13 @@ function registerJobOperation (key, job){
 }
 
 
-function createScriptJob(input, done){
-  var task = input.task;
-  var script_id = task.script_id;
-  Script.findById(script_id).exec(function(error,script){
-    var job = new ScriptJob();
+const createScriptJob = (input, done) => {
+  const task = input.task;
+  const script_id = task.script_id;
+  const query = Script.findById(script_id)
+
+  query.exec((error,script) => {
+    const job = new ScriptJob();
     job.task = task.toObject(); // >>> add .id 
     job.script = script.toObject(); // >>> add .id 
     job.task_id = task._id;
@@ -246,28 +253,31 @@ function createScriptJob(input, done){
     job.notify = input.notify;
     job.state = STATE_NEW;
     job.event = input.event||null;
-    job.save(error => {
-      if(error) return done(error);
+    job.save(err => {
+      if (err) return done(err)
 
       var key = globalconfig.elasticsearch.keys.task.execution;
       registerJobOperation(key, job);
 
       logger.log('script job created.');
       done(null, job);
-    });
-  });
+    })
+  })
 }
 
-
-function createScraperJob(input, done){
-  var task = input.task;
-  var job = new ScraperJob();
+/**
+ *
+ *
+ */
+const createScraperJob = (input, done) => {
+  const task = input.task
+  const job = new ScraperJob()
   job.task = task.toObject(); // >>> add .id 
   job.task_id = task._id;
   job.user = input.user;
   job.user_id = input.user._id;
-  job.host_id = task.host_id ;
-  job.host = task.host_id ;
+  job.host_id = task.host_id;
+  job.host = task.host_id;
   job.name = task.name;
   job.customer_id = input.customer._id;
   job.customer_name = input.customer.name;
@@ -284,7 +294,6 @@ function createScraperJob(input, done){
     done(null, job);
   });
 }
-
 
 function ResultMail ( job ) {
 

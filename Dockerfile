@@ -21,4 +21,4 @@ RUN cd ${destDir}; npm install
 #Export and run.
 EXPOSE 60080
 #By default run prod, If development is requiered This command would be override by docker-compose up
-CMD [ "npm", "run","start" ]
+CMD ["npm","run","start"]

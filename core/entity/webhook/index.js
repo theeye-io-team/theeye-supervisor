@@ -1,10 +1,9 @@
 "use strict";
 
 const mongodb = require('../../lib/mongodb').db;
-const Schema = require('mongoose').Schema;
-var BaseSchema = require('./schema');
-var afterInsert = require('./afterInsert');
-var afterRemove = require('./afterRemove');
+const BaseSchema = require('./schema');
+const afterInsert = require('./afterInsert');
+const afterRemove = require('./afterRemove');
 
 var Webhook = mongodb.model('Webhook',
   new BaseSchema({

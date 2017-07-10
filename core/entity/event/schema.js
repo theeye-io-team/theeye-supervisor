@@ -1,20 +1,14 @@
 'use strict';
 
-const util = require('util');
-const Schema = require('mongoose').Schema;
-const async = require('async');
-const randomSecret = require('../../lib/random-secret');
+const util = require('util')
+const Schema = require('mongoose').Schema
+const async = require('async')
+const properties = require('./base-properties')
 
 function BaseSchema (specs) {
+
   // Schema constructor
-  Schema.call(this, util._extend({
-    name: { type: String, 'default': '' },
-    creation_date: { type: Date, 'default': Date.now },
-    last_update: { type: Date, 'default': null },
-    enable: { type: Boolean, 'default': true },
-    customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
-    secret: { type: String, 'default': randomSecret }
-  }, specs),{
+  Schema.call(this, util._extend(properties, specs),{
     collection: 'events',
     discriminatorKey: '_type'
   });
@@ -36,23 +30,23 @@ function BaseSchema (specs) {
   }
 
   this.set('toJSON'  , def);
-  this.set('toObject', def);
+  this.set('toObject', def)
 
   this.pre('save', function(next) {
-    this.last_update = new Date();
+    this.last_update = new Date()
     // do stuff
-    next();
+    next()
   });
 
-  this.statics.fetch = function(query,done){
-    // theres is a bug in mongoose with this schemas
+  this.statics.fetch = function (query,done) {
+    // there is a bug in mongoose with this schemas.
     // populate within the find query does not work as expected
     this
     .find(query)
-    .exec(function(err, events){
+    .exec((err, events) => {
       async.each(
         events,
-        function(e, callback){
+        (e, callback) => {
           e.populate({
             path: 'emitter',
             populate: {
@@ -61,14 +55,12 @@ function BaseSchema (specs) {
             }
           }, callback)
         },
-        function(err){
-          done(err,events);
-        }
-      );
-    });
+        (err) => done(err, events)
+      )
+    })
   }
 
-  return this;
+  return this
 }
 
 util.inherits(BaseSchema, Schema);

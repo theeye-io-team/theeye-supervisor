@@ -71,7 +71,7 @@ var controller = {
    * @path /:customer/agent/:hostname/config
    *
    */
-  fetch: function (req, res, next) {
+  fetch (req, res, next) {
     var user = req.user;
     var host = req.host;
     var customer = req.customer;
@@ -85,7 +85,8 @@ var controller = {
       host_id: host._id,
       customer_id: customer._id
     }, function(error, monitors){
-      if(error) res.send(500);
+      if (error) return res.send(500);
+
       generateAgentConfig(monitors, function(err, config){
         if (err) return next(err);
         if (!config) {
@@ -112,8 +113,8 @@ function generateAgentConfig (monitors,next) {
     }
 
     logger.log('setting up monitor configuration');
-    (function(configDone){
-      switch(monitor.type){
+    (function(configDone) {
+      switch (monitor.type) {
         case 'file':
           var fileId = monitor.config.file;
           File.findById(fileId,function(err,file){

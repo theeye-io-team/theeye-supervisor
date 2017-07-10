@@ -4,7 +4,7 @@ const format = require('util').format;
 const debug = require('debug')('service:resource:notifications');
 const Constants = require('../../constants/monitors');
 const ResourceTypes = {
-  'dstat': {
+  dstat: {
     type: 'dstat',
     events:[{
       severity: 'LOW',
@@ -33,13 +33,43 @@ const ResourceTypes = {
       subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} STATS recovered`; }
     }]
   },
-  'psaux': { type: 'psaux', events: [] },
-  'host': { type: 'host', events: [] },
-  'process': { type: 'process', events: [] },
-  'script': { type: 'script', events: [] },
-  'scraper': { type: 'scraper', events: [] },
-  'service': { type: 'service', events: [] },
-  'file': {
+  psaux: { type: 'psaux', events: [] },
+  host: { type: 'host', events: [] },
+  process: { type: 'process', events: [] },
+  scraper: { type: 'scraper', events: [] },
+  service: { type: 'service', events: [] },
+  script: {
+    type: 'script',
+    events: [{
+      severity: 'HIGH',
+      name: Constants.RESOURCE_FAILURE,
+      subject: function(resource, event_data) {
+        return `[${this.severity}] ${resource.name} failure`
+      },
+			message: function(resource, event_data) {
+				const result = resource.last_event.script_result
+
+				const lastline = result.lastline ? result.lastline.trim() : 'no data'
+				const stdout = result.stdout ? result.stdout.trim() : 'no data'
+				const stderr = result.stderr ? result.stderr.trim() : 'no data'
+				const code = result.code || 'no data'
+				const html = `
+					<p>${resource.name} on ${resource.hostname} checks failed.</p>
+					<span>Monitor output</span>
+					<pre>
+						<ul>
+							<li>lastline : ${lastline}</li>
+							<li>stdout : ${stdout}</li>
+							<li>stderr : ${stderr}</li>
+							<li>code : ${code}</li>
+						</ul>
+					</pre>`
+
+				return html
+			}
+    }]
+  },
+  file: {
     type: 'file', 
     events: [{
       severity: 'LOW',

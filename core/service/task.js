@@ -1,75 +1,84 @@
-var debug = require('debug')('service:task');
+const logger = require('../lib/logger')('service:task');
+const async = require('async');
+const lodash = require('lodash');
+const config = require('config');
 
 var Tag = require('../entity/tag').Entity;
 var Host = require('../entity/host').Entity;
 var Task = require('../entity/task').Entity;
 var ScraperTask = require('../entity/task/scraper').Entity;
 var Script = require('../entity/file').Script;
-var TaskTemplate = require('../entity/task/template').Entity;
+
+const ScriptTaskTemplate = require('../entity/task/template').ScriptTemplate
+const ScraperTaskTemplate = require('../entity/task/template').ScraperTemplate
+
 var TaskEvent = require('../entity/event').TaskEvent;
-var async = require('async');
-var _ = require('lodash');
 
-var validator = require('validator');
 // var filter = require('../router/param-filter');
-var elastic = require('../lib/elastic');
-var config = require('config');
-var FetchBy = require('../lib/fetch-by');
-var SchedulerService = require('./scheduler');
+var elastic = require('../lib/elastic')
+var FetchBy = require('../lib/fetch-by')
+var SchedulerService = require('./scheduler')
 
-function registerTaskCRUDOperation(customer,data) {
-  var key = config.elasticsearch.keys.task.crud;
-  elastic.submit(customer,key,data);
+const registerTaskCRUDOperation = (customer,data) => {
+  const key = config.elasticsearch.keys.task.crud
+  elastic.submit(customer,key,data)
 }
 
-var TaskService = {
-  remove:function(options){
+const TaskService = {
+  remove (options) {
     var task = options.task;
     Task.remove({ _id: task._id }, err => {
       if(err) return options.fail(err);
 
       SchedulerService.unscheduleTask(task);
 
-      TaskEvent.remove({ emitter: task._id }, err => {
+      TaskEvent.remove({ emitter_id: task._id }, err => {
         if(err) return options.fail(err);
 
         registerTaskCRUDOperation(
-          options.customer.name,{
-            'name':options.task.name,
-            'customer_name':options.customer.name,
-            'user_id':options.user.id,
-            'user_email':options.user.email,
-            'operation':'delete'
+          options.customer.name, {
+            name: options.task.name,
+            customer_name: options.customer.name,
+            user_id: options.user.id,
+            user_email: options.user.email,
+            operation: 'delete'
           }
-        );
-      });
-      options.done();
-    });
-  },
-  update:function(options){
-    var task = options.task;
-    var updates = options.updates;
-    updates.host = updates.host_id;
+        )
+      })
 
-    task.update(updates, function(error){
+      options.done()
+    })
+  },
+  /**
+   *
+   * @param {Object} options
+   *
+   */
+  update (options) {
+    const self = this
+    const done = options.done
+    const task = options.task
+    const updates = options.updates
+
+    updates.host = updates.host_id
+
+    task.update(updates, (error) => {
       if (error) {
-        return options.fail(error);
+        return options.fail(error)
       } else {
-        debug('publishing task');
-        task.publish(function(pub){
-          registerTaskCRUDOperation(
-            options.customer.name,{
-              'name':task.name,
-              'customer_name':options.customer.name,
-              'user_id':options.user.id,
-              'user_email':options.user.email,
-              'operation':'update'
-            }
-          );
-          options.done(pub);
-        });
+        logger.log('publishing task')
+        self.populate(task, function(err,pub){
+          registerTaskCRUDOperation(options.customer.name,{
+            name: task.name,
+            customer_name: options.customer.name,
+            user_id: options.user.id,
+            user_email: options.user.email,
+            operation: 'update'
+          })
+          done(pub)
+        })
       }
-    });
+    })
   },
   /**
    *
@@ -77,6 +86,7 @@ var TaskService = {
    *
    */
   fetchBy (filter,next) {
+    const self = this
     FetchBy.call(Task,filter,function(err,tasks){
       if (err) return next(err);
       if (tasks.length===0) return next(null,tasks);
@@ -85,7 +95,7 @@ var TaskService = {
       var asyncTasks = [];
       tasks.forEach(function(task){
         asyncTasks.push(function(callback){
-          task.publish(function(data){
+          self.populate(task,function(err, data){
             publishedTasks.push(data);
             callback();
           });
@@ -97,256 +107,306 @@ var TaskService = {
       });
     });
   },
-  createManyTasks (input, doneFn) {
-    var create = [];
-    debug('creating tasks');
+  /**
+   *
+   * @param {Object} input
+   * @param {Function} next
+   *
+   */
+  createManyTasks (input, next) {
+    var create = []
+    logger.log('creating tasks')
 
     function asyncTaskCreation (hostId) {
       return (function(asyncCb){
         if( hostId.match(/^[a-fA-F0-9]{24}$/) ) {
           Host.findById(hostId, function(error, host){
-            if(error) return asyncCb(error);
-            if(!host) return asyncCb(new Error('not found host id ' + hostId));
+            if (error) return asyncCb(error)
+            if (!host) return asyncCb(new Error('not found host id ' + hostId))
 
-            TaskService.create(_.extend({}, input, {
+            const data = lodash.extend({}, input, {
               host: host,
               host_id: host._id,
               customer_id: input.customer._id,
+              customer: input.customer._id,
               user_id: input.user._id
-            }), asyncCb );
-          });
+            })
+
+            TaskService.create(data, (err,task) => {
+              // turn task object into plain object, populate subdocuments
+              TaskService.populate(task, asyncCb)
+            })
+          })
         } else {
-          asyncCb(new Error('invalid host id ' + hostId), null);
+          asyncCb(new Error('invalid host id ' + hostId), null)
         }
-      });
+      })
     }
 
-    var hosts = input.hosts ;
-    debug('creating task on hosts %j', hosts);
-    for( var i in hosts ) {
-      var hostId = hosts[i];
-      create.push( asyncTaskCreation(hostId) );
+    var hosts = input.hosts
+    logger.log('creating task on hosts %j', hosts)
+    for (var i in hosts) {
+      var hostId = hosts[i]
+      create.push( asyncTaskCreation(hostId) )
     }
 
-    async.parallel(create, doneFn);
+    async.parallel(create, next);
   },
   /**
    *
    * @author Facundo
    * @param {Object} options
+   * @property {TaskTemplate} options.template
+   * @property {Customer} options.customer
+   * @property {Host} options.host
+   * @property {Function(Error,Object)} options.done
    *
    */
   createFromTemplate (options) {
-    var template = options.templateData, // plain object
-      host = options.host,
-      customer = options.customer,
-      doneFn = options.done;
+    const self = this
+    const template = options.template // plain object
+    const customer = options.customer
+    const host = options.host
+    const done = options.done || (() => {})
+    var data
 
-    debug('creating task from template %j', template);
+    logger.log('creating task from template %j', template);
 
-    var tplId = (template._id||template.id);
+    data = lodash.assign({}, template.toObject(), {
+      customer_id: customer._id,
+      customer: customer,
+      host: host,
+      host_id: host._id,
+      template_id: template._id,
+      template: template,
+      _type: template._type // force _type
+    })
 
-    this.create( _.extend(template,{
-      customer : customer,
-      host : host||null,
-      host_id : (host&&host._id)||null,
-      template : tplId,
-      id: null,
-      user_id : null,
-      _type : 'Task'
-    }), (err, task) => {
-      if(err) debug(err);
-      doneFn(err, task);
-    });
+    delete data._id
+    delete data.id
+    delete data.user_id
+
+    self.create(data,(err,task) => {
+      //self.populate(task,done)
+      done(err, task)
+    })
   },
   /**
-   *
-   * Create a task
-   *
-   * @author Facundo
-   * @param {Object} options
-   * @param {Object} options
-   *
+   * @author Facugon
+   * @summary Create a task
+   * @param {Object} input
+   * @property {Customer} input.customer
+   * @property {User} input.user
+   * @property {Host} input.host
+   * @property {TaskTemplate} input.template
+   * @param {Function(Error,)} done
    */
   create (input, done) {
-    function _created (task) {
-      debug('task type "%s" created %j',task.type, task);
-      registerTaskCRUDOperation(input.customer.name,{
-        'name':task.name,
-        'customer_name':input.customer.name,
-        'user_id':(input.user&&input.user.id)||null,
-        'user_email':(input.user&&input.user.email)||null,
-        'operation':'create'
-      });
-      task.publish(data => {
-        done(null,data);
-      });
+    const self = this
+    const customer = input.customer
+    const user = input.user
+
+    const created = (task) => {
+      logger.log('creating task type "%s"', task.type)
+      logger.data('%j', task)
+
+      registerTaskCRUDOperation(customer.name,{
+        name: task.name,
+        customer_name: customer.name,
+        user_id: (user && user.id) || null,
+        user_email: (user && user.email) || null,
+        operation: 'create'
+      })
+
+      //self.populate(task, done)
+      return done(null,task)
     }
 
-    debug('creating task with host id %s', input.host_id);
+    logger.log('creating task with data %o', input)
+
     var task;
-    if( input.type == 'scraper' ){
-      task = new ScraperTask(input);
+    if (input.type == 'scraper') {
+      task = new ScraperTask(input)
     } else {
-      task = new Task(input);
+      task = new Task(input)
     }
 
     task.save(err => {
-      if(err) {
-        debug(err);
-        return done(err);
+      if (err) {
+        logger.error(err)
+        return done(err)
       }
-      _created(task);
+      created(task);
 
-      if( input.tags && Array.isArray(input.tags) )
-        Tag.create(input.tags, input.customer);
+      if (input.tags && Array.isArray(input.tags)) {
+        Tag.create(input.tags, customer)
+      }
 
-      TaskEvent.create({
-        name:'success',
-        customer: input.customer,
-        emitter: task
-      },{
-        name:'failure',
-        customer: input.customer,
-        emitter: task
-      },
-      err => debug(err));
-    });
+      TaskEvent.create(
+        {
+          name: 'success',
+          customer: customer,
+          customer_id: customer._id,
+          emitter: task,
+          emitter_id: task._id,
+        },
+        {
+          name: 'failure',
+          customer: customer,
+          customer_id: customer._id,
+          emitter: task,
+          emitter_id: task._id,
+        },
+        (err) => {
+          if (err) {
+            logger.error(err)
+          }
+        }
+      )
+    })
+  },
+  populateAll (tasks, next) {
+    var result = []
+    if (!Array.isArray(tasks)||tasks.length===0) {
+      return next(null,result)
+    }
+
+    const populated = lodash.after(tasks.length,() => next(null, result))
+
+    for (var i=0; i<tasks.length; i++) {
+      const task = tasks[i]
+      this.populate(task,() => {
+        result.push(task)
+        populated()
+      })
+    }
+  },
+  populate (task, done) {
+    const data = task.toObject()
+
+    // only if host_id is set
+    const populateHost = (id, next) => {
+      if (!id) return next()
+      Host.findById(id, (err, host) => {
+        if (err) return next(err)
+        if (!host) return next()
+        data.host = host
+        data.hostname = host.hostname
+        next()
+      })
+    }
+
+    // only task type script, and if script_id is set
+    const populateScript = (id, next) => {
+      if (!id) return next()
+      Script.findById(id, (err,script) => {
+        if (err) return next(err)
+        if (!script) return next()
+        data.script = script
+        data.script_id = script._id
+        data.script_name = script.filename
+        next()
+      })
+    }
+
+    populateHost(task.host_id, (err) => {
+      if (err) return done(err)
+      populateScript(task.script_id, (err) => {
+        return done(err,data)
+      })
+    })
   }
-};
+}
 
+module.exports = TaskService
 
 /**
  *
- * handle tasks.
- * validate type and data
+ * Handle tasks. Validate type and data, create templates
+ *
  * @author Facundo
- * @param {Array} tasks , array of plain objects
- * @param {Object} customer
- * @param {Object} user
+ * @param {HostGroup} hostgroup
+ * @param {Array<Task>} tasks
+ * @param {Customer} customer
+ * @param {User} user
  * @param {Function} done
  *
  */
-TaskService.tasksToTemplates = function(
-  tasks,
-  customer,
-  user,
-  done
-) {
-  var err;
-  if(!tasks) {
-    err = new Error('tasks definition required');
-    err.statusCode = 400;
-    return done(err);
-  }
+TaskService.createTemplates = (hostgroup, tasks, customer, user, done) => {
+  if (!tasks) return done(null,[])
+  if (!Array.isArray(tasks) || tasks.length == 0) return done(null,[])
 
-  if(! Array.isArray(tasks)) {
-    err = new Error('tasks must be an array');
-    err.statusCode = 400;
-    return done(err);
-  }
+  logger.log('processing %s tasks', tasks.length)
 
-  if(tasks.length == 0) {
-    debug('no tasks. skipping');
-    return done(null,[]);
-  }
+  async.map(
+    tasks,
+    (task, next) => {
+      var template
+      var data
 
-  var templates = [];
-
-  var templatized = _.after( tasks.length, function(){
-    debug('all tasks templates processed');
-    done(null, templates);
-  });
-
-  debug('processing %s tasks', tasks.length);
-
-  for(var i=0; i<tasks.length; i++){
-    var value = tasks[i];
-    debug('processing task %j', value);
-
-    if( Object.keys( value ).length === 0 ) {
-      err = new Error('invalid task definition');
-      err.statusCode = 400;
-      return done(err);
-    }
-
-    // create template from existent task
-    if( value.hasOwnProperty('id') ){
-      if( validator.isMongoId(value.id) ){
-        taskToTemplate(value.id, function(error, tpl){
-          if(error) done(error);
-
-          debug('task to template done');
-          templates.push( tpl );
-          templatized();
-        });
-      } else {
-        err = new Error('invalid task id');
+      if (Object.keys(task).length === 0) {
+        const err = new Error('invalid task definition');
         err.statusCode = 400;
-        return done(err);
+        return next(err)
       }
-    } else {
-      // validate, set & instantiate template with data
-      validateTaskTemplateData(value, function(valErr, data) {
-        if(valErr || !data) {
-          err = new Error('invalid task data');
-          err.statusCode = 400;
-          err.data = valErr;
-          return done(err);
+
+      data = Object.assign({},task)
+      data.hostgroup_id = hostgroup._id
+      data.hostgroup = hostgroup
+      data.customer_id = customer._id
+      data.customer = customer
+      data.user_id = user._id
+      data.user = user
+      data.source_model_id = data.id || data._id
+      data.triggers = task.triggers || []
+
+      if (data._id) delete data._id // must be autogenerated
+      if (data.secret) delete data.secret // autogenerate too
+
+      logger.log('creating task template')
+      logger.data('%j',data)
+
+      if (task.type === 'scraper') {
+        template = new ScraperTaskTemplate(data)
+      } else {
+        data.script = data.script_id
+        template = new ScriptTaskTemplate(data)
+      }
+
+      template.save(err => {
+        if (err) {
+          logger.error(err, err.errors)
+          return next(err)
         }
-
-        data.customer = customer;
-        data.user = user;
-        data._type = 'TaskTemplate';
-        TaskTemplate.create(data, function(e, template){
-          debug('task template create from scratch done');
-          templates.push( template );
-          templatized();
-        });
-      });
+        logger.log('task template %s created', template._id)
+        next(err,template)
+      })
+    },
+    (err, templates) => {
+      if (err) {
+        logger.error(err)
+        return done(err)
+      }
+      logger.log('all task templates created')
+      return done(null, templates)
     }
-  }
-};
-
-/**
- * @author Facundo
- * @return null
- */
-function validateTaskTemplateData(input, done){
-  if(!input.script_id) {
-    var e = new Error('script is required');
-    e.statusCode = 400;
-    return done(e, false);
-  }
-
-  Script.findById( input.script_id, function(err, script){
-    if(err) throw err;
-    if(!script){
-      var e = new Error('script not found');
-      e.statusCode = 400;
-      return done(e, false);
-    }
-
-    done(null,input);
-  });
+  )
 }
 
 /**
  * Create a template from task properties.
  * @author Facundo
  */
-function taskToTemplate(id, doneFn){
+const taskToTemplate = (id, next) => {
   Task.findById( id , function(error, task){
     if(error) throw new Error(error);
 
     if(!task) {
       var e = new Error('task not found. invalid task id');
       e.statusCode = 400;
-      return doneFn(e);
+      return next(e);
     }
 
-    task.toTemplate( doneFn );
+    task.toTemplate(next);
   });
 }
-
-module.exports = TaskService ;

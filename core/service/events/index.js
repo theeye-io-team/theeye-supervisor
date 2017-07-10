@@ -1,44 +1,45 @@
 'use strict';
 
-const EventEmitter = require('events').EventEmitter;
-const util = require('util');
-const config = require('config');
-const logger = require('../../lib/logger')(':events');
+const EventEmitter = require('events').EventEmitter
+const util = require('util')
+const config = require('config')
+const ObjectId = require('mongoose').Types.ObjectId
 
-const User = require('../../entity/user').Entity;
-const Task = require('../../entity/task').Entity;
-const ObjectId = require('mongoose').Types.ObjectId;
-const CustomerService = require('../customer');
-
-const app = require('../../app');
+const App = require('../../app')
+const logger = require('../../lib/logger')(':events')
+const User = require('../../entity/user').Entity
+const Task = require('../../entity/task').Entity
+const CustomerService = require('../customer')
 
 class EventDispatcher extends EventEmitter {
 
   constructor ( options ) {
-    super ();
+    super ()
     // theeye user , used to automatic jobs
-    this.user = null;
+    this.user = null
   }
 
   initialize (done) {
-    function next(){
-      logger.log('started');
-      done();
+    const next = () => {
+      logger.log('events dispatcher is ready')
+      done()
     }
-    if( this.user ){
-      next(null,user);
+
+    if (this.user) {
+      return next(null,user)
     } else {
       User.findOne(config.system.user,(err, user) => {
         if (err) throw err;
         if (!user) {
-          this.user = new User(config.system.user);
+          // system user not found. create one
+          this.user = new User(config.system.user)
           this.user.save( err => {
-            if(err) throw err;
-            else next(null, user);
+            if (err) throw err
+            else next(null, this.user)
           });
         } else {
-          this.user = user;
-          next(null, user);
+          this.user = user
+          next(null, user)
         }
       });
     }
@@ -49,64 +50,71 @@ class EventDispatcher extends EventEmitter {
    * @param {Object} event_data event extra data generated
    */
   dispatch (event, event_data) {
-    event_data||(event_data=null);
+    event_data || (event_data=null)
 
     logger.log(
       'new event id %s name %s , type %s , emitter %s',
       event._id, event.name, event._type, event.emitter
     );
 
-    Task.find({
-      triggers: event._id
-    },(err, tasks) => {
+    Task.find({ triggers: event._id }, (err, tasks) => {
       if (err) return logger.error( err );
       if (tasks.length == 0) return;
 
-      tasks.forEach(task => createJob.call(this, {
-        task: task,
-        event: event,
-        event_data: event_data
-      }));
-    });
+      for (var i=0; i<tasks.length; i++) {
+        createJob({
+          user: this.user,
+          task: tasks[i],
+          event: event,
+          event_data: event_data
+        })
+      }
+    })
 
-    return this;
+    return this
   }
 }
+
+module.exports = new EventDispatcher()
 
 /**
  * @author Facugon
  * @param {Array options}
  * @access private
  */
-function createJob ( options ) {
-  var task = options.task,
-    event = options.event;
+const createJob = (options) => {
+  const task = options.task
+  const user = options.user
+  const event = options.event
 
   logger.log('preparing to run task %s', task._id);
 
   task.populate([
-    {path:'customer_id'},
-    {path:'host'}
-  ],err => {
-    if (err) return logger.error(err);
-    if (!task.customer_id) return logger.error('FATAL. task %s does not has a customer', task._id);
-    if (!task.host) return logger.error('WARNING. task %s does not has a host. cannot execute', task._id);
-
-    var customer = task.customer_id; //after populate customer_id is a customer model
-    if (!customer) {
-      return logger.error(
-        new Error('task customer is not set, %j', task)
-      );
+    { path: 'customer' },
+    { path: 'host' }
+  ], err => {
+    if (err) {
+      logger.error(err)
+      return
+    }
+    if (!task.customer) {
+      logger.error('FATAL. Task %s does not has a customer', task._id)
+      return
+    }
+    if (!task.host) {
+      logger.error('WARNING. Task %s does not has a host. Cannot execute', task._id)
+      return
     }
 
-    var runDateMilliseconds =  Date.now() + task.grace_time * 1000 ;
+    const customer = task.customer
+    const runDateMilliseconds =  Date.now() + task.grace_time * 1000
 
-    if( task.grace_time > 0 ){
+    if (task.grace_time > 0) {
       // schedule the task
-      app.scheduler.scheduleTask({
+      App.scheduler.scheduleTask({
         event: event,
         task: task,
-        user: this.user,
+        user: user,
         customer: customer,
         notify: true,
         schedule: {
@@ -116,7 +124,7 @@ function createJob ( options ) {
         if (err) return logger.error(err);
 
         CustomerService.getAlertEmails(customer.name,(err, emails)=>{
-          app.jobDispatcher.sendJobCancelationEmail({
+          App.jobDispatcher.sendJobCancelationEmail({
             task_secret: task.secret,
             task_id: task.id,
             schedule_id: agenda.attrs._id,
@@ -130,10 +138,10 @@ function createJob ( options ) {
         });
       });
     } else {
-      app.jobDispatcher.create({
+      App.jobDispatcher.create({
         event: event,
         task: task,
-        user: this.user,
+        user: user,
         customer: customer,
         notify: true
       }, (err, job) => {
@@ -144,6 +152,3 @@ function createJob ( options ) {
     }
   });
 }
-
-
-module.exports = new EventDispatcher();

@@ -1,15 +1,13 @@
-"use strict";
+'use strict'
 
-const Schema = require('mongoose').Schema;
-const mongodb = require('../../lib/mongodb').db;
-const BaseSchema = require('./schema');
+const Schema = require('mongoose').Schema
+const BaseSchema = require('./schema')
 
 var EventSchema = new BaseSchema({
   emitter: {
     type: Schema.Types.ObjectId,
-    ref: 'Task',
-    'default': null
+    ref: 'Task'
   },
-});
+})
 
-module.exports = EventSchema;
+module.exports = EventSchema

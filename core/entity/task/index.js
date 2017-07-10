@@ -1,67 +1,25 @@
-"use strict";
+'use strict';
 
-const ObjectId = require('mongoose').Schema.Types.ObjectId;
-const lodash = require('lodash');
-var mongodb = require('../../lib/mongodb').db;
-var BaseSchema = require('./schema');
-var Template = require('./template').Entity;
-var Script = require('../file').Script;
-var Host = require('../host').Entity;
+const mongodb = require('../../lib/mongodb').db
+const ObjectId = require('mongoose').Schema.Types.ObjectId
+const BaseSchema = require('./schema')
+const Template = require('./template').Entity
 
 /**
  * Extended Schema. Includes non template attributes
  */
-var TaskSchema = BaseSchema.extend({
-  host_id: { type: String, 'default': null },
-  host: { type: ObjectId, ref: 'Host', 'default': null },
-  template: { type: ObjectId, ref: 'TaskTemplate', 'default': null },
-  type: { type: String, 'default':'script' },
-  script_arguments: { type: Array, 'default': [] },
-  script_runas: { type: String, 'default':'' },
-  script_id: { type: String, ref: 'Script' },
-});
-
-/**
- *
- *
- */
-TaskSchema.methods.publish = function(next) {
-  var task = this;
-
-  function preparePublish (options) {
-    options||(options={});
-
-    var data = task.toObject();
-
-    if(options.host){
-      data.host_id = options.host.id;
-      data.hostname = options.host.hostname;
-    }
-    if(options.script){
-      data.script_id = options.script.id;
-      data.script_name = options.script.filename;
-    }
-
-    next(data);
-  }
-
-  var options = { host: null, script: null };
-
-  var doneFn = lodash.after(2, () => preparePublish(options));
-
-  if( ! task.host_id ) doneFn();
-  else Host.findById(task.host_id, function(err,host){
-    if( ! err || host != null ) options.host = host;
-    doneFn();
-  });
-
-  if( ! task.script_id ) doneFn();
-  else Script.findById(task.script_id, function(err,script){
-    if( ! err || script != null ) options.script = script;
-    doneFn();
-  });
-};
-
+const TaskSchema = BaseSchema.extend({
+  template_id: { type: ObjectId },
+  host_id: { type: String },
+  script_id: { type: String },
+  script_runas: { type: String },
+  script_arguments: { type: Array },
+  type: { type: String, default: 'script' },
+  // relations
+  host: { type: ObjectId, ref: 'Host' },
+  script: { type: ObjectId, ref: 'Script' },
+  template: { type: ObjectId, ref: 'TaskTemplate' },
+})
 
 /**
  *
@@ -70,12 +28,20 @@ TaskSchema.methods.publish = function(next) {
  *
  */
 TaskSchema.methods.toTemplate = function(doneFn) {
-  var values = this.toObject();
-  var template = new Template(values);
+  var values = this.toObject()
+  var template = new Template(values)
   template.save(function(error){
-    doneFn(error, template);
-  });
-};
+    doneFn(error, template)
+  })
+}
+
+TaskSchema.methods.templateProperties = function () {
+  var values = BaseSchema.methods.templateProperties.apply(this,arguments)
+  values.script_arguments = this.script_arguments 
+  values.script_runas = this.script_runas
+  values.script_id = this.script_id
+  return values
+}
 
 /**
  *
@@ -83,23 +49,24 @@ TaskSchema.methods.toTemplate = function(doneFn) {
  *
  */
 TaskSchema.statics.create = function(input,next) {
-  var instance = new this();
-  instance.host = (input.host||null);
-  instance.host_id = (input.host?input.host._id:null);
+  var instance = new this()
+  const host_id = input.host ? input.host._id : null
+
+  instance.host = host_id
+  instance.host_id = host_id
   instance.customer_id = input.customer._id;
   instance.script_id = input.script._id;
   instance.script_arguments = input.script_arguments;
   instance.script_runas = input.script_runas;
   instance.user_id = input.user._id;
-  instance.public = (input.public||false);
-  instance.name = (input.name||null);
-  instance.template = (input.template_id||null);
-  instance.description = (input.description||'');
   instance.tags = input.tags;
-  instance.save(function(err,entity){
-    next(err, entity);
-  });
-};
+  instance.public = input.public || false
+  instance.name = input.name || null
+  instance.template = input.template_id || null
+  instance.template_id = input.template_id || null
+  instance.description = input.description || ''
+  instance.save(next)
+}
 
 var Task = mongodb.model('Task', TaskSchema);
 Task.ensureIndexes();

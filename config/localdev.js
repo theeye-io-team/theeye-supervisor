@@ -14,6 +14,7 @@ module.exports = {
     "driver": "local"
   },
   "monitor": {
+    "enabled": false,
     "fails_count_alert": 3,
     "resources_check_failure_interval_milliseconds": 10000,
     "resources_alert_failure_threshold_milliseconds": 30000

@@ -44,7 +44,7 @@ module.exports = function (server, passport) {
   var updateMiddlewares = middlewares.concat([
     router.requireCredential('agent'),
     router.resolve.idToEntity({param:'resource',required:true}),
-    router.resolve.idToEntity({param:'host_id',entity:'host',into:'host'}),
+    //router.resolve.idToEntity({param:'host_id',entity:'host',into:'host'}),
     router.filter.spawn({filter:'emailArray',param:'acl'})
   ]);
   server.patch('/:customer/resource/:resource', updateMiddlewares, controller.update);
@@ -110,28 +110,36 @@ var controller = {
         fails_count: -1,
         type: 1 
       }
-    });
+    })
 
     filter.where.customer_id = req.customer._id;
     if ( !ACL.hasAccessLevel(req.user.credential,'admin') ) {
       // find what this user can access
-      filter.where.acl = req.user.email ;
+      filter.where.acl = req.user.email
     }
 
-    ResourceManager.fetchBy(filter,function(error,resources){
-      if(error||!resources) {
-        res.send(500);
+    ResourceManager.fetchBy(filter,(err,resources) => {
+      if (err) {
+        res.send(500,err)
+      } else if (!Array.isArray(resources)) {
+        res.send(503, new Error('resources not available'))
       } else {
-        resources.forEach( r => {
-          if (r.monitor) {
-            if (Array.isArray(r.monitor.tags)) {
-              r.monitor.tags.push(r.hostname);
+        if (resources.length===0) {
+          res.send(200,[])
+        } else {
+          var resource
+          for (var i=0; i<resources.length; i++) {
+            resource = resources[i]
+            if (resource.monitor) {
+              if (Array.isArray(resource.monitor.tags)) {
+                resource.monitor.tags.push(resource.hostname);
+              }
             }
           }
-        });
-        res.send(200,resources);
+          res.send(200,resources)
+        }
       }
-    });
+    })
   },
   /**
    *
@@ -139,23 +147,23 @@ var controller = {
    *
    */
   remove (req,res,next) {
-    var resource = req.resource;
+    const resource = req.resource
 
-    if(resource.type == 'host') {
-      debug('removing host resource');
+    if (resource.type == 'host') {
+      debug('removing host resource')
       ResourceManager.removeHostResource({
-        resource:resource,
-        user:req.user
-      });
-      res.send(200,{});
+        resource: resource,
+        user: req.user
+      })
+      res.send(200,{})
     } else {
-      debug('removing resource');
+      debug('removing resource')
       ResourceManager.remove({
-        resource:resource,
-        notifyAgents:true,
-        user:req.user
-      });
-      res.send(200,{});
+        resource: resource,
+        notifyAgents: true,
+        user: req.user
+      })
+      res.send(200,{})
     }
   },
   /**
@@ -164,31 +172,34 @@ var controller = {
    *
    */
   create (req,res,next) {
-    var customer = req.customer;
-    var body = req.body,
-      hosts = body.hosts;
+    const customer = req.customer
+    const body = req.body
+    const hosts = body.hosts
 
     body.acl = req.acl;
 
-    if (!hosts) return res.send(400, [{
-      field:'hosts',
-      message:'a host is required',
-      value:hosts,
-      code:'EREQ'
-    }]);
-
-    if (!Array.isArray(hosts)) hosts = [hosts];
-
-    var params = MonitorManager.validateData(body);
-    if (params.errors && params.errors.hasErrors()) {
-      return res.send(400, params.errors);
+    if (!hosts) {
+      return res.send(400, [{
+        field: 'hosts',
+        message: 'a host is required',
+        value: hosts,
+        code: 'EREQ'
+      }])
     }
 
-    var input = params.data;
-    input.user = req.user;
-    input.customer = customer;
-    input.customer_id = customer.id;
-    input.customer_name = customer.name;
+    if (!Array.isArray(hosts)) hosts = [hosts]
+
+    var params = MonitorManager.validateData(body)
+    if (params.errors && params.errors.hasErrors()) {
+      return res.send(400, params.errors)
+    }
+
+    var input = params.data
+    input.user_id = req.user._id
+    input.user_email = req.user.email
+    input.customer = customer
+    input.customer_id = customer.id
+    input.customer_name = customer.name
 
     ResourceManager.createResourceOnHosts(hosts,input,function(error,results){
       if (error) {
@@ -219,14 +230,14 @@ var controller = {
    *
    */
   update (req,res,next) {
-    var updates,
-      resource = req.resource,
-      body = req.body;
+    const resource = req.resource
+    const body = req.body
+    var updates
 
-    body.host = req.host;
-    body.acl = req.acl;
+    body.host = req.host
+    body.acl = req.acl
 
-    var params = MonitorManager.validateData(body);
+    const params = MonitorManager.validateData(body)
     if (params.errors && params.errors.hasErrors()) {
       return res.send(400, params.errors);
     }
@@ -235,22 +246,39 @@ var controller = {
       updates = {
         acl: req.acl,
         tags: body.tags
-      };
+      }
     } else {
-      updates = params.data;
+      updates = params.data
     }
 
-    ResourceManager.update({
-      resource: resource,
-      updates: updates,
-      user: req.user
-    },function(error,resource){
-      if (error) {
-        res.send(500,json.error('update error',error.message));
-      } else {
-        res.send(200,resource);
-      }
-    });
+    const doUpdate = () => {
+      ResourceManager.update({
+        user_id: req.user._id,
+        resource: resource,
+        updates: updates
+      },(error,resource) => {
+        if (error) {
+          res.send(500,json.error('update error',error.message));
+        } else {
+          res.send(200,resource);
+        }
+      })
+    }
+
+    if (updates.host_id) {
+      Host.findById(updates.host_id, (err, host) => {
+        if (err) return res.send(500,err)
+        if (!host) return res.send(400,'invalid host')
+        updates.host_id = host._id
+        updates.host = host._id
+        updates.hostname = host.hostname
+        doUpdate()
+      })
+    } else {
+      doUpdate()
+    }
+
+
   },
   /**
    *
@@ -276,11 +304,12 @@ var controller = {
    *
    */
   update_state (req,res,next) {
-    var resource = req.resource;
-    var input = req.params;
-    var state = req.params.state;
-    var manager = new ResourceManager(resource);
-    input.last_update = new Date();
+    const resource = req.resource
+    const input = req.params
+    const state = req.params.state
+    const manager = new ResourceManager(resource)
+    input.last_update = new Date()
+
     manager.handleState(input,function(error){
       if (!error) {
         res.send(200,resource);

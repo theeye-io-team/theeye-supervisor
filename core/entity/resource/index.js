@@ -1,31 +1,36 @@
-"use strict";
+'use strict';
 
 require('mongoose-schema-extend');
-var mongodb = require('../../lib/mongodb').db;
-var BaseSchema = require('./schema');
-var Template = require('./template').Entity;
-var ObjectId = require('mongoose').Schema.Types.ObjectId;
-var debug = require('debug')('eye:entity:resource');
-var extend = require('lodash/assign');
-var INITIAL_STATE = 'normal' ;
+const mongodb = require('../../lib/mongodb').db;
+const BaseSchema = require('./schema');
+const Template = require('./template').Entity;
+const ObjectId = require('mongoose').Schema.Types.ObjectId;
+const debug = require('debug')('eye:entity:resource');
+const extend = require('lodash/assign');
+const INITIAL_STATE = 'normal'
 
 /**
  * Extended Schema. Includes non template attributes
  */
 var ResourceSchema = BaseSchema.EntitySchema.extend({
-  host_id: { type:String },
-  hostname: { type:String },
-  fails_count: { type:Number, 'default':0 },
-  state: { type:String, 'default':INITIAL_STATE },
-  enable: { type:Boolean, 'default':true },
-  template: { type: ObjectId, ref: 'ResourceTemplate', 'default': null },
-  creation_date: { type:Date, 'default': Date.now },
-  last_check: { type:Date, 'default':null },
-  last_update: { type:Date, 'default':Date.now },
-  last_event: { type: Object, 'default':{} }
-});
+  host_id: { type: String, required: true },
+  monitor_id: { type: ObjectId },
+  template_id: { type: ObjectId },
+  hostname: { type: String },
+  fails_count: { type: Number, default: 0 },
+  state: { type: String, default: INITIAL_STATE },
+  enable: { type: Boolean, default: true },
+  creation_date: { type: Date, default: Date.now },
+  last_update: { type: Date, default: Date.now },
+  last_event: { type: Object, default: () => { return {} } },
+  last_check: { type: Date },
+  // relations
+  monitor: { type: ObjectId, ref: 'ResourceMonitor' }, // has one
+  template: { type: ObjectId, ref: 'ResourceTemplate' }, // has one
+  host: { type: ObjectId, ref: 'Host' }, // belongs to
+})
 
-ResourceSchema.statics.INITIAL_STATE = INITIAL_STATE ;
+ResourceSchema.statics.INITIAL_STATE = INITIAL_STATE
 
 ResourceSchema.statics.create = function(input, next){
   var data = {};
@@ -60,47 +65,39 @@ ResourceSchema.methods.patch = function(input, next){
  *
  */
 ResourceSchema.methods.toTemplate = function(doneFn) {
-  var entity = this;
-  var values = {};
-
-  for(var key in BaseSchema.properties){
-    values[ key ] = entity[ key ];
-  }
-
-  values.base_resource = entity;
-  
-  var template = new Template(values);
+  const values = this.templateProperties()
+  const template = new Template(values)
   template.save(function(error){
-    doneFn(error, template);
+    doneFn(error, template)
   });
 }
 
-ResourceSchema.statics.FromTemplate = function(
-  template, 
-  options, 
-  doneFn
-) {
-  var data = {
-    host_id: options.host._id,
-    hostname: options.host.hostname,
-    template: template._id
-  };
-  var input = extend(data,template.toObject());
-  input.description = input.description;
-  input.name = input.name;
-  delete input._id;
-  debug('creating resource from template %j', input);
+ResourceSchema.methods.templateProperties = function() {
+  const values = {}
+  var key
+  for (key in BaseSchema.properties) {
+    values[key] = this[key]
+  }
+  return values
+}
 
-  var model = new this(input);
-  model.last_update = new Date();
-  model._type = 'Resource';
-  model.save(function(err){
-    if(err){
-      debug('ERROR with %j',input);
-      debug(err.message);
-    }
-    doneFn(err,model);
-  });
+/**
+ *
+ * @param {Object} template
+ * @param {Object} options
+ * @param {Function} done
+ * @return undefined
+ *
+ */
+ResourceSchema.statics.createFromTemplate = function(template, options, done) {
+  throw new Error('nothing to do here anymore!')
+}
+
+ResourceSchema.methods.populate = function(options,next){
+  return next(null,this)
+  //return Entity.populate(this,[
+  //  { path: '' },
+  //],next)
 }
 
 var Entity = mongodb.model('Resource', ResourceSchema);
