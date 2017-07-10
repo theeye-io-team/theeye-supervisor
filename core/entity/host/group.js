@@ -8,6 +8,7 @@ const BaseSchema = require('../base-schema')
 
 const TriggerTemplate = new Schema({
   emitter_template_id: { type: Schema.Types.ObjectId },
+  emitter_template_type: { type: 'String' },
   task_template_id: { type: Schema.Types.ObjectId },
   event_type: { type: String },
   event_name: { type: String },
@@ -41,6 +42,13 @@ EntitySchema.methods.populateAll = function(next) {
     { path: 'hosts' },
     { path: 'tasks' },
     { path: 'resources' },
+    {
+      path: 'triggers',
+      populate: {
+        path: 'task_template',
+        select: 'name type' // only populate this fields
+      }
+    },
   ],next)
 }
 

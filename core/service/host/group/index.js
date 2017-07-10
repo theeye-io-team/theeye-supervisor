@@ -439,7 +439,9 @@ const generateTasksTriggersTemplates = (templates, triggers, next) => {
               event_type: events[j]._type, // the instance of Event to create
               event_name: events[j].name, // something to distinguish the event
               emitter_template_id: tasks[k]._id, // emitter task template id
+              emitter_template_type: tasks[k]._type,
               task_template_id: taskTemplate._id, // triggered task template id
+              task_template: taskTemplate._id, // triggered task template id
             })
           }
         }
@@ -452,7 +454,9 @@ const generateTasksTriggersTemplates = (templates, triggers, next) => {
               event_type: events[j]._type, // the instance of Event to create
               event_name: events[j].name, // something to distinguish the event
               emitter_template_id: resources[l].monitor_template._id, // emitter monitor template id
+              emitter_template_type: resources[l].monitor_template._type,
               task_template_id: taskTemplate._id, // triggered task template id
+              task_template: taskTemplate._id, // triggered task template id
             })
           }
         }
