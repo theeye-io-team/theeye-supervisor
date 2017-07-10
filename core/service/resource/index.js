@@ -589,6 +589,7 @@ Service.fetchBy = function (filter,next) {
         }
 
         if (!monitor) {
+          logger.error('monitor for resource id %s was not found',resource._id)
           data.monitor = null
         } else {
           data.monitor = monitor.toObject()
