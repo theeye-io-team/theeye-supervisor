@@ -118,6 +118,8 @@ HostService.config = (host, customer, next) => {
           logger.log('processing triggers')
           logger.data('triggers %j', task.triggers)
 
+          data.tasks.push(task)
+
           if (
             ! task.triggers ||
             ! Array.isArray(task.triggers) ||
@@ -157,7 +159,6 @@ HostService.config = (host, customer, next) => {
             // 2. to webhooks 
             // 3. other external events and sources (not implemented yet)
             // Triggers of same host should be "templatized"
-            data.tasks.push(task)
             completed()
           })
         })

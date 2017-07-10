@@ -588,7 +588,12 @@ Service.fetchBy = function (filter,next) {
           return fetched()
         }
 
-        data.monitor = monitor.toObject()
+        if (!monitor) {
+          data.monitor = null
+        } else {
+          data.monitor = monitor.toObject()
+        }
+
         pub.push(data)
         fetched()
       })
