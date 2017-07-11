@@ -45,7 +45,7 @@ module.exports = {
   */
   },
   "monitor": {
-    "enabled": false,
+    "disabled": false,
     "fails_count_alert": 3,
     "check_interval": 10000
   },

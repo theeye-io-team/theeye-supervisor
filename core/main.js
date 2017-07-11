@@ -43,14 +43,7 @@ require('./environment').setenv(function(){
       var dispatcher = require('./service/events');
       dispatcher.initialize(function(){
 
-        var config = require('config');
-        if (config.monitor.enabled!==false) {
-          logger.log('initializing monitor');
-          var monitor = require('./service/monitor');
-          monitor.start();
-        } else {
-          logger.log('WARNING ! Monitoring service is disabled by config');
-        }
+        require('./service/monitor').start()
 
         logger.log('initializing server');
         var app = require('./app');

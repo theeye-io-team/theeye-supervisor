@@ -1,6 +1,6 @@
 'use strict';
 
-var debug = require('debug')('eye:controller:resource');
+var logger = require('../lib/logger')('controller:resource');
 var json = require('../lib/jsonresponse');
 var ResourceManager = require('../service/resource');
 var MonitorManager = require('../service/resource/monitor');
@@ -120,6 +120,7 @@ var controller = {
 
     ResourceManager.fetchBy(filter,(err,resources) => {
       if (err) {
+        logger.error(err)
         res.send(500,err)
       } else if (!Array.isArray(resources)) {
         res.send(503, new Error('resources not available'))
@@ -150,14 +151,14 @@ var controller = {
     const resource = req.resource
 
     if (resource.type == 'host') {
-      debug('removing host resource')
+      logger.log('removing host resource')
       ResourceManager.removeHostResource({
         resource: resource,
         user: req.user
       })
       res.send(200,{})
     } else {
-      debug('removing resource')
+      logger.log('removing resource')
       ResourceManager.remove({
         resource: resource,
         notifyAgents: true,
@@ -215,11 +216,11 @@ var controller = {
 
           return res.send(400, error.errors);
         } else {
-          debug(error);
+          logger.error(error);
           return res.send(500, json.error('internal error', error));
         }
       } else {
-        debug('resources created');
+        logger.log('resources created');
         return res.send(201, results);
       }
     });

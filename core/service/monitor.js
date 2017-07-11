@@ -1,34 +1,43 @@
 "use strict";
 
-var config = require('config');
-var lodash = require('lodash');
+const config = require('config');
+const lodash = require('lodash');
+const logger = require('../lib/logger')(':monitor');
 var Resource = require('../entity/resource').Entity;
 var ResourceMonitor = require('../entity/monitor').Entity;
 var Host = require('../entity/host').Entity;
 var ResourceService = require('./resource');
 var CustomerService = require('./customer');
 var HostService = require('./host');
-var logger = require('../lib/logger')(':monitor');
 
 const Constants = require('../constants/monitors');
 const Scheduler = require('../service/scheduler');
 
 module.exports = {
   start: function () {
-    var mconfig = config.get('monitor');
-    // to seconds
-    var interval = mconfig.check_interval / 1000;
+    const mconfig = config.get('monitor');
+    if (Boolean(process.env.MONITORING_DISABLED) === true) {
+      logger.log('WARNING! Monitoring service is disabled via process.env');
+      return
+    } else if (mconfig.disabled === true) {
+      logger.log('WARNING! Monitoring service is disabled via config');
+      return
+    } else {
+      logger.log('initializing monitor');
+      // to seconds
+      var interval = mconfig.check_interval / 1000;
 
-    Scheduler.agenda.define(
-      'monitoring',
-      { lockLifetime: (5 * 60 * 1000) }, // max lock
-      (job, done) => { checkResourcesState(done) }
-    );
+      Scheduler.agenda.define(
+        'monitoring',
+        { lockLifetime: (5 * 60 * 1000) }, // max lock
+        (job, done) => { checkResourcesState(done) }
+      );
 
-    Scheduler.agenda.every(`${interval} seconds`,'monitoring');
-    logger.log('monitoring started');
+      Scheduler.agenda.every(`${interval} seconds`,'monitoring');
+      logger.log('monitoring started');
+    }
   }
-};
+}
 
 function checkResourcesState (done) {
   logger.debug('***** CHECKING RESOURCES STATUS *****');

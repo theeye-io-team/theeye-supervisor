@@ -14,7 +14,7 @@ module.exports = {
     "driver": "local"
   },
   "monitor": {
-    "enabled": false,
+    "disabled": true, // this is enabled if not specified or by default
     "fails_count_alert": 3,
     "resources_check_failure_interval_milliseconds": 10000,
     "resources_alert_failure_threshold_milliseconds": 30000
@@ -27,7 +27,7 @@ module.exports = {
     "database": "theeye"
   },
   "elasticsearch": {
-    "enabled":false,
+    "enabled": false,
     "url":"http://localhost:9200", // via ssh tunnel
     "keys":{
       //"prefix":"localdev-"
