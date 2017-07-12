@@ -17,7 +17,7 @@ module.exports = {
    */
   getAlertEmails (customerName, next) {
     const self = this
-    const emails = []
+    var emails
 
     Customer.findOne({ name: customerName },function(error, customer){
       if (error) {
@@ -107,7 +107,7 @@ module.exports = {
    * @return null
    */
   create (input, next) {
-    var data = {
+    const data = {
       emails: input.emails,
       name: input.name,
       description: (input.description||'')
