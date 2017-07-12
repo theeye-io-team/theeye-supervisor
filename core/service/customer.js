@@ -11,12 +11,13 @@ var ACL = require('../lib/acl');
 
 module.exports = {
   /**
-   * search every user of with this customer
-   * and extract its email.
+   * @summary get the email of every user for this customer
+   * @param {String} customerName
+   * @param {Function} next
    */
   getAlertEmails (customerName, next) {
-    var self = this,
-      emails = [];
+    const self = this
+    const emails = []
 
     Customer.findOne({ name: customerName },function(error, customer){
       if (error) {
@@ -48,7 +49,7 @@ module.exports = {
                 emails.push(user.email);
               }
             }
-          });
+          })
         }
 
         return next(null, emails);

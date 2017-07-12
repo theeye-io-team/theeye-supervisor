@@ -1,13 +1,11 @@
 'use strict';
 
 // order matters
-var credentials = ['viewer','user','agent','admin','owner','root'];
+const credentials = ['viewer','user','agent','admin','owner','root'];
 
 module.exports = {
   accessLevel (credential) {
-    var lvl ;
-    lvl = credentials.indexOf(credential);
-    return lvl;
+    return credentials.indexOf(credential)
   },
   hasAccessLevel (current, required, options) {
     options||(options={});

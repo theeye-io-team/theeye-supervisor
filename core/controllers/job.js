@@ -69,12 +69,12 @@ var controller = {
   },
   update (req, res, next) {
     var result = req.params.result;
-    if( ! result ){
+    if (!result) {
       return res.send(400, json.error('result data is required'));
     }
 
     app.jobDispatcher.update(req.job, result, (err, job) => {
-      if(err) return res.send(500);
+      if (err) return res.send(500);
       res.send(200, job);
       next();
     });

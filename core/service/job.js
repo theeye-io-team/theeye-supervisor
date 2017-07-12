@@ -23,7 +23,7 @@ const STATE_SUCCESS = 'success';
 const STATE_FAILURE = 'failure';
 const STATE_NEW = 'new';
 
-var service = {
+module.exports = {
   /**
    * @param {Object} input
    * @param {Function} next
@@ -116,7 +116,7 @@ var service = {
     // if job is an agent update, break
     if (job.name == 'agent:config:update') return;
 
-    var message = { topic: "jobs", subject: "job_update" };
+    var message = { topic: 'jobs', subject: 'job_update' };
     NotificationService.sendSNSNotification(job, message);
 
     var key = globalconfig.elasticsearch.keys.task.result;
@@ -296,48 +296,50 @@ const createScraperJob = (input, done) => {
 }
 
 function ResultMail ( job ) {
-
   /**
    *
    * parse result log and return html to send via email
    *
    */
-  function scriptExecutionLog (job) {
-    var html, stdout, stderr, code,
-      result = (job.result&&job.result.script_result)||null;
+  const scriptExecutionLog = (job) => {
+    var html
+    var stdout
+    var stderr
+    var code
+    var result = (job.result && job.result.script_result) || null
 
     if (!result) {
-      html = '<span>script execution is not available</span>';
+      html = `<span>script execution is not available</span>`
     } else {
-      stdout = result.stdout?result.stdout.trim():'no stdout',
-      stderr = result.stderr?result.stderr.trim():'no stderr',
-      code = result.code||'no code',
+      stdout = result.stdout ? result.stdout.trim() : 'no stdout'
+      stderr = result.stderr ? result.stderr.trim() : 'no stderr'
+      code = result.code || 'no code'
       html = `<pre><ul>
         <li>stdout : ${stdout}</li>
         <li>stderr : ${stderr}</li>
         <li>code : ${code}</li>
-        </ul></pre>`;
+        </ul></pre>`
     }
-    return html;
+    return html
   }
 
-  function scriptExecutionMail (job,emails) {
-    var state, html, log = scriptExecutionLog(job);
+  const scriptExecutionMail = (job,emails) => {
+    var state
+    var html
+    var log = scriptExecutionLog(job)
+    var result = job.result
 
-    var result = job.result;
     if (result && result.script_result) {
-      if (result.event=='killed'||result.script_result.killed) {
-        state = 'interrupted';
+      if (result.event=='killed' || result.script_result.killed) {
+        state = 'interrupted'
         html = `
           <h3>Task ${job.task.name} execution on host ${job.host.hostname} has been interrupted.</h3>
           <p>The script ${job.script.filename} execution takes more than 10 minutos to finish and was interrupted.</p>
           <p>If you need more information, please contact the administrator</p>
-          `;
+          `
       } else {
-        state = 'completed';
-        html = `
-          <h3>Task ${job.task.name} execution on ${job.host.hostname} has been completed.</h3>
-          `;
+        state = 'completed'
+        html = `<h3>Task ${job.task.name} execution on ${job.host.hostname} has been completed.</h3>`
       }
     }
 
@@ -345,7 +347,7 @@ function ResultMail ( job ) {
 
     NotificationService.sendEmailNotification({
       customer_name: job.customer_name,
-      subject: `[TASK] ${job.task.name} on ${job.host.hostname} ${state}`,
+      subject: `[TASK] ${job.task.name} executed on ${job.host.hostname} ${state}`,
       content: html,
       to: emails
     });
@@ -371,9 +373,9 @@ function ResultMail ( job ) {
   app.customer.getAlertEmails(
     job.customer_name,
     (err, emails) => {
-      var mailTo,
-        extraEmail = [],
-        acls = job.task.acl;
+      var mailTo
+      var extraEmail = []
+      var acls = job.task.acl
 
       if (Array.isArray(acls) && acls.length>0) {
         extraEmail = acls.filter(email => emails.indexOf(email) === -1);
@@ -388,11 +390,11 @@ function ResultMail ( job ) {
         this[ job._type ]( job, mailTo );
       });
     }
-  );
+  )
+}
 
-};
-
-function CreationMail (job) {
+/*
+const CreationMail = (job) => {
   var html = `<h3>Task ${job.task.name} will run on ${job.host.hostname}.</h3>`;
 
   NotificationService.sendEmailNotification({
@@ -402,6 +404,4 @@ function CreationMail (job) {
     to: job.user.email
   });
 }
-
-
-module.exports = service ;
+*/
