@@ -304,7 +304,11 @@ function Service(resource) {
     if (input.last_update) resource.last_update = input.last_update;
     if (input.last_check) resource.last_check = input.last_check;
 
-    logger.data('resource state [%s] > %o', resource.name, input);
+    logger.data(
+      'resource %s type %s state change %o',
+      resource.type,
+      resource.name,
+      input)
 
     CustomerService.getCustomerConfig(
       resource.customer_id,
@@ -350,7 +354,7 @@ function Service(resource) {
 
         next();
       }
-    );
+    )
   }
 }
 

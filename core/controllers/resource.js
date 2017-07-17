@@ -1,16 +1,16 @@
 'use strict';
 
-var logger = require('../lib/logger')('controller:resource');
-var json = require('../lib/jsonresponse');
-var ResourceManager = require('../service/resource');
-var MonitorManager = require('../service/resource/monitor');
-var Resource = require('../entity/resource').Entity;
-var Monitor = require('../entity/monitor').Entity;
-var Host = require('../entity/host').Entity;
-var Job = require('../entity/job').Job;
-var router = require('../router');
-var dbFilter = require('../lib/db-filter');
-var ACL = require('../lib/acl');
+const logger = require('../lib/logger')('controller:resource');
+const json = require('../lib/jsonresponse');
+const ResourceManager = require('../service/resource');
+const MonitorManager = require('../service/resource/monitor');
+const Resource = require('../entity/resource').Entity;
+const Monitor = require('../entity/monitor').Entity;
+const Host = require('../entity/host').Entity;
+const Job = require('../entity/job').Job;
+const router = require('../router');
+const dbFilter = require('../lib/db-filter');
+const ACL = require('../lib/acl');
 
 module.exports = function (server, passport) {
   // default middlewares
@@ -20,25 +20,41 @@ module.exports = function (server, passport) {
     router.ensureCustomer,
   ];
 
-  server.get('/:customer/resource',middlewares.concat([
-    router.requireCredential('viewer'),
-  ]),controller.fetch);
+  server.get(
+    '/:customer/resource',
+    middlewares.concat([
+      router.requireCredential('viewer'),
+    ]),
+    controller.fetch
+  );
 
-  server.get('/:customer/resource/:resource',middlewares.concat([
-    router.requireCredential('viewer'),
-    router.resolve.idToEntity({param:'resource',required:true}),
-    router.ensureAllowed({entity:{name:'resource'}})
-  ]),controller.get);
+  server.get(
+    '/:customer/resource/:resource',
+    middlewares.concat([
+      router.requireCredential('viewer'),
+      router.resolve.idToEntity({param:'resource',required:true}),
+      router.ensureAllowed({entity:{name:'resource'}})
+    ]),
+    controller.get
+  );
 
-  server.post('/:customer/resource',middlewares.concat([
-    router.requireCredential('admin'),
-    router.filter.spawn({filter:'emailArray',param:'acl'})
-  ]),controller.create);
+  server.post(
+    '/:customer/resource',
+    middlewares.concat([
+      router.requireCredential('admin'),
+      router.filter.spawn({filter:'emailArray',param:'acl'})
+    ]),
+    controller.create
+  );
 
-  server.del('/:customer/resource/:resource',middlewares.concat([
-    router.requireCredential('admin'),
-    router.resolve.idToEntity({param:'resource',required:true})
-  ]),controller.remove);
+  server.del(
+    '/:customer/resource/:resource',
+    middlewares.concat([
+      router.requireCredential('admin'),
+      router.resolve.idToEntity({param:'resource',required:true})
+    ]),
+    controller.remove
+  );
 
 
   var updateMiddlewares = middlewares.concat([
@@ -54,7 +70,7 @@ module.exports = function (server, passport) {
   // SUPPORTED FROM VERSION v0.9.3-beta-11-g8d1a93b
   //
   server.put('/:customer/resource/:resource', updateMiddlewares, function(req,res,next){
-    // some older version of agent keep updating state to this URL.
+    // some older version of the agent are still updating resources state using this URL. need to keep it
     if (req.user.credential==='agent') {
       controller.update_state.apply(controller, arguments);
     } else {
@@ -76,11 +92,14 @@ module.exports = function (server, passport) {
     controller.update_alerts
   );
 
-  server.patch('/:customer/resource/:resource/state',middlewares.concat([
-    router.requireCredential('agent',{exactMatch:true}),
-    router.resolve.idToEntity({param:'resource',required:true})
-  ]),controller.update_state);
-
+  server.patch(
+    '/:customer/resource/:resource/state',
+    middlewares.concat([
+      router.requireCredential('agent',{exactMatch:true}),
+      router.resolve.idToEntity({param:'resource',required:true})
+    ]),
+    controller.update_state
+  );
 }
 
 var controller = {

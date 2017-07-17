@@ -170,7 +170,7 @@ const Service = module.exports = {
 
   /**
    * @author Facugon
-   * @summary Replace host template configuration
+   * @summary Replace host template basic properties. Will not affect tasks & monitors provisioning
    * @param {Object} input
    * @property {Customer} input.customer
    * @property {HostGroup} input.group
