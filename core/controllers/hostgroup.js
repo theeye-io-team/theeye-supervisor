@@ -3,8 +3,7 @@
 const lodash = require('lodash')
 const async = require('async')
 const router = require('../router')
-const logger = require('../lib/logger')('eye:controller:template')
-
+const logger = require('../lib/logger')('eye:controller:hostgroup')
 const HostGroup = require('../entity/host/group').Entity
 const HostGroupService = require('../service/host/group')
 
@@ -93,8 +92,8 @@ const controller = {
         return res.send(200,[])
       }
 
-      var result = []
-      var done = lodash.after(
+      const result = []
+      const done = lodash.after(
         groups.length,
         () => res.send(200, result)
       )
@@ -140,6 +139,7 @@ const controller = {
   create (req, res, next) {
     const body = req.body
     const hostname_regex = body.hostname_regex
+    const host_origin = req.body.copy_host
 
     if (typeof hostname_regex === 'string') {
       try {
@@ -153,6 +153,7 @@ const controller = {
       //user_id: req.user._id,
       //customer_id: req.customer._id,
       //customer_name: req.customer.name,
+      host_origin: host_origin,
       user: req.user,
       customer: req.customer,
       name: body.name,
@@ -163,8 +164,12 @@ const controller = {
       triggers: body.triggers || [], // Array of Objects with a task id and related triggers ids
       resources: body.resources || [] // Array of Objects with resources and monitors definition, all mixed
     }, (err, group) => {
-      if (err) return responseError(err, res)
-      res.send(200, group)
+      if (err) {
+        err.statusCode || (err.statusCode = 500)
+        responseError(err, res)
+      } else {
+        res.send(200, group)
+      }
       next()
     })
   },
@@ -196,15 +201,19 @@ const controller = {
       tasks: body.tasks || [], // Array of Objects with task definition
       resources: body.resources || [] // Array of Objects with resources and monitors definition, all mixed
     }, (err, group) => {
-      if (err) return responseError(err, res)
-      res.send(200, group)
+      if (err) {
+        err.statusCode || (err.statusCode = 500)
+        responseError(err, res)
+      } else {
+        res.send(200, group)
+      }
       next()
     })
   }
 }
 
 const responseError = (e,res) => {
-  logger.error('%o',e)
+  //logger.error('%o',e)
   const errorRes = {
     error: e.message,
     info: []

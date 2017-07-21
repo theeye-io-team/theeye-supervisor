@@ -3,6 +3,7 @@
 const logger = require('../lib/logger')('controller:resource');
 const json = require('../lib/jsonresponse');
 const ResourceManager = require('../service/resource');
+const HostsManager = require('../service/host');
 const MonitorManager = require('../service/resource/monitor');
 const Resource = require('../entity/resource').Entity;
 const Monitor = require('../entity/monitor').Entity;
@@ -171,7 +172,7 @@ var controller = {
 
     if (resource.type == 'host') {
       logger.log('removing host resource')
-      ResourceManager.removeHostResource({
+      HostsManager.removeHostResource({
         resource: resource,
         user: req.user
       })

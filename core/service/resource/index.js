@@ -10,16 +10,12 @@ const NotificationService = require('../notification');
 const ResourceMonitorService = require('./monitor');
 const EventDispatcher = require('../events');
 const ResourcesNotifications = require('./notifications');
-const Job = require('../../entity/job').Job;
 const AgentUpdateJob = require('../../entity/job').AgentUpdate;
 const MonitorEvent = require('../../entity/event').MonitorEvent;
 const ResourceModel = require('../../entity/resource').Entity;
 const MonitorModel = require('../../entity/monitor').Entity;
 const MonitorTemplate = require('../../entity/monitor/template').Entity;
 const Host = require('../../entity/host').Entity;
-const HostGroup = require('../../entity/host/group').Entity;
-const HostStats = require('../../entity/host/stats').Entity;
-const Task = require('../../entity/task').Entity;
 const Tag = require('../../entity/tag').Entity;
 
 function Service(resource) {
@@ -308,7 +304,8 @@ function Service(resource) {
       'resource %s type %s state change %o',
       resource.type,
       resource.name,
-      input)
+      input
+    )
 
     CustomerService.getCustomerConfig(
       resource.customer_id,
@@ -606,136 +603,6 @@ Service.fetchBy = function (filter,next) {
   })
 }
 
-
-
-/**
- *
- * @author Facundo
- * @param {Object} input
- * @param {Resource} input.resource the resource to be removed
- * @param {User} input.user requesting user
- * @param {Function(Error)} done
- *
- */
-Service.removeHostResource = function (input, done) {
-  const host_id = input.resource.host_id
-  const resource_id = input.resource._id
-
-  logger.log('removing host "%s" resource "%s" resources', host_id, resource_id);
-
-  // find and remove host
-  Host
-    .findById(host_id)
-    .exec(function(err, item){
-      if (err) {
-        logger.error(err);
-        return
-      }
-      if (!item) return
-      item.remove((err) => {
-        if (err) logger.error(err)
-      });
-    });
-
-  logger.log('removing host stats');
-  // find and remove saved cached host stats
-  HostStats
-    .find({ host_id: host_id })
-    .exec(function(err, items){
-      if (err) {
-        logger.error(err);
-        return
-      }
-      if (!Array.isArray(items)||items.length===0) return
-      for (var i=0; i<items.length; i++) {
-        items[i].remove((err) => {})
-      }
-    })
-
-  // find and remove resources
-  const removeResource = (resource, done) => {
-    logger.log('removing host resource "%s"', resource.name);
-    Service.remove({
-      resource: resource,
-      notifyAgents: false,
-      user: input.user
-    },(err) => {
-      if (err) {
-        logger.error(err);
-        return
-      }
-      else logger.log('resource "%s" removed', resource.name)
-      done(err)
-    });
-  }
-
-  ResourceModel
-    .find({ host_id: host_id })
-    .exec(function(err, resources){
-      if (err) {
-        logger.error(err);
-        return
-      }
-      if (!Array.isArray(resources)||resources.length===0) return
-      const resourceRemoved = lodash.after(resources.length, () => {
-        // all resources && monitors removed
-      })
-
-      for (var i=0; i<resources.length; i++) {
-        removeResource(resources[i], resourceRemoved)
-      }
-    })
-
-  // find and remove host jobs
-  Job
-    .find({ host_id: host_id })
-    .exec(function(err, items){
-      if (err) {
-        logger.error(err);
-        return
-      }
-      if (!Array.isArray(items)||items.length===0) return
-      for (var i=0; i<items.length; i++) {
-        items[i].remove((err) => {})
-      }
-    })
-
-  // find and remove host tasks
-  Task
-    .find({ host_id: host_id })
-    .exec(function(err, items){
-      if (err) {
-        logger.error(err);
-        return
-      }
-      if (!Array.isArray(items)||items.length===0) return
-      for (var i=0; i<items.length; i++) {
-        items[i].host_id = null
-        items[i].save()
-      }
-    });
-
-  const removeFromGroup = (group) => {
-    const idx = group.hosts.indexOf(host_id)
-    if (idx === -1) return
-    group.hosts.splice(idx,1)
-    group.save()
-  }
-
-  HostGroup
-    .find({ hosts: host_id })
-    .exec((err,groups) => {
-      if (err) {
-        logger.error(err);
-        return
-      }
-      if (!Array.isArray(groups) || groups.length===0) return
-      for (var i=0; i<groups.length; i++) {
-        removeFromGroup(groups[i])
-      }
-    })
-}
-
 /**
  *
  * @author Facundo
@@ -943,7 +810,7 @@ Service.createFromTemplate = function(options) {
  * @author Facugon
  *
  */
-function handleHostIdAndData (hostId, input, doneFn) {
+const handleHostIdAndData = (hostId, input, doneFn) => {
   Host.findById(hostId, function(err,host){
     if (err) return doneFn(err);
 

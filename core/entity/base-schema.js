@@ -4,16 +4,11 @@ const util = require('util')
 const Schema = require('mongoose').Schema
 const lifecicle = require('mongoose-lifecycle')
 const FetchBy = require('../lib/fetch-by');
+const baseProperties = require('./base-schema-properties')
 
-function BaseSchema (props,specs) {
+function BaseSchema (props, specs) {
   // Schema constructor
-  Schema.call(this, util._extend({
-    creation_date: { type: Date, default: Date.now },
-    last_update: { type: Date, default: Date.now },
-    enable: { type: Boolean, default: true },
-    customer_id: { type: Schema.Types.ObjectId },
-    customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
-  }, props),{
+  Schema.call(this, Object.assign({}, baseProperties, props),{
     collection: specs.collection,
     discriminatorKey: '_type'
   })

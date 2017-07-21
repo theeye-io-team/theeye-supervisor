@@ -32,32 +32,42 @@ module.exports = {
     async.map(
       resources,
       (resource, next) => {
-        const monitorConfig = lodash.assign({}, resource.monitor, resource.monitor.config)
-        const result = MonitorService.validateData(monitorConfig)
+        const monitor = resource.monitor
 
-        if (!result || result.errors) {
-          const msg = 'invalid resource monitor data';
-          logger.error(msg);
-          const e = new Error(msg);
-          e.statusCode = 400;
-          e.info = result.error;
-          return next(e);
+        if (!monitor) {
+          const err = new Error('resource monitor data not defined')
+          err.statusCode = 400
+          err.resource = resource
+          return next(err)
         }
 
-        var values = result.data
-        values.customer = customer
+        const config = lodash.assign({}, monitor, monitor.config||{})
+        const result = MonitorService.validateData(config)
+
+        if (!result || result.errors) {
+          const msg = 'invalid resource monitor data'
+          logger.error(msg)
+          const e = new Error(msg)
+          e.statusCode = 400
+          e.info = result.error
+          return next(e)
+        }
+
+        const data = result.data
+        data.customer = customer
         // DO NOT UN-COMMENT ! user property generates conflict with monitor.config.user property of monitor.type === file 
-        //values.user = user
-        values.hostgroup = hostgroup
-        values.source_monitor_id = (resource.monitor._id || resource.monitor.id)
-        values.source_resource_id = (resource._id || resource.id)
+        //data.user = user
+        data.hostgroup = hostgroup
+        data.source_monitor_id = (resource.monitor._id || resource.monitor.id)
+        data.source_resource_id = (resource._id || resource.id)
 
         logger.log('creating template')
-        createResourceTemplate(values,next)
+        createResourceTemplate(data,next)
       },
       (err, templates) => {
         if (err) {
-          logger.error(err)
+          logger.error('failed to create resource template')
+          logger.error(err, err.resource)
           return done(err)
         }
         done(null, templates)

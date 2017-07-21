@@ -13,6 +13,7 @@ const HostGroup = require('../../../entity/host/group').Entity
 const ResourceTemplate = require('../../../entity/resource/template').Entity
 const MonitorTemplate = require('../../../entity/monitor/template').Entity
 const TaskTemplate = require('../../../entity/task/template').Template
+const Recipe = require('../../../entity/recipe').Recipe
 
 /** NON TEMPLATES **/
 const Monitor = require('../../../entity/monitor').Entity
@@ -88,10 +89,10 @@ const Service = module.exports = {
    * @author Facugon
    * @summary create group definition.
    * @param {Object} input , group data properties
-   * @property {Object[]} input.triggers, plain objects array
-   * @property {Object[]} input.tasks, plain objects array
-   * @property {Object[]} input.resources, plain objects array
-   * @property {ObjectId[]} input.hosts, array of hosts objectid 
+   * @property {Object[]} input.triggers plain objects array
+   * @property {Object[]} input.tasks plain objects array
+   * @property {Object[]} input.resources plain objects array
+   * @property {ObjectId[]} input.hosts array of hosts objectid 
    * @property {Customer} input.customer
    * @property {User} input.user
    * @property {String} input.name
@@ -104,6 +105,7 @@ const Service = module.exports = {
     const resources = input.resources
     const customer = input.customer
     const user = input.user
+    const host_origin_id = input.host_origin
     var group
 
     const values = lodash.assign({},input,{
@@ -132,6 +134,28 @@ const Service = module.exports = {
         customer,
         user,
         (err, templates) => {
+          if (err) {
+            logger.error('%o', err)
+            return next(err)
+          }
+
+          logger.log('creating recipe')
+          createRecipe({
+            tags: [],
+            public: false,
+            customer: customer._id,
+            customer_id: customer._id,
+            user: user._id,
+            user_id: user._id,
+            name: group.name,
+            description: group.description,
+            instructions: {
+              resources: resources,
+              tasks: tasks,
+              triggers: triggers
+            }
+          })
+
           logger.log('all templates created. attaching to group')
           // attach ids to template and save relations
           group.triggers = templates.triggers
@@ -161,6 +185,10 @@ const Service = module.exports = {
                   copyTemplateToHost(group.hosts[i], group, customer, (err) => { })
                 }
               }
+
+              if (host_origin_id) {
+                addHostOriginToGroup(host_origin_id, group, customer, user)
+              }
             })
           })
         } // end generate templates callback
@@ -187,6 +215,14 @@ const Service = module.exports = {
     const group = input.group
     const customer = input.customer
 
+    if (!Array.isArray(group.hosts)) {
+      group.hosts = [] // it must be
+    }
+
+    if (!Array.isArray(input.hosts)) {
+      input.hosts = [] // it must be
+    }
+
     // host elements only present in group.hosts.
     // group.hosts is an array of mongo ObjectID
     const delHosts = group.hosts.filter(idobj => input.hosts.indexOf(idobj.toString()) === -1)
@@ -201,7 +237,6 @@ const Service = module.exports = {
     //const regexHasChanged = Boolean(input.hostname_regex !== group.hostname_regex)
     //if (regexHasChanged) {
     //}
-
     group.name = input.name
     group.hosts = input.hosts
     group.description = input.description
@@ -311,6 +346,11 @@ const Service = module.exports = {
     })
   },
 
+  /**
+   *
+   *
+   *
+   */
   orchestrate (host, next) {
     this.searchGroupsForHost(host,(err, groups) => {
       if (err||!groups||groups.length===0) return next(err,null)
@@ -325,7 +365,7 @@ const Service = module.exports = {
       for (var i=0; i<groups.length; i++) {
         (function(group){ // ensure vars scope
           logger.log('using group regexp %s', group.hostname_regex)
-          supplyHostWithTemplate(host, group, customer, (err) => {
+          supplyHostWithTemplateInstructions(host, group, customer, (err) => {
             if (err) logger.error(err)
 
             group.hosts.addToSet(host._id)
@@ -339,6 +379,147 @@ const Service = module.exports = {
       }
     })
   }
+}
+
+/**
+ *
+ *
+ *
+ */
+const createRecipe = (options) => {
+  var recipe = new Recipe(options)
+  recipe.save((err) => {
+    if (err) {
+      logger.error('fail to create the template recipe')
+      logger.error('%o', err)
+    }
+  })
+}
+
+/**
+ *
+ * @summary remove host task & resources and add to the template 
+ * @param {String} host_id
+ * @param {HostGroup} group
+ * @param {Customer} customer
+ * @param {User} user 
+ * @param {Function(Error)} next
+ */
+const addHostOriginToGroup = (host_id, group, customer, user, next) => {
+  next || (next=()=>{})
+
+  /**
+   * @summary find and remove tasks
+   */
+  const removeHostTasks = (host, next) => {
+    const removeTask = (task, done) => {
+      TaskService.remove({
+        customer: customer,
+        user: user,
+        task: task,
+        fail: (err) => {
+          logger.error('fail removing task %s', task._id)
+          logger.error(err)
+          done(err)
+        },
+        done: done
+      })
+    }
+    // find and remove host tasks
+    logger.log('removing host tasks')
+    // find tasks not being part of a template and remove them.
+    Task
+      .find({
+        $or: [
+          { template: { $exists: false } }, // not exists
+          { template: { $eq: null } } // not defined
+        ],
+        host_id: host_id,
+      })
+      .exec((err, tasks) => {
+        if (err) {
+          logger.error(err)
+          return next(err)
+        }
+        if (!Array.isArray(tasks)||tasks.length===0) {
+          return next()
+        }
+        // all resources && monitors removed
+        const taskRemoved = lodash.after(tasks.length, next)
+
+        for (var i=0; i<tasks.length; i++) {
+          removeTask(tasks[i], taskRemoved)
+        }
+      })
+  }
+
+  /**
+   * @summary find and remove resources which are not template.
+   */
+  const removeHostResources = (host, next) => {
+    const removeResource = (resource, done) => {
+      ResourceService.remove({
+        resource: resource,
+        notifyAgents: false,
+        user: user
+      },(err) => {
+        if (err) {
+          logger.error(err)
+          return done(err)
+        }
+        //else logger.log('resource "%s" removed', resource.name)
+        done()
+      })
+    }
+
+    logger.log('removing host resources')
+    // find resources not being part of a template and remove them
+    Resource
+      .find({
+        $or: [
+          { template: { $exists: false } }, // not exists
+          { template: { $eq: null } } // not defined
+        ],
+        host_id: host_id,
+        type: { $ne: 'host' } // do not remove host type resources !!
+      })
+      .exec(function(err, resources){
+        if (err) {
+          logger.error(err)
+          return next(err)
+        }
+        if (!Array.isArray(resources)||resources.length===0) {
+          return next()
+        }
+        // all resources && monitors removed
+        const resourceRemoved = lodash.after(resources.length, next)
+
+        for (var i=0; i<resources.length; i++) {
+          removeResource(resources[i], resourceRemoved)
+        }
+      })
+  }
+
+  /**
+   * @summary clean up the host. remove tasks and resources
+   */
+  findHost(host_id, (err,host) => {
+    if (err||!host) return next(err)
+    removeHostTasks(host, (err) => {
+      if (err) return next(err)
+      removeHostResources(host, (err) => {
+        if (err) return next(err)
+        logger.log('adding original host to the template')
+        copyTemplateToHost(host, group, customer, (err)=>{
+          if (err) return next(err)
+          group.hosts.addToSet(host._id)
+          group.save(err => logger.error(err))
+
+          return next()
+        })
+      })
+    })
+  })
 }
 
 /**
@@ -765,7 +946,7 @@ const removeTemplateEntities = (templates, TemplateSchema, LinkedSchema, keepClo
  * @param {Customer} customer
  * @param {Function} done
  */
-const supplyHostWithTemplate = (host, group, customer, done) => {
+const supplyHostWithTemplateInstructions = (host, group, customer, done) => {
   Service.populate(group,(err) => {
     copyTemplateToHost(host, group, customer, (err) => {
       done(err)

@@ -1,22 +1,22 @@
-"use strict";
+'use strict'
 
 const lodash = require('lodash')
 const async = require('async')
-
-var Monitor = require('../../entity/monitor').Entity
-var Event = require("../../entity/event").Event
-var Host = require("../../entity/host").Entity
-var Task = require('../../entity/task').Entity
-var Resource = require("../../entity/resource").Entity
-var AgentUpdateJob = require('../../entity/job').AgentUpdate
-
-var NotificationService = require("../notification")
-var CustomerService = require("../customer")
-var Handlebars = require("../../lib/handlebars")
-var ResourceService = require("../resource")
-var HostGroupService = require('./group')
-var logger = require("../../lib/logger")("service:host")
-
+const NotificationService = require('../notification')
+const CustomerService = require('../customer')
+const Handlebars = require('../../lib/handlebars')
+const ResourceService = require('../resource')
+const HostGroupService = require('./group')
+const logger = require('../../lib/logger')('service:host')
+const Job = require('../../entity/job').Job;
+const Monitor = require('../../entity/monitor').Entity
+const Event = require('../../entity/event').Event
+const Host = require('../../entity/host').Entity
+const HostGroup = require('../../entity/host/group').Entity;
+const HostStats = require('../../entity/host/stats').Entity;
+const Task = require('../../entity/task').Entity
+const Resource = require('../../entity/resource').Entity
+const AgentUpdateJob = require('../../entity/job').AgentUpdate
 const createMonitor = ResourceService.createResourceOnHosts
 
 function HostService (host) {
@@ -25,6 +25,11 @@ function HostService (host) {
 
 module.exports = HostService 
 
+//
+//
+// Instance Methods
+//
+//
 HostService.prototype = {
   agentUnreachable () {
     const vent = 'agent_unreachable'
@@ -65,6 +70,145 @@ HostService.prototype = {
       sendEventNotification(host,vent)
     }
   }
+}
+
+//
+//
+// Static Methods
+//
+//
+
+/**
+ *
+ * @author Facundo
+ * @param {Object} input
+ * @property {Resource} input.resource the resource to be removed
+ * @property {User} input.user requesting user
+ * @param {Function(Error)} done
+ *
+ */
+HostService.removeHostResource = function (input, done) {
+  const resource = input.resource
+  const user = input.user
+  const host_id = resource.host_id
+
+  logger.log('removing host "%s" resource "%s"', host_id, resource._id)
+
+  // find and remove host
+  logger.log('removing host')
+  Host
+    .findById(host_id)
+    .exec(function(err, item){
+      if (err) {
+        logger.error(err)
+        return
+      }
+      if (!item) return
+      item.remove((err) => {
+        if (err) logger.error(err)
+      })
+    })
+
+  logger.log('removing host stats')
+  // find and remove saved cached host stats
+  HostStats
+    .find({ host_id: host_id })
+    .exec(function(err, items){
+      if (err) {
+        logger.error(err)
+        return
+      }
+      if (!Array.isArray(items)||items.length===0) return
+      for (var i=0; i<items.length; i++) {
+        items[i].remove((err) => {})
+      }
+    })
+
+  // find and remove resources
+  const removeResource = (resource, done) => {
+    ResourceService.remove({
+      resource: resource,
+      notifyAgents: false,
+      user: user
+    },(err) => {
+      if (err) {
+        logger.error(err)
+        return
+      }
+      //else logger.log('resource "%s" removed', resource.name)
+      done(err)
+    });
+  }
+
+  logger.log('removing host resources')
+  Resource
+    .find({ host_id: host_id })
+    .exec(function(err, resources){
+      if (err) {
+        logger.error(err)
+        return
+      }
+      if (!Array.isArray(resources)||resources.length===0) return
+      const resourceRemoved = lodash.after(resources.length, () => {
+        // all resources && monitors removed
+      })
+
+      for (var i=0; i<resources.length; i++) {
+        removeResource(resources[i], resourceRemoved)
+      }
+    })
+
+  // find and remove host jobs
+  logger.log('removing host jobs')
+  Job
+    .find({ host_id: host_id })
+    .exec(function(err, items){
+      if (err) {
+        logger.error(err)
+        return
+      }
+      if (!Array.isArray(items)||items.length===0) return
+      for (var i=0; i<items.length; i++) {
+        items[i].remove((err) => {})
+      }
+    })
+
+  // find and remove host tasks
+  logger.log('removing the host from the tasks')
+  Task
+    .find({ host_id: host_id })
+    .exec(function(err, items){
+      if (err) {
+        logger.error(err)
+        return
+      }
+      if (!Array.isArray(items)||items.length===0) return
+      for (var i=0; i<items.length; i++) {
+        items[i].host_id = null
+        items[i].save()
+      }
+    });
+
+  const removeFromGroup = (group) => {
+    const idx = group.hosts.indexOf(host_id)
+    if (idx === -1) return
+    group.hosts.splice(idx,1)
+    group.save()
+  }
+
+  logger.log('removing host from groups')
+  HostGroup
+    .find({ hosts: host_id })
+    .exec((err,groups) => {
+      if (err) {
+        logger.error(err)
+        return
+      }
+      if (!Array.isArray(groups) || groups.length===0) return
+      for (var i=0; i<groups.length; i++) {
+        removeFromGroup(groups[i])
+      }
+    })
 }
 
 /**
@@ -177,8 +321,8 @@ HostService.config = (host, customer, next) => {
 }
 
 /**
+ * @summary Register a new host
  * @author Facugon
- *
  * @param {Object} input
  * @param {String} input.hostname
  * @param {Customer} input.customer
@@ -239,46 +383,6 @@ HostService.register = (input,next) => {
 }
 
 /**
- * @param {Host} host
- * @param {Object} data
- * @param {Function(Error,Object)} next
- */
-const createHostResources = (host, data, next) => {
-  ResourceService.create(data, (err, result) => {
-    if (err) {
-      logger.error(err)
-      return next(err)
-    }
-
-    logger.log('host resource created')
-    const resource = result.resource
-    next(null, { host: host, resource: resource })
-
-    HostGroupService.orchestrate(host, (err, groups) => {
-      if (err) {
-        logger.error(err)
-        return
-      }
-
-      if (!groups||!Array.isArray(groups)||groups.length===0) {
-        // create resources and notify agent
-        createBaseMonitors(
-          Object.assign({}, data, {
-            host: host,
-            resource: resource
-          }),
-          () => {
-            AgentUpdateJob.create({ host_id: host._id })
-          }
-        )
-      } else {
-        AgentUpdateJob.create({ host_id: host._id })
-      }
-    })
-  })
-}
-
-/**
  * @deprecated
  */
 HostService.fetchBy = (query,next) => {
@@ -320,6 +424,51 @@ HostService.disableHostsByCustomer = (customer, doneFn) => {
       }
     }
   });
+}
+
+
+/**
+ * Create a resource for the host, also 
+ * clone from a template if matched or the basic dstat & psaux monitors.
+ *
+ * @summary Create host resources, orchestrate basic or template resources
+ * @param {Host} host
+ * @param {Object} data
+ * @param {Function(Error,Object)} next
+ */
+const createHostResources = (host, data, next) => {
+  ResourceService.create(data, (err, result) => {
+    if (err) {
+      logger.error(err)
+      return next(err)
+    }
+
+    logger.log('host resource created')
+    const resource = result.resource
+    next(null, { host: host, resource: resource })
+
+    HostGroupService.orchestrate(host, (err, groups) => {
+      if (err) {
+        logger.error(err)
+        return
+      }
+
+      if (!groups||!Array.isArray(groups)||groups.length===0) {
+        // create resources and notify agent
+        createBaseMonitors(
+          Object.assign({}, data, {
+            host: host,
+            resource: resource
+          }),
+          () => {
+            AgentUpdateJob.create({ host_id: host._id })
+          }
+        )
+      } else {
+        AgentUpdateJob.create({ host_id: host._id })
+      }
+    })
+  })
 }
 
 const sendEventNotification = (host,vent) => {
@@ -364,7 +513,7 @@ const sendEventNotification = (host,vent) => {
 }
 
 /**
- * create a dstats and psaux monitoring workers
+ * @summary create a dstats and psaux monitoring workers
  * @param {Object} input
  * @param {Function} next
  */
@@ -444,12 +593,10 @@ const detectTaskTriggersOfSameHost = (triggers, host, next) => {
 }
 
 /**
- * is host trigger
- *
+ * Detect if an event has an emitter that triggers a task on the same host
  * @param {ObjectId} event_id Event mongodb id
  * @param {ObjectId} host_id Host mongodb id
  * @param {Function} next callback
- *
  */
 const isHostEvent = (event_id, host_id, next) => {
   logger.log('fetching event %s', event_id)

@@ -8,7 +8,7 @@ const properties = require('./base-properties')
 function BaseSchema (specs) {
 
   // Schema constructor
-  Schema.call(this, util._extend(properties, specs),{
+  Schema.call(this, Object.assign({}, properties, specs),{
     collection: 'events',
     discriminatorKey: '_type'
   });
@@ -29,7 +29,7 @@ function BaseSchema (specs) {
     }
   }
 
-  this.set('toJSON'  , def);
+  this.set('toJSON', def);
   this.set('toObject', def)
 
   this.pre('save', function(next) {

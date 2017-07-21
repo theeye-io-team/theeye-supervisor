@@ -5,7 +5,6 @@ const async = require('async');
 const path = require('path');
 const BaseSchema = require('../base-schema');
 const FetchBy = require('../../lib/fetch-by');
-
 const config = require('config');
 
 function FileSchema (props) {
@@ -27,7 +26,7 @@ function FileSchema (props) {
     tags: { type:Array, default:[] }
   }
 
-  BaseSchema.call(this, util._extend({},properties, props), specs);
+  BaseSchema.call(this, util._extend({}, properties, props), specs);
 
   this.methods.getFullPath = function() {
     const uploadPath = config.get('system').file_upload_folder;
