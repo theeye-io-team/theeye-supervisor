@@ -1,3 +1,5 @@
+'use strict'
+
 const logger = require('../lib/logger')('service:task');
 const async = require('async');
 const lodash = require('lodash');
