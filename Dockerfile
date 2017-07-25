@@ -1,5 +1,5 @@
 #FROM interactar/theeye-supervisor:15_09_16
-FROM node:6
+FROM node:6.11
 MAINTAINER Javier Ailbirt <jailbirt@interactar.com>
 ENV destDir /src/theeye/supervisor
 # Temporary Move node_modules for avoiding packages reinstallation
