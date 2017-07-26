@@ -1,35 +1,46 @@
-'use strict';
+'use strict'
 
-const async = require('async');
-const extend = require('util')._extend;
+const systemConfig = require('config').system
+const async = require('async')
+const extend = require('util')._extend
 var json = require('../lib/jsonresponse');
 var logger = require('../lib/logger')('controller:agent');
 var router = require('../router');
 var NotificationService = require('../service/notification');
 var ResourceManager = require('../service/resource');
 var ResourceMonitorService = require('../service/resource/monitor');
-var Host = require('../entity/host').Entity;
-var File = require('../entity/file').File;
+
+const Host = require('../entity/host').Entity;
+const File = require('../entity/file').File;
+const User = require('../entity/user').Entity
+
 
 module.exports = function (server, passport) {
-	server.put('/:customer/agent/:hostname',[
+	server.put('/:customer/agent/:hostname', [
     passport.authenticate('bearer', {session:false}),
     router.requireCredential('agent'),
     router.resolve.customerNameToEntity({}),
     router.ensureCustomer,
     router.resolve.hostnameToHost({})
-  ],controller.update);
+  ], controller.update)
 
-  server.get('/:customer/agent/:hostname/config',[
+  server.get('/:customer/agent/:hostname/config', [
     passport.authenticate('bearer', {session:false}),
     router.requireCredential('agent'),
     router.resolve.customerNameToEntity({}),
     router.ensureCustomer,
     router.resolve.hostnameToHost({})
-  ],controller.fetch);
+  ], controller.fetch)
+
+  server.get('/:customer/agent/credentials', [
+    passport.authenticate('bearer', {session:false}),
+    router.requireCredential('admin'),
+    router.resolve.customerNameToEntity({}),
+    router.ensureCustomer,
+  ], controller.credentials)
 }
 
-var controller = {
+const controller = {
   /**
    *
    * @path /:customer/agent/:hostname/config
@@ -72,9 +83,9 @@ var controller = {
    *
    */
   fetch (req, res, next) {
-    var user = req.user;
-    var host = req.host;
-    var customer = req.customer;
+    const user = req.user
+    const host = req.host
+    const customer = req.customer
 
     if (!host) return res.send(400,'hostname required');
     if (!customer) return res.send(400,'customer required');
@@ -98,6 +109,29 @@ var controller = {
         res.send(200,config);
         next();
       });
+    })
+  },
+  credentials (req, res, next) {
+    const customer = req.customer
+
+    User.findOne({
+      credential: 'agent',
+      'customers.name': customer.name
+    }).exec((err, agent) => {
+      if (err) return next(err)
+
+      if (agent===null) return res.send(404,'agent not found')
+
+      const baseConfig = {
+        supervisor: {
+          api_url: systemConfig.base_url,
+          client_id: agent.client_id,
+          client_secret: agent.client_secret,
+          client_customer: customer.name
+        }
+      }
+
+      return res.send(200, baseConfig)
     })
   }
 }

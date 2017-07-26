@@ -17,8 +17,7 @@ var async = require('async');
  * @return null
  *
  */
-function customerNamesToUserCustomers (names, completedFn)
-{
+function customerNamesToUserCustomers (names, completedFn) {
   if(!names||names.length==0) return completedFn(null,[]);
 
   function createCallFn (name) {
