@@ -100,7 +100,7 @@ var controller = {
       });
     })
   }
-};
+}
 
 function generateAgentConfig (monitors,next) {
   var workers = [];

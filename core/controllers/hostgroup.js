@@ -149,7 +149,7 @@ const controller = {
       }
     }
 
-    HostGroupService.create({
+    HostGroupService.create( Object.freeze({
       //user_id: req.user._id,
       //customer_id: req.customer._id,
       //customer_name: req.customer.name,
@@ -163,7 +163,7 @@ const controller = {
       tasks: body.tasks || [], // Array of Objects with task definition
       triggers: body.triggers || [], // Array of Objects with a task id and related triggers ids
       resources: body.resources || [] // Array of Objects with resources and monitors definition, all mixed
-    }, (err, group) => {
+    }), (err, group) => {
       if (err) {
         err.statusCode || (err.statusCode = 500)
         responseError(err, res)

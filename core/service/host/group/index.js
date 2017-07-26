@@ -88,11 +88,11 @@ const Service = module.exports = {
   /**
    * @author Facugon
    * @summary create group definition.
-   * @param {Object} input , group data properties
+   * @param {Object} input group data properties. freezed object
    * @property {Object[]} input.triggers plain objects array
    * @property {Object[]} input.tasks plain objects array
    * @property {Object[]} input.resources plain objects array
-   * @property {ObjectId[]} input.hosts array of hosts objectid 
+   * @property {String[]} input.hosts array of hosts string ids
    * @property {Customer} input.customer
    * @property {User} input.user
    * @property {String} input.name
@@ -105,8 +105,20 @@ const Service = module.exports = {
     const resources = input.resources
     const customer = input.customer
     const user = input.user
-    const host_origin_id = input.host_origin
     var group
+
+    /**
+     * @param {String} host
+     * @param {String[]} hosts
+     * @return {String[]}
+     */
+    const findAndRemove = (host,hosts) => {
+      let idx = hosts.indexOf(host)
+      if (idx > -1) {
+        hosts.splice(idx, 1) // remove host
+      }
+      return hosts
+    }
 
     const values = lodash.assign({},input,{
       tasks: [],
@@ -114,6 +126,9 @@ const Service = module.exports = {
       user_id: user._id,
       customer_id: customer._id,
       customer_name: customer.name,
+      // check if input.hosts contains the same id as host_origin.
+      // remove it if present. will be added at the end of the process
+      hosts: findAndRemove(input.host_origin, input.hosts.slice())
     })
 
     logger.log('creating group %o', values)
@@ -180,14 +195,22 @@ const Service = module.exports = {
               next(err, group)
 
               if (group.hosts.length > 0) {
-                /** copy template configs to the attached hosts **/
-                for (var i=0; i<group.hosts.length; i++) {
-                  copyTemplateToHost(group.hosts[i], group, customer, (err) => { })
+                /**
+                 * copy template configs to the attached hosts.
+                 * group.hosts should be already populated,
+                 * it is Host object Array
+                 **/
+                debug.log('copying template to hosts')
+                for (let i=0; i<group.hosts.length; i++) {
+                  let host = group.hosts[i]
+                  if (host._id.toString() !== input.host_origin) {
+                    copyTemplateToHost(group.hosts[i], group, customer, (err) => { })
+                  }
                 }
               }
 
-              if (host_origin_id) {
-                addHostOriginToGroup(host_origin_id, group, customer, user)
+              if (input.host_origin) {
+                addHostOriginToGroup(input.host_origin, group, customer, user)
               }
             })
           })
@@ -509,9 +532,10 @@ const addHostOriginToGroup = (host_id, group, customer, user, next) => {
       if (err) return next(err)
       removeHostResources(host, (err) => {
         if (err) return next(err)
-        logger.log('adding original host to the template')
         copyTemplateToHost(host, group, customer, (err)=>{
           if (err) return next(err)
+
+          logger.log('adding original host to the template')
           group.hosts.addToSet(host._id)
           group.save(err => logger.error(err))
 
@@ -813,7 +837,9 @@ const copyTasksToHost = (host, templates, customer, next) => {
     next(null,tasks)
   })
 
-  for (var i=0; i<templates.length; i++) {
+  if (templates.length===0) return next()
+
+  for (let i=0; i<templates.length; i++) {
     TaskService.createFromTemplate({
       customer: customer,
       template: templates[i],
@@ -843,6 +869,8 @@ const copyResourcesToHost = (host, templates, customer, next) => {
   const done = lodash.after(templates.length,() => {
     next(null,resources)
   })
+
+  if (templates.length===0) return next()
 
   for (var i=0; i<templates.length; i++) {
     ResourceService.createFromTemplate({
@@ -967,6 +995,9 @@ const supplyHostWithTemplateInstructions = (host, group, customer, done) => {
  * @param {Function} next callback
  */
 const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
+
+  if (triggers.length===0) return next()
+
   const searchTriggerEmitter = (trigger) => {
     var emitter
     // search current emitter id
@@ -1062,7 +1093,7 @@ const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
 
   var procesableTriggers = []
   var procesable
-  for (var i=0; i<triggers.length; i++) {
+  for (let i=0; i<triggers.length; i++) {
     procesable = getProcesableTrigger(triggers[i])
     if (typeof procesable === 'object') {
       procesableTriggers.push( procesable )
