@@ -102,10 +102,10 @@ EntitySchema.statics.publishAll = function(entities, next){
  *
  */
 EntitySchema.methods.setUpdates = function(input, next) {
-  next=next||function(){};
-  var monitor = this;
-  var type = monitor.type;
-  debug('updating resource monitor type "%s"', type);
+  next || (next = function(){})
+  var monitor = this
+  var type = monitor.type
+  debug('updating resource monitor type "%s"', type)
 
   /** set common properties **/
   if (input.looptime) monitor.looptime = input.looptime;
@@ -118,9 +118,12 @@ EntitySchema.methods.setUpdates = function(input, next) {
   if (input.name) monitor.name = input.name;
   if (input.description) monitor.description = input.description;
 
+  monitor.template = null
+  monitor.template_id = null
+
   var config = monitor.config;
-  if(input.config) _.assign(input, input.config);
-  switch(type) {
+  if (input.config) _.assign(input, input.config);
+  switch (type) {
     case 'scraper':
       //monitor.host_id = input.external_host_id || input.host_id;
       monitor.host_id = input.host_id;
@@ -186,12 +189,13 @@ EntitySchema.methods.setUpdates = function(input, next) {
 
   monitor.config = config;
   var updates = {};
-  for( var key in monitor.toObject() ){
-    if( key != '_id' && key != '__v' )
-      updates[key] = monitor[key];
+  for (var key in monitor.toObject()) {
+    if (key != '_id' && key != '__v') {
+      updates[key] = monitor[key]
+    }
   }
 
-  debug('monitor properties set to %j', updates);
+  debug('monitor properties set to %j', updates)
 
-  next(null, updates);
+  next(null, updates)
 }
