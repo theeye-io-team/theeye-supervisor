@@ -500,10 +500,13 @@ Service.update = function(input,next) {
 
   logger.log('updating monitor %j',updates);
 
-  // remove from updates if present. cant be changed
+  // remove from updates if present
   delete updates.monitor
   delete updates.customer
-  delete updates.template
+
+ // if model is changed just remove the template link
+  updates.template = null
+  updates.template_id = null
 
   resource.update(updates,function(error){
     if (error) {
@@ -514,10 +517,14 @@ Service.update = function(input,next) {
     MonitorModel.findOne({
       resource_id: resource._id
     },function(error,monitor){
-      if (error) return next(error);
-      if (!monitor) return next(new Error('resource monitor not found'), null);
+      if (error) {
+        return next(error)
+      }
+      if (!monitor) {
+        return next(new Error('resource monitor not found'), null)
+      }
 
-      var previous_host_id = monitor.host_id;
+      var previous_host_id = monitor.host_id
       monitor.update(updates,function(error){
         if(error) return next(error);
 
@@ -540,9 +547,9 @@ Service.update = function(input,next) {
 
         Tag.create(updates.tags,{ _id: resource.customer_id });
         next(null,resource);
-      });
-    });
-  });
+      })
+    })
+  })
 }
 
 function getEventSeverity (event,resource) {

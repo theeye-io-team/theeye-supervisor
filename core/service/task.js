@@ -78,6 +78,10 @@ const TaskService = {
 
     updates.host = updates.host_id
 
+    // unset template when modifying task
+    updates.template = null
+    updates.template_id = null
+
     task.update(updates, (error) => {
       if (error) {
         return options.fail(error)
