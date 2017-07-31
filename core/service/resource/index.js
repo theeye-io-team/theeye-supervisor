@@ -737,44 +737,51 @@ Service.createFromTemplate = function(options) {
   const host = options.host
   const customer = options.customer
 
-  const generateResourceModel = () => {
-    const input = lodash.extend(template.toObject(), {
+  const generateResourceModel = (input) => {
+    const data = lodash.extend({}, input, {
       host: host._id,
       host_id: host._id,
       hostname: host.hostname,
-      template: template._id,
-      template_id: template._id,
+      template: input._id,
+      template_id: input._id,
       last_update: new Date(),
       last_event: {},
       _type: 'Resource'
     })
     // remove template _id
-    delete input.id
-    delete input._id
-    logger.log('creating resource from template %j', input)
-    return new ResourceModel(input)
+    delete data.id
+    delete data._id
+    logger.log('creating resource from template %j', data)
+    return new ResourceModel(data)
   }
 
-  const generateMonitorModel = () => {
-    const input = lodash.extend(template.monitor_template.toObject(), {
+  const generateMonitorModel = (input) => {
+    const data = lodash.extend({}, input.monitor_template, {
       host: host,
       host_id: host._id,
-      template: template.monitor_template_id,
-      template_id: template.monitor_template_id,
+      template: input.monitor_template_id,
+      template_id: input.monitor_template_id,
       customer: resource.customer_id,
       customer_id: resource.customer_id,
       customer_name: resource.customer_name,
       _type: 'ResourceMonitor'
     })
     // remove template _id
-    delete input._id
-    delete input.id
-    logger.log('creating monitor from template %j', input)
-    return new MonitorModel(input)
+    delete data._id
+    delete data.id
+    logger.log('creating monitor from template %j', data)
+    return new MonitorModel(data)
   }
 
-  var resource = generateResourceModel(template)
-  var monitor = generateMonitorModel(template)
+  const input = template.toObject()
+  input.monitor_template = template.monitor_template.toObject()
+
+  if (template.type === 'dstat' || template.type === 'psaux') {
+    input.name = host.hostname
+    input.monitor_template.name = host.hostname
+  }
+  var resource = generateResourceModel(input)
+  var monitor = generateMonitorModel(input)
 
   // the ids are generated as soon as the models are created.
   // dont need to save them before

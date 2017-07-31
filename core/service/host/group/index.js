@@ -804,7 +804,7 @@ const unlinkHostFromTemplate = (host, template, next) => {
 const copyTemplateToHost = (host, template, customer, next) => {
   next || (next = ()=>{})
 
-  // add async calls here to handle errors on creation process
+  /** @todo add async calls here to handle errors on creation process **/
   copyTasksToHost(host, template.tasks, customer, (err,tasks) => {
     copyResourcesToHost(host, template.resources, customer, (err, resources) => {
       copyTriggersToHostTasks(host, tasks, resources, template.triggers, (err) => {
@@ -870,9 +870,9 @@ const copyResourcesToHost = (host, templates, customer, next) => {
     next(null,resources)
   })
 
-  if (templates.length===0) return next()
+  if (templates.length===0) return next(null,[])
 
-  for (var i=0; i<templates.length; i++) {
+  for (let i=0; i<templates.length; i++) {
     ResourceService.createFromTemplate({
       customer: customer,
       template: templates[i],

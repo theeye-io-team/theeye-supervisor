@@ -46,11 +46,15 @@ var controller = {
     res.send(200,{ job: job });
   },
   fetch (req,res,next) {
-    debug.log('querying jobs');
+    debug.log('querying jobs')
 
-    var host = req.host;
-    var customer = req.customer;
-    var input = { host: req.host };
+    const host = req.host
+    if (!host) {
+      debug.log('host %s not found', req.params.hostname)
+      return res.send(404, 'host is not valid')
+    }
+    const customer = req.customer
+    const input = { host: req.host }
 
     if( req.params.process_next ) {
       app.jobDispatcher.getNextPendingJob(input,function(error,job){
