@@ -182,8 +182,8 @@ module.exports = {
         break;
       case 'file':
         var mode = input.permissions
-        var user = input.user
-        var group = input.group
+        var os_user = input.os_username
+        var os_group = input.os_groupname
 
         if (!mode) {
           data.permissions = null
@@ -191,16 +191,16 @@ module.exports = {
           data.permissions = parseUnixOctalModeString(mode)||errors.invalid('mode')
         }
 
-        if (!user) {
-          data.user = null
+        if (!os_user) {
+          data.os_username = null
         } else {
-          data.user = user
+          data.os_username = os_user
         }
 
-        if (!group) {
-          data.group = null
+        if (!os_group) {
+          data.os_groupname = null
         } else {
-          data.group = group
+          data.os_groupname = os_group
         }
 
         data.is_manual_path = Boolean(input.is_manual_path)
@@ -369,8 +369,8 @@ function setMonitorForFile(input) {
       path: input.path,
       basename: input.basename,
       dirname: input.dirname,
-      user: input.user,
-      group: input.group,
+      os_username: input.os_username,
+      os_groupname: input.os_groupname,
       permissions: input.permissions
     }
 	})

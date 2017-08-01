@@ -17,7 +17,7 @@ const properties = {
   alerts: { type: Boolean, default: true },
   // relation
   customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
-  //user: { type: Schema.Types.ObjectId, ref: 'User' }, // DONT UNCOMMENT , IT GENERATES CONFLICT WITH MONITOR FILE ENTITY USER PROPERTY !!!!!!
+  user: { type: Schema.Types.ObjectId, ref: 'User' }
 }
 
 exports.properties = properties

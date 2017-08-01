@@ -160,8 +160,8 @@ EntitySchema.methods.setUpdates = function(input, next) {
       config.basename = input.basename
       config.dirname = input.dirname
       config.permissions = input.permissions
-      config.user = input.user
-      config.group = input.group
+      config.os_username = input.os_username
+      config.os_groupname = input.os_groupname
       config.file = input.file
       break;
     case 'script':
