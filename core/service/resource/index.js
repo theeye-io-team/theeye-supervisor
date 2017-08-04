@@ -495,16 +495,18 @@ Service.createDefaultEvents = (monitor,customer,done) => {
  *
  */
 Service.update = function(input,next) {
-  var updates = input.updates;
-  var resource = input.resource;
+  const updates = input.updates
+  const resource = input.resource
 
   logger.log('updating monitor %j',updates);
 
   // remove from updates if present
   delete updates.monitor
   delete updates.customer
+  delete updates.user_id // cannot be changed
+  delete updates.user // cannot be changed
 
- // if model is changed just remove the template link
+  // if model is changed just remove the template link
   updates.template = null
   updates.template_id = null
 
