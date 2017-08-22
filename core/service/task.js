@@ -1,20 +1,20 @@
 'use strict'
 
-const logger = require('../lib/logger')('service:task');
-const async = require('async');
-const lodash = require('lodash');
-const config = require('config');
+const logger = require('../lib/logger')('service:task')
+const async = require('async')
+const lodash = require('lodash')
+const config = require('config')
 
-var Tag = require('../entity/tag').Entity;
-var Host = require('../entity/host').Entity;
-var Task = require('../entity/task').Entity;
-var ScraperTask = require('../entity/task/scraper').Entity;
-var Script = require('../entity/file').Script;
+const Tag = require('../entity/tag').Entity
+const Host = require('../entity/host').Entity
+const Task = require('../entity/task').Entity
+const TaskEvent = require('../entity/event').TaskEvent
+const ScraperTask = require('../entity/task/scraper').Entity
+const Script = require('../entity/file').Script
+const Job = require('../entity/job').Job
 
 const ScriptTaskTemplate = require('../entity/task/template').ScriptTemplate
 const ScraperTaskTemplate = require('../entity/task/template').ScraperTemplate
-
-var TaskEvent = require('../entity/event').TaskEvent;
 
 // var filter = require('../router/param-filter');
 var elastic = require('../lib/elastic')
@@ -329,10 +329,30 @@ const TaskService = {
       })
     }
 
+    const populateLastJob = (next) => {
+      Job
+        .findOne({
+          task_id: task._id,
+          host_id: task.host_id
+        })
+        .sort({ creation_date: -1 })
+        .exec((err,last) => {
+          if (err) return next(err)
+          if (!last) return next()
+
+          data.lastjob_id = last._id
+          data.lastjob = last
+          return next()
+        })
+    }
+
     populateHost(task.host_id, (err) => {
       if (err) return done(err)
       populateScript(task.script_id, (err) => {
-        return done(err,data)
+        if (err) return done(err)
+        populateLastJob(err => {
+          return done(err,data)
+        })
       })
     })
   }

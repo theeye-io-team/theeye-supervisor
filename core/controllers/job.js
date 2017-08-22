@@ -38,12 +38,12 @@ module.exports = function(server, passport) {
     router.resolve.idToEntity({param:'task',required:true}),
     router.ensureAllowed({entity:{name:'task'}})
   ), controller.create);
-};
+}
 
 var controller = {
   get (req,res,next) {
     var job = req.job;
-    res.send(200,{ job: job });
+    res.send(200,{ job: job })
   },
   fetch (req,res,next) {
     debug.log('querying jobs')
@@ -64,8 +64,8 @@ var controller = {
       });
     } else {
       Job.find({
-        host_id:host.id,
-        customer_name:customer.name
+        host_id: host.id,
+        customer_name: customer.name
       }).exec(function(err,jobs){
         res.send(200, { jobs : jobs });
       });
@@ -100,7 +100,7 @@ var controller = {
         debug.log(error);
         return res.send(500);
       }
-      res.send(200,{job: job});
+      res.send(200,job)
     });
   }
-};
+}

@@ -86,22 +86,22 @@ var controller = {
    * @route /task
    */
   fetch (req, res, next) {
-    var host = req.host;
-    var customer = req.customer;
+    const host = req.host
+    const customer = req.customer
+    const input = req.query
 
-    var input = req.query;
-    if (host) input.host_id = host._id;
+    if (host) input.host_id = host._id
 
-    var filter = dbFilter(input,{ /** default **/ });
-    filter.where.customer_id = customer.id;
+    const filter = dbFilter(input,{ /** default **/ })
+    filter.where.customer_id = customer.id
 
     if ( !ACL.hasAccessLevel(req.user.credential,'admin') ) {
       // find what this user can access
-      filter.where.acl = req.user.email;
+      filter.where.acl = req.user.email
     }
 
     TaskService.fetchBy(filter, function(error, tasks) {
-      if (error) return res.send(500);
+      if (error) return res.send(500)
       res.send(200, tasks);
     });
   },
@@ -116,7 +116,9 @@ var controller = {
   get (req, res, next) {
     TaskService.populate(
       req.task,
-      (err,data) => res.send(200, data)
+      (err,data) => {
+        res.send(200, data)
+      }
     )
   },
   /**
@@ -165,12 +167,12 @@ var controller = {
       customer: req.customer,
       task: req.task,
       updates: input,
-      done: function(task){
-        res.send(200,task);
+      done: (task) => {
+        res.send(200, task)
       },
-      fail: function(error){
-        logger.error(error);
-        res.send(500);
+      fail: (error) => {
+        logger.error(error)
+        res.send(500)
       }
     });
   }

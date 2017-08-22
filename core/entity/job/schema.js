@@ -8,21 +8,22 @@ function BaseSchema (specs) {
 
   // Schema constructor
   Schema.call(this, util._extend({
-    task_id: { type: String, 'default':null },
-    task: { type: Object, 'default':null }, // embedded
-    host_id: { type: String, 'default':null },
-    host: { type: ObjectId, ref:'Host', 'default':null },
-    user_id: { type: String, 'default':null },
-    user: { type: ObjectId, ref:'User', 'default':null },
-    customer_id: { type:String, 'default':null },
-    customer_name: { type : String, 'default':null },
-    name: { type: String, 'default':null },
-    notify: { type: Boolean, 'default':null },
-    state: { type: String, 'default':null },
-    result: { type: Object, 'default': {} },
-    creation_date: { type: Date, 'default': Date.now },
-    last_update: { type: Date, 'default': Date.now },
-    event: { type: ObjectId, ref: 'Event', 'default': null }
+    task_id: { type: String },
+    task: { type: Object }, // embedded
+    host_id: { type: String },
+    host: { type: ObjectId, ref:'Host' },
+    user_id: { type: String },
+    user: { type: ObjectId, ref:'User' },
+    customer_id: { type:String },
+    customer_name: { type: String },
+    name: { type: String },
+    notify: { type: Boolean },
+    state: { type: String },
+    result: { type: Object, default: {} },
+    creation_date: { type: Date, default: Date.now },
+    last_update: { type: Date, default: Date.now },
+    event: { type: ObjectId, ref: 'Event' },
+    event_id: { type: ObjectId }
   }, specs),{
     collection: 'jobs',
     discriminatorKey: '_type'

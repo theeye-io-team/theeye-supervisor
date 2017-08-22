@@ -298,8 +298,6 @@ var controller = {
     } else {
       doUpdate()
     }
-
-
   },
   /**
    *

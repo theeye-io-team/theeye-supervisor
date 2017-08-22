@@ -1,14 +1,22 @@
-'use strict';
+'use strict'
 
-var logger = require('../lib/logger')(':router');
-var config = require('config');
-var fs = require('fs');
-var join = require('path').join;
+const logger = require('../lib/logger')(':router')
 
+/**
+ *
+ * router middlewares
+ *
+ */
 module.exports = {
-  loadControllers: function(server, passport) {
-    logger.log('loading controllers');
+  resolve: require('./param-resolver'),
+  filter: require('./param-filter'),
+  requireCredential: require('./require-credential'),
+  requireSecret: require('./require-secret'),
+  ensureCustomer: require('./ensure-customer'),
+  ensureAllowed: require('./ensure-allowed'),
+  loadControllers (server, passport) {
     // avoiding dynamic linker
+    logger.log('loading controllers');
     require('../controllers/index')(server,passport);
     require('../controllers/agent')(server,passport);
     require('../controllers/auth')(server);
@@ -19,8 +27,8 @@ module.exports = {
     require('../controllers/host')(server,passport);
     //require('../controllers/hostgroup-monitor')(server,passport); // deprecated
     //require('../controllers/hostgroup-task')(server,passport); // deprecated
+    //require('../controllers/template')(server,passport); // deprecated
     require('../controllers/hostgroup')(server,passport);
-    //require('../controllers/template')(server,passport);
     require('../controllers/job')(server,passport);
     require('../controllers/psaux')(server,passport);
     require('../controllers/monitor')(server,passport);
@@ -35,10 +43,4 @@ module.exports = {
     require('../controllers/webhook')(server,passport);
     require('../controllers/workflow')(server,passport);
   },
-  resolve: require('./param-resolver'),
-  filter: require('./param-filter'),
-  requireCredential: require('./require-credential'),
-  requireSecret: require('./require-secret'),
-  ensureCustomer: require('./ensure-customer'),
-  ensureAllowed: require('./ensure-allowed')
 }
