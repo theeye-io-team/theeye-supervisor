@@ -81,15 +81,24 @@ const TaskService = {
     // unset template when modifying task
     updates.template = null
     updates.template_id = null
+    delete updates._id // if any
 
-    task.update(updates, (error) => {
-      if (error) {
-        return options.fail(error)
+    task.update(updates, err => {
+      if (err) {
+        return options.fail(err)
       } else {
         logger.log('publishing task')
         self.populate(task, function(err,pub){
+
+          let reportName
+          if (task.name != updates.name) {
+            reportName = `${task.name} > ${updates.name}`
+          } else  {
+            reportName = task.name
+          }
+
           registerTaskCRUDOperation(options.customer.name,{
-            name: task.name,
+            name: reportName,
             customer_name: options.customer.name,
             user_id: options.user.id,
             user_email: options.user.email,
@@ -111,21 +120,16 @@ const TaskService = {
       if (err) return next(err);
       if (tasks.length===0) return next(null,tasks);
 
-      var publishedTasks = [];
-      var asyncTasks = [];
-      tasks.forEach(function(task){
-        asyncTasks.push(function(callback){
-          self.populate(task,function(err, data){
-            publishedTasks.push(data);
-            callback();
-          });
-        });
-      });
-
-      async.parallel(asyncTasks,function(){
-        next(null, publishedTasks);
-      });
-    });
+      async.map(
+        tasks,
+        (task, callback) => {
+          self.populate(task, callback)
+        },
+        (err, published) => {
+          next(err, published)
+        }
+      )
+    })
   },
   /**
    *

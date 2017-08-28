@@ -39,16 +39,16 @@ function BaseSchema (props, specs) {
    * helper update method
    *
    */
-  this.methods.update = function(updates, next){
-    var model = this
-    var data = model.toObject()
-    for (var key in updates) {
-      if (data.hasOwnProperty(key)) {
-        model[key] = updates[key]
-      }
-    }
-    model.save( err => next(err,model) )
-  }
+  //this.methods.update = function(updates, next){
+  //  var model = this
+  //  var data = model.toObject()
+  //  for (var key in updates) {
+  //    if (data.hasOwnProperty(key)) {
+  //      model[key] = updates[key]
+  //    }
+  //  }
+  //  model.save( err => next(err,model) )
+  //}
 
   this.statics.fetchBy = function (filter, next) {
     FetchBy.call(this,filter,next)

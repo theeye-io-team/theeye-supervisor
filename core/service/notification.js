@@ -1,3 +1,4 @@
+'use strict'
 
 var config = require('config');
 var AWS = require('aws-sdk'); 
@@ -7,18 +8,16 @@ var mailer = require('../lib/mailer');
 var debug = require('../lib/logger')('service:notification');
 
 module.exports = {
-  sendSNSNotification : function(sns,options)
-  {
-    if( config.get('is_dev') )
-    {
+  sendSNSNotification (sns,options) {
+    if ( config.get('is_dev') ) {
       var websnscfg = config.get('web-sns');
       var webroute = config.get('system').web_url +
         websnscfg.topicEndpoint[ options.topic ];
 
-      var params = { 'form' : { 'Message' : JSON.stringify(sns) } };
+      var params = { form: { Message: JSON.stringify(sns) } }
 
       debug.log('Submit Web SNS information(direct no AWS) to %s', webroute);
-      var req = request.post(
+      const req = request.post(
         webroute,
         params,
         function (error, response, body) {
@@ -30,12 +29,10 @@ module.exports = {
             debug.log(body.replace(/(\r\n|\n|\r)/gm,''));
           }
         }
-      );
-    }
-    else
-    {
+      )
+    } else {
       debug.log('Submit SNS information');
-      var snscfg = config.get('sns');
+      const snscfg = config.get('sns');
 
       SNS.publish({
         'TopicArn': snscfg.topicArn[ options.topic ],
@@ -47,7 +44,7 @@ module.exports = {
       });
     }
   },
-  sendEmailNotification : function(options) {
+  sendEmailNotification (options) {
     mailer.sendMail({
       'customer_name': options.customer_name,
       'subject': options.subject,
