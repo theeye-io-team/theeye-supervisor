@@ -1,6 +1,7 @@
 "use strict";
 
-const lodash = require('lodash');
+const after = require('lodash/after');
+const assign = require('lodash/assign');
 const globalconfig = require('config');
 const logger = require('../../lib/logger')('service:resource');
 const elastic = require('../../lib/elastic');
@@ -53,7 +54,7 @@ function Service(resource) {
       .findOne({ resource_id: resource._id })
       .exec(function(err,monitor){
         resource.monitor = monitor
-        var specs = lodash.assign({},input,{ resource: resource });
+        var specs = assign({},input,{ resource: resource });
 
         ResourcesNotifications(specs,(error,details) => {
           if (error) {
@@ -372,7 +373,7 @@ Service.populateAll = function (resources,next) {
     return next(null,result)
   }
 
-  const populated = lodash.after(resources.length,() => next(null,result))
+  const populated = after(resources.length,() => next(null,result))
 
   for (var i=0;i<resources.length;i++) {
     const resource = resources[i]
@@ -429,7 +430,7 @@ Service.create = function (input, next) {
     }
 
     createResourceAndMonitor({
-      resource_data: lodash.extend({},input,{
+      resource_data: assign({},input,{
         name: input.name,
         type: type,
       }),
@@ -583,7 +584,7 @@ Service.fetchBy = function (filter,next) {
     if (resources.length===0) return next(null,[])
 
     const pub = []
-    const fetched = lodash.after(resources.length,() => {
+    const fetched = after(resources.length,() => {
       next(null, pub)
     })
 
@@ -704,7 +705,7 @@ Service.createResourceOnHosts = function(hosts,input,done) {
   var errors = null;
   var monitors = [];
 
-  var completed = lodash.after(hosts.length, function(){
+  var completed = after(hosts.length, function(){
     logger.log('all hosts processed');
     done(errors, monitors);
   });
@@ -747,12 +748,12 @@ Service.createFromTemplate = function(options) {
   const customer = options.customer
 
   const generateResourceModel = (input) => {
-    const data = lodash.extend({}, input, {
+    const data = assign({}, input, {
       host: host._id,
       host_id: host._id,
       hostname: host.hostname,
-      template: input._id,
-      template_id: input._id,
+      template: template._id,
+      template_id: template._id,
       last_update: new Date(),
       last_event: {},
       _type: 'Resource'
@@ -765,11 +766,11 @@ Service.createFromTemplate = function(options) {
   }
 
   const generateMonitorModel = (input) => {
-    const data = lodash.extend({}, input.monitor_template, {
+    const data = assign({}, input.monitor_template, {
       host: host,
       host_id: host._id,
-      template: input.monitor_template_id,
-      template_id: input.monitor_template_id,
+      template: template.monitor_template._id,
+      template_id: template.monitor_template._id,
       customer: resource.customer_id,
       customer_id: resource.customer_id,
       customer_name: resource.customer_name,
@@ -785,10 +786,15 @@ Service.createFromTemplate = function(options) {
   const input = template.toObject()
   input.monitor_template = template.monitor_template.toObject()
 
-  if (template.type === 'dstat' || template.type === 'psaux') {
-    input.name = host.hostname
-    input.monitor_template.name = host.hostname
-  }
+  //if (template.type === 'dstat') {
+  //  input.name = 'Health'
+  //  input.monitor_template.name = 'Health'
+  //}
+  //if (template.type === 'psaux') {
+  //  input.name = 'Process List'
+  //  input.monitor_template.name = 'Process List'
+  //}
+
   var resource = generateResourceModel(input)
   var monitor = generateMonitorModel(input)
 

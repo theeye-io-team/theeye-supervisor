@@ -1,6 +1,7 @@
 'use strict'
 
-const lodash = require('lodash')
+const after = require('lodash/after')
+const assign = require('lodash/assign')
 const config = require('config')
 const async = require('async')
 const elastic = require('../../../lib/elastic')
@@ -120,7 +121,7 @@ const Service = module.exports = {
       return hosts
     }
 
-    const values = lodash.assign({},input,{
+    const values = assign({},input,{
       tasks: [],
       resources: [],
       user_id: user._id,
@@ -200,7 +201,7 @@ const Service = module.exports = {
                  * group.hosts should be already populated,
                  * it is Host object Array
                  **/
-                debug.log('copying template to hosts')
+                logger.log('copying template to hosts')
                 for (let i=0; i<group.hosts.length; i++) {
                   let host = group.hosts[i]
                   if (host._id.toString() !== input.host_origin) {
@@ -380,7 +381,7 @@ const Service = module.exports = {
 
       const customer = groups[0].customer // @todo all the same customer. populate.customer may not be necessary. improve somehow
 
-      const provisioningCompleted = lodash.after(groups.length,() => {
+      const provisioningCompleted = after(groups.length,() => {
         next(null, groups)
       })
 
@@ -468,7 +469,7 @@ const addHostOriginToGroup = (host_id, group, customer, user, next) => {
           return next()
         }
         // all resources && monitors removed
-        const taskRemoved = lodash.after(tasks.length, next)
+        const taskRemoved = after(tasks.length, next)
 
         for (var i=0; i<tasks.length; i++) {
           removeTask(tasks[i], taskRemoved)
@@ -515,7 +516,7 @@ const addHostOriginToGroup = (host_id, group, customer, user, next) => {
           return next()
         }
         // all resources && monitors removed
-        const resourceRemoved = lodash.after(resources.length, next)
+        const resourceRemoved = after(resources.length, next)
 
         for (var i=0; i<resources.length; i++) {
           removeResource(resources[i], resourceRemoved)
@@ -746,7 +747,7 @@ const unlinkHostFromTemplate = (host, template, next) => {
 
       if (!entities||entities.length===0) return done()
 
-      const removed = lodash.after(entities.length, done)
+      const removed = after(entities.length, done)
 
       for (var i=0; i<entities.length; i++) {
         removeEntity(entities[i], removed)
@@ -833,7 +834,7 @@ const copyTemplateToHost = (host, template, customer, next) => {
  */
 const copyTasksToHost = (host, templates, customer, next) => {
   const tasks = []
-  const done = lodash.after(templates.length,() => {
+  const done = after(templates.length,() => {
     next(null,tasks)
   })
 
@@ -866,7 +867,7 @@ const copyTasksToHost = (host, templates, customer, next) => {
  */
 const copyResourcesToHost = (host, templates, customer, next) => {
   const resources = []
-  const done = lodash.after(templates.length,() => {
+  const done = after(templates.length,() => {
     next(null,resources)
   })
 
@@ -950,7 +951,7 @@ const removeTemplateEntities = (templates, TemplateSchema, LinkedSchema, keepClo
           return done()
         } else {
           // remove all
-          const removed = lodash.after(entities.length, () => {
+          const removed = after(entities.length, () => {
             logger.log('all entities removed')
             return done()
           })
@@ -1123,7 +1124,7 @@ const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
 
       logger.log('saving tasks')
       const saved = []
-      const saveCompleted = lodash.after(tasksToSave.length, next)
+      const saveCompleted = after(tasksToSave.length, next)
       const saveTask = (task) => {
         var id = task._id.toString()
         // if not saved

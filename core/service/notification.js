@@ -35,9 +35,9 @@ module.exports = {
       const snscfg = config.get('sns');
 
       SNS.publish({
-        'TopicArn': snscfg.topicArn[ options.topic ],
-        'Message': JSON.stringify(sns),
-        'Subject': options.subject
+        TopicArn: snscfg.topicArn[ options.topic ],
+        Message: JSON.stringify(sns),
+        Subject: options.subject
       },function(error,data){
         if(error) debug.error(error);
         else debug.log(data);
@@ -46,10 +46,10 @@ module.exports = {
   },
   sendEmailNotification (options) {
     mailer.sendMail({
-      'customer_name': options.customer_name,
-      'subject': options.subject,
-      'html': options.content,
-      'to': options.to
+      customer_name: options.customer_name,
+      subject: options.subject,
+      html: options.content,
+      to: options.to
     }, function(error, info){
       if( error ) {
         debug.error('failed to send email');

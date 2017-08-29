@@ -111,22 +111,22 @@ module.exports = {
     job.save( err => {
       if (err) logger.log(err);
       done(err, job);
-    });
+    })
 
     // if job is an agent update, break
-    if (job.name == 'agent:config:update') return;
+    if (job.name == 'agent:config:update') return
 
-    var message = { topic: 'jobs', subject: 'job_update' };
-    NotificationService.sendSNSNotification(job, message);
+    var message = { topic: 'jobs', subject: 'job_update' }
+    NotificationService.sendSNSNotification(job, message)
 
-    var key = globalconfig.elasticsearch.keys.task.result;
-    registerJobOperation(key, job);
+    var key = globalconfig.elasticsearch.keys.task.result
+    registerJobOperation(key, job)
 
     // job completed mail.
-    new ResultMail ( job );
+    new ResultMail ( job )
 
     // trigger result event
-    new ResultEvent ( job );
+    new ResultEvent ( job )
   },
   // automatic job scheduled . send cancelation
   sendJobCancelationEmail (input) {
@@ -179,9 +179,9 @@ function ResultEvent (job) {
     enable: true,
     name: job.state
   }, (err, event) => {
-    if(err) return logger.error(err);
+    if (err) return logger.error(err);
 
-    if(!event){
+    if (!event) {
       var err = new Error('no event handler defined for state "' + job.state + '" on task ' + job.task.id);
       return logger.error(err);
     }
