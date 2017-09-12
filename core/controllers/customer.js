@@ -61,7 +61,7 @@ var controller = {
 
         for(var c=0;c<customers.length;c++)
           published.push( customers[c].publish() );
-          
+
         return res.send(200, customers.map(customer => customer.publish()) );
       }
     });
@@ -73,7 +73,7 @@ var controller = {
     var input = req.body;
 
     if(!input.name) return res.send(400, json.error('name is required'));
-    if(!input.email) return res.send(400, json.error('email is required'));
+    if(!input.emails) return res.send(400, json.error('email is required'));
 
     CustomerService.create(input, function(error,customer) {
       if(error) {
@@ -113,7 +113,7 @@ var controller = {
             customer.agent = user;
 
             return res.send(201, customer);
-          } 
+          }
         });
       }
     });

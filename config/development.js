@@ -30,5 +30,10 @@ module.exports = {
     "transport": {
       "type":"sendmail"
     }
+  },
+  "monitor": {
+    "disabled": true,
+    "fails_count_alert": 3,
+    "check_interval": 10000
   }
 }

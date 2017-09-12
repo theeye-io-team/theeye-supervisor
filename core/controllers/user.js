@@ -79,6 +79,10 @@ function UserInterface (req, next) {
   else
    values.push({'param':'email','value':req.params.email});
 
+  /** username **/
+  if(req.params.username)
+    values.push({'param':'username','value':req.params.username});
+
   /** credential **/
   if(!req.params.credential)
     errors.push({'param':'credential','message':'required'});

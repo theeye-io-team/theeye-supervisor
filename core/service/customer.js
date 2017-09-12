@@ -112,7 +112,12 @@ module.exports = {
       name: input.name,
       description: (input.description||'')
     };
-
+    if (input.config) {
+      data.config = {
+        elasticsearch: (input.config.elasticsearch||{ enabled: false }),
+        kibana: (input.config.kibana||null)
+      };
+    }
     var customer = new Customer(data);
     customer.save(function(err, customer){
       if(err) return next(err);

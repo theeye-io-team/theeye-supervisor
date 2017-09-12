@@ -22,8 +22,8 @@ function customerNamesToUserCustomers (names, completedFn) {
 
   function createCallFn (name) {
     return function (doneFn) {
-      Customer.findOne({ 
-        'name': name 
+      Customer.findOne({
+        'name': name
       }, function(error, customer) {
         if(error) return doneFn(error);
         if(!customer) {
@@ -108,7 +108,7 @@ module.exports = {
             if(error) return next(error);
             next(null,user);
           });
-        });  
+        });
       }
     );
   },
@@ -142,6 +142,7 @@ module.exports = {
           customers: customers,
           credential: options.credential,
           enabled: options.enabled || false,
+          username: options.username
         };
 
         var user = new User(data);
