@@ -1,12 +1,10 @@
 "use strict";
 
-const path = require('path');
-const extend = require('util')._extend;
-const CustomerService = require('../service/customer');
-const logger = require('./logger')(':elastic');
-const config = require('config');
-const fs = require('fs');
-
+const path = require('path')
+const extend = require('util')._extend
+const CustomerService = require('../service/customer')
+const logger = require('./logger')(':elastic')
+const fs = require('fs')
 const request = require("request").defaults({
   timeout: 5000,
   json: true,
@@ -22,34 +20,32 @@ module.exports = {
   submit (customerName, key, data) {
     const query = { name: customerName }
     CustomerService.getCustomerConfig(query, (err,config) => {
-      var specs
-      var elastic
+      var specs, elastic
 
-      if (err||!config) {
-        logger.error('FATAL - no config found. elasticsearch submit will fail');
+      if (err || !config) {
+        logger.error('customer elasticsearch configuration not found. elasticsearch submit aborted')
         return
       }
 
       if (!config.elasticsearch) {
-        logger.error('FATAL - no config. elasticsearch config key not set');
+        logger.error('customer elasticsearch configuration key not set. elasticsearch submit aborted')
         return
       }
 
       elastic = config.elasticsearch
-      if (!elastic.url) {
-        logger.error('ERROR - invalid elasticsearch url configuration.');
-        return
-      }
-
-      data.type = key
-      data.timestamp || (data.timestamp = (new Date()).getTime())
-      data.date || (data.date = (new Date()).toISOString())
-      specs = {
-        url: elastic.url + '/' + path.join(customerName,key),
-        body: data
-      }
-
       if (elastic.enabled===true) {
+        if (!elastic.url) {
+          logger.error('customer elasticsearch configuration url invalid')
+          return
+        }
+
+        data.type = key
+        data.timestamp || (data.timestamp = (new Date()).getTime())
+        data.date || (data.date = (new Date()).toISOString())
+        specs = {
+          url: elastic.url + '/' + path.join(customerName,key),
+          body: data
+        }
         request.post(specs,(err,respose,body) => {
           if (err) {
             logger.error('Request Error : %j', err);
@@ -59,12 +55,12 @@ module.exports = {
           logger.log('submit done to %s', specs.url);
         })
       } else {
-        logger.log('elasticsearch is not enabled');
+        logger.log('customer elasticsearch service disabled')
       }
 
-      if (elastic.debug===true) {
-        logger.log('elasticsearch debug enabled');
-        debug(elastic.debug_file,specs);
+      if (process.env.NODE_ENV='development' && elastic.debug===true) {
+        logger.log('elasticsearch debug enabled')
+        debug(elastic.debug_file,specs)
       }
     })
   }
