@@ -1,14 +1,14 @@
 'use strict';
 
 var lodash = require('lodash');
-var validator = require('validator');
+var isEmail = require('validator/lib/isEmail');
 
 module.exports = {
   emailArray (value) {
     var emails = this.toArray(value);
     if (emails.length===0) { return emails; }
     return emails.filter( email => {
-      return validator.isEmail(email);
+      return isEmail(email);
     });
   },
   /**

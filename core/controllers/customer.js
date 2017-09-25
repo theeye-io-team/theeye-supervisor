@@ -1,6 +1,8 @@
 'use strict';
 
-const lodash = require('lodash');
+const merge = require('lodash/merge');
+const isURL = require('validator/lib/isURL')
+
 var logger = require('../lib/logger')('controller:customer');
 var json = require('../lib/jsonresponse');
 var router = require('../router');
@@ -70,21 +72,32 @@ var controller = {
    *
    */
   create (req,res,next) {
-    var input = req.body;
+    const input = req.body
 
-    if(!input.name) return res.send(400, json.error('name is required'));
-    if(!input.emails) return res.send(400, json.error('email is required'));
+    if (!input.name) {
+      return res.send(400, json.error('name is required'))
+    }
+    if (input.config) {
+      const elasticsearch = input.config.elasticsearch
+      if (elasticsearch && elasticsearch.enabled === true) {
+        if (!elasticsearch.url) {
+          return res.send(400, json.error('elasticsearch.url is required when elasticsearch.enabled'))
+        } else if (!isURL(elasticsearch.url)) {
+          return res.send(400, json.error('elasticsearch.url must be valid URL'))
+        }
+      }
+    }
 
     CustomerService.create(input, function(error,customer) {
-      if(error) {
-        if(error.code == 11000) { //duplicated
-          res.send(400, json.error(input.name + ' customer already exists'));
+      if (error) {
+        if (error.code == 11000) { //duplicated
+          res.send(400, json.error(input.name + ' customer already exists'))
         } else {
-          logger.log(error);
-          res.send(500, json.error('failed to create customer'));
+          logger.log(error)
+          res.send(500, json.error('failed to create customer'))
         }
       } else {
-        logger.log('new customer created');
+        logger.log('new customer created')
 
         UserService.create({
           email: customer.name + '-agent@theeye.io',
@@ -92,31 +105,29 @@ var controller = {
           credential: 'agent',
           enabled: true
         }, function(error, user) {
-          if(error) {
-            logger.error('creating user agent for customer');
-            logger.error(error);
+          if (error) {
+            logger.error('creating user agent for customer')
+            logger.error(error)
 
             customer.remove(function(e){
-              if(e) return logger.error(e);
-              logger.log('customer %s removed', customer.name);
-            });
+              if (e) return logger.error(e)
+              logger.log('customer %s removed', customer.name)
+            })
 
-            if(error.code == 11000) { //duplicated
-              res.send(400, json.error('customer user agent already registered'));
+            if (error.code == 11000) { //duplicated
+              res.send(400, json.error('customer user agent already registered'))
             } else {
-              logger.log(error);
-              res.send(500, json.error('failed to create user agent'));
+              logger.log(error)
+              res.send(500, json.error('failed to create user agent'))
             }
           } else {
-            logger.log('user agent created');
-
-            customer.agent = user;
-
-            return res.send(201, customer);
+            logger.log('user agent created')
+            customer.agent = user
+            return res.send(201, customer)
           }
-        });
+        })
       }
-    });
+    })
   },
   /**
    * @method PATCH
@@ -124,24 +135,42 @@ var controller = {
    * @route /customer/:customer
    */
   patch (req, res, next) {
-    var customer = req.customer;
-    var updates = req.params;
+    const customer = req.customer
+    const updates = req.params
 
-    if (updates.description) customer.description = updates.description;
-    if (Array.isArray(updates.emails)) customer.emails = updates.emails;
     if (updates.config) {
-      var config = lodash.merge({},customer.config,updates.config);
-      customer.config = config;
+      const elasticsearch = updates.config.elasticsearch
+      if (elasticsearch && elasticsearch.enabled === true) {
+        if (!elasticsearch.url) {
+          return res.send(400, json.error('elasticsearch.url is required when elasticsearch.enabled'))
+        } else if (
+          ! isURL(elasticsearch.url,{
+            protocols: ['http','https'],
+            require_protocol: true
+          })
+        ) {
+          return res.send(400, json.error('elasticsearch.url must be a valid URL'))
+        }
+      }
+    }
+
+    customer.config = merge({}, customer.config, updates.config)
+
+    if (updates.description) {
+      customer.description = updates.description
+    }
+    if (Array.isArray(updates.emails)) {
+      customer.emails = updates.emails
     }
 
     customer.save( (err,model) => {
       if (err) {
-        res.send(500,err);
+        res.send(500,err)
       } else {
-        res.send(200, customer);
+        res.send(200, customer)
       }
-      next();
-    });
+      next()
+    })
   },
   /**
    *

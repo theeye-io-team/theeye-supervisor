@@ -108,21 +108,24 @@ module.exports = {
    */
   create (input, next) {
     const data = {
-      emails: input.emails,
+      emails: Array.isArray(input.emails) ? input.emails : [],
       name: input.name,
-      description: (input.description||'')
-    };
-    if (input.config) {
-      data.config = {
-        elasticsearch: (input.config.elasticsearch||{ enabled: false }),
-        kibana: (input.config.kibana||null)
-      };
+      description: (input.description || '')
     }
-    var customer = new Customer(data);
+
+    if (input.config) {
+      const config = input.config
+      data.config = {
+        elasticsearch: (config.elasticsearch || { enabled: false }),
+        kibana: (config.kibana || null)
+      }
+    }
+
+    var customer = new Customer(data)
     customer.save(function(err, customer){
-      if(err) return next(err);
-      else return next(null, customer);
-    });
+      if (err) return next(err)
+      else return next(null, customer)
+    })
   },
   /**
    *

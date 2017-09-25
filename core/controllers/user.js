@@ -1,6 +1,6 @@
 'use strict';
 
-var validator = require('validator');
+var isEmail = require('validator/lib/isEmail')
 var logger = require('../lib/logger')('controller:user');
 var json = require('../lib/jsonresponse');
 var UserService = require('../service/user');
@@ -74,7 +74,7 @@ function UserInterface (req, next) {
   /** email **/
   if(!req.params.email)
     errors.push({'param':'email','message':'required'});
-  else if(!validator.isEmail(req.params.email))
+  else if(!isEmail(req.params.email))
     errors.push({'param':'email','message':'invalid'});
   else
    values.push({'param':'email','value':req.params.email});

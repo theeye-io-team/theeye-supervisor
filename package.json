@@ -34,7 +34,7 @@
     "restify": "2.8.5",
     "stream-buffers": "~2.2.0",
     "underscore": "~1.8.3",
-    "validator": "~4.9.0"
+    "validator": "8.2.0"
   },
   "scripts": {
     "test": "NODE_ENV=localdev ./mocha --harmony_proxies",

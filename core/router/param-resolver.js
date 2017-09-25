@@ -4,7 +4,7 @@ var logger = require('../lib/logger')(':router:middleware:params-resolver');
 var Host = require('../entity/host').Entity;
 var User = require('../entity/user').Entity;
 var Customer = require('../entity/customer').Entity;
-var validator = require('validator');
+var isMongoId = require('validator/lib/isMongoId');
 
 function firstToUpper(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
@@ -34,7 +34,7 @@ module.exports = {
         return next();
       }
 
-      if (!validator.isMongoId(_id)) {
+      if (!isMongoId(_id)) {
         if (options.required) {
           var e = new Error(options.param + ' id is invalid');
           e.statusCode = 400;
