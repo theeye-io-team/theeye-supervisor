@@ -39,7 +39,10 @@ module.exports = {
         Message: JSON.stringify(sns),
         Subject: options.subject
       },function(error,data){
-        if(error) debug.error(error);
+        if (error) {
+          debug.error('SNS submit error')
+          debug.error(error)
+        }
         else debug.log(data);
       });
     }
