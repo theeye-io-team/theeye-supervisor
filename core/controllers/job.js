@@ -1,22 +1,22 @@
-'use strict';
+'use strict'
 
-var app = require('../app');
-var json = require('../lib/jsonresponse');
-var debug = require('../lib/logger')('controller:job');
-var router = require('../router');
-var Job = require('../entity/job').Job;
+const app = require('../app')
+const json = require('../lib/jsonresponse')
+const debug = require('../lib/logger')('controller:job')
+const router = require('../router')
+const Job = require('../entity/job').Job
 
-module.exports = function(server, passport) {
+module.exports = (server, passport) => {
   var middlewares = [
     passport.authenticate('bearer', {session:false}),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer
-  ];
+  ]
 
   server.put('/:customer/job/:job', middlewares.concat(
     router.requireCredential('agent',{exactMatch:true}),
     router.resolve.idToEntity({param:'job',required:true})
-  ), controller.update);
+  ), controller.update)
 
   /**
    *
@@ -26,21 +26,21 @@ module.exports = function(server, passport) {
   server.get('/:customer/job/:job', middlewares.concat(
     router.requireCredential('user'),
     router.resolve.idToEntity({param:'job',required:true})
-  ), controller.get);
+  ), controller.get)
 
   server.get('/:customer/job', middlewares.concat(
     router.requireCredential('user'),
     router.resolve.hostnameToHost({required:true})
-  ), controller.fetch);
+  ), controller.fetch)
 
   server.post('/:customer/job', middlewares.concat(
     router.requireCredential('user'),
     router.resolve.idToEntity({param:'task',required:true}),
     router.ensureAllowed({entity:{name:'task'}})
-  ), controller.create);
+  ), controller.create)
 }
 
-var controller = {
+const controller = {
   get (req,res,next) {
     var job = req.job;
     res.send(200,{ job: job })
@@ -56,7 +56,7 @@ var controller = {
     const customer = req.customer
     const input = { host: req.host }
 
-    if( req.params.process_next ) {
+    if (req.params.process_next) {
       app.jobDispatcher.getNextPendingJob(input,function(error,job){
         var jobs = [];
         if( job != null ) jobs.push(job);

@@ -1,3 +1,6 @@
+'use strict'
+
+const LIFECYCLE = require('../constants/lifecycle')
 var Agenda = require('agenda');
 // var config = require('config');
 var async = require('async');
@@ -33,6 +36,15 @@ util.inherits(Scheduler, EventEmitter);
 
 
 Scheduler.prototype = {
+  initialize: function(ready) {
+    var self = this;
+    this.agenda.on('ready', function(){
+      logger.log('scheduler is ready');
+      ready();
+      self.setupAgenda();
+    });
+    this.agenda.start();
+  },
   setupAgenda: function(){
     var self = this;
     var agenda = this.agenda;
@@ -69,15 +81,6 @@ Scheduler.prototype = {
     process.on('SIGTERM', graceful);
     process.on('SIGINT', graceful);
   },
-  initialize: function(ready) {
-    var self = this;
-    this.agenda.on('ready', function(){
-      logger.log('scheduler is ready');
-      ready();
-      self.setupAgenda();
-    });
-    this.agenda.start();
-  },
   /**
    * schedules a task
    * @param {Object} task data.
@@ -88,19 +91,19 @@ Scheduler.prototype = {
       user = input.user,
       schedule = input.schedule;
 
-    var data = {
-      task_id : task._id ,
-      host_id : task.host_id ,
-      script_id : task.script_id ,
-      script_arguments : task.script_arguments ,
-      name : task.name ,
-      user_id : user._id ,
-      customer_id : customer._id ,
-      customer_name : customer.name ,
-      state : 'new' ,
-      notify : input.notify ,
-      scheduleData : schedule
-    };
+    const data = {
+      task_id: task._id ,
+      host_id: task.host_id ,
+      script_id: task.script_id ,
+      script_arguments: task.script_arguments ,
+      name: task.name ,
+      user_id: user._id ,
+      customer_id: customer._id ,
+      customer_name: customer.name ,
+      lifecycle: LIFECYCLE.READY,
+      notify: input.notify ,
+      scheduleData: schedule
+    }
 
     // runDate is miliseconds
     var date = new Date(schedule.runDate);

@@ -1,7 +1,9 @@
 "use strict";
 
+const app = require('../app');
 const async = require('async');
 const globalconfig = require('config');
+const LIFECYCLE = require('../constants/lifecycle')
 
 var JobModels = require('../entity/job');
 var Job = JobModels.Job;
@@ -15,13 +17,11 @@ var NotificationService = require('./notification');
 var elastic = require('../lib/elastic');
 var logger = require('../lib/logger')('eye:jobs');
 
-const app = require('../app');
-
 const JOB_UPDATE_AGENT_CONFIG = 'agent:config:update';
 //const STATE_AGENT_UPDATED = 'agent-updated';
+
 const STATE_SUCCESS = 'success';
 const STATE_FAILURE = 'failure';
-const STATE_NEW = 'new';
 
 module.exports = {
   /**
@@ -29,14 +29,12 @@ module.exports = {
    * @param {Function} next
    */
   fetchBy (input,next) {
-    var query = {};
+    const query = {}
+    if (input.host) query.host_id = input.host._id
+    if (input.state) query.state = input.state
+    if (input.lifecycle) query.lifecycle = input.lifecycle
 
-    if( input.host ) query.host_id = input.host._id ;
-    if( input.state ) query.state = input.state ;
-
-    Job.find(query,function(error, jobs){
-      next( jobs );
-    });
+    Job.find(query,next)
   },
   /**
    *
@@ -45,13 +43,14 @@ module.exports = {
    *
    */
   getNextPendingJob(input,next) {
-    var query = {};
-    query.state = STATE_NEW;
-    query.host_id = input.host._id;
+    const query = {
+      lifecycle: LIFECYCLE.READY,
+      host_id: input.host._id
+    }
 
-    Job.findOne(query,function(error,job){
-      if( job != null ) {
-        job.state = "sent";
+    Job.findOne(query, (error,job) => {
+      if (job!==null) {
+        job.lifecycle = LIFECYCLE.ASSIGNED
         job.save(error => {
           if(error) throw error;
           next(null,job);
@@ -87,6 +86,8 @@ module.exports = {
         return done(err)
       }
 
+      removeOldJobs(task)
+
       if (type == 'script') {
         createScriptJob(input, afterCreate)
       } else if (type == 'scraper') {
@@ -104,20 +105,20 @@ module.exports = {
    * @param {Function} done
    *
    */
-  update ( job, result, done ) {
-    var state = (result.state||STATE_FAILURE);
-    job.state = state;
-    job.result = result;
-    job.save( err => {
-      if (err) logger.log(err);
-      done(err, job);
+  update (job, result, done) {
+    // if not specified asume success
+    var state = (result.state || STATE_SUCCESS)
+
+    job.lifecycle = LIFECYCLE.FINISHED
+    job.state = state // final job state
+    job.result = result
+    job.save(err => {
+      if (err) logger.log(err)
+      done(err, job)
     })
 
     // if job is an agent update, break
     if (job.name == 'agent:config:update') return
-
-    var message = { topic: 'jobs', subject: 'job_update' }
-    NotificationService.sendSNSNotification(job, message)
 
     var key = globalconfig.elasticsearch.keys.task.result
     registerJobOperation(key, job)
@@ -127,6 +128,19 @@ module.exports = {
 
     // trigger result event
     new ResultEvent ( job )
+  },
+  cancel (job, next) {
+    next||(next=()=>{})
+    job.lifecycle = LIFECYCLE.CANCELED
+    job.save(err => {
+      if (err) {
+        logger.error('fail to cancel job %s', job._id)
+        logger.data(job)
+        logger.error(err)
+      }
+      logger.log('job %s canceled', job._id)
+      next(err)
+    })
   },
   // automatic job scheduled . send cancelation
   sendJobCancelationEmail (input) {
@@ -167,29 +181,22 @@ module.exports = {
     });
   },
   */
-};
+}
 
 /**
  *
+ * remove old jobs status, the history is keept in historical database
+ * this registry is just for operations
  *
  */
-function ResultEvent (job) {
-  TaskEvent.findOne({
-    emitter_id: job.task.id,
-    enable: true,
-    name: job.state
-  }, (err, event) => {
-    if (err) return logger.error(err);
-
-    if (!event) {
-      var err = new Error('no event handler defined for state "' + job.state + '" on task ' + job.task.id);
-      return logger.error(err);
+const removeOldJobs = (task) => {
+  Job.remove({ task_id: task._id }, err => {
+    if (err) {
+      logger.error('Failed to remove old jobs registry for task %s', task._id)
+      logger.error(err)
     }
-
-    EventDispatcher.dispatch(event);
-  });
+  })
 }
-
 
 /**
  *
@@ -197,38 +204,39 @@ function ResultEvent (job) {
  * works for result and execution.
  *
  */
-function registerJobOperation (key, job){
+const registerJobOperation = (key, job) => {
   // submit job operation to elastic search
   job.populate([
     { path: 'user' },
     { path: 'host' }
-  ],
-  (err) => {
-    var data = {
-      'hostname': job.host.hostname,
-      'customer_name': job.customer_name,
-      'user_id': job.user._id,
-      'user_email': job.user.email,
-      'task_name': job.task.name,
-      'task_type': job.task.type,
-      'state' : job.state,
-    };
-
-    if( job._type == 'ScraperJob' ){
-      data.task_url = job.task.url;
-      data.task_method = job.task.method;
-      data.task_status_code = job.task.status_code ;
-      data.task_pattern = job.task.pattern ;
-    } else {
-      data.script_name = job.script.filename;
-      data.script_md5 = job.script.md5;
-      data.script_last_update = job.script.last_update;
-      data.script_mimetype = job.script.mimetype;
+  ], (err) => {
+    const data = {
+      hostname: job.host.hostname,
+      customer_name: job.customer_name,
+      user_id: job.user._id,
+      user_email: job.user.email,
+      task_name: job.task.name,
+      task_type: job.task.type,
+      state: job.state,
     }
 
-    if( job.result ) data.result = job.result ;
-    elastic.submit(job.customer_name,key,data);
-  });
+    if (job._type == 'ScraperJob') {
+      data.task_url = job.task.url
+      data.task_method = job.task.method
+      data.task_status_code = job.task.status_code 
+      data.task_pattern = job.task.pattern
+    } else {
+      data.script_name = job.script.filename
+      data.script_md5 = job.script.md5
+      data.script_last_update = job.script.last_update
+      data.script_mimetype = job.script.mimetype
+    }
+
+    if (job.result) {
+      data.result = job.result
+    }
+    elastic.submit(job.customer_name,key,data)
+  })
 }
 
 
@@ -251,7 +259,7 @@ const createScriptJob = (input, done) => {
     job.customer_id = input.customer._id;
     job.customer_name = input.customer.name;
     job.notify = input.notify;
-    job.state = STATE_NEW;
+    job.lifecycle = LIFECYCLE.READY
     job.event = input.event||null;
     job.save(err => {
       if (err) return done(err)
@@ -282,7 +290,7 @@ const createScraperJob = (input, done) => {
   job.customer_id = input.customer._id;
   job.customer_name = input.customer.name;
   job.notify = input.notify;
-  job.state = STATE_NEW;
+  job.lifecycle = LIFECYCLE.READY
   job.event = input.event||null;
   job.save(error => {
     if(error) return done(error);
@@ -292,6 +300,27 @@ const createScraperJob = (input, done) => {
 
     logger.log('scraper job created.');
     done(null, job);
+  });
+}
+
+/**
+ *
+ *
+ */
+function ResultEvent (job) {
+  TaskEvent.findOne({
+    emitter_id: job.task.id,
+    enable: true,
+    name: job.state
+  }, (err, event) => {
+    if (err) return logger.error(err);
+
+    if (!event) {
+      var err = new Error('no event handler defined for state "' + job.state + '" on task ' + job.task.id);
+      return logger.error(err);
+    }
+
+    EventDispatcher.dispatch(event);
   });
 }
 

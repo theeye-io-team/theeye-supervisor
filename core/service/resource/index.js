@@ -1,25 +1,28 @@
-"use strict";
+"use strict"
 
-const after = require('lodash/after');
-const assign = require('lodash/assign');
-const globalconfig = require('config');
-const logger = require('../../lib/logger')('service:resource');
-const elastic = require('../../lib/elastic');
-const Constants = require('../../constants/monitors');
-const CustomerService = require('../customer');
-const NotificationService = require('../notification');
-const ResourceMonitorService = require('./monitor');
-const EventDispatcher = require('../events');
-const ResourcesNotifications = require('./notifications');
-const AgentUpdateJob = require('../../entity/job').AgentUpdate;
-const MonitorEvent = require('../../entity/event').MonitorEvent;
-const ResourceModel = require('../../entity/resource').Entity;
-const MonitorModel = require('../../entity/monitor').Entity;
-const MonitorTemplate = require('../../entity/monitor/template').Entity;
-const Host = require('../../entity/host').Entity;
-const Tag = require('../../entity/tag').Entity;
+const App = require('../../app')
+const after = require('lodash/after')
+const assign = require('lodash/assign')
+const globalconfig = require('config')
+const logger = require('../../lib/logger')('service:resource')
+const elastic = require('../../lib/elastic')
+const Constants = require('../../constants/monitors')
+const Lifecycle = require('../../constants/lifecycle')
+const CustomerService = require('../customer')
+const NotificationService = require('../notification')
+const ResourceMonitorService = require('./monitor')
+const EventDispatcher = require('../events')
+const ResourcesNotifications = require('./notifications')
+// Entities
+const AgentUpdateJob = require('../../entity/job').AgentUpdate
+const MonitorEvent = require('../../entity/event').MonitorEvent
+const ResourceModel = require('../../entity/resource').Entity
+const MonitorModel = require('../../entity/monitor').Entity
+const MonitorTemplate = require('../../entity/monitor/template').Entity
+const Host = require('../../entity/host').Entity
+const Tag = require('../../entity/tag').Entity
 
-function Service(resource) {
+function Service (resource) {
   var _resource = resource;
 
   function logStateChange (resource,input) {
@@ -45,7 +48,6 @@ function Service(resource) {
       subject:'resource_update'
     });
   }
-
 
   function sendResourceEmailAlert (resource,input) {
     if (resource.alerts===false) return;
@@ -116,6 +118,10 @@ function Service(resource) {
     });
   }
 
+  function needToSendUpdatesStoppedEmail (resource) {
+    return resource.type === Constants.RESOURCE_TYPE_HOST ||
+      resource.failure_severity === Constants.MONITOR_SEVERITY_CRITICAL;
+  }
 
   function handleFailureState (resource,input,config) {
     var newState = Constants.RESOURCE_FAILURE;
@@ -152,11 +158,6 @@ function Service(resource) {
         dispatchResourceEvent(resource,Constants.RESOURCE_FAILURE);
       }
     }
-  }
-
-  function needToSendUpdatesStoppedEmail (resource) {
-    return resource.type === Constants.RESOURCE_TYPE_HOST ||
-      resource.failure_severity === Constants.MONITOR_SEVERITY_CRITICAL;
   }
 
   function handleNormalState (resource,input,config) {
@@ -205,11 +206,12 @@ function Service(resource) {
     }
   }
 
-  function handleUpdatesStoppedState (resource,input,config) {
-    var newState = Constants.RESOURCE_STOPPED;
-    var failure_threshold = config.fails_count_alert;
-
+  const handleUpdatesStoppedState = (resource,input,config) => {
+    const newState = Constants.RESOURCE_STOPPED;
+    const failure_threshold = config.fails_count_alert;
+    const isHost = (resource.type === Constants.RESOURCE_TYPE_HOST)
     resource.fails_count++;
+
     logger.log(
       'resource %s[%s] notifications stopped count %s/%s',
       resource.name,
@@ -218,26 +220,54 @@ function Service(resource) {
       failure_threshold
     );
 
-    // current resource state
-    if (resource.state != newState) {
-      if (resource.fails_count >= failure_threshold) {
-        logger.log('resource "%s" notifications stopped', resource.name);
+    const resourceUpdatesStopped = resource.state != newState &&
+      resource.fails_count >= failure_threshold
 
-        input.event||(input.event=input.state); // state = agent or resource stopped
-        input.failure_severity = getEventSeverity(input.event,resource);
-
-        resource.state = newState;
-
-        if (needToSendUpdatesStoppedEmail(resource)) {
-          sendResourceEmailAlert(resource,input);
-        }
-        logStateChange(resource,input);
-        dispatchResourceEvent(resource,Constants.RESOURCE_STOPPED);
-        dispatchStateChangeSNS(resource,{
-          message:'updates stopped',
-          data:input
-        });
+    const dispatchNotifications = () => {
+      if (needToSendUpdatesStoppedEmail(resource)) {
+        sendResourceEmailAlert(resource,input)
       }
+
+      logStateChange(resource,input)
+      dispatchResourceEvent(resource,Constants.RESOURCE_STOPPED)
+      dispatchStateChangeSNS(resource,{
+        message: 'updates stopped',
+        data: input
+      })
+    }
+
+    /**
+     * if any job is assigned to the host's agent cancel it.
+     */
+    const cancelAssignedJobs = () => {
+      const query = {
+        host: { _id: resource.host_id }
+      }
+
+      App.jobDispatcher.fetchBy(query, (err, jobs) => {
+        if (jobs.length===0) {
+          // nothing to do
+          return
+        }
+
+        // search for jobs to cancel
+        jobs.filter(job => {
+          return job.lifecycle === Lifecycle.ASSIGNED
+        }).forEach(job => {
+          App.jobDispatcher.cancel(job)
+        })
+      })
+    }
+
+    // current resource state
+    if (resourceUpdatesStopped) {
+      logger.log('resource "%s" notifications stopped', resource.name)
+      input.event||(input.event = input.state) // state = agent or resource stopped
+      input.failure_severity = getEventSeverity(input.event, resource)
+      resource.state = newState
+      dispatchNotifications()
+      // if the resource is a host
+      if (isHost) cancelAssignedJobs()
     }
   }
 
@@ -245,7 +275,7 @@ function Service(resource) {
    *
    * espeshial case of monitor state changed.
    * the resource was updated or changed or was not present and currently created.
-   * the monitor trigger the changed event and the supervisor emmit the event internally
+   * the monitor trigger the changed event and the supervisor emit the event internally
    *
    */
   function handleChangedStateEvent (resource,input,config) {
@@ -323,7 +353,7 @@ function Service(resource) {
           // monitoring update event. detected stop
           case Constants.AGENT_STOPPED:
           case Constants.RESOURCE_STOPPED:
-            handleUpdatesStoppedState(resource,input,monitorConfig);
+            handleUpdatesStoppedState(resource,input,monitorConfig)
             break;
           case Constants.RESOURCE_NORMAL:
             resource.last_update = new Date();
@@ -558,19 +588,19 @@ Service.update = function(input,next) {
 function getEventSeverity (event,resource) {
   logger.log('resource event is "%s"', event);
 
+  const hasSeverity = resource.failure_severity &&
+    Constants.MONITOR_SEVERITIES.indexOf(
+      resource.failure_severity.toUpperCase()
+    ) !== -1
+
   // severity is set and is valid
-  if (
-    resource.failure_severity &&
-    Constants.MONITOR_SEVERITIES.indexOf(resource.failure_severity.toUpperCase()) !== -1
-  ) {
-    return resource.failure_severity;
-  }
+  if (hasSeverity) return resource.failure_severity;
 
   // else try to determine the severity
   if (event && /^host:stats:.*$/.test(event)) {
-    return 'LOW';
+    return 'LOW'
   } else {
-    return 'HIGH';
+    return 'HIGH'
   }
 }
 

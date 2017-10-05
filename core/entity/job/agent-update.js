@@ -3,10 +3,11 @@
 const BaseSchema = require('./schema');
 const Job = require('./index');
 const logger = require('../../lib/logger');
+const LIFECYCLE = require('../../constants/lifecycle')
 
 var AgentUpdateJobSchema = new BaseSchema({
   name: { type: String, default: 'agent:config:update' },
-  state: { type: String, default: 'new' },
+  lifecycle: { type: String, default: LIFECYCLE.READY },
   notify: { type: Boolean, default: false },
 });
 
@@ -16,19 +17,27 @@ var AgentUpdateJobSchema = new BaseSchema({
 AgentUpdateJobSchema.statics.create = function (specs,next) {
   next || (next=()=>{})
 
-  const self = this
-  self.find({
+  const Job = this
+  const query = Job.find({
     host_id: specs.host_id,
-    state: 'new'
-  }).exec((err, jobs) => {
+    lifecycle: LIFECYCLE.READY
+  })
 
-    // check if there are update jobs already created for this host
+  // check if there are update jobs already created for this host
+  query.exec((err, jobs) => {
     if (jobs.length !== 0) {
       // return any job
       return next(null, jobs[0])
     }
 
-    const job = new self(specs)
+    Job.remove({ host_id: specs.host_id }, err => {
+      if (err) {
+        logger.error('Failed to remove old agent update jobs for host %s',specs.host_id)
+        logger.error(err)
+      }
+    })
+
+    const job = new Job(specs)
     job.host = specs.host_id // enforce host_id, just to be redundant
     job.save(err => {
       if (err) {

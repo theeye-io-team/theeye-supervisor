@@ -5,7 +5,7 @@ const Job = require('./index');
 
 var ScriptSchema = new BaseSchema({
   script_id: { type: String },
-  script_arguments: { type: Array, 'default': [] },
+  script_arguments: { type: Array, default: [] },
   script: { type: Object }, // embedded
 });
 

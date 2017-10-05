@@ -25,11 +25,9 @@ module.exports = {
     require('../controllers/event')(server,passport);
     require('../controllers/host-stats')(server,passport);
     require('../controllers/host')(server,passport);
-    //require('../controllers/hostgroup-monitor')(server,passport); // deprecated
-    //require('../controllers/hostgroup-task')(server,passport); // deprecated
-    //require('../controllers/template')(server,passport); // deprecated
     require('../controllers/hostgroup')(server,passport);
     require('../controllers/job')(server,passport);
+    require('../controllers/job-lifecycle')(server,passport);
     require('../controllers/psaux')(server,passport);
     require('../controllers/monitor')(server,passport);
     require('../controllers/resource')(server,passport);
