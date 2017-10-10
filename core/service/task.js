@@ -342,10 +342,15 @@ const TaskService = {
         .sort({ creation_date: -1 })
         .exec((err,last) => {
           if (err) return next(err)
-          if (!last) return next()
 
-          data.lastjob_id = last._id
-          data.lastjob = last
+          if (!last) {
+            data.lastjob_id = null
+            data.lastjob = null
+          } else {
+            data.lastjob_id = last._id
+            data.lastjob = last
+          }
+
           return next()
         })
     }

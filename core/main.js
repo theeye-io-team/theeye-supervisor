@@ -1,9 +1,8 @@
 'use strict';
 
-var ErrorHandler = require('./lib/error-handler');
-require('./lib/error-extend');
-
-var logger = require('./lib/logger')('main');
+require('./lib/error-extend')
+const ErrorHandler = require('./lib/error-handler')
+const logger = require('./lib/logger')('main')
 logger.log('initializing supervisor');
 
 process.on('SIGINT', function(){
@@ -36,27 +35,27 @@ require('./environment').setenv(function(){
   require('./lib/mongodb').connect(function(){
 
     logger.log('initializing scheduler');
-    var scheduler = require('./service/scheduler');
+    const scheduler = require('./service/scheduler')
     scheduler.initialize(function(){
 
-      logger.log('initializing events dispatcher');
-      var dispatcher = require('./service/events');
+      logger.log('initializing events dispatcher')
+      const dispatcher = require('./service/events')
       dispatcher.initialize(function(){
 
         require('./service/monitor').start()
 
-        logger.log('initializing server');
-        var app = require('./app');
+        logger.log('initializing server')
 
-        app.jobDispatcher = require('./service/job');
-        app.eventDispatcher = dispatcher;
-        app.scheduler = scheduler;
-        app.customer = require('./service/customer');
+        const App = require('./app')
+        App.jobDispatcher = require('./service/job')
+        App.taskManager = require('./service/task')
+        App.eventDispatcher = dispatcher
+        App.scheduler = scheduler
+        App.customer = require('./service/customer')
+        App.start()
 
-        app.start();
-
-        logger.log('supervisor is running');
-      });
-    });
-  });
-});
+        logger.log('supervisor is running')
+      })
+    })
+  })
+})

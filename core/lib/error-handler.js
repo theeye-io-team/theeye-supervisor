@@ -1,82 +1,77 @@
 var config = require('config');
 var notification = require('../service/notification');
 
-var ErrorHandler = function(){
-  var errors = [];
+var ErrorHandler = function (){
+  this.errors = []
+}
 
-  this.required = function(name,value){
+module.exports = ErrorHandler;
+
+const errorLine = (error) => {
+  var message = error.message;
+  var statusCode = error.statusCode;
+
+  var html = '<h2>Exception</h2>' ;
+  html += '<pre>' + error.stack + '</pre>' + "\n" ;
+  if(statusCode){
+    html += `<p>status code : ${statusCode}</p>`;
+  }
+  return html;
+}
+
+ErrorHandler.prototype = {
+  required: function(name,value){
     var e = new Error(name + ' is required');
     e.statusCode = 400;
     e.field = name;
     e.value = value;
     e.code = 'EREQ';
-    errors.push( e );
+    this.errors.push( e );
 		return this;
-  }
-
-  this.invalid = function(name,value){
+  },
+  invalid: function(name,value){
     var e = new Error(name + ' is invalid');
     e.statusCode = 400;
     e.field = name;
     e.value = value;
     e.code = 'EVALID';
-    errors.push( e );
+    this.errors.push( e );
 		return this;
-  }
-
+  },
   /**
    *
    * turn object into Array.
    * Array knows how turn it self into string
    *
    */
-  this.toString = function(){
+  toString: function(){
     var e = [];
-    for (var i=0; i<errors.length; i++) {
-      var err = errors[i];
+    for (var i=0; i<this.errors.length; i++) {
+      var err = this.errors[i];
       delete err.stack;
       e.push(err);
     }
     return e;
-  }
-
-  this.toJSON = this.toString;
-
-  function errorLine(error){
-    var message = error.message;
-    var statusCode = error.statusCode;
-
-    var html = '<h2>Exception</h2>' ;
-    html += '<pre>' + error.stack + '</pre>' + "\n" ;
-    if(statusCode){
-      html += `<p>status code : ${statusCode}</p>`;
-    }
-    return html;
-  }
-
-  this.toHtml = function(){
+  },
+  toHtml: function(){
     var e = [];
-    for(var i=0; i<errors.length; i++){
-      e.push( errorLine( errors[i] ) );
+    for(var i=0; i<this.errors.length; i++){
+      e.push( errorLine( this.errors[i] ) );
     }
     return e.join('<br/>');
-  }
-
-  this.hasErrors = function(){
-    return errors.length > 0;
-  }
-
-  this.sendExceptionAlert = function(error){
-    errors.push( error );
+  },
+  hasErrors: function(){
+    return this.errors.length > 0;
+  },
+  sendExceptionAlert: function(error){
+    this.errors.push( error );
     notification.sendEmailNotification({
       customer_name:'theeye',
       subject:'Supervisor Exception',
       to: config.support,
       content: this.toHtml()
-    });
+    })
   }
-
-  return this;
 }
 
-module.exports = ErrorHandler;
+ErrorHandler.prototype.toJSON = ErrorHandler.prototype.toString

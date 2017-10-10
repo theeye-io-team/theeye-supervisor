@@ -1,6 +1,6 @@
 "use strict";
 
-const app = require('../app');
+const App = require('../app');
 const async = require('async');
 const globalconfig = require('config');
 const LIFECYCLE = require('../constants/lifecycle')
@@ -23,7 +23,7 @@ const JOB_UPDATE_AGENT_CONFIG = 'agent:config:update';
 const STATE_SUCCESS = 'success';
 const STATE_FAILURE = 'failure';
 
-module.exports = {
+const JobsDispatcher = {
   /**
    * @param {Object} input
    * @param {Function} next
@@ -78,12 +78,18 @@ module.exports = {
       else done(null, job)
     }
 
-    task.populate('host', err => {
+    App.taskManager.populate(task, (err, task) => {
       if (err) return done(err);
 
       if (!task.host) {
         err = new Error('invalid task ' + task._id  + ' does not has a host assigned');
         return done(err)
+      }
+
+      if (jobInProgress(task.lastjob) === true) {
+        err = new Error('job in progress')
+        err.statusCode = 423
+        return done(err, task.lastjob)
       }
 
       removeOldJobs(task)
@@ -183,6 +189,14 @@ module.exports = {
   */
 }
 
+module.exports = JobsDispatcher
+
+const jobInProgress = (job) => {
+  if (!job) return false
+  return job.lifecycle === LIFECYCLE.READY ||
+    job.lifecycle === LIFECYCLE.ASSIGNED
+}
+
 /**
  *
  * remove old jobs status, the history is keept in historical database
@@ -238,7 +252,6 @@ const registerJobOperation = (key, job) => {
     elastic.submit(job.customer_name,key,data)
   })
 }
-
 
 const createScriptJob = (input, done) => {
   const task = input.task;
@@ -399,7 +412,7 @@ function ResultMail ( job ) {
     });
   }
 
-  app.customer.getAlertEmails(
+  App.customer.getAlertEmails(
     job.customer_name,
     (err, emails) => {
       var mailTo

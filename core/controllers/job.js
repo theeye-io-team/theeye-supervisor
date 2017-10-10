@@ -1,6 +1,6 @@
 'use strict'
 
-const app = require('../app')
+const App = require('../app')
 const json = require('../lib/jsonresponse')
 const debug = require('../lib/logger')('controller:job')
 const router = require('../router')
@@ -57,50 +57,59 @@ const controller = {
     const input = { host: req.host }
 
     if (req.params.process_next) {
-      app.jobDispatcher.getNextPendingJob(input,function(error,job){
-        var jobs = [];
-        if( job != null ) jobs.push(job);
-        res.send(200, { jobs : jobs });
-      });
+      App.jobDispatcher.getNextPendingJob(input,function(error,job){
+        var jobs = []
+        if (job != null) jobs.push(job)
+        res.send(200, { jobs : jobs })
+      })
     } else {
       Job.find({
         host_id: host.id,
         customer_name: customer.name
       }).exec(function(err,jobs){
-        res.send(200, { jobs : jobs });
-      });
+        res.send(200, { jobs : jobs })
+      })
     }
   },
   update (req, res, next) {
-    var result = req.params.result;
+    var result = req.params.result
     if (!result) {
-      return res.send(400, json.error('result data is required'));
+      return res.send(400, json.error('result data is required'))
     }
 
-    app.jobDispatcher.update(req.job, result, (err, job) => {
-      if (err) return res.send(500);
-      res.send(200, job);
-      next();
-    });
+    App.jobDispatcher.update(req.job, result, (err, job) => {
+      if (err) return res.send(500)
+      res.send(200, job)
+      next()
+    })
   },
   create (req,res,next) {
-    var task = req.task;
-    var user = req.user;
-    var customer = req.customer;
+    var task = req.task
+    var user = req.user
+    var customer = req.customer
 
-    debug.log('new task received');
+    debug.log('new task received')
 
-    app.jobDispatcher.create({
+    App.jobDispatcher.create({
       task: task,
       user: user,
       customer: customer,
       notify: true
-    },(error,job) => {
-      if(error){
-        debug.log(error);
-        return res.send(500);
+    }, (error,job) => {
+      if (error) {
+        if (error.statusCode) {
+          if (error.statusCode===423) {
+            return res.send(error.statusCode, job)
+          } else {
+            debug.log(error)
+            return res.send(error.statusCode, error.message)
+          }
+        } else {
+          debug.log(error)
+          return res.send(500)
+        }
       }
       res.send(200,job)
-    });
+    })
   }
 }

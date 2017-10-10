@@ -148,7 +148,7 @@ module.exports = {
       case 'scraper':
         var url = input.url;
         if (!url) errors.required('url',url);
-        else if (! isURL(url,{require_protocol:true})) errors.invalid('url',url);
+        else if (!isURL(url,{require_protocol:true})) errors.invalid('url',url);
         else data.url = url;
 
         data.timeout = input.timeout||10000;

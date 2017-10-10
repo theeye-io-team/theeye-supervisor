@@ -1,11 +1,12 @@
-"use strict"; 
-const restify = require('restify');
-const util = require('util');
-const multer = require('multer');
-const config =  require('config');
-const router = require('./router');
-const auth = require('./lib/auth');
-const logger = require('./lib/logger')('server');
+"use strict"
+
+const restify = require('restify')
+const util = require('util')
+const multer = require('multer')
+const config =  require('config')
+const router = require('./router')
+const auth = require('./lib/auth')
+const logger = require('./lib/logger')('app')
 
 const App = {
 
