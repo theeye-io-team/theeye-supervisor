@@ -26,14 +26,14 @@ function connect () {
 
   if (config.debug) mongoose.set("debug",true);
 
-  return mongoose.createConnection(connection, (config.options||{}) );
+  return mongoose.createConnection(connection, (config.options||{}))
 }
 
 function Connection () {
   var _db ;
 
   this.connect = function (done) {
-    if( _db ) return done(); // already connected
+    if (_db) return done() // already connected
 
     _db = connect();
 
@@ -51,6 +51,10 @@ function Connection () {
       debug('MongoDB connected');
       done();
     });
+  }
+
+  this.disconnect = function (done) {
+    _db.close()
   }
 
   Object.defineProperty(this, 'db', {

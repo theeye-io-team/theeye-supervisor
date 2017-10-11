@@ -49,8 +49,9 @@ class EventDispatcher extends EventEmitter {
    * @param {Event} event an event entity to dispatch
    * @param {Object} event_data event extra data generated
    */
-  dispatch (event, event_data) {
+  dispatch (event, event_data, done) {
     event_data || (event_data=null)
+    done || (done=()=>{})
 
     logger.log(
       'new event id %s name %s , type %s , emitter %s',
@@ -58,8 +59,12 @@ class EventDispatcher extends EventEmitter {
     );
 
     Task.find({ triggers: event._id }, (err, tasks) => {
-      if (err) return logger.error( err );
-      if (tasks.length == 0) return;
+      if (err) {
+        logger.error(err)
+        done(err)
+      }
+
+      if (tasks.length == 0) return done()
 
       for (var i=0; i<tasks.length; i++) {
         createJob({
@@ -69,6 +74,8 @@ class EventDispatcher extends EventEmitter {
           event_data: event_data
         })
       }
+
+      done(null, tasks)
     })
 
     return this

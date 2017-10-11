@@ -4,6 +4,7 @@ const App = require('../app');
 const async = require('async');
 const globalconfig = require('config');
 const LIFECYCLE = require('../constants/lifecycle')
+const JOBS = require('../constants/jobs')
 
 var JobModels = require('../entity/job');
 var Job = JobModels.Job;
@@ -17,8 +18,6 @@ var NotificationService = require('./notification');
 var elastic = require('../lib/elastic');
 var logger = require('../lib/logger')('eye:jobs');
 
-const JOB_UPDATE_AGENT_CONFIG = 'agent:config:update';
-//const STATE_AGENT_UPDATED = 'agent-updated';
 
 const STATE_SUCCESS = 'success';
 const STATE_FAILURE = 'failure';
@@ -124,7 +123,7 @@ const JobsDispatcher = {
     })
 
     // if job is an agent update, break
-    if (job.name == 'agent:config:update') return
+    if (job.name == JOBS.AGENT_UPDATE) return
 
     var key = globalconfig.elasticsearch.keys.task.result
     registerJobOperation(key, job)

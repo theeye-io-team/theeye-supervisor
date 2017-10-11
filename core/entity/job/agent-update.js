@@ -4,9 +4,10 @@ const BaseSchema = require('./schema');
 const Job = require('./index');
 const logger = require('../../lib/logger');
 const LIFECYCLE = require('../../constants/lifecycle')
+const JOBS = require('../../constants/jobs')
 
-var AgentUpdateJobSchema = new BaseSchema({
-  name: { type: String, default: 'agent:config:update' },
+const AgentUpdateJobSchema = new BaseSchema({
+  name: { type: String, default: JOBS.AGENT_UPDATE },
   lifecycle: { type: String, default: LIFECYCLE.READY },
   notify: { type: Boolean, default: false },
 });
@@ -14,7 +15,7 @@ var AgentUpdateJobSchema = new BaseSchema({
 /**
  * create a job from a dynamic task or macro generated from a script
  */
-AgentUpdateJobSchema.statics.create = function (specs,next) {
+AgentUpdateJobSchema.statics.create = function (specs, next) {
   next || (next=()=>{})
 
   const Job = this

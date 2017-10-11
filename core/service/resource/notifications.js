@@ -9,17 +9,17 @@ const ResourceTypes = {
     events:[{
       severity: 'LOW',
       name: 'host:stats:cpu:high',
-      message: function(resource, event_data) { return `${resource.hostname} cpu check failed. ${event_data.cpu}% CPU in use`; },
+      message: function(resource, event_data) { return `${resource.hostname} cpu check failed. ${Number(event_data.cpu).toFixed(2)}% CPU in use`; },
       subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} CPU alert`; }
     },{
       severity: 'LOW',
       name: 'host:stats:mem:high',
-      message: function(resource, event_data) { return `${resource.hostname} mem check failed. ${event_data.mem}% MEM in use`; },
+      message: function(resource, event_data) { return `${resource.hostname} mem check failed. ${Number(event_data.mem).toFixed(2)}% MEM in use`; },
       subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} MEM alert`; }
     },{
       severity: 'LOW',
       name: 'host:stats:cache:high',
-      message: function(resource, event_data) { return `${resource.hostname} cache check failed. ${event_data.cache}% CACHE in use`; },
+      message: function(resource, event_data) { return `${resource.hostname} cache check failed. ${Number(event_data.cache).toFixed(2)}% CACHE in use`; },
       subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} CACHE alert`; }
     },{
       severity: 'LOW',
@@ -34,7 +34,28 @@ const ResourceTypes = {
     }]
   },
   psaux: { type: 'psaux', events: [] },
-  host: { type: 'host', events: [] },
+  host: {
+    type: 'host',
+    events: [{
+      severity: 'HIGH',
+      name: Constants.RESOURCE_STOPPED,
+      subject: function(resource, event_data) {
+        return `[${this.severity}] ${resource.hostname} unreachable`
+      },
+			message: function(resource, event_data) {
+        return `Host ${resource.hostname.toUpperCase()} stopped reporting updates.`
+			}
+    },{
+      severity: 'HIGH',
+      name: Constants.RESOURCE_RECOVERED,
+      subject: function(resource, event_data) {
+        return `[${this.severity}] ${resource.hostname} recovered`
+      },
+			message: function(resource, event_data) {
+        return `Host ${resource.hostname.toUpperCase()} started reporting again.`
+			}
+    }]
+  },
   process: { type: 'process', events: [] },
   scraper: { type: 'scraper', events: [] },
   service: { type: 'service', events: [] },
@@ -47,7 +68,13 @@ const ResourceTypes = {
         return `[${this.severity}] ${resource.name} failure`
       },
 			message: function(resource, event_data) {
-				const result = resource.last_event.script_result
+				let result
+        // use an empty object if not set
+        if (!resource.last_event||!resource.last_event.script_result) {
+          result = {}
+        } else {
+          result = resource.last_event.script_result
+        }
 
 				const lastline = result.lastline ? result.lastline.trim() : 'no data'
 				const stdout = result.stdout ? result.stdout.trim() : 'no data'
@@ -78,74 +105,6 @@ const ResourceTypes = {
       subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} file ${resource.monitor.config.basename} was restored`; }
     }]
   },
-};
-
-module.exports = function (specs, done) {
-  var typeEvent ;
-  var resource = specs.resource;
-  var event_name = specs.event;
-  var event_data = specs.data||{};
-  var severity = specs.failure_severity;
-  var type = resource.type;
-
-  try {
-    typeEvent = searchTypeEvent(type, event_name);
-  } catch (error) {
-    return done(error,null);
-  }
-
-  if (!typeEvent) {
-    typeEvent = Object.create(defaultTypeEvent(specs.resource.state));
-  }
-
-  if (specs.failure_severity) {
-    typeEvent.severity = specs.failure_severity.toUpperCase();
-  }
-
-  return done(null,{
-    content: typeEvent.message(resource, event_data),
-    subject: typeEvent.subject(resource, event_data)
-  });
-}
-
-/**
- * @param String type
- * @param String event_name
- * @return {Object} {String severity, String message, String subject}
- */
-function searchTypeEvent (type,event_name) {
-  var typeEvent = undefined;
-
-  if (!ResourceTypes.hasOwnProperty(type)) {
-    throw new Error('resource type "' + type + '" is invalid or not defined');
-  }
-
-  if (
-    type == Constants.RESOURCE_TYPE_DSTAT ||
-    type == Constants.RESOURCE_TYPE_PSAUX
-  ) {
-    if (
-      event_name === Constants.RESOURCE_STOPPED ||
-      event_name === Constants.RESOURCE_RECOVERED ||
-      !event_name
-    ) {
-      throw new Error(type + '/' + event_name + ' event ignored.');
-    }
-  }
-
-  var resourceType = ResourceTypes[type];
-  var typeEvents = resourceType.events;
-
-  if (typeEvents.length !== 0) {
-    for (var i=0; i<typeEvents.length; i++) {
-      typeEvent = typeEvents[i];
-      if (typeEvent.name == event_name) {
-        return Object.create(typeEvent);
-      }
-    }
-  }
-
-  return typeEvent;
 }
 
 /**
@@ -157,17 +116,6 @@ function searchTypeEvent (type,event_name) {
 function defaultTypeEvent (event_name) {
   var spec ;
   switch (event_name) {
-    case Constants.RESOURCE_FAILURE:
-      spec = {
-        severity: 'HIGH',
-        message: function(resource, event_data) {
-          return `${resource.hostname} ${resource.name} checks failed.`
-        } ,
-        subject: function(resource, event_data) {
-          return `[${this.severity}] ${resource.name} failure`
-        }
-      };
-      break;
     case Constants.RESOURCE_NORMAL:
       spec = {
         severity: 'HIGH',
@@ -213,29 +161,118 @@ function defaultTypeEvent (event_name) {
       };
       break;
     case Constants.WORKERS_ERROR_EVENT:
+    case Constants.RESOURCE_FAILURE:
     default:
       spec = {
         severity: 'HIGH',
         message: function(resource, event_data) {
-          var message, data = event_data;
-
-          if (data.error) {
-            if (typeof data.error === 'string') {
-              message = data.error;
-            } else if (typeof data.error.message === 'string') {
-              message = data.error.message;
-            }
-          } else {
-            message = event_name;
-          }
-
-          return `${resource.hostname} ${resource.name} reported an error "${message}".`
+          return `${resource.hostname} ${resource.name} checks failed.`
         } ,
         subject: function(resource, event_data) {
-          return `[${this.severity}] ${resource.name} error`
+          return `[${this.severity}] ${resource.name} failure`
         }
-      };
-      break;
+      }
+      break
+      //spec = {
+      //  severity: 'HIGH',
+      //  message: function(resource, event_data) {
+      //    var message, data = event_data;
+
+      //    if (data.error) {
+      //      if (typeof data.error === 'string') {
+      //        message = data.error;
+      //      } else if (typeof data.error.message === 'string') {
+      //        message = data.error.message;
+      //      }
+      //    } else {
+      //      message = event_name;
+      //    }
+
+      //    return `${resource.hostname} ${resource.name} reported an error "${message}".`
+      //  } ,
+      //  subject: function(resource, event_data) {
+      //    return `[${this.severity}] ${resource.name} error`
+      //  }
+      //};
+      //break;
   }
   return spec;
+}
+
+/**
+ * @summary search for an event named event_name
+ * @param String type
+ * @param String event_name
+ * @return {Object} {String severity, String message, String subject}
+ */
+function searchTypeEvent (type,event_name) {
+  var typeEvent = undefined;
+  event_name || (event_name=null)
+
+  if (!ResourceTypes.hasOwnProperty(type)) {
+    throw new Error('resource type "' + type + '" is invalid or not defined');
+  }
+
+  if (
+    type == Constants.RESOURCE_TYPE_DSTAT ||
+    type == Constants.RESOURCE_TYPE_PSAUX
+  ) {
+    if (
+      event_name === Constants.RESOURCE_STOPPED ||
+      event_name === Constants.RESOURCE_RECOVERED ||
+      !event_name
+    ) {
+      throw new Error(type + '/' + event_name + ' event ignored.');
+    }
+  }
+
+  var resourceType = ResourceTypes[type]
+  var typeEvents = resourceType.events
+
+  if (typeEvents.length !== 0) {
+    for (var i=0; i<typeEvents.length; i++) {
+      let element = typeEvents[i]
+      if (element.name == event_name) {
+        return Object.create(element)
+      }
+    }
+  }
+
+  return typeEvent
+}
+
+/**
+ *
+ * @param {Object} specs
+ * @param {Resource} specs.resource
+ * @param {String} specs.event
+ * @param {Object} specs.data
+ * @param {String} specs.failure_severity
+ */
+module.exports = function (specs, done) {
+  const resource = specs.resource
+  const type = resource.type
+  const event_name = specs.event || resource.state
+  const event_data = specs.data || {}
+  const severity = specs.failure_severity
+  var typeEvent
+
+  try {
+    typeEvent = searchTypeEvent(type, event_name)
+  } catch (error) {
+    return done(error,null)
+  }
+
+  if (!typeEvent) {
+    typeEvent = Object.create(defaultTypeEvent(event_name))
+  }
+
+  if (severity) {
+    typeEvent.severity = severity.toUpperCase()
+  }
+
+  return done(null,{
+    content: typeEvent.message(resource, event_data),
+    subject: typeEvent.subject(resource, event_data)
+  })
 }

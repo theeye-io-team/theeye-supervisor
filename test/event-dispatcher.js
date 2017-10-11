@@ -4,24 +4,32 @@ var mongodb = require('../core/lib/mongodb');
 var assert = require('chai').assert;
 var mongoose = require('mongoose');
 
-mongodb.connect(function(){
+describe('Event Dispatcher',function(){
+  var Dispatcher, Event
 
-  var Dispatcher = require('../core/service/events');
-  var Event = require('../core/entity/event').Event;
+  before(function(done){
+    mongodb.connect(function(){
+      Dispatcher = require('../core/service/events')
+      Event = require('../core/entity/event').Event
+      done()
+    })
+  })
 
-  describe('Event Dispatcher',function(){
-    it('dispatch an event', function(done){
+  after(function(done){
+    done()
+  })
 
-      Event
-        .findById({ _id: '57e3014b045b584d4ff1ede1'  })
-        .exec( (err,event) => {
-
-          Dispatcher.initialize( () => {
-            dispatch( event );
-          })
-
-        });
-
-    });
-  });
-});
+  it('dispatch an event', function(done){
+    let query = Event.findOne()
+    query.exec( (err,event) => {
+      assert.ifError(err)
+      assert.isNotNull(event, 'event not found')
+      Dispatcher.initialize( () => {
+        Dispatcher.dispatch( event, {}, (err, tasks) => {
+          assert.ifError(err)
+          done()
+        })
+      })
+    })
+  })
+})
