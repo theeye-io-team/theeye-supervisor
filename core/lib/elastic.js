@@ -1,5 +1,6 @@
 "use strict";
 
+const isURL = require('validator/lib/isURL')
 const path = require('path')
 const extend = require('util')._extend
 const CustomerService = require('../service/customer')
@@ -22,7 +23,7 @@ module.exports = {
     CustomerService.getCustomerConfig(query, (err,config) => {
       var specs, elastic
 
-      if (err || !config) {
+      if (err||!config) {
         logger.error('customer elasticsearch configuration not found. elasticsearch submit aborted')
         return
       }
@@ -33,27 +34,27 @@ module.exports = {
       }
 
       elastic = config.elasticsearch
-      if (elastic.enabled===true) {
-        if (!elastic.url) {
-          logger.error('customer elasticsearch configuration url invalid')
-          return
-        }
+      data.type = key
+      data.timestamp || (data.timestamp = (new Date()).getTime())
+      data.date || (data.date = (new Date()).toISOString())
+      specs = {
+        url: elastic.url + '/' + path.join(customerName,key),
+        body: data
+      }
 
-        data.type = key
-        data.timestamp || (data.timestamp = (new Date()).getTime())
-        data.date || (data.date = (new Date()).toISOString())
-        specs = {
-          url: elastic.url + '/' + path.join(customerName,key),
-          body: data
+      if (elastic.enabled===true) {
+        if (isURL(elastic.url)) {
+          request.post(specs,(err,respose,body) => {
+            if (err) {
+              logger.error('Request Error : %j', err);
+              logger.error('Error data sent: %j', specs);
+              return;
+            }
+            logger.log('submit done to %s', specs.url);
+          })
+        } else {
+          logger.error('customer elasticsearch configuration url invalid')
         }
-        request.post(specs,(err,respose,body) => {
-          if (err) {
-            logger.error('Request Error : %j', err);
-            logger.error('Error data sent: %j', specs);
-            return;
-          }
-          logger.log('submit done to %s', specs.url);
-        })
       } else {
         logger.log('customer elasticsearch service disabled')
       }

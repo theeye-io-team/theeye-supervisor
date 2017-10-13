@@ -15,7 +15,7 @@ var TaskEvent = require('../entity/event').TaskEvent;
 var EventDispatcher = require('./events');
 
 var NotificationService = require('./notification');
-var elastic = require('../lib/elastic');
+const elastic = require('../lib/elastic');
 var logger = require('../lib/logger')('eye:jobs');
 
 
@@ -129,7 +129,7 @@ const JobsDispatcher = {
     registerJobOperation(key, job)
 
     // job completed mail.
-    new ResultMail ( job )
+    //new ResultMail ( job )
 
     // trigger result event
     new ResultEvent ( job )
@@ -171,21 +171,7 @@ const JobsDispatcher = {
       content: html,
       to: input.to
     });
-  },
-  // send job canceled email
-  /**
-  sendJobCanceledEmail (input) {
-    var html = `<h3>Task execution on ${input.hostname} canceled</h3>
-    The task ${input.task_name} on host ${input.hostname} at ${input.date} has been canceled.<br/>`;
-
-    NotificationService.sendEmailNotification({
-      customer_name: input.customer_name,
-      subject: `[TASK] Task ${input.task_name} execution on ${input.hostname} canceled`,
-      content: html,
-      to: input.to
-    });
-  },
-  */
+  }
 }
 
 module.exports = JobsDispatcher
@@ -336,113 +322,100 @@ function ResultEvent (job) {
   });
 }
 
-function ResultMail ( job ) {
-  /**
-   *
-   * parse result log and return html to send via email
-   *
-   */
-  const scriptExecutionLog = (job) => {
-    var html
-    var stdout
-    var stderr
-    var code
-    var result = (job.result && job.result.script_result) || null
-
-    if (!result) {
-      html = `<span>script execution is not available</span>`
-    } else {
-      stdout = result.stdout ? result.stdout.trim() : 'no stdout'
-      stderr = result.stderr ? result.stderr.trim() : 'no stderr'
-      code = result.code || 'no code'
-      html = `<pre><ul>
-        <li>stdout : ${stdout}</li>
-        <li>stderr : ${stderr}</li>
-        <li>code : ${code}</li>
-        </ul></pre>`
-    }
-    return html
-  }
-
-  const scriptExecutionMail = (job,emails) => {
-    var state
-    var html
-    var log = scriptExecutionLog(job)
-    var result = job.result
-
-    if (result && result.script_result) {
-      if (result.event=='killed' || result.script_result.killed) {
-        state = 'interrupted'
-        html = `
-          <h3>Task ${job.task.name} execution on host ${job.host.hostname} has been interrupted.</h3>
-          <p>The script ${job.script.filename} execution takes more than 10 minutos to finish and was interrupted.</p>
-          <p>If you need more information, please contact the administrator</p>
-          `
-      } else {
-        state = 'completed'
-        html = `<h3>Task ${job.task.name} execution on ${job.host.hostname} has been completed.</h3>`
-      }
-    }
-
-    html += `<span>Script execution log </span><br/>` + log;
-
-    NotificationService.sendEmailNotification({
-      customer_name: job.customer_name,
-      subject: `[TASK] ${job.task.name} executed on ${job.host.hostname} ${state}`,
-      content: html,
-      to: emails
-    });
-
-    return;
-  }
-
-  this.ScriptJob = function (job,emails) {
-    return scriptExecutionMail(job,emails);
-  }
-
-  this.ScraperJob = function (job,emails) {
-    var html = `<h3>Task ${job.task.name} execution completed on ${job.host.hostname}.</h3>`;
-
-    NotificationService.sendEmailNotification({
-      customer_name: job.customer_name,
-      subject: `[TASK] ${job.task.name} executed on ${job.host.hostname}`,
-      content: html,
-      to: emails
-    });
-  }
-
-  App.customer.getAlertEmails(
-    job.customer_name,
-    (err, emails) => {
-      var mailTo
-      var extraEmail = []
-      var acls = job.task.acl
-
-      if (Array.isArray(acls) && acls.length>0) {
-        extraEmail = acls.filter(email => emails.indexOf(email) === -1);
-      }
-
-      mailTo = extraEmail.length>0 ? emails.concat(extraEmail) : emails;
-
-      job.populate([
-        { path: 'user' },
-        { path: 'host' }
-      ], error => {
-        this[ job._type ]( job, mailTo );
-      });
-    }
-  )
-}
-
-/*
-const CreationMail = (job) => {
-  var html = `<h3>Task ${job.task.name} will run on ${job.host.hostname}.</h3>`;
-
-  NotificationService.sendEmailNotification({
-    customer_name: job.customer_name,
-    subject: `[TASK] New ${job.task.name} execution on ${job.host.hostname}`,
-    content: html,
-    to: job.user.email
-  });
-}
-*/
+//function ResultMail ( job ) {
+//  /**
+//   *
+//   * parse result log and return html to send via email
+//   *
+//   */
+//  const scriptExecutionLog = (job) => {
+//    var html
+//    var stdout
+//    var stderr
+//    var code
+//    var result = (job.result && job.result.script_result) || null
+//
+//    if (!result) {
+//      html = `<span>script execution is not available</span>`
+//    } else {
+//      stdout = result.stdout ? result.stdout.trim() : 'no stdout'
+//      stderr = result.stderr ? result.stderr.trim() : 'no stderr'
+//      code = result.code || 'no code'
+//      html = `<pre><ul>
+//        <li>stdout : ${stdout}</li>
+//        <li>stderr : ${stderr}</li>
+//        <li>code : ${code}</li>
+//        </ul></pre>`
+//    }
+//    return html
+//  }
+//
+//  const scriptExecutionMail = (job,emails) => {
+//    var state
+//    var html
+//    var log = scriptExecutionLog(job)
+//    var result = job.result
+//
+//    if (result && result.script_result) {
+//      if (result.event=='killed' || result.script_result.killed) {
+//        state = 'interrupted'
+//        html = `
+//          <h3>Task ${job.task.name} execution on host ${job.host.hostname} has been interrupted.</h3>
+//          <p>The script ${job.script.filename} execution takes more than 10 minutos to finish and was interrupted.</p>
+//          <p>If you need more information, please contact the administrator</p>
+//          `
+//      } else {
+//        state = 'completed'
+//        html = `<h3>Task ${job.task.name} execution on ${job.host.hostname} has been completed.</h3>`
+//      }
+//    }
+//
+//    html += `<span>Script execution log </span><br/>` + log;
+//
+//    NotificationService.sendEmailNotification({
+//      customer_name: job.customer_name,
+//      subject: `[TASK] ${job.task.name} executed on ${job.host.hostname} ${state}`,
+//      content: html,
+//      to: emails
+//    });
+//
+//    return;
+//  }
+//
+//  this.ScriptJob = function (job,emails) {
+//    return scriptExecutionMail(job,emails);
+//  }
+//
+//  this.ScraperJob = function (job,emails) {
+//    var html = `<h3>Task ${job.task.name} execution completed on ${job.host.hostname}.</h3>`;
+//
+//    NotificationService.sendEmailNotification({
+//      customer_name: job.customer_name,
+//      subject: `[TASK] ${job.task.name} executed on ${job.host.hostname}`,
+//      content: html,
+//      to: emails
+//    });
+//  }
+//
+//  App.customer.getAlertEmails(
+//    job.customer_name,
+//    (err, emails) => {
+//      var mailTo
+//      var extraEmail = []
+//      var acls = job.task.acl
+//
+//      if (Array.isArray(acls) && acls.length>0) {
+//        extraEmail = acls.filter(email => emails.indexOf(email) === -1);
+//      }
+//
+//      mailTo = extraEmail.length>0 ? emails.concat(extraEmail) : emails;
+//
+//      job.populate([
+//        { path: 'user' },
+//        { path: 'host' }
+//      ], error => {
+//        this[ job._type ]( job, mailTo );
+//      });
+//    }
+//  )
+//}

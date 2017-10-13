@@ -375,6 +375,7 @@ function Service (resource) {
 
         // submit monitor result to elastic search
         var key = globalconfig.elasticsearch.keys.monitor.execution;
+        input.hostname = resource.hostname;
         input.name = resource.name;
         input.type = resource.type;
         input.customer_name = resource.customer_name;

@@ -17,7 +17,7 @@ const ScriptTaskTemplate = require('../entity/task/template').ScriptTemplate
 const ScraperTaskTemplate = require('../entity/task/template').ScraperTemplate
 
 // var filter = require('../router/param-filter');
-var elastic = require('../lib/elastic')
+const elastic = require('../lib/elastic')
 var FetchBy = require('../lib/fetch-by')
 var SchedulerService = require('./scheduler')
 
