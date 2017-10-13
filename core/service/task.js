@@ -340,6 +340,7 @@ const TaskService = {
           host_id: task.host_id
         })
         .sort({ creation_date: -1 })
+        .populate('user')
         .exec((err,last) => {
           if (err) return next(err)
 

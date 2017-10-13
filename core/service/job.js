@@ -1,28 +1,27 @@
-"use strict";
+"use strict"
 
-const App = require('../app');
-const async = require('async');
-const globalconfig = require('config');
+const App = require('../app')
+const async = require('async')
+const globalconfig = require('config')
+const logger = require('../lib/logger')('eye:jobs')
+const elastic = require('../lib/elastic')
 const LIFECYCLE = require('../constants/lifecycle')
 const JOBS = require('../constants/jobs')
 
-var JobModels = require('../entity/job');
-var Job = JobModels.Job;
-var ScriptJob = JobModels.Script;
-var ScraperJob = JobModels.Scraper;
-var Script = require('../entity/file').Script;
-var TaskEvent = require('../entity/event').TaskEvent;
-var EventDispatcher = require('./events');
+const JobModels = require('../entity/job')
+const Job = JobModels.Job
+const ScriptJob = JobModels.Script
+const ScraperJob = JobModels.Scraper
 
-var NotificationService = require('./notification');
-const elastic = require('../lib/elastic');
-var logger = require('../lib/logger')('eye:jobs');
+const Script = require('../entity/file').Script
+const TaskEvent = require('../entity/event').TaskEvent
+const EventDispatcher = require('./events')
+const NotificationService = require('./notification')
 
+const STATE_SUCCESS = 'success'
+const STATE_FAILURE = 'failure'
 
-const STATE_SUCCESS = 'success';
-const STATE_FAILURE = 'failure';
-
-const JobsDispatcher = {
+module.exports = {
   /**
    * @param {Object} input
    * @param {Function} next
@@ -77,7 +76,7 @@ const JobsDispatcher = {
       else done(null, job)
     }
 
-    App.taskManager.populate(task, (err, task) => {
+    App.taskManager.populate(task, (err) => {
       if (err) return done(err);
 
       if (!task.host) {
@@ -174,8 +173,6 @@ const JobsDispatcher = {
   }
 }
 
-module.exports = JobsDispatcher
-
 const jobInProgress = (job) => {
   if (!job) return false
   return job.lifecycle === LIFECYCLE.READY ||
@@ -189,7 +186,8 @@ const jobInProgress = (job) => {
  *
  */
 const removeOldJobs = (task) => {
-  Job.remove({ task_id: task._id }, err => {
+  logger.log('removing old jobs of task %s', task._id)
+  Job.remove({ task_id: task._id }, function(err) {
     if (err) {
       logger.error('Failed to remove old jobs registry for task %s', task._id)
       logger.error(err)
