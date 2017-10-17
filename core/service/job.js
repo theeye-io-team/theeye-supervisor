@@ -90,16 +90,16 @@ module.exports = {
         return done(err, task.lastjob)
       }
 
-      removeOldJobs(task)
-
-      if (type == 'script') {
-        createScriptJob(input, afterCreate)
-      } else if (type == 'scraper') {
-        createScraperJob(input, afterCreate)
-      } else {
-        err = new Error('invalid or undefined task type ' + task.type)
-        done(err)
-      }
+      removeOldTaskJobs(task, () => {
+        if (type == 'script') {
+          createScriptJob(input, afterCreate)
+        } else if (type == 'scraper') {
+          createScraperJob(input, afterCreate)
+        } else {
+          err = new Error('invalid or undefined task type ' + task.type)
+          done(err)
+        }
+      })
     })
   },
   /**
@@ -185,13 +185,14 @@ const jobInProgress = (job) => {
  * this registry is just for operations
  *
  */
-const removeOldJobs = (task) => {
+const removeOldTaskJobs = (task, next) => {
   logger.log('removing old jobs of task %s', task._id)
   Job.remove({ task_id: task._id }, function(err) {
     if (err) {
       logger.error('Failed to remove old jobs registry for task %s', task._id)
       logger.error(err)
     }
+    next(err)
   })
 }
 
