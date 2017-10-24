@@ -4,10 +4,14 @@ var logger = require('../lib/logger')(':router:middleware:params-resolver');
 var Host = require('../entity/host').Entity;
 var User = require('../entity/user').Entity;
 var Customer = require('../entity/customer').Entity;
-var isMongoId = require('validator/lib/isMongoId');
+var isMongoId = require('validator/lib/isMongoId')
 
 function firstToUpper(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+const isObject = (value) => {
+  return Object.prototype.toString.call(value) == '[object Object]'
 }
 
 module.exports = {
@@ -21,6 +25,12 @@ module.exports = {
 
     return function (req, res, next) {
       var _id = req.params[paramName]||req.body[paramName]||req.query[paramName];
+
+      if (isObject(_id)) {
+        _id = _id._id || undefined
+      } else if (typeof _id !== 'string') {
+        _id = undefined
+      }
 
       if (!_id) {
         if (options.required) {
