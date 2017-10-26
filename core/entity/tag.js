@@ -8,6 +8,7 @@ const lodash = require('lodash');
 var EntitySchema = Schema({
   name: { type: String },
   creation_date: { type: Date, 'default': new Date() },
+  customer_id: { type: Schema.Types.ObjectId, ref: 'Customer' },
   customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
 });
 
@@ -21,7 +22,7 @@ const specs = {
   transform: function (doc, ret, options) {
     // remove the _id of every document before returning the result
     ret.id = ret._id;
-    delete ret._id;
+    //delete ret._id;
     delete ret.__v;
   }
 };
@@ -35,9 +36,10 @@ EntitySchema.statics.create = function(tags,customer,next){
   var data = tags.map(tag => {
     return {
       name: tag,
+      customer_id: mongoose.Types.ObjectId( customer._id ),
       customer: mongoose.Types.ObjectId( customer._id )
-    };
-  });
+    }
+  })
 
   // find or create
   var instances = [];
