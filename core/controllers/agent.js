@@ -3,6 +3,8 @@
 const systemConfig = require('config').system
 const async = require('async')
 const extend = require('util')._extend
+const MONITORS = require('../constants/monitors')
+
 var json = require('../lib/jsonresponse');
 var logger = require('../lib/logger')('controller:agent');
 var router = require('../router');
@@ -47,33 +49,40 @@ const controller = {
    *
    */
   update (req, res, next) {
-    var host = req.host ;
-    if(!host){
-      logger.error('invalid request for %s. host not found', req.params.hostname);
-      return res.send(404,'invalid host');
+    var host = req.host
+    if (!host) {
+      logger.error('invalid request for %s. host not found', req.params.hostname)
+      return res.send(404,'invalid host')
     }
 
-    logger.log('receiving agent keep alive for host "%s"', host.hostname);
+    logger.log('receiving agent keep alive for host "%s"', host.hostname)
 
-    host.last_update = new Date();
-    host.save(err=>{
-      if(err) return logger.error(err);
+    host.last_update = new Date()
+    host.save(err => {
+      if (err) {
+        logger.error(err)
+        return res.send(500)
+      }
 
-      ResourceManager.findHostResources(host,{
-        'type':'host',
-        'ensureOne':true
-      }, (err,resource) => {
-        if (err||!resource) return;
-        var handler = new ResourceManager(resource);
-        handler.handleState({
-          state:'normal',
-          last_update: new Date()
-        });
-      });
-    });
+      const query = { type: 'host', ensureOne: true }
+      ResourceManager.findHostResources(host, query, (err, resource) => {
+        if (err) {
+          logger.error(err)
+          return res.send(500)
+        }
+        
+        if (!resource) {
+          logger.error('host resource not found.')
+          return res.send(503)
+        }
 
-    res.send(200);
-    return next();
+        let handler = new ResourceManager(resource)
+        handler.handleState({ state: MONITORS.RESOURCE_NORMAL })
+
+        res.send(200)
+        next()
+      })
+    })
   },
   /**
    *

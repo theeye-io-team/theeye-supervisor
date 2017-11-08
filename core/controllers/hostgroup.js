@@ -6,6 +6,8 @@ const router = require('../router')
 const logger = require('../lib/logger')('eye:controller:hostgroup')
 const HostGroup = require('../entity/host/group').Entity
 const HostGroupService = require('../service/host/group')
+const audit = require('../lib/audit')
+const config = require('config')
 
 /**
  *
@@ -14,6 +16,7 @@ const HostGroupService = require('../service/host/group')
  *
  */
 module.exports = function(server, passport) {
+  const crudTopic = config.notifications.topics.hostgroup.crud
   const middleware = [
     passport.authenticate('bearer', {session:false}),
     router.requireCredential('admin'),
@@ -22,7 +25,12 @@ module.exports = function(server, passport) {
   ]
 
   server.get('/:customer/hostgroup',middleware,controller.fetch)
-  server.post('/:customer/hostgroup',middleware,controller.create)
+  server.post(
+    '/:customer/hostgroup',
+    middleware,
+    controller.create,
+    audit.afterCreate('group', { display: 'name', topic: crudTopic })
+  )
 
   server.get('/:customer/hostgroup/:group',
     middleware.concat(
@@ -41,7 +49,9 @@ module.exports = function(server, passport) {
         entity: 'host/group',
         required: true
       })
-    ), controller.replace
+    ),
+    controller.replace,
+    audit.afterReplace('group', { display: 'name', topic: crudTopic })
   )
 
   server.del('/:customer/hostgroup/:group',
@@ -51,7 +61,9 @@ module.exports = function(server, passport) {
         entity: 'host/group',
         required: true
       })
-    ), controller.remove
+    ),
+    controller.remove,
+    audit.afterRemove('group', { display: 'name', topic: crudTopic })
   )
 }
 
@@ -120,7 +132,15 @@ const controller = {
     HostGroupService.remove({
       group: group,
       user: req.user
-    },() => res.send(200))
+    },(err) => {
+      if (err) {
+        logger.error(err)
+        res.send(500)
+      } else {
+        res.send(200)
+        next()
+      }
+    })
   },
   /**
    *
@@ -169,8 +189,9 @@ const controller = {
         responseError(err, res)
       } else {
         res.send(200, group)
+        req.group = group
+        next()
       }
-      next()
     })
   },
   /**
@@ -202,18 +223,18 @@ const controller = {
       resources: body.resources || [] // Array of Objects with resources and monitors definition, all mixed
     }, (err, group) => {
       if (err) {
+        logger.error(err)
         err.statusCode || (err.statusCode = 500)
         responseError(err, res)
       } else {
         res.send(200, group)
+        next()
       }
-      next()
     })
   }
 }
 
 const responseError = (e,res) => {
-  //logger.error('%o',e)
   const errorRes = {
     error: e.message,
     info: []

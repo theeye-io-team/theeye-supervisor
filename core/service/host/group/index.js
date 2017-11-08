@@ -4,7 +4,6 @@ const after = require('lodash/after')
 const assign = require('lodash/assign')
 const config = require('config')
 const async = require('async')
-const elastic = require('../../../lib/elastic')
 const logger = require('../../../lib/logger')('service:host:group')
 
 /** TEMPLATES **/
@@ -26,11 +25,6 @@ const ResourceService = require('../../../service/resource')
 const ResourceTemplateService = require('../../../service/resource/template')
 
 //exports.Monitor = require('./monitor')
-
-const registerGroupCRUDOperation = (customer,data) => {
-  const key = config.elasticsearch.keys.template.crud
-  elastic.submit(customer,key,data)
-}
 
 const Service = module.exports = {
   /**
@@ -74,13 +68,6 @@ const Service = module.exports = {
 
       group.remove((err) => {
         if (err) return done(err)
-        registerGroupCRUDOperation(group.customer_name,{
-          name: group.hostname_regex,
-          customer_name: group.customer_name,
-          user_id: input.user.id,
-          user_email: input.user.email,
-          operation: 'delete'
-        })
         done()
       })
     })
@@ -179,15 +166,6 @@ const Service = module.exports = {
           group.tasks = templates.tasks.map(t => t._id)
           group.save(err => {
             if (err) return next(err)
-
-            registerGroupCRUDOperation(group.customer_name,{
-              name: group.name,
-              regexp: group.hostname_regex,
-              customer_name: group.customer_name,
-              user_id: user.id,
-              user_email: user.email,
-              operation: 'create'
-            })
 
             // host template has been created ! populate all the data
             Service.populate(group,(err) => {

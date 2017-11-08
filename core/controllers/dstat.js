@@ -8,6 +8,7 @@ const HostStats = require('../entity/host/stats').Entity;
 const NotificationService = require('../service/notification');
 const ResourceManager = require('../service/resource');
 const elastic = require('../lib/elastic');
+const MONITORS = require('../constants/monitors.js')
 
 module.exports = function (server, passport) {
   server.post('/:customer/dstat/:hostname',[
@@ -26,16 +27,6 @@ const parseStats = (stats) => {
     }
   }
   return stats;
-}
-
-const elasticSubmit = (data) => {
-  logger.data('dstat %j', data);
-  const key = config.elasticsearch.keys.host.stats;
-  elastic.submit(data.customer_name,key,data);
-  NotificationService.sendSNSNotification(data,{
-    topic: 'host-stats',
-    subject: 'dstat_update'
-  });
 }
 
 /**
@@ -60,39 +51,46 @@ const controller = {
     if (!host) return res.send(404,'invalid host. not found')
     if (!stats) return res.send(400,'stats are required')
 
+    logger.data('dstat %j', stats)
+
     HostStats.findOne({
       host_id: host._id,
-      type:'dstat'
-    },(error,dstat) => {
+      type: MONITORS.RESOURCE_TYPE_DSTAT
+    }, (error,dstat) => {
       if (error) {
-        return logger.error(error)
+        logger.error(error)
+        return
       }
 
       if (dstat == null) {
-        logger.log('creating host dstat');
-        HostStats.create(host,'dstat',stats);
+        logger.log('creating host dstat')
+        HostStats.create(host, MONITORS.RESOURCE_TYPE_DSTAT, stats)
       } else {
-        logger.log('updating host dstat');
+        logger.log('updating host dstat')
 
-        var date = new Date();
-        dstat.last_update = date;
-        dstat.last_update_timestamp = date.getTime();
-        dstat.stats = stats;
-        dstat.save();
+        var date = new Date()
+        dstat.last_update = date
+        dstat.last_update_timestamp = date.getTime()
+        dstat.stats = stats
+        dstat.save()
       }
-    });
-
-    logger.log('resending dstat data');
-
-    elasticSubmit({
-      timestamp: (new Date()).getTime(),
-      date: (new Date()).toISOString(),
-      customer_name: customer.name,
-      hostname: host.hostname,
-      stats: req.body.dstat,
-      type: 'host-stats'
     })
 
-    return res.send(200);
+    logger.log('resending dstat data')
+
+    const topic = config.notifications.topics.host.stats;
+    const data = {
+      organization: customer.name,
+      hostname: host.hostname,
+      stats: req.body.dstat
+    }
+
+    elastic.submit(customer.name, topic, data) // topic = config.notifications.topics.host.stats
+
+    NotificationService.sendSNSNotification(data,{
+      topic: topic, subject: 'dstat_update'
+    })
+
+    return res.send(200)
   }
 }

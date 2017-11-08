@@ -9,7 +9,6 @@ var extend = require('util')._extend;
 var Script = require("../entity/file").Script;
 var Task = require("../entity/task").Entity;
 var logger = require('../lib/logger')('service:script');
-var elastic = require('../lib/elastic');
 var storage = require('../lib/storage').get();
 
 /**
@@ -51,12 +50,6 @@ function updateScriptFile (file, script, doneFn) {
 function getScriptKeyname (filename) {
   return filename + '[ts:' + Date.now() + ']' ;
 }
-
-function registerScriptCRUDOperation(customer,data) {
-  var key = config.elasticsearch.keys.script.crud;
-  elastic.submit(customer,key,data);
-}
-
 
 module.exports = {
   create: function (input,next) {
@@ -101,14 +94,6 @@ module.exports = {
     Script.create(options,function(error,script){
       var customer_name = input.customer.name;
       if(error) return next(error,null);
-
-      registerScriptCRUDOperation(customer_name,{
-        'name':script.name,
-        'customer_name':customer_name,
-        'user_id':input.user.id,
-        'user_email':input.user.email,
-        'operation':'create'
-      });
       return next(null,script);
     });
   },
@@ -137,15 +122,6 @@ module.exports = {
       logger.log('updating script');
       script.update(updates,error => {
         if(error) return next(error);
-        registerScriptCRUDOperation(
-          input.customer.name, {
-            'name':script.name,
-            'customer_name':input.customer.name,
-            'user_id':input.user.id,
-            'user_email':input.user.email,
-            'operation':'update'
-          }
-        );
         logger.log('script updated');
         next(null,script);
       });
@@ -163,15 +139,6 @@ module.exports = {
       var filter = {_id:script._id};
       Script.remove(filter,function(error){
         if(error) return next(error);
-
-        registerScriptCRUDOperation(input.customer.name,{
-          name: script.name,
-          customer_name: input.customer.name,
-          user_id: input.user.id,
-          user_email: input.user.email,
-          operation: 'delete'
-        });
-
         next();
       });
 

@@ -28,10 +28,7 @@ module.exports = {
   },
   "elasticsearch": {
     "enabled": false,
-    "url":"http://localhost:9200", // via ssh tunnel
-    "keys":{
-      //"prefix":"localdev-"
-    }
+    "url":"http://localhost:9200" // via ssh tunnel
   },
   "mailer": {
     "from": "The Eye Development %customer% <%customer%@theeye.io>",

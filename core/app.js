@@ -15,15 +15,29 @@ const App = {
     const passport = auth.initialize();
 
     server.pre( (req,res,next) => {
-      logger.log('REQUEST %s %s', req.method, req.url);
-      next();
-    });
+      logger.log('REQUEST %s %s', req.method, req.url)
+      next()
+    })
 
-    server.use(restify.acceptParser(server.acceptable));
-    server.use(restify.gzipResponse());
-    server.use(restify.queryParser());
-    server.use(restify.jsonBodyParser());
-    server.use(passport.initialize());
+    // respond with error middleware
+    server.use((req,res,next) => {
+      res.sendError = (err,next) => {
+        const status = err.statusCode || 500
+        res.send(status, {
+          statusCode: status,
+          message: err.message,
+          errors: err.errors
+        })
+        if (next) next()
+      }
+      next()
+    })
+
+    server.use(restify.acceptParser(server.acceptable))
+    server.use(restify.gzipResponse())
+    server.use(restify.queryParser())
+    server.use(restify.jsonBodyParser())
+    server.use(passport.initialize())
     server.use(multer({
       dest: config.system.file_upload_folder ,
       rename: (fieldname, filename) => {

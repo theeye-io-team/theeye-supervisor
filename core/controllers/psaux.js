@@ -1,5 +1,6 @@
 'use strict';
 
+const MONITORS = require('../constants/monitors')
 var json = require('../lib/jsonresponse');
 var HostStats = require('../entity/host/stats').Entity;
 var NotificationService = require('../service/notification');
@@ -60,10 +61,7 @@ var controller = {
     },(err,resource)=>{
       if(err||!resource)return;
       var handler = new ResourceManager(resource);
-      handler.handleState({
-        last_update: new Date(),
-        state: 'normal'
-      });
+      handler.handleState({ state: MONITORS.RESOURCE_NORMAL })
     });
 
     NotificationService.sendSNSNotification({

@@ -6,7 +6,8 @@ const assign = require('lodash/assign')
 const globalconfig = require('config')
 const logger = require('../../lib/logger')('service:resource')
 const elastic = require('../../lib/elastic')
-const Constants = require('../../constants/monitors')
+const CONSTANTS = require('../../constants')
+const MONITORS = require('../../constants/monitors')
 const Lifecycle = require('../../constants/lifecycle')
 const CustomerService = require('../customer')
 const NotificationService = require('../notification')
@@ -26,27 +27,25 @@ function Service (resource) {
   var _resource = resource;
 
   function logStateChange (resource,input) {
-    var data = {
-      date: (new Date()).toISOString(),
-      timestamp: (new Date()).getTime(),
-      state: input.state,
+    const data = {
       hostname: resource.hostname,
-      customer_name: resource.customer_name,
-      resource_id: resource._id,
-      resource_name: resource.name,
-      resource_type: resource.type,
-      type: 'resource-stats'
-    };
+      state: input.state,
+      organization: resource.customer_name,
+      id: resource._id,
+      name: resource.name,
+      type: resource.type,
+      operation: CONSTANTS.UPDATE
+    }
 
-    var key = globalconfig.elasticsearch.keys.resource.stats;
-    elastic.submit(resource.customer_name,key,data);
+    const topic = globalconfig.notifications.topics.monitor.state
+    elastic.submit(resource.customer_name, topic, data) // topic = globalconfig.notifications.topics.monitor.state
   }
 
   function dispatchStateChangeSNS (resource, options) {
     NotificationService.sendSNSNotification(resource,{
       topic:'events',
       subject:'resource_update'
-    });
+    })
   }
 
   function sendResourceEmailAlert (resource,input) {
@@ -119,13 +118,13 @@ function Service (resource) {
   }
 
   function needToSendUpdatesStoppedEmail (resource) {
-    return resource.type === Constants.RESOURCE_TYPE_HOST ||
-      resource.failure_severity === Constants.MONITOR_SEVERITY_CRITICAL;
+    return resource.type === MONITORS.RESOURCE_TYPE_HOST ||
+      resource.failure_severity === MONITORS.MONITOR_SEVERITY_CRITICAL;
   }
 
-  function handleFailureState (resource,input,config) {
-    var newState = Constants.RESOURCE_FAILURE;
-    var failure_threshold = config.fails_count_alert;
+  const handleFailureState = (resource,input,config) => {
+    const newState = MONITORS.RESOURCE_FAILURE;
+    const failure_threshold = config.fails_count_alert;
     logger.log('resource "%s" check fails.', resource.name);
 
     resource.last_event = input;
@@ -155,22 +154,22 @@ function Service (resource) {
           message:'monitor failure',
           data:input
         });
-        dispatchResourceEvent(resource,Constants.RESOURCE_FAILURE);
+        dispatchResourceEvent(resource,MONITORS.RESOURCE_FAILURE);
       }
     }
   }
 
-  function handleNormalState (resource,input,config) {
+  const handleNormalState = (resource,input,config) => {
     logger.log('"%s"("%s") state is normal', resource.name, resource.type);
 
-    var failure_threshold = config.fails_count_alert;
-    var isRecoveredFromFailure = Boolean(resource.state===Constants.RESOURCE_FAILURE);
+    const failure_threshold = config.fails_count_alert;
+    const isRecoveredFromFailure = Boolean(resource.state===MONITORS.RESOURCE_FAILURE);
 
     resource.last_event = input;
 
     // failed at least once
-    if (resource.fails_count!==0||resource.state!==Constants.RESOURCE_NORMAL) {
-      resource.state = Constants.RESOURCE_NORMAL;
+    if (resource.fails_count!==0||resource.state!==MONITORS.RESOURCE_NORMAL) {
+      resource.state = MONITORS.RESOURCE_NORMAL;
       // resource failure was alerted ?
       if (resource.fails_count >= failure_threshold) {
         logger.log('"%s" has been restored', resource.name);
@@ -179,7 +178,7 @@ function Service (resource) {
           input.event||(input.event=input.state);
         } else {
           // is recovered from "stop sending updates"
-          input.event = Constants.RESOURCE_RECOVERED;
+          input.event = MONITORS.RESOURCE_RECOVERED;
         }
 
         input.failure_severity = getEventSeverity(input.event,resource);
@@ -193,7 +192,7 @@ function Service (resource) {
         }
 
         logStateChange(resource,input);
-        dispatchResourceEvent(resource,Constants.RESOURCE_RECOVERED);
+        dispatchResourceEvent(resource,MONITORS.RESOURCE_RECOVERED);
         dispatchStateChangeSNS(resource,{
           message:(input.message||'monitor normal'),
           data:input
@@ -207,9 +206,9 @@ function Service (resource) {
   }
 
   const handleUpdatesStoppedState = (resource,input,config) => {
-    const newState = Constants.RESOURCE_STOPPED;
+    const newState = MONITORS.RESOURCE_STOPPED;
     const failure_threshold = config.fails_count_alert;
-    const isHost = (resource.type === Constants.RESOURCE_TYPE_HOST)
+    const isHost = (resource.type === MONITORS.RESOURCE_TYPE_HOST)
     resource.fails_count++;
 
     logger.log(
@@ -229,7 +228,7 @@ function Service (resource) {
       }
 
       logStateChange(resource,input)
-      dispatchResourceEvent(resource,Constants.RESOURCE_STOPPED)
+      dispatchResourceEvent(resource,MONITORS.RESOURCE_STOPPED)
       dispatchStateChangeSNS(resource,{
         message: 'updates stopped',
         data: input
@@ -282,19 +281,12 @@ function Service (resource) {
     resource.last_event = input;
     input.failure_severity = getEventSeverity(input.event,resource);
     sendResourceEmailAlert(resource,input);
-    dispatchResourceEvent(resource,Constants.RESOURCE_CHANGED);
+    dispatchResourceEvent(resource,MONITORS.RESOURCE_CHANGED);
     logStateChange(resource,input);
     dispatchStateChangeSNS(resource,{
       message: 'file changed',
       data: input
     });
-  }
-
-  function isSuccess (state) {
-    return Constants.SUCCESS_STATES.indexOf( state.toLowerCase() ) != -1 ;
-  }
-  function isFailure (state) {
-    return Constants.FAILURE_STATES.indexOf( state.toLowerCase() ) != -1 ;
   }
 
   /**
@@ -304,15 +296,29 @@ function Service (resource) {
    * @return String
    *
    */
+  function isSuccess (state) {
+    return MONITORS.SUCCESS_STATES.indexOf(state.toLowerCase()) != -1
+  }
+  function isFailure (state) {
+    return MONITORS.FAILURE_STATES.indexOf(state.toLowerCase()) != -1
+  }
   function filterStateEvent (state) {
-    if (!state||typeof state != 'string') return Constants.RESOURCE_ERROR;
+    if (!state||typeof state != 'string') {
+      return MONITORS.RESOURCE_ERROR
+    }
 
     // is a recognized state
-    if (Constants.MONITOR_STATES.indexOf(state) !== -1) return state;
-    if (isSuccess(state)) return Constants.RESOURCE_NORMAL;
-    if (isFailure(state)) return Constants.RESOURCE_FAILURE;
-    // if no state is defined , return error
-    return Constants.RESOURCE_ERROR;
+    if (MONITORS.MONITOR_STATES.indexOf(state) !== -1) {
+      return state
+    }
+
+    if (isSuccess(state)) {
+      return MONITORS.RESOURCE_NORMAL
+    }
+    if (isFailure(state)) {
+      return MONITORS.RESOURCE_FAILURE
+    }
+    return MONITORS.RESOURCE_ERROR
   }
 
   /**
@@ -322,77 +328,72 @@ function Service (resource) {
    * @return null
    */
   this.handleState = function (input,next) {
-    next||(next=function(){});
-    var resource = _resource;
+    next || (next=function(){})
+    const resource = _resource
+    const state = filterStateEvent(input.state)
+    input.state = state
 
-    var state = filterStateEvent(input.state);
-    input.state = state;
+    resource.last_check = new Date()
 
-    if (input.last_update) resource.last_update = input.last_update;
-    if (input.last_check) resource.last_check = input.last_check;
-
-    logger.data(
-      'resource %s type %s state change %o',
-      resource.type,
-      resource.name,
-      input
-    )
-
-    CustomerService.getCustomerConfig(
-      resource.customer_id,
-      (err,config) => {
-        if (err||!config) {
-          throw new Error('customer config unavailable');
-        }
-        var monitorConfig = config.monitor;
-
-        switch (input.state) {
-          case Constants.RESOURCE_CHANGED:
-            handleChangedStateEvent(resource,input,monitorConfig);
-            break;
-          // monitoring update event. detected stop
-          case Constants.AGENT_STOPPED:
-          case Constants.RESOURCE_STOPPED:
-            handleUpdatesStoppedState(resource,input,monitorConfig)
-            break;
-          case Constants.RESOURCE_NORMAL:
-            resource.last_update = new Date();
-            handleNormalState(resource,input,monitorConfig);
-            break;
-          default:
-          case Constants.RESOURCE_FAILURE:
-            resource.last_update = new Date();
-            handleFailureState(resource,input,monitorConfig);
-            break;
-        }
-
-        resource.save(err => {
-          if (err) {
-            logger.error('error saving resource state');
-            logger.error(err, err.errors);
-          }
-        });
-
-        // submit monitor result to elastic search
-        var key = globalconfig.elasticsearch.keys.monitor.execution;
-        input.hostname = resource.hostname;
-        input.name = resource.name;
-        input.type = resource.type;
-        input.customer_name = resource.customer_name;
-        elastic.submit(resource.customer_name,key,input);
-
-        next();
+    CustomerService.getCustomerConfig(resource.customer_id, (err,config) => {
+      if (err || !config) {
+        throw new Error('customer config unavailable')
       }
-    )
+
+      const monitorConfig = config.monitor
+
+      switch (state) {
+        case MONITORS.RESOURCE_CHANGED:
+          handleChangedStateEvent(resource, input, monitorConfig)
+          break
+        case MONITORS.AGENT_STOPPED:
+        case MONITORS.RESOURCE_STOPPED:
+          handleUpdatesStoppedState(resource, input, monitorConfig)
+          break
+        case MONITORS.RESOURCE_NORMAL:
+          resource.last_update = new Date()
+          handleNormalState(resource, input, monitorConfig)
+          break
+        default:
+        case MONITORS.RESOURCE_FAILURE:
+          resource.last_update = new Date()
+          handleFailureState(resource, input, monitorConfig)
+          break
+      }
+
+      resource.save(err => {
+        if (err) {
+          logger.error('error saving resource state')
+          logger.error(err, err.errors)
+        }
+      })
+
+      //input.hostname = resource.hostname
+      //input.name = resource.name
+      //input.type = resource.type
+      //input.customer_name = resource.customer_name
+
+      let payload = {
+        hostname: resource.hostname,
+        organization: resource.customer_name,
+        model_name: resource.name,
+        model_type: resource.type,
+        model_id: resource._id,
+        operation: CONSTANTS.UPDATE,
+        result: resource.last_event.data,
+        state: resource.state
+      }
+
+      // submit monitor result to elastic search
+      var topic = globalconfig.notifications.topics.monitor.execution
+      elastic.submit(resource.customer_name, topic, payload) // topic = globalconfig.notifications.topics.monitor.execution
+
+      next()
+    })
   }
 }
 
 module.exports = Service;
-
-function registerResourceCRUDOperation(customer,data) {
-  var key = globalconfig.elasticsearch.keys.monitor.crud;
-  elastic.submit(customer,key,data);
-}
 
 Service.populate = function (resource,done) {
   return resource.populate({},done)
@@ -446,18 +447,18 @@ Service.findHostResources = function(host,options,done) {
  *
  */
 Service.create = function (input, next) {
-  next||(next=function(){});
-  logger.log('creating resource for host %j', input);
-  var type = (input.type||input.monitor_type);
+  next||(next=function(){})
+  logger.log('creating resource for host %j', input)
+  var type = (input.type||input.monitor_type)
 
   ResourceMonitorService.setMonitorData(type,input,function(error,monitor_data){
     if (error) {
-      return next(error);
+      return next(error)
     }
     if (!monitor_data) {
-      var e = new Error('invalid resource data');
-      e.statusCode = 400;
-      return next(e);
+      var e = new Error('invalid resource data')
+      e.statusCode = 400
+      return next(e)
     }
 
     createResourceAndMonitor({
@@ -470,23 +471,26 @@ Service.create = function (input, next) {
       var monitor = result.monitor;
       var resource = result.resource;
       logger.log('resource & monitor created');
-      registerResourceCRUDOperation(
-        monitor.customer_name,{
-          name: monitor.name,
-          type: resource.type,
-          customer_name: monitor.customer_name,
-          user_id: input.user_id,
-          user_email: input.user_email,
-          operation: 'create'
-        }
-      );
+
+      const topic = globalconfig.notifications.topics.monitor.crud
+      elastic.submit(monitor.customer_name, topic, { // topic = globalconfig.notifications.topics.monitor.crud , BULK CREATE
+        hostname: monitor.hostname,
+        organization: monitor.customer_name,
+        model_id: monitor._id,
+        model_name: monitor.name,
+        model_type: monitor.type,
+        user_id: input.user._id,
+        user_email: input.user.email,
+        user_name: input.user.username,
+        operation: CONSTANTS.CREATE
+      })
 
       Service.createDefaultEvents(monitor,input.customer)
-      Tag.create(input.tags,input.customer);
-      AgentUpdateJob.create({ host_id: monitor.host_id });
-      next(null,result);
-    });
-  });
+      Tag.create(input.tags,input.customer)
+      AgentUpdateJob.create({ host_id: monitor.host_id })
+      next(null,result)
+    })
+  })
 }
 
 Service.createDefaultEvents = (monitor,customer,done) => {
@@ -500,21 +504,21 @@ Service.createDefaultEvents = (monitor,customer,done) => {
 
   MonitorEvent.create(
     // NORMAL state does not trigger EVENT
-    //{ customer: customer, emitter: monitor, name: Constants.RESOURCE_NORMAL } ,
-    Object.assign({}, base, { name: Constants.RESOURCE_RECOVERED }) ,
-    Object.assign({}, base, { name: Constants.RESOURCE_STOPPED }) ,
-    Object.assign({}, base, { name: Constants.RESOURCE_FAILURE }) ,
+    //{ customer: customer, emitter: monitor, name: MONITORS.RESOURCE_NORMAL } ,
+    Object.assign({}, base, { name: MONITORS.RESOURCE_RECOVERED }) ,
+    Object.assign({}, base, { name: MONITORS.RESOURCE_STOPPED }) ,
+    Object.assign({}, base, { name: MONITORS.RESOURCE_FAILURE }) ,
     (err) => {
       if (err) logger.error(err)
     }
   );
 
-  if (monitor.type === Constants.RESOURCE_TYPE_FILE) {
+  if (monitor.type === MONITORS.RESOURCE_TYPE_FILE) {
     MonitorEvent.create({
       customer: customer,
       emitter: monitor,
       emitter_id: monitor._id,
-      name: Constants.RESOURCE_CHANGED
+      name: MONITORS.RESOURCE_CHANGED
     }, err => {
       if (err) logger.error(err);
     });
@@ -542,16 +546,17 @@ Service.update = function(input,next) {
   updates.template = null
   updates.template_id = null
 
-  resource.update(updates,function(error){
-    if (error) {
-      logger.error(error);
-      return next(error);
+  resource.update(updates,(err) => {
+    if (err) {
+      logger.error(err)
+      return next(err)
     }
 
     MonitorModel.findOne({
       resource_id: resource._id
     },function(error,monitor){
       if (error) {
+        logger.error(err)
         return next(error)
       }
       if (!monitor) {
@@ -559,28 +564,20 @@ Service.update = function(input,next) {
       }
 
       var previous_host_id = monitor.host_id
-      monitor.update(updates,function(error){
-        if(error) return next(error);
-
-        registerResourceCRUDOperation(
-          monitor.customer_name,{
-            name: monitor.name,
-            type: resource.type,
-            customer_name: monitor.customer_name,
-            user_id: input.user_id,
-            user_email: input.user_email,
-            operation: 'update'
-          }
-        );
-
-        AgentUpdateJob.create({ host_id: updates.host_id });
-        // if monitor host changes, the new and the old agents should be notified
-        if(previous_host_id != updates.host_id){
-          AgentUpdateJob.create({ host_id: previous_host_id });
+      monitor.update(updates,(err) => {
+        if (err) {
+          logger.error(err)
+          return next(err)
         }
 
-        Tag.create(updates.tags,{ _id: resource.customer_id });
-        next(null,resource);
+        AgentUpdateJob.create({ host_id: updates.host_id })
+        // if monitor host changes, the new and the old agents should be notified
+        if (previous_host_id != updates.host_id) {
+          AgentUpdateJob.create({ host_id: previous_host_id })
+        }
+
+        Tag.create(updates.tags,{ _id: resource.customer_id })
+        next(null,resource)
       })
     })
   })
@@ -590,7 +587,7 @@ function getEventSeverity (event,resource) {
   logger.log('resource event is "%s"', event);
 
   const hasSeverity = resource.failure_severity &&
-    Constants.MONITOR_SEVERITIES.indexOf(
+    MONITORS.MONITOR_SEVERITIES.indexOf(
       resource.failure_severity.toUpperCase()
     ) !== -1
 
@@ -651,7 +648,6 @@ Service.fetchBy = function (filter,next) {
  */
 Service.remove = function (input, done) {
   done||(done=function(){});
-
   var resource = input.resource;
   var notifyAgents = input.notifyAgents;
 
@@ -660,10 +656,12 @@ Service.remove = function (input, done) {
   MonitorModel.find({
     resource_id: resource._id
   },function(error,monitors){
-    if(monitors.length !== 0){
-      var monitor = monitors[0];
+    if (monitors.length !== 0) {
+      var monitor = monitors[0]
       monitor.remove(function(err){
-        if(err) return logger.error(err);
+        if (err) {
+          return logger.error(err)
+        }
 
         MonitorEvent.remove({
           emitter_id: monitor._id
@@ -672,31 +670,19 @@ Service.remove = function (input, done) {
         })
 
         logger.log('monitor %s removed', monitor.name);
-        if(notifyAgents) {
+        if (notifyAgents) {
           AgentUpdateJob.create({ host_id: monitor.host_id });
         }
-      });
+      })
     } else {
-      logger.error('monitor not found.');
+      logger.error('monitor not found.')
     }
 
     resource.remove(function(err){
-      if(err) return done(err);
-
-      registerResourceCRUDOperation(
-        resource.customer_name,{
-          'name':resource.name,
-          'type':resource.type,
-          'customer_name':resource.customer_name,
-          'user_id':input.user.id,
-          'user_email':input.user.email,
-          'operation':'delete'
-        }
-      );
-
-      done();
-    });
-  });
+      if (err) return done(err)
+      done()
+    })
+  })
 }
 
 Service.disableResourcesByCustomer = function(customer, doneFn){
@@ -878,7 +864,7 @@ const handleHostIdAndData = (hostId, input, doneFn) => {
     input.hostname = host.hostname
 
     Service.create(input, doneFn)
-  });
+  })
 }
 
 /**

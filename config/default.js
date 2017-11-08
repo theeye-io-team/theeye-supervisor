@@ -132,46 +132,49 @@ module.exports = {
     }
   },
   "elasticsearch": {
-    "enabled":false,
-    "url":"",
-    "keys":{
-      "prefix":null,
-      "agent":{
-        "version":"agent-version"
+    "enabled": false,
+    "url": "",
+  },
+  "notifications": {
+    "topics": {
+      "agent": {
+        "version": "agent-version"
       },
-      "host":{
-        "stats":"host-stats",
+      "host": {
+        "stats": "host-stats",
       },
-      "resource":{
-        "stats":"resource-stats",
+      //"resource": {
+      //  "stats": "resource-stats",
+      //},
+      "monitor": {
+        "crud": "monitor-crud",
+        "execution": "monitor-execution",
+        "state": "monitor-state",
       },
-      "monitor":{
-        "crud":"crud-monitor",
-        "execution":"monitor-execution"
+      "script": {
+        "crud": "script-crud"
       },
-      "script":{
-        "crud":"crud-script"
+      "file": {
+        "crud": "file-crud"
       },
-      "file":{
-        "crud":"crud-file"
+      "hostgroup": {
+        "crud": "provisioning-crud",
       },
-      "template":{
-        "crud":"crud-template",
-        "task":{"crud":"crud-task-template"},
-        "monitor":{"crud":"crud-monitor-template"}
+      "host": {
+        "crud": "host-crud",
+        "stats": "host-stats"
       },
-      "host":{
-        "crud":"crud-host",
-        "stats":"host-stats"
+      "task": {
+        "crud": "task-crud",
+        "execution": "task-execution",
+        "result": "task-result"
       },
-      "task":{
-        "crud":"crud-task",
-        "execution":"task-execution",
-        "result":"task-result"
+      "job": {
+        "crud": "job-crud"
       },
-      "webhook":{
-        "crud":"crud-webhook",
-        "triggered":"triggered-webhook"
+      "webhook": {
+        "crud": "webhook-crud",
+        "triggered": "triggered-webhook"
       }
     }
   },

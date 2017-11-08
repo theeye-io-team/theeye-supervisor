@@ -10,8 +10,8 @@ var ResourceService = require('./resource');
 var CustomerService = require('./customer');
 var HostService = require('./host');
 
-const Constants = require('../constants/monitors');
-const Scheduler = require('../service/scheduler');
+const MONITORS = require('../constants/monitors')
+const Scheduler = require('../service/scheduler')
 
 module.exports = {
   start: function () {
@@ -108,10 +108,7 @@ function checkResourceMonitorStatus (resource,cconfig,done) {
 
     if( trigger === true ) {
       var manager = new ResourceService(resource);
-      manager.handleState({
-        state: Constants.RESOURCE_STOPPED,
-        last_check: new Date()
-      });
+      manager.handleState({ state: MONITORS.RESOURCE_STOPPED })
     } else {
       resource.last_check = new Date();
       resource.save();
@@ -135,10 +132,7 @@ function checkHostResourceStatus (resource, cconfig, done) {
 
   if( trigger === true ) {
     var manager = new ResourceService(resource);
-    manager.handleState({
-      state: Constants.RESOURCE_STOPPED,
-      last_check: new Date()
-    });
+    manager.handleState({ state: MONITORS.RESOURCE_STOPPED })
   } else {
     resource.last_check = new Date();
     resource.save();

@@ -18,7 +18,7 @@ function BaseSchema (specs) {
     customer_name: { type: String },
     name: { type: String },
     notify: { type: Boolean },
-    state: { type: String },
+    state: { type: String, default: 'unknown' },
     lifecycle: { type: String },
     result: { type: Object, default: {} },
     creation_date: { type: Date, default: Date.now },

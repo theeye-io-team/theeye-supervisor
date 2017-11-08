@@ -11,15 +11,19 @@ const Host = require('../entity/host').Entity;
 const Job = require('../entity/job').Job;
 const router = require('../router');
 const dbFilter = require('../lib/db-filter');
+const audit = require('../lib/audit')
 const ACL = require('../lib/acl');
+const config = require('config')
 
 module.exports = function (server, passport) {
+  const crudTopic = config.notifications.topics.monitor.crud
+
   // default middlewares
   var middlewares = [
     passport.authenticate('bearer',{session:false}),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,
-  ];
+  ]
 
   server.get(
     '/:customer/resource',
@@ -45,8 +49,9 @@ module.exports = function (server, passport) {
       router.requireCredential('admin'),
       router.filter.spawn({filter:'emailArray',param:'acl'})
     ]),
-    controller.create
-  );
+    controller.bulkCreate
+    //audit.afterCreate('resource',{ display: 'name' }) // cannot audit bulk creation
+  )
 
   server.del(
     '/:customer/resource/:resource',
@@ -54,7 +59,8 @@ module.exports = function (server, passport) {
       router.requireCredential('admin'),
       router.resolve.idToEntity({param:'resource',required:true})
     ]),
-    controller.remove
+    controller.remove,
+    audit.afterRemove('resource',{ display: 'name', topic: crudTopic })
   );
 
 
@@ -64,20 +70,31 @@ module.exports = function (server, passport) {
     //router.resolve.idToEntity({param:'host_id',entity:'host',into:'host'}),
     router.filter.spawn({filter:'emailArray',param:'acl'})
   ]);
-  server.patch('/:customer/resource/:resource', updateMiddlewares, controller.update);
+
+  server.patch(
+    '/:customer/resource/:resource',
+    updateMiddlewares,
+    controller.update,
+    audit.afterReplace('resource',{ display: 'name', topic: crudTopic  })
+  )
 
   //
   // KEEP BACKWARD COMPATIBILITY WITH OLDER AGENT VERSIONS.
   // SUPPORTED FROM VERSION v0.9.3-beta-11-g8d1a93b
   //
-  server.put('/:customer/resource/:resource', updateMiddlewares, function(req,res,next){
-    // some older version of the agent are still updating resources state using this URL. need to keep it
-    if (req.user.credential==='agent') {
-      controller.update_state.apply(controller, arguments);
-    } else {
-      controller.update.apply(controller, arguments);
-    }
-  });
+  server.put(
+    '/:customer/resource/:resource',
+    updateMiddlewares,
+    function(req,res,next){
+      // some older version of the agent are still updating resources state using this URL. need to keep it
+      if (req.user.credential==='agent') {
+        controller.update_state.apply(controller, arguments);
+      } else {
+        controller.update.apply(controller, arguments);
+      }
+    },
+    audit.afterReplace('resource',{ display: 'name', topic: crudTopic })
+  )
 
   /**
    *
@@ -90,8 +107,9 @@ module.exports = function (server, passport) {
       router.requireCredential('admin'),
       router.resolve.idToEntity({param:'resource',required:true})
     ]),
-    controller.update_alerts
-  );
+    controller.update_alerts,
+    audit.afterUpdate('resource',{ display: 'name', topic: crudTopic })
+  )
 
   server.patch(
     '/:customer/resource/:resource/state',
@@ -99,11 +117,12 @@ module.exports = function (server, passport) {
       router.requireCredential('agent',{exactMatch:true}),
       router.resolve.idToEntity({param:'resource',required:true})
     ]),
-    controller.update_state
-  );
+    controller.update_state,
+    audit.afterUpdate('resource',{ display: 'name', topic: crudTopic })
+  )
 }
 
-var controller = {
+const controller = {
   /**
    *
    * @method GET
@@ -114,10 +133,11 @@ var controller = {
     Monitor
       .findOne({ resource: resource._id })
       .exec(function(err,monitor){
-        var data = resource.toObject();
-        data.monitor = monitor;
-        res.send(200, data);
-      });
+        var data = resource.toObject()
+        data.monitor = monitor
+        res.send(200, data)
+        next()
+      })
   },
   /**
    *
@@ -141,12 +161,13 @@ var controller = {
     ResourceManager.fetchBy(filter,(err,resources) => {
       if (err) {
         logger.error(err)
-        res.send(500,err)
+        res.send(500)
       } else if (!Array.isArray(resources)) {
         res.send(503, new Error('resources not available'))
       } else {
         if (resources.length===0) {
           res.send(200,[])
+          next()
         } else {
           var resource
           for (var i=0; i<resources.length; i++) {
@@ -158,6 +179,7 @@ var controller = {
             }
           }
           res.send(200,resources)
+          next()
         }
       }
     })
@@ -176,7 +198,8 @@ var controller = {
         resource: resource,
         user: req.user
       })
-      res.send(200,{})
+      res.send(204)
+      next()
     } else {
       logger.log('removing resource')
       ResourceManager.remove({
@@ -185,14 +208,14 @@ var controller = {
         user: req.user
       })
       res.send(200,{})
+      next()
     }
   },
   /**
-   *
+   * @summary Create many resources on hosts
    * @method POST
-   *
    */
-  create (req,res,next) {
+  bulkCreate (req,res,next) {
     const customer = req.customer
     const body = req.body
     const hosts = body.hosts
@@ -216,34 +239,32 @@ var controller = {
     }
 
     var input = params.data
-    input.user_id = req.user._id
-    input.user_email = req.user.email
+    input.user = req.user
+    //input.user_id = req.user._id
+    //input.user_email = req.user.email
     input.customer = customer
     input.customer_id = customer.id
     input.customer_name = customer.name
 
-    ResourceManager.createResourceOnHosts(hosts,input,function(error,results){
+    ResourceManager.createResourceOnHosts(hosts, input, (error,results) => {
       if (error) {
         if (error.errors) {
-          var messages=[];
-          for(var err in error.errors){
-            var e = errors[err];
-            messages.push({
-              field: e.path,
-              type: e.kind
-            });
+          var messages=[]
+          for (var err in error.errors) {
+            var e = errors[err]
+            messages.push({ field: e.path, type: e.kind })
           }
-
-          return res.send(400, error.errors);
+          return res.send(400, error.errors)
         } else {
-          logger.error(error);
-          return res.send(500, json.error('internal error', error));
+          logger.error(error)
+          return res.send(500, json.error('internal error', error))
         }
       } else {
-        logger.log('resources created');
-        return res.send(201, results);
+        logger.log('resources created')
+        res.send(201, results)
+        next()
       }
-    });
+    })
   },
   /**
    *
@@ -277,19 +298,26 @@ var controller = {
         user_id: req.user._id,
         resource: resource,
         updates: updates
-      },(error,resource) => {
-        if (error) {
-          res.send(500,json.error('update error',error.message));
+      },(err,resource) => {
+        if (err) {
+          logger.error(err)
+          res.send(500)
         } else {
-          res.send(200,resource);
+          res.send(200,resource)
+          next()
         }
       })
     }
 
     if (updates.host_id) {
       Host.findById(updates.host_id, (err, host) => {
-        if (err) return res.send(500,err)
-        if (!host) return res.send(400,'invalid host')
+        if (err) {
+          logger.error(err)
+          res.send(500)
+        }
+        if (!host) {
+          return res.send(400,'invalid host')
+        }
         updates.host_id = host._id
         updates.host = host._id
         updates.hostname = host.hostname
@@ -308,12 +336,16 @@ var controller = {
    *
    */
   update_alerts (req, res, next) {
-    var resource = req.resource;
-    resource.alerts = req.params.alerts;
-    resource.save(error => {
-      if (error) res.send(500);
-      else res.send(200, resource);
-    });
+    const resource = req.resource
+    resource.alerts = req.params.alerts
+    resource.save(err => {
+      if (err) {
+        res.send(500)
+      } else {
+        res.send(200, resource)
+        next()
+      }
+    })
   },
   /**
    *
@@ -325,16 +357,15 @@ var controller = {
   update_state (req,res,next) {
     const resource = req.resource
     const input = req.params
-    const state = req.params.state
     const manager = new ResourceManager(resource)
-    input.last_update = new Date()
-
-    manager.handleState(input,function(error){
-      if (!error) {
-        res.send(200,resource);
+    manager.handleState(input, err => {
+      if (err) {
+        logger.error(err)
+        res.send(500)
       } else {
-        res.send(500,json.error('internal server error'));
+        res.send(200,resource)
+        next()
       }
-    });
-  },
-};
+    })
+  }
+}

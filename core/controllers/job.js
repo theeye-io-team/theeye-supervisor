@@ -2,9 +2,12 @@
 
 const App = require('../app')
 const json = require('../lib/jsonresponse')
-const debug = require('../lib/logger')('controller:job')
+const logger = require('../lib/logger')('controller:job')
 const router = require('../router')
 const Job = require('../entity/job').Job
+const Script = require('../entity/file').Script
+const TASK = require('../constants/task')
+const ErrorHandler = require('../lib/error-handler');
 
 module.exports = (server, passport) => {
   var middlewares = [
@@ -46,11 +49,11 @@ const controller = {
     res.send(200,{ job: job })
   },
   fetch (req,res,next) {
-    debug.log('querying jobs')
+    logger.log('querying jobs')
 
     const host = req.host
     if (!host) {
-      debug.log('host %s not found', req.params.hostname)
+      logger.log('host %s not found', req.params.hostname)
       return res.send(404, 'host is not valid')
     }
     const customer = req.customer
@@ -74,42 +77,151 @@ const controller = {
   update (req, res, next) {
     var result = req.params.result
     if (!result) {
-      return res.send(400, json.error('result data is required'))
+      return res.send(400, 'result data is required')
     }
 
-    App.jobDispatcher.update(req.job, result, (err, job) => {
+    if (!result.state && !result.data) return res.send(400)
+
+    App.jobDispatcher.update({
+      job: req.job,
+      result: result,
+      user: req.user,
+    }, (err, job) => {
       if (err) return res.send(500)
       res.send(200, job)
       next()
     })
   },
+  /**
+   *
+   * @param {Object[]} req.params.task_arguments an array of objects with { order, label, value } arguments definition
+   *
+   */
   create (req,res,next) {
-    var task = req.task
-    var user = req.user
-    var customer = req.customer
+    const task = req.task
 
-    debug.log('new task received')
-
-    App.jobDispatcher.create({
+    let script
+    let jobData = {
       task: task,
-      user: user,
-      customer: customer,
+      user: req.user,
+      customer: req.customer,
       notify: true
-    }, (error,job) => {
-      if (error) {
-        if (error.statusCode) {
-          if (error.statusCode===423) {
-            return res.send(error.statusCode, job)
-          } else {
-            debug.log(error)
-            return res.send(error.statusCode, error.message)
+    }
+
+    const prepareScript = (next) =>  {
+      if (task.type===TASK.TYPE_SCRIPT) {
+        const query = Script.findById(task.script_id)
+        query.exec((err, script) => {
+          if (err) {
+            logger.error('%o',err)
+            return res.send(500,err.message)
           }
-        } else {
-          debug.log(error)
-          return res.send(500)
-        }
+
+          if (!script) {
+            logger.error('script not found')
+            return res.send(503,'the script for this task is no longer available')
+          }
+
+          jobData.script = script
+          prepareTaskArgumentsValues(
+            task.script_arguments,
+            req.params.task_arguments || [],
+            (err,args) => {
+              if (err) {
+                return res.sendError(err)
+              }
+              jobData.script_arguments = args
+              next(null,jobData)
+            }
+          )
+        })
+      } else {
+        next(null,jobData)
       }
-      res.send(200,job)
+    }
+
+    const createJob = () => {
+      logger.log('creating new job')
+      App.jobDispatcher.create(jobData, (error,job) => {
+        if (error) {
+          if (error.statusCode) {
+            if (error.statusCode===423) {
+              return res.send(error.statusCode, job)
+            } else {
+              logger.error(error)
+              return res.send(error.statusCode, error.message)
+            }
+          } else {
+            logger.error(error)
+            return res.send(500)
+          }
+        }
+        res.send(200,job)
+      })
+    }
+
+    prepareScript( () => {
+      createJob()
     })
   }
+}
+
+/**
+ *
+ * @param {Object[]} argumentsDefinition stored definition
+ * @param {Object{}} argumentsValues user provided values
+ * @param {Function} next callback
+ *
+ */
+const prepareTaskArgumentsValues = (argumentsDefinition,argumentsValues,next) => {
+  let errors = new ErrorHandler()
+  let filteredArguments = []
+
+  argumentsDefinition.forEach( (def,index) => {
+    if (Boolean(def)) { // is defined
+      if (typeof def === 'string') { // fixed value old version compatibility
+        filteredArguments[index] = def
+      } else if (def.type) {
+
+        const order = (def.order || index) // if is not defined, it is the order the argument is being processed
+
+        if (def.type===TASK.ARGUMENT_TYPE_FIXED) {
+          filteredArguments[order] = def.value
+        } else if (
+          def.type === TASK.ARGUMENT_TYPE_INPUT ||
+          def.type === TASK.ARGUMENT_TYPE_SELECT
+        ) {
+          // require user input
+          const found = argumentsValues.find(reqArg => {
+            return (reqArg.order === order && reqArg.label === def.label)
+          })
+
+          // the argument is not present within the provided request arguments
+          if (!found) {
+            errors.required(def.label, null, 'task argument ' + def.label + ' is required. provide the argument order and label')
+          } else {
+            if (!found.value) {
+              errors.invalid(def.label, def.value, 'task argument value required')
+            } else {
+              filteredArguments[order] = found.value
+            }
+          }
+        } else { // bad argument definition
+          errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
+          // error ??
+        }
+      } else { // argument is not a string and does not has a type
+        errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
+        // task definition error
+      }
+    }
+  })
+
+  if (errors.hasErrors()) {
+    const err = new Error('invalid task arguments')
+    err.statusCode = 400
+    err.errors = errors
+    return next(err)
+  }
+  next(null,filteredArguments)
 }

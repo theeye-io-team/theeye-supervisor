@@ -203,26 +203,32 @@ const registerHostname = (input, done) => {
 
       /** update agent reported version **/
       function updateAgentVersion () {
-        logger.log('updating agent version');
-        host.agent_version = properties.agent_version;
-        host.last_update = new Date();
-        host.save();
-        var data = {
-          customer_name: customer.name,
-          hostname: host.hostname,
-          version: host.agent_version
-        };
+        logger.log('updating agent version')
+        host.agent_version = properties.agent_version
+        host.last_update = new Date()
+        host.save(err => {
+          if (err) {
+            logger.error(err)
+            return 
+          }
 
-        var key = config.elasticsearch.keys.agent.version;
-        elastic.submit(customer.name,key,data);
+          var data = {
+            organization: customer.name,
+            hostname: host.hostname,
+            version: host.agent_version
+          }
+
+          const topic = config.notifications.topics.agent.version
+          elastic.submit(customer.name, topic, data) // topic = config.notifications.topics.agent.version
+        })
       }
 
-      updateAgentVersion();
+      updateAgentVersion()
 
       Resource.findOne({
         host_id: host._id,
         type: 'host'
-      },function(err,resource){
+      }, function(err,resource){
         if (error) {
           logger.error(err)
           return done(err)

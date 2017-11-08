@@ -8,6 +8,8 @@ const router = require('../router');
 const dbFilter = require('../lib/db-filter');
 const ACL = require('../lib/acl');
 const ErrorHandler = require('../lib/error-handler');
+const audit = require('../lib/audit')
+const TASK = require('../constants/task')
 
 module.exports = function(server, passport){
   var middlewares = [
@@ -27,40 +29,63 @@ module.exports = function(server, passport){
     router.ensureAllowed({ entity:{ name: 'task' } })
   ),controller.get);
 
-  server.post('/:customer/task',middlewares.concat([
-    router.requireCredential('admin'),
-    router.resolve.idToEntity({ param: 'script', entity: 'file' })
-  ]),controller.create);
+  server.post(
+    '/:customer/task',
+    middlewares.concat([
+      router.requireCredential('admin'),
+      router.resolve.idToEntity({ param: 'script', entity: 'file' }),
+      router.resolve.idToEntity({ param: 'host' })
+    ]),
+    //controller.bulkCreate
+    controller.create,
+    audit.afterCreate('task',{ display: 'name' })
+  )
 
   var mws = middlewares.concat(
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'task', required: true }),
     router.resolve.idToEntity({ param: 'host_id', entity: 'host', into: 'host' })
   );
-  server.patch('/:customer/task/:task', mws, controller.update)
-  server.put('/:customer/task/:task', mws, controller.update)
-  server.del('/:customer/task/:task', mws, controller.remove)
+  server.patch(
+    '/:customer/task/:task',
+    mws,
+    controller.update,
+    audit.afterUpdate('task',{ display: 'name' })
+  )
+  server.put(
+    '/:customer/task/:task',
+    mws,
+    controller.update,
+    audit.afterReplace('task',{ display: 'name' })
+  )
+  server.del(
+    '/:customer/task/:task',
+    mws,
+    controller.remove,
+    audit.afterRemove('task',{ display: 'name' })
+  )
 }
 
-var controller = {
+const controller = {
   /**
    *
+   * @summary create many tasks at once
    * @method POST
    * @author Facugon
    *
    */
-  create (req, res, next) {
-    var errors = new ErrorHandler();
+  bulkCreate (req, res, next) {
+    var errors = new ErrorHandler()
     var input = extend({},req.body,{
       customer: req.customer,
       user: req.user,
       script: req.script
-    });
+    })
 
-    input.hosts||(input.hosts=req.body.host);
+    input.hosts || (input.hosts=req.body.host)
 
-    if (!input.type) return res.send(400, errors.required('type', input.type));
-    if (!input.hosts) return res.send(400, errors.required('hosts', input.hosts));
+    if (!input.type) return res.send(400, errors.required('type', input.type))
+    if (!input.hosts) return res.send(400, errors.required('hosts', input.hosts))
     if (Array.isArray(input.hosts)) {
       if (input.hosts.length===0) {
         return res.send(400, errors.required('hosts', input.hosts));
@@ -71,14 +96,53 @@ var controller = {
 
     if (!input.name) return res.send(400, errors.required('name', input.name));
 
-    TaskService.createManyTasks(input, function(error, tasks){
-      if (error) {
-        logger.error(error);
-        return res.send(500, error);
+    TaskService.createManyTasks(input, function(err, tasks){
+      if (err) {
+        logger.error('%o',err)
+        return res.sendError(err)
       }
-      res.send(200, tasks);
-      next();
-    });
+      res.send(200, tasks)
+      next()
+    })
+  },
+  create (req, res, next) {
+    const errors = new ErrorHandler()
+    const input = extend({},req.body,{
+      customer: req.customer,
+      customer_id: req.customer._id,
+      user: req.user,
+      user_id: req.user_id
+    })
+
+    if (!input.name) errors.required('name', input.name)
+    if (!input.type) errors.required('type', input.type)
+    if (!req.host) {
+      errors[!req.body.host?'required':'invalid']('host', req.host)
+    }
+    input.host = req.host._id
+    input.host_id = req.host._id
+
+    if (input.type===TASK.TYPE_SCRIPT) {
+      if (!req.script) {
+        errors[!req.body.script?'required':'invalid']('script', req.script)
+      }
+      input.script = req.script
+    }
+    if (input.type===TASK.TYPE_SCRAPER) { }
+
+    if (errors.hasErrors()){
+      return res.send(400,errors)
+    }
+
+    TaskService.create(input, (err,task) => {
+      if (err) return res.sendError(err)
+      TaskService.populate(task, (err,data) => {
+        if (err) return res.sendError(err)
+        res.send(200,data)
+        req.task = task
+        next()
+      })
+    })
   },
   /**
    * @author Facundo
@@ -138,10 +202,9 @@ var controller = {
       customer:req.customer,
       done:function(){
         res.send(200,{});
+        next()
       },
-      fail:function(error){
-        res.send(500,error);
-      }
+      fail: (err) => { res.sendError(err) }
     });
   },
   /**
@@ -154,26 +217,27 @@ var controller = {
    *
    */
   update (req,res,next) {
-    var errors = new ErrorHandler();
-    var input = extend({},req.body);
+    var errors = new ErrorHandler()
+    var input = extend({},req.body)
 
-    if (!req.task) return res.send(400, errors.required('task'));
-    if (!req.host) return res.send(400, errors.required('host'));
-    if (!input.name) return res.send(400, errors.required('name'));
+    if (!req.task) return res.send(400, errors.required('task'))
+    if (!req.host) return res.send(400, errors.required('host'))
+    if (!input.name) return res.send(400, errors.required('name'))
 
-    logger.log('updating task %j', input);
+    logger.log('updating task %j', input)
     TaskService.update({
       user: req.user,
       customer: req.customer,
       task: req.task,
       updates: input,
-      done: (task) => {
+      done: function (task) {
         res.send(200, task)
+        next()
       },
-      fail: (error) => {
-        logger.error(error)
-        res.send(500)
+      fail: function (err) {
+        logger.error('%o',err)
+        res.sendError(err)
       }
-    });
+    })
   }
-};
+}

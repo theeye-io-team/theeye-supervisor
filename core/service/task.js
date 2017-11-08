@@ -1,17 +1,22 @@
 'use strict'
 
+const isMongoId = require('validator/lib/isMongoId')
 const logger = require('../lib/logger')('service:task')
-const async = require('async')
-const lodash = require('lodash')
-const config = require('config')
+const asyncMap = require('async/map')
 
+const lodashAssign = require('lodash/assign')
+const lodashAfter = require('lodash/after')
+const lodashExtend = require('lodash/extend')
+
+const config = require('config')
 const Tag = require('../entity/tag').Entity
 const Host = require('../entity/host').Entity
 const Task = require('../entity/task').Entity
+const TaskFactory = require('../entity/task').Factory
 const TaskEvent = require('../entity/event').TaskEvent
-const ScraperTask = require('../entity/task/scraper').Entity
 const Script = require('../entity/file').Script
 const Job = require('../entity/job').Job
+const CONSTANTS = require('../constants')
 
 const ScriptTaskTemplate = require('../entity/task/template').ScriptTemplate
 const ScraperTaskTemplate = require('../entity/task/template').ScraperTemplate
@@ -20,11 +25,6 @@ const ScraperTaskTemplate = require('../entity/task/template').ScraperTemplate
 const elastic = require('../lib/elastic')
 var FetchBy = require('../lib/fetch-by')
 var SchedulerService = require('./scheduler')
-
-const registerTaskCRUDOperation = (customer,data) => {
-  const key = config.elasticsearch.keys.task.crud
-  elastic.submit(customer,key,data)
-}
 
 const TaskService = {
   /**
@@ -51,15 +51,6 @@ const TaskService = {
 
             if (err) return options.fail(err)
 
-            registerTaskCRUDOperation(
-              options.customer.name, {
-                name: options.task.name,
-                customer_name: options.customer.name,
-                user_id: options.user.id,
-                user_email: options.user.email,
-                operation: 'delete'
-              }
-            )
           })
 
         options.done()
@@ -77,36 +68,30 @@ const TaskService = {
     const updates = options.updates
 
     updates.host = updates.host_id
-
     // unset template when modifying task
     updates.template = null
     updates.template_id = null
-    delete updates._id // if any
+    delete updates._id // if set
 
-    task.update(updates, err => {
+    task.set(updates)
+    task.save(function (err, task) {
       if (err) {
+        if (err.name=='ValidationError') {
+          err.statusCode = 400
+        }
         return options.fail(err)
-      } else {
-        logger.log('publishing task')
-        self.populate(task, function(err,pub){
-
-          let reportName
-          if (task.name != updates.name) {
-            reportName = `${task.name} > ${updates.name}`
-          } else  {
-            reportName = task.name
-          }
-
-          registerTaskCRUDOperation(options.customer.name,{
-            name: reportName,
-            customer_name: options.customer.name,
-            user_id: options.user.id,
-            user_email: options.user.email,
-            operation: 'update'
-          })
-          done(pub)
-        })
       }
+
+      logger.log('publishing task')
+      self.populate(task, function(err,pub){
+        let reportName
+        if (task.name != updates.name) {
+          reportName = `${task.name} > ${updates.name}`
+        } else  {
+          reportName = task.name
+        }
+        done(pub)
+      })
     })
   },
   /**
@@ -120,7 +105,7 @@ const TaskService = {
       if (err) return next(err);
       if (tasks.length===0) return next(null,tasks);
 
-      async.map(
+      asyncMap(
         tasks,
         (task, callback) => {
           self.populate(task, callback)
@@ -138,43 +123,52 @@ const TaskService = {
    *
    */
   createManyTasks (input, next) {
-    var create = []
+    const hosts = input.hosts
     logger.log('creating tasks')
+    asyncMap( hosts, (hostId, done) => {
+      if (isMongoId(hostId)) {
+        logger.log('creating task on hosts %j', hosts)
+        Host.findById(hostId, function(error, host){
+          if (error) return done(error)
+          if (!host) return done(new Error('not found host id ' + hostId))
 
-    function asyncTaskCreation (hostId) {
-      return (function(asyncCb){
-        if( hostId.match(/^[a-fA-F0-9]{24}$/) ) {
-          Host.findById(hostId, function(error, host){
-            if (error) return asyncCb(error)
-            if (!host) return asyncCb(new Error('not found host id ' + hostId))
-
-            const data = lodash.extend({}, input, {
-              host: host,
-              host_id: host._id,
-              customer_id: input.customer._id,
-              customer: input.customer._id,
-              user_id: input.user._id
-            })
-
-            TaskService.create(data, (err,task) => {
-              // turn task object into plain object, populate subdocuments
-              TaskService.populate(task, asyncCb)
-            })
+          const data = lodashExtend({}, input, {
+            host: host,
+            host_id: host._id,
+            customer_id: input.customer._id,
+            customer: input.customer._id,
+            user_id: input.user._id
           })
-        } else {
-          asyncCb(new Error('invalid host id ' + hostId), null)
-        }
-      })
-    }
 
-    var hosts = input.hosts
-    logger.log('creating task on hosts %j', hosts)
-    for (var i in hosts) {
-      var hostId = hosts[i]
-      create.push( asyncTaskCreation(hostId) )
-    }
+          TaskService.create(data, (err,task) => {
 
-    async.parallel(create, next);
+            /**
+             * @todo submit here instead of using lib/audit middleware because
+             * audit middleware cannot be used with bulk creation
+             */
+            const topic = config.notifications.topics.task.crud
+            elastic.submit(input.customer.name, topic, { // topic = config.notifications.topics.task.crud , BULK CREATE
+              hostname: task.hostname || 'undefined',
+              model_id: task._id,
+              model_name: task.name,
+              model_type: task._type,
+              organization: input.customer.name,
+              user_id: input.user._id,
+              user_name: input.user.username,
+              user_email: input.user.email,
+              operation: CONSTANTS.CREATE
+            })
+
+            // turn task object into plain object, populate subdocuments
+            TaskService.populate(task, done)
+          })
+        })
+      } else {
+        done(new Error('invalid host id ' + hostId), null)
+      }
+    }, (err, tasks) => {
+      next(err, tasks)
+    })
   },
   /**
    *
@@ -196,7 +190,7 @@ const TaskService = {
 
     logger.log('creating task from template %j', template);
 
-    data = lodash.assign({}, template.toObject(), {
+    data = lodashAssign({}, template.toObject(), {
       customer_id: customer._id,
       customer: customer,
       host: host,
@@ -231,41 +225,11 @@ const TaskService = {
     const user = input.user
 
     const created = (task) => {
-      logger.log('creating task type "%s"', task.type)
+      logger.log('task type "%s" created', task.type)
       logger.data('%j', task)
-
-      registerTaskCRUDOperation(customer.name,{
-        name: task.name,
-        customer_name: customer.name,
-        user_id: (user && user.id) || null,
-        user_email: (user && user.email) || null,
-        operation: 'create'
-      })
-
-      //self.populate(task, done)
       return done(null,task)
     }
-
-    logger.log('creating task with data %o', input)
-
-    var task;
-    if (input.type == 'scraper') {
-      task = new ScraperTask(input)
-    } else {
-      task = new Task(input)
-    }
-
-    task.save(err => {
-      if (err) {
-        logger.error(err)
-        return done(err)
-      }
-      created(task);
-
-      if (input.tags && Array.isArray(input.tags)) {
-        Tag.create(input.tags, customer)
-      }
-
+    const createTaskEvents = (task) => {
       TaskEvent.create(
         {
           name: 'success',
@@ -287,6 +251,25 @@ const TaskService = {
           }
         }
       )
+    }
+    const createTags = (tags) => {
+      if (tags && Array.isArray(tags)) {
+        Tag.create(tags, customer)
+      }
+    }
+
+    logger.log('creating task with data %o', input)
+
+    var task = TaskFactory.create(input)
+
+    task.save(err => {
+      if (err) {
+        logger.error(err)
+        return done(err)
+      }
+      createTags(input.tags)
+      createTaskEvents(task)
+      created(task)
     })
   },
   populateAll (tasks, next) {
@@ -295,7 +278,7 @@ const TaskService = {
       return next(null,result)
     }
 
-    const populated = lodash.after(tasks.length,() => next(null, result))
+    const populated = lodashAfter(tasks.length,() => next(null, result))
 
     for (var i=0; i<tasks.length; i++) {
       const task = tasks[i]
@@ -403,7 +386,7 @@ TaskService.createTemplates = (hostgroup, tasks, customer, user, done) => {
     template.save(err => next(err, template))
   }
 
-  async.map(
+  asyncMap(
     tasks,
     (task, next) => {
       if (Object.keys(task).length === 0) {

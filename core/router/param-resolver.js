@@ -27,7 +27,7 @@ module.exports = {
       var _id = req.params[paramName]||req.body[paramName]||req.query[paramName];
 
       if (isObject(_id)) {
-        _id = _id._id || undefined
+        _id = ( _id._id || _id.id || undefined )
       } else if (typeof _id !== 'string') {
         _id = undefined
       }

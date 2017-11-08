@@ -20,23 +20,25 @@ const errorLine = (error) => {
 }
 
 ErrorHandler.prototype = {
-  required: function(name,value){
-    var e = new Error(name + ' is required');
-    e.statusCode = 400;
-    e.field = name;
-    e.value = value;
-    e.code = 'EREQ';
-    this.errors.push( e );
-		return this;
+  required: function(name,value,message){
+    var e = new Error(name + ' is required')
+    e.statusCode = 400
+    e.field = name
+    e.value = value
+    e.code = 'EREQ'
+    e.message = message
+    this.errors.push( e )
+		return this
   },
-  invalid: function(name,value){
-    var e = new Error(name + ' is invalid');
-    e.statusCode = 400;
-    e.field = name;
-    e.value = value;
-    e.code = 'EVALID';
-    this.errors.push( e );
-		return this;
+  invalid: function(name,value,message){
+    var e = new Error(name + ' is invalid')
+    e.statusCode = 400
+    e.field = name
+    e.value = value
+    e.code = 'EVALID'
+    e.message = message
+    this.errors.push( e )
+		return this
   },
   /**
    *

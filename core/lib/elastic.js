@@ -15,10 +15,10 @@ const request = require("request").defaults({
 module.exports = {
   /**
    * @param {String} customerName
-   * @param {String} key
+   * @param {String} topic 
    * @param {Object} data
    */
-  submit (customerName, key, data) {
+  submit (customerName, topic, data) {
     const query = { name: customerName }
     CustomerService.getCustomerConfig(query, (err,config) => {
       var specs, elastic
@@ -34,11 +34,12 @@ module.exports = {
       }
 
       elastic = config.elasticsearch
-      data.type = key
-      data.timestamp || (data.timestamp = (new Date()).getTime())
-      data.date || (data.date = (new Date()).toISOString())
+
+      data.topic = topic 
+      data.timestamp = (new Date()).getTime()
+      data.date = (new Date()).toISOString()
       specs = {
-        url: elastic.url + '/' + path.join(customerName,key),
+        url: elastic.url + '/' + path.join(customerName, topic),
         body: data
       }
 

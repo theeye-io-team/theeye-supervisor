@@ -4,6 +4,8 @@ const mongodb = require('../../lib/mongodb').db
 const ObjectId = require('mongoose').Schema.Types.ObjectId
 const BaseSchema = require('./schema')
 const Template = require('./template').Entity
+const TASK = require('../../constants/task')
+const ScraperTask = require('./scraper')
 
 /**
  * Extended Schema. Includes non template attributes
@@ -82,3 +84,17 @@ Task.on('afterInsert',function(model){ });
 Task.on('afterRemove',function(model){ });
 
 exports.Entity = Task;
+exports.ScriptTask = Task
+exports.ScraperTask = ScraperTask
+
+exports.Factory = {
+  create (input) {
+    if (input.type == TASK.TYPE_SCRAPER) {
+      return new ScraperTask(input)
+    }
+    if (input.type == TASK.TYPE_SCRIPT) {
+      return new Task(input)
+    }
+    throw new Error('invalid error type ' + input.type)
+  }
+}

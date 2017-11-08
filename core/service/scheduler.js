@@ -85,22 +85,22 @@ Scheduler.prototype = {
    * schedules a task
    * @param {Object} task data.
    */
-  scheduleTask: function(input, done) {
-    var task = input.task,
-      customer = input.customer,
-      user = input.user,
-      schedule = input.schedule;
+  scheduleTask: function (input, done) {
+    var task = input.task
+    var customer = input.customer
+    var user = input.user
+    var schedule = input.schedule
 
     const data = {
       task_id: task._id ,
       host_id: task.host_id ,
       script_id: task.script_id ,
-      script_arguments: task.script_arguments ,
       name: task.name ,
       user_id: user._id ,
       customer_id: customer._id ,
       customer_name: customer.name ,
       lifecycle: LIFECYCLE.READY,
+      script_arguments: input.script_arguments ,
       notify: input.notify ,
       scheduleData: schedule
     }
@@ -273,12 +273,14 @@ Scheduler.prototype = {
         return true;
       });
 
-      if(failed) return done();
+      if (failed) return done();
 
       JobDispatcher.create({
         task: data.task,
         user: data.user,
         customer: data.customer,
+        script: data.script,
+        script_arguments: jobData.script_arguments,
         notify: true
       },(err,job)=>{
         if(err) return new JobError(err);

@@ -89,7 +89,7 @@ module.exports = {
       var ccfg = merge({}, basecfg, (customer.config||{}))
 
       // extend default config options with customer defined options
-      if(next) return next(null,ccfg)
+      if (next) return next(null,ccfg)
     })
   },
   fetch (filter, next) {

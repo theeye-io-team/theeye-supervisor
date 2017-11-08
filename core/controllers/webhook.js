@@ -3,7 +3,7 @@
 var extend = require('lodash/assign');
 var dbFilter = require('../lib/db-filter');
 var logger = require('../lib/logger')('eye:controller:webhook');
-var audit = require('../lib/audit');
+const audit = require('../lib/audit');
 var router = require('../router');
 
 const EventDispatcher = require('../service/events');

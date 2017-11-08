@@ -7,13 +7,13 @@ const logger = require('../lib/logger')('eye:jobs')
 const elastic = require('../lib/elastic')
 const LIFECYCLE = require('../constants/lifecycle')
 const JOBS = require('../constants/jobs')
+const CONSTANTS = require('../constants')
 
 const JobModels = require('../entity/job')
 const Job = JobModels.Job
 const ScriptJob = JobModels.Script
 const ScraperJob = JobModels.Scraper
 
-const Script = require('../entity/file').Script
 const TaskEvent = require('../entity/event').TaskEvent
 const EventDispatcher = require('./events')
 const NotificationService = require('./notification')
@@ -50,12 +50,13 @@ module.exports = {
       if (job!==null) {
         job.lifecycle = LIFECYCLE.ASSIGNED
         job.save(error => {
-          if(error) throw error;
-          next(null,job);
-        });
+          if (error) throw error
+          next(null,job)
+        })
+      } else {
+        next(null,null)
       }
-      else next(null,null);
-    });
+    })
   },
   /**
    * @author Facugon
@@ -65,18 +66,14 @@ module.exports = {
    * @property {User} input.user
    * @property {Customer} input.customer
    * @property {Boolean} input.notify
+   * @property {String[]} input.script_arguments only required if it is a script-type job
    * @param {Function(Error,Job)} done
    */
   create (input, done) {
     const task = input.task
     const type = task.type
 
-    const afterCreate = (err, job) => {
-      if (err) done(err)
-      else done(null, job)
-    }
-
-    App.taskManager.populate(task, (err) => {
+    App.taskManager.populate(task, (err, taskData) => {
       if (err) return done(err);
 
       if (!task.host) {
@@ -84,48 +81,74 @@ module.exports = {
         return done(err)
       }
 
-      if (jobInProgress(task.lastjob) === true) {
+      if (jobInProgress(taskData.lastjob) === true) {
         err = new Error('job in progress')
         err.statusCode = 423
-        return done(err, task.lastjob)
+        return done(err, taskData.lastjob)
       }
 
       removeOldTaskJobs(task, () => {
+        const created = (err, job) => {
+          if (err) {
+            return done(err)
+          }
+          logger.log('script job created.')
+
+          let topic = globalconfig.notifications.topics.job.crud
+          registerJobOperation(CONSTANTS.CREATE, topic, {
+            task: task,
+            job: job,
+            user: input.user
+          })
+
+          done(null, job)
+        }
+
         if (type == 'script') {
-          createScriptJob(input, afterCreate)
+          createScriptJob(input, created)
         } else if (type == 'scraper') {
-          createScraperJob(input, afterCreate)
+          createScraperJob(input, created)
         } else {
           err = new Error('invalid or undefined task type ' + task.type)
-          done(err)
+          return done(err)
         }
       })
     })
   },
   /**
    *
-   * @param {Job} job
-   * @param {Object} result
+   * @param {Object} input
+   * @property {Job} input.job
+   * @property {User} input.user
+   * @property {Object} input.result
    * @param {Function} done
    *
    */
-  update (job, result, done) {
-    // if not specified asume success
-    var state = (result.state || STATE_SUCCESS)
+  update (input, done) {
+    const job = input.job
+    const user = input.user
+    const result = input.result
+
+    // if not failure, assume success
+    var state = (result.state===STATE_FAILURE) ? STATE_FAILURE : STATE_SUCCESS
 
     job.lifecycle = LIFECYCLE.FINISHED
-    job.state = state // final job state
-    job.result = result
+    job.state = state
+    job.result = result.data
     job.save(err => {
       if (err) logger.log(err)
       done(err, job)
     })
 
-    // if job is an agent update, break
-    if (job.name == JOBS.AGENT_UPDATE) return
+    // if job is an agent update, skip notifications and events
+    if (job.name==JOBS.AGENT_UPDATE) return
 
-    var key = globalconfig.elasticsearch.keys.task.result
-    registerJobOperation(key, job)
+    var topic = globalconfig.notifications.topics.job.crud
+    registerJobOperation(CONSTANTS.UPDATE, topic, {
+      task: job.task,
+      job: job,
+      user: user
+    })
 
     // job completed mail.
     //new ResultMail ( job )
@@ -198,75 +221,96 @@ const removeOldTaskJobs = (task, next) => {
 
 /**
  *
- * register job operation in elastic search.
- * works for result and execution.
+ * @summary register job operation in elastic search works for result and execution.
+ * @param {String} operation
+ * @param {String} topic
+ * @param {Object} input
+ * @property {Job} input.job
+ * @property {User} input.user
+ * @property {Task} input.task
  *
  */
-const registerJobOperation = (key, job) => {
+const registerJobOperation = (operation, topic, input) => {
+  const task = input.task
+  const job = input.job
+  const user = input.user
+
   // submit job operation to elastic search
   job.populate([
-    { path: 'user' },
     { path: 'host' }
   ], (err) => {
-    const data = {
+    const payload = {
       hostname: job.host.hostname,
-      customer_name: job.customer_name,
-      user_id: job.user._id,
-      user_email: job.user.email,
-      task_name: job.task.name,
-      task_type: job.task.type,
-      state: job.state,
+      state: job.state || 'undefined',
+      lifecycle: job.lifecycle,
+      name: task.name,
+      type: task.type,
+      organization: job.customer_name,
+      user_id: user._id,
+      user_name: user.email,
+      user_email: user.username,
+      operation: operation
     }
 
     if (job._type == 'ScraperJob') {
-      data.task_url = job.task.url
-      data.task_method = job.task.method
-      data.task_status_code = job.task.status_code 
-      data.task_pattern = job.task.pattern
+      payload.url = job.task.url
+      payload.method = job.task.method
+      payload.statuscode = job.task.status_code 
+      payload.pattern = job.task.pattern
     } else {
-      data.script_name = job.script.filename
-      data.script_md5 = job.script.md5
-      data.script_last_update = job.script.last_update
-      data.script_mimetype = job.script.mimetype
+      payload.filename = job.script.filename
+      payload.md5 = job.script.md5
+      payload.mtime = job.script.last_update
+      payload.mimetype = job.script.mimetype
     }
 
-    if (job.result) {
-      data.result = job.result
-    }
-    elastic.submit(job.customer_name,key,data)
+    if (job.result) payload.result = job.result
+
+    elastic.submit(job.customer_name, topic, payload) // topic = globalconfig.notifications.topics.job.crud , CREATE/UPDATE
   })
 }
 
+/**
+ * @param {Object} input
+ * @property {String} input.script_id
+ * @property {String[]} input.script_arguments ordered script arguments values
+ */
 const createScriptJob = (input, done) => {
-  const task = input.task;
-  const script_id = task.script_id;
-  const query = Script.findById(script_id)
+  const task = input.task
+  const script = input.script
 
-  query.exec((error,script) => {
-    const job = new ScriptJob();
-    job.task = task.toObject(); // >>> add .id 
-    job.script = script.toObject(); // >>> add .id 
-    job.task_id = task._id;
-    job.script_id = script._id;
-    job.user = input.user;
-    job.user_id = input.user._id;
-    job.host_id = task.host_id;
-    job.host = task.host_id;
-    job.name = task.name;
-    job.customer_id = input.customer._id;
-    job.customer_name = input.customer.name;
-    job.notify = input.notify;
-    job.lifecycle = LIFECYCLE.READY
-    job.event = input.event||null;
-    job.save(err => {
-      if (err) return done(err)
+  const job = new ScriptJob()
+  job.script = script.toObject() // >>> add .id 
+  job.script_id = script._id
+  job.script_arguments = input.script_arguments
+  job.script_runas = task.script_runas
+  job.task = task.toObject() // >>> add .id 
 
-      var key = globalconfig.elasticsearch.keys.task.execution;
-      registerJobOperation(key, job);
+  /**
+   * @todo should remove hereunder line in the future.
+   * only keep for backward compatibility with agents with version number equal or older than version 0.11.3.
+   * at this moment this is overwriting saved job.task.script_arguments definition.
+   */
+  job.task.script_arguments = input.script_arguments
 
-      logger.log('script job created.');
-      done(null, job);
-    })
+  job.task_id = task._id
+  job.user = input.user
+  job.user_id = input.user._id
+  job.host_id = task.host_id
+  job.host = task.host_id
+  job.name = task.name
+  job.customer_id = input.customer._id
+  job.customer_name = input.customer.name
+  job.notify = input.notify
+  job.lifecycle = LIFECYCLE.READY
+  job.event = input.event||null
+  job.save(err => {
+    if (err) {
+      logger.error('%o',err)
+      return done(err)
+    }
+
+    done(null, job)
   })
 }
 
@@ -289,15 +333,13 @@ const createScraperJob = (input, done) => {
   job.notify = input.notify;
   job.lifecycle = LIFECYCLE.READY
   job.event = input.event||null;
-  job.save(error => {
-    if(error) return done(error);
-
-    var key = globalconfig.elasticsearch.keys.task.execution;
-    registerJobOperation(key, job);
-
-    logger.log('scraper job created.');
-    done(null, job);
-  });
+  job.save(err => {
+    if (err) {
+      logger.error('%o',err)
+      return done(err)
+    }
+    done(null, job)
+  })
 }
 
 /**

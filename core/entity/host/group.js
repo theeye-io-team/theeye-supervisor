@@ -27,11 +27,12 @@ const properties = {
   tasks: [{ type: ObjectId, ref: 'TaskTemplate' }], // has many
   resources: [{ type: ObjectId, ref: 'ResourceTemplate' }], // has many
   triggers: [ TriggerTemplate ], // has many
+  _type: { type: String, default: 'HostGroup' }
 }
 
 exports.properties = properties
 
-var EntitySchema = new BaseSchema(properties,{
+const EntitySchema = new BaseSchema(properties,{
   collection: 'host_templates',
   discriminatorKey: '_type'
 })
