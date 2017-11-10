@@ -40,5 +40,6 @@ module.exports = {
     require('../controllers/user')(server,passport);
     require('../controllers/webhook')(server,passport);
     require('../controllers/workflow')(server,passport);
+    require('../controllers/member')(server,passport);
   },
 }
