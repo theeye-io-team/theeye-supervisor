@@ -198,7 +198,7 @@ const controller = {
         resource: resource,
         user: req.user
       })
-      res.send(204)
+      res.send(200,{})
       next()
     } else {
       logger.log('removing resource')
