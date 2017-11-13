@@ -1,7 +1,7 @@
 'use strict';
 
 // order matters
-const credentials = ['viewer','user','agent','admin','owner','root'];
+const credentials = ['viewer','user','agent','manager','admin','owner','root'];
 
 module.exports = {
   accessLevel (credential) {

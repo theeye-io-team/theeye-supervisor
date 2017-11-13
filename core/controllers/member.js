@@ -19,15 +19,23 @@ module.exports = function (server, passport) {
    */
   server.patch('/:customer/member/:user/credential',[
     passport.authenticate('bearer', {session:false}),
-    router.requireCredential('admin'),
+    router.requireCredential('manager'),
     router.resolve.idToEntity({param:'user'}),
     router.filter.spawn({param:'customers', filter:'toArray'}),
     router.filter.spawn({param:'customers', filter:'uniq'}),
   ], controller.updateCrendential);
 
+  server.patch('/:customer/member/:user/customers',[
+    passport.authenticate('bearer', {session:false}),
+    router.requireCredential('manager'),
+    router.resolve.idToEntity({param:'user'}),
+    router.filter.spawn({param:'customers', filter:'toArray'}),
+    router.filter.spawn({param:'customers', filter:'uniq'}),
+  ], controller.updateCustomers);
+
   server.del('/:customer/member/:user',[
     passport.authenticate('bearer', {session:false}),
-    router.requireCredential('admin'),
+    router.requireCredential('manager'),
     router.resolve.idToEntity({ param:'user' }),
   ], controller.removeFromCustomer);
 };
@@ -45,6 +53,35 @@ var controller = {
     }
 
     UserService.update(user._id, {credential: params.credential}, function(error, user){
+      if (error) {
+        if (error.statusCode) {
+          return res.send(error.statusCode, error.message);
+        } else {
+          logger.error(error);
+          return res.send(500,'internal error');
+        }
+      } else {
+        user.publish({
+          include_customers : true
+        }, function(error, data){
+          if(error)
+            return res.send(500,'internal error');
+          res.send(200, data);
+        });
+      }
+    });
+  },
+  updateCustomers (req, res, next) {
+    var user = req.user;
+    if (!user) return res.send(404, json.error('User not found'));
+
+    var params = req.params;
+
+    if (!params.customers || params.customers.length == 0) {
+      return res.send(400, json.error('Missing customers.'));
+    }
+
+    UserService.update(user._id, {customers: params.customers}, function(error, user){
       if (error) {
         if (error.statusCode) {
           return res.send(error.statusCode, error.message);
