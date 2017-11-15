@@ -5,7 +5,7 @@ const ObjectId = require('mongoose').Schema.Types.ObjectId
 const BaseSchema = require('./schema')
 const Template = require('./template').Entity
 const TASK = require('../../constants/task')
-const ScraperTask = require('./scraper')
+const ScraperTask = require('./scraper').Entity
 
 /**
  * Extended Schema. Includes non template attributes
