@@ -27,7 +27,13 @@ module.exports = function(server, passport){
     router.ensureCustomer,
   ]
 
-  server.get('/:customer/script',middlewares,controller.fetch)
+  server.get('/:customer/script' , [
+    passport.authenticate('bearer', {session:false}),
+    router.requireCredential('viewer'),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer,
+  ] , controller.fetch)
+
   server.post(
     '/:customer/script',
     middlewares,
@@ -38,7 +44,15 @@ module.exports = function(server, passport){
   var mws = middlewares.concat(
     router.resolve.idToEntity({param:'script',required:true,entity:'file'})
   )
-  server.get('/:customer/script/:script',mws,controller.get)
+
+  server.get('/:customer/script/:script', [
+    passport.authenticate('bearer', {session:false}),
+    router.requireCredential('viewer'),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer,
+    router.resolve.idToEntity({param:'script',required:true,entity:'file'})
+  ] , controller.get)
+
   server.patch(
     '/:customer/script/:script',
     mws,

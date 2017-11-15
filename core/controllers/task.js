@@ -12,22 +12,28 @@ const audit = require('../lib/audit')
 const TASK = require('../constants/task')
 
 module.exports = function(server, passport){
+  server.get('/:customer/task', [
+    passport.authenticate('bearer', {session:false}),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer,
+    router.requireCredential('viewer'),
+    router.resolve.idToEntity({ param: 'host' })
+  ] , controller.fetch)
+
+  server.get('/:customer/task/:task' , [
+    passport.authenticate('bearer', {session:false}),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer,
+    router.requireCredential('viewer'),
+    router.resolve.idToEntity({ param: 'task', required: true }),
+    router.ensureAllowed({ entity: { name: 'task' } })
+  ] , controller.get)
+
   var middlewares = [
     passport.authenticate('bearer', {session:false}),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer
-  ];
-
-  server.get('/:customer/task',middlewares.concat([
-    router.requireCredential('user'),
-    router.resolve.idToEntity({ param: 'host' })
-  ]),controller.fetch);
-
-  server.get('/:customer/task/:task',middlewares.concat(
-    router.requireCredential('user'),
-    router.resolve.idToEntity({ param: 'task', required: true }),
-    router.ensureAllowed({ entity:{ name: 'task' } })
-  ),controller.get);
+  ]
 
   server.post(
     '/:customer/task',
