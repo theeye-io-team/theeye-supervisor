@@ -1,5 +1,7 @@
 'use strict'
 
+const App = require('../app')
+
 const isMongoId = require('validator/lib/isMongoId')
 const logger = require('../lib/logger')('service:task')
 const asyncMap = require('async/map')
@@ -292,7 +294,8 @@ const TaskService = {
     const data = task.toObject()
 
     // only if host_id is set
-    const populateHost = (id, next) => {
+    const populateHost = (next) => {
+      let id = task.host_id
       if (!id) return next()
       Host.findById(id, (err, host) => {
         if (err) return next(err)
@@ -304,7 +307,8 @@ const TaskService = {
     }
 
     // only task type script, and if script_id is set
-    const populateScript = (id, next) => {
+    const populateScript = (next) => {
+      let id = task.script_id
       if (!id) return next()
       Script.findById(id, (err,script) => {
         if (err) return next(err)
@@ -339,14 +343,26 @@ const TaskService = {
         })
     }
 
-    populateHost(task.host_id, (err) => {
-      if (err) return done(err)
-      populateScript(task.script_id, (err) => {
-        if (err) return done(err)
-        populateLastJob(err => {
-          return done(err,data)
-        })
+    const populateSchedules = (next) => {
+      App.scheduler.getTaskSchedule(task._id, (err, schedules) => {
+        if (err) {
+          return next(err)
+        } else { 
+          data.schedules = schedules
+          next(null, schedules)
+        }
       })
+    }
+
+    asyncMap([
+      populateHost,
+      populateScript,
+      populateLastJob,
+      populateSchedules
+    ], (populate,callback) => {
+      populate(callback)
+    }, err => {
+      return done(err, data)
     })
   }
 }

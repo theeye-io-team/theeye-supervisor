@@ -19,7 +19,6 @@ var User = require('../entity/user').Entity;
 var JobDispatcher = require('./job');
 
 function Scheduler() {
-
   EventEmitter.call(this);
 
   // use the default mongodb connection
@@ -30,10 +29,8 @@ function Scheduler() {
   });
 }
 
-
 // give the scheduler the hability to emit events
 util.inherits(Scheduler, EventEmitter);
-
 
 Scheduler.prototype = {
   initialize: function(ready) {
@@ -171,18 +168,15 @@ Scheduler.prototype = {
     }
     agendaJob.save(done);
   },
-  getTaskScheduleData: function(oid, callback) {
-    if(!oid) {
-      return callback(new Error('task id must be provided'));
-    }
-    this.agenda.jobs(
-      {
-        $and:[
-          {name: 'task'},
-          {'data.task_id': oid}
-        ]
-      },
-      callback);
+  getTaskSchedule (taskId, callback) {
+    if (!taskId) return callback(new Error('task id required'))
+
+    this.agenda.jobs({
+      $and:[
+        {name: 'task'},
+        {'data.task_id': taskId}
+      ]
+    }, callback)
   },
   // searches for task jobs of a given customer id
   // TODO method naming could be improved if it's not gonna be a generic getter
@@ -199,15 +193,13 @@ Scheduler.prototype = {
       },
       callback);
   },
-
   // Counts schedules for the given task
   // @param callback: Function (err, schedulesCount)
   taskSchedulesCount: function(task, callback) {
-    this.getTaskScheduleData(task._id, function(err, schedules){
+    this.getTaskSchedule(task._id, function(err, schedules){
       return callback(err, err ? 0 : schedules.length);
     });
   },
-
   //Cancels a specific scheduleId. Task is provided for further processing
   cancelTaskSchedule: function(task, scheduleId, callback) {
     if(!scheduleId) return callback(new Error('schedule id must be provided'));
@@ -226,7 +218,6 @@ Scheduler.prototype = {
       self.handleScheduledTag(task,function(){});
     });
   },
-
   // deletes ALL schedules for a given task
   unscheduleTask: function (task, callback) {
     this.agenda.cancel({
@@ -236,7 +227,6 @@ Scheduler.prototype = {
       ]
     }, callback);
   },
-
   taskProcessor: function(agendaJob, done) {
     logger.log('////////////////////////////////////////');
     logger.log('////////////////////////////////////////');

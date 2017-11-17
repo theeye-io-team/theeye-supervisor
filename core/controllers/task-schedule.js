@@ -41,14 +41,14 @@ var controller = {
    */
   fetch (req, res, next) {
     var task = req.task;
-    app.scheduler.getTaskScheduleData(task._id, function (err, scheduleData) {
+    app.scheduler.getTaskSchedule(task._id, function (err, scheduleData) {
       if (err) {
-        logger.error('Scheduler had an error retrieving data for %s',task._id);
-        logger.error(err);
-        return res.send(500);
+        logger.error('Scheduler had an error retrieving data for %s',task._id)
+        logger.error(err)
+        return res.send(500)
       }
-      else res.send(200, { scheduleData: scheduleData });
-    });
+      else res.send(200, scheduleData)
+    })
   },
   /**
    *
@@ -68,8 +68,8 @@ var controller = {
         logger.error(err);
         return res.send(500);
       }
-      else res.send(200,{status:'done'});
-    });
+      else res.send(200,{})
+    })
   },
   /**
    *
@@ -79,27 +79,26 @@ var controller = {
    *
    */
   create (req, res, next) {
-    var task = req.task;
-    var user = req.user;
-    var customer = req.customer;
+    var task = req.task
+    var user = req.user
+    var customer = req.customer
 
-    var schedule = req.body.scheduleData;
-    if (!schedule||!schedule.runDate) {
-      return res.send(400,json.error('Must have a date'));
+    if (!req.body.scheduleData||!req.body.scheduleData.runDate) {
+      return res.send(400,json.error('Must have a date'))
     }
 
     app.scheduler.scheduleTask({
       task: task,
       customer: customer,
       user: user,
-      schedule: schedule
-    }, function (err) {
-      if(err) {
-        logger.error(err);
-        return res.send(500, err);
+      schedule: req.body.scheduleData
+    }, function (err, schedule) {
+      if (err) {
+        logger.error(err)
+        return res.send(500, err)
       }
 
-      res.send(200, {nextRun : schedule.runDate});
-    });
+      res.send(200, schedule)
+    })
   }
-};
+}

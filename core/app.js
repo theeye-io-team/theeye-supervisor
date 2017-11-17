@@ -9,7 +9,6 @@ const auth = require('./lib/auth')
 const logger = require('./lib/logger')('app')
 
 const App = {
-
   start () {
     const server = restify.createServer();
     const passport = auth.initialize();
