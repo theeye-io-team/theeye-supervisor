@@ -13,6 +13,7 @@ const JobModels = require('../entity/job')
 const Job = JobModels.Job
 const ScriptJob = JobModels.Script
 const ScraperJob = JobModels.Scraper
+const Script = require('../entity/file').Script
 
 const TaskEvent = require('../entity/event').TaskEvent
 const EventDispatcher = require('./events')
@@ -92,6 +93,7 @@ module.exports = {
           if (err) {
             return done(err)
           }
+
           logger.log('script job created.')
 
           let topic = globalconfig.notifications.topics.job.crud
@@ -270,6 +272,27 @@ const registerJobOperation = (operation, topic, input) => {
   })
 }
 
+const prepareScript = (script_id, next) =>  {
+  const query = Script.findById(script_id)
+  query.exec((err, script) => {
+    if (err) {
+      logger.error('%o',err)
+      err.statusCode = 500
+      return next(err)
+    }
+
+    if (!script) {
+      let msg = 'cannot create job. script is no longer available'
+      logger.error(msg)
+      let err = new Error(msg)
+      err.statusCode = 404
+      return next(err)
+    }
+
+    next(null,script)
+  })
+}
+
 /**
  * @param {Object} input
  * @property {String} input.script_id
@@ -277,40 +300,42 @@ const registerJobOperation = (operation, topic, input) => {
  */
 const createScriptJob = (input, done) => {
   const task = input.task
-  const script = input.script
+  prepareScript(task.script_id, (err,script) => {
+    if (err) return done(err)
 
-  const job = new ScriptJob()
-  job.script = script.toObject() // >>> add .id 
-  job.script_id = script._id
-  job.script_arguments = input.script_arguments
-  job.script_runas = task.script_runas
-  job.task = task.toObject() // >>> add .id 
+    const job = new ScriptJob()
+    job.script = script.toObject() // >>> add .id 
+    job.script_id = script._id
+    job.script_arguments = input.script_arguments
+    job.script_runas = task.script_runas
+    job.task = task.toObject() // >>> add .id 
 
-  /**
-   * @todo should remove hereunder line in the future.
-   * only keep for backward compatibility with agents with version number equal or older than version 0.11.3.
-   * at this moment this is overwriting saved job.task.script_arguments definition.
-   */
-  job.task.script_arguments = input.script_arguments
+    /**
+     * @todo should remove hereunder line in the future.
+     * only keep for backward compatibility with agents with version number equal or older than version 0.11.3.
+     * at this moment this is overwriting saved job.task.script_arguments definition.
+     */
+    job.task.script_arguments = input.script_arguments
 
-  job.task_id = task._id
-  job.user = input.user
-  job.user_id = input.user._id
-  job.host_id = task.host_id
-  job.host = task.host_id
-  job.name = task.name
-  job.customer_id = input.customer._id
-  job.customer_name = input.customer.name
-  job.notify = input.notify
-  job.lifecycle = LIFECYCLE.READY
-  job.event = input.event||null
-  job.save(err => {
-    if (err) {
-      logger.error('%o',err)
-      return done(err)
-    }
+    job.task_id = task._id
+    job.user = input.user
+    job.user_id = input.user._id
+    job.host_id = task.host_id
+    job.host = task.host_id
+    job.name = task.name
+    job.customer_id = input.customer._id
+    job.customer_name = input.customer.name
+    job.notify = input.notify
+    job.lifecycle = LIFECYCLE.READY
+    job.event = input.event||null
+    job.save(err => {
+      if (err) {
+        logger.error('%o',err)
+        return done(err)
+      }
 
-    done(null, job)
+      done(null, job)
+    })
   })
 }
 

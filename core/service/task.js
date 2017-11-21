@@ -26,7 +26,6 @@ const ScraperTaskTemplate = require('../entity/task/template').ScraperTemplate
 // var filter = require('../router/param-filter');
 const elastic = require('../lib/elastic')
 var FetchBy = require('../lib/fetch-by')
-var SchedulerService = require('./scheduler')
 
 const TaskService = {
   /**
@@ -44,7 +43,7 @@ const TaskService = {
       .exec(err => {
         if (err) return options.fail(err)
 
-        SchedulerService.unscheduleTask(task)
+        App.scheduler.unscheduleTask(task)
 
         TaskEvent
           .find({ emitter_id: task._id })

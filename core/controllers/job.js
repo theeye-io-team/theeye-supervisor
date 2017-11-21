@@ -5,8 +5,7 @@ const json = require('../lib/jsonresponse')
 const logger = require('../lib/logger')('controller:job')
 const router = require('../router')
 const Job = require('../entity/job').Job
-const Script = require('../entity/file').Script
-const TASK = require('../constants/task')
+const TaskConstants = require('../constants/task')
 const ErrorHandler = require('../lib/error-handler');
 
 module.exports = (server, passport) => {
@@ -100,44 +99,11 @@ const controller = {
   create (req,res,next) {
     const task = req.task
 
-    let script
     let jobData = {
       task: task,
       user: req.user,
       customer: req.customer,
       notify: true
-    }
-
-    const prepareScript = (next) =>  {
-      if (task.type===TASK.TYPE_SCRIPT) {
-        const query = Script.findById(task.script_id)
-        query.exec((err, script) => {
-          if (err) {
-            logger.error('%o',err)
-            return res.send(500,err.message)
-          }
-
-          if (!script) {
-            logger.error('script not found')
-            return res.send(503,'the script for this task is no longer available')
-          }
-
-          jobData.script = script
-          prepareTaskArgumentsValues(
-            task.script_arguments,
-            req.params.task_arguments || [],
-            (err,args) => {
-              if (err) {
-                return res.sendError(err)
-              }
-              jobData.script_arguments = args
-              next(null,jobData)
-            }
-          )
-        })
-      } else {
-        next(null,jobData)
-      }
     }
 
     const createJob = () => {
@@ -160,9 +126,25 @@ const controller = {
       })
     }
 
-    prepareScript( () => {
-      createJob()
-    })
+    const prepareTask = (next) => {
+      if (task._type === TaskConstants.TYPE_SCRIPT) {
+        prepareTaskArgumentsValues(
+          task.script_arguments,
+          req.params.task_arguments || [],
+          (err,args) => {
+            if (err) {
+              return res.sendError(err)
+            }
+            jobData.script_arguments = args
+            next()
+          }
+        )
+      } else {
+        next()
+      }
+    }
+
+    prepareTask(() => { createJob() })
   }
 }
 
@@ -185,11 +167,11 @@ const prepareTaskArgumentsValues = (argumentsDefinition,argumentsValues,next) =>
 
         const order = (def.order || index) // if is not defined, it is the order the argument is being processed
 
-        if (def.type===TASK.ARGUMENT_TYPE_FIXED) {
+        if (def.type===TaskConstants.ARGUMENT_TYPE_FIXED) {
           filteredArguments[order] = def.value
         } else if (
-          def.type === TASK.ARGUMENT_TYPE_INPUT ||
-          def.type === TASK.ARGUMENT_TYPE_SELECT
+          def.type === TaskConstants.ARGUMENT_TYPE_INPUT ||
+          def.type === TaskConstants.ARGUMENT_TYPE_SELECT
         ) {
           // require user input
           const found = argumentsValues.find(reqArg => {

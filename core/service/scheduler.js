@@ -18,6 +18,8 @@ var Customer = require('../entity/customer').Entity;
 var User = require('../entity/user').Entity;
 var JobDispatcher = require('./job');
 
+const TaskConstants = require('../constants/task')
+
 function Scheduler() {
   EventEmitter.call(this);
 
@@ -236,43 +238,36 @@ Scheduler.prototype = {
 
     var jobData = agendaJob.attrs.data;
 
-    function JobError (err){
-      agendaJob.fail(err);
-      agendaJob.save();
-      done(err);
+    const JobError = (err) => {
+      agendaJob.fail(err)
+      agendaJob.save()
+      done(err)
     }
 
     async.parallel({
-      customer: callback => Customer.findById(jobData.customer_id, callback) ,
-      task: callback => Task.findById(jobData.task_id, callback) ,
-      host: callback => Host.findById(jobData.host_id, callback) ,
-      user: callback => User.findById(jobData.user_id, callback) ,
-      script: callback => Script.findById(jobData.script_id, callback)
-    }, function(err, data) {
-      if(err) return new JobError(err);
+      customer: callback => Customer.findById(jobData.customer_id, callback),
+      task: callback => Task.findById(jobData.task_id, callback),
+      host: callback => Host.findById(jobData.host_id, callback),
+      user: callback => User.findById(jobData.user_id, callback)
+    }, function (err, data) {
+      if (err) {
+        return new JobError(err)
+      }
 
-      var failed = false;
-      Object.keys(data).every(function(k,i){
-        //if any member isn't here: fail and done.
-        if(!data[k]) {
-          failed = true;
-          agendaJob.fail(k + ' (' + jobData[k+'_id'] +') is missing');
-          agendaJob.save();
-          return false;
-        }
-        return true;
-      });
+      // if any member isn't here: fail and done.
+      var undefinedProperty = Object.keys(data).find(key => !data[key])
 
-      if (failed) return done();
+      if (undefinedProperty) {
+        return JobError( new Error(`${undefinedProperty} (${jobData[undefinedProperty + '_id']}) is missing`) )
+      }
 
       JobDispatcher.create({
         task: data.task,
         user: data.user,
         customer: data.customer,
-        script: data.script,
         script_arguments: jobData.script_arguments,
         notify: true
-      },(err,job)=>{
+      }, (err,job)=>{
         if(err) return new JobError(err);
         done();
       });
