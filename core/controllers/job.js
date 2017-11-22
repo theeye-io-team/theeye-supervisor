@@ -6,7 +6,7 @@ const logger = require('../lib/logger')('controller:job')
 const router = require('../router')
 const Job = require('../entity/job').Job
 const TaskConstants = require('../constants/task')
-const ErrorHandler = require('../lib/error-handler');
+const JobConstants = require('../constants/jobs')
 
 module.exports = (server, passport) => {
   var middlewares = [
@@ -103,7 +103,8 @@ const controller = {
       task: task,
       user: req.user,
       customer: req.customer,
-      notify: true
+      notify: true,
+      origin: JobConstants.ORIGIN_USER
     }
 
     const createJob = () => {
@@ -126,9 +127,9 @@ const controller = {
       })
     }
 
-    const prepareTask = (next) => {
-      if (task._type === TaskConstants.TYPE_SCRIPT) {
-        prepareTaskArgumentsValues(
+    const prepareTaskArguments = (next) => {
+      if (task.type === TaskConstants.TYPE_SCRIPT) {
+        App.taskManager.prepareTaskArgumentsValues(
           task.script_arguments,
           req.params.task_arguments || [],
           (err,args) => {
@@ -144,66 +145,6 @@ const controller = {
       }
     }
 
-    prepareTask(() => { createJob() })
+    prepareTaskArguments(() => { createJob() })
   }
-}
-
-/**
- *
- * @param {Object[]} argumentsDefinition stored definition
- * @param {Object{}} argumentsValues user provided values
- * @param {Function} next callback
- *
- */
-const prepareTaskArgumentsValues = (argumentsDefinition,argumentsValues,next) => {
-  let errors = new ErrorHandler()
-  let filteredArguments = []
-
-  argumentsDefinition.forEach( (def,index) => {
-    if (Boolean(def)) { // is defined
-      if (typeof def === 'string') { // fixed value old version compatibility
-        filteredArguments[index] = def
-      } else if (def.type) {
-
-        const order = (def.order || index) // if is not defined, it is the order the argument is being processed
-
-        if (def.type===TaskConstants.ARGUMENT_TYPE_FIXED) {
-          filteredArguments[order] = def.value
-        } else if (
-          def.type === TaskConstants.ARGUMENT_TYPE_INPUT ||
-          def.type === TaskConstants.ARGUMENT_TYPE_SELECT
-        ) {
-          // require user input
-          const found = argumentsValues.find(reqArg => {
-            return (reqArg.order === order && reqArg.label === def.label)
-          })
-
-          // the argument is not present within the provided request arguments
-          if (!found) {
-            errors.required(def.label, null, 'task argument ' + def.label + ' is required. provide the argument order and label')
-          } else {
-            if (!found.value) {
-              errors.invalid(def.label, def.value, 'task argument value required')
-            } else {
-              filteredArguments[order] = found.value
-            }
-          }
-        } else { // bad argument definition
-          errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
-          // error ??
-        }
-      } else { // argument is not a string and does not has a type
-        errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
-        // task definition error
-      }
-    }
-  })
-
-  if (errors.hasErrors()) {
-    const err = new Error('invalid task arguments')
-    err.statusCode = 400
-    err.errors = errors
-    return next(err)
-  }
-  next(null,filteredArguments)
 }

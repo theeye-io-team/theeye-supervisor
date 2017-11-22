@@ -1,13 +1,15 @@
 'use strict'
 
-const LIFECYCLE = require('../constants/lifecycle')
-var Agenda = require('agenda');
+const Agenda = require('agenda')
+const async = require('async')
+const ObjectId = require('mongoose').Types.ObjectId
+const EventEmitter = require('events').EventEmitter
+const util = require('util')
+
+const App = require('../app')
+
 // var config = require('config');
-var async = require('async');
 // var format = require('util').format;
-var ObjectId = require('mongoose').Types.ObjectId;
-var EventEmitter = require('events').EventEmitter;
-var util = require('util');
 
 var logger = require('../lib/logger')(':scheduler');
 var mongodb = require('../lib/mongodb').connection.db;
@@ -16,9 +18,13 @@ var Task = require('../entity/task').Entity;
 var Script = require('../entity/file').Script;
 var Customer = require('../entity/customer').Entity;
 var User = require('../entity/user').Entity;
-var JobDispatcher = require('./job');
 
 const TaskConstants = require('../constants/task')
+const JobConstants = require('../constants/jobs')
+const LifecycleConstants = require('../constants/lifecycle')
+
+const JobDispatcher = require('../service/job')
+const TaskManager = require('../service/task')
 
 function Scheduler() {
   EventEmitter.call(this);
@@ -35,7 +41,7 @@ function Scheduler() {
 util.inherits(Scheduler, EventEmitter);
 
 Scheduler.prototype = {
-  initialize: function(ready) {
+  initialize (ready) {
     var self = this;
     this.agenda.on('ready', function(){
       logger.log('scheduler is ready');
@@ -44,7 +50,7 @@ Scheduler.prototype = {
     });
     this.agenda.start();
   },
-  setupAgenda: function(){
+  setupAgenda () {
     var self = this;
     var agenda = this.agenda;
 
@@ -82,44 +88,46 @@ Scheduler.prototype = {
   },
   /**
    * schedules a task
-   * @param {Object} task data.
+   * @param {Object} input data
+   * @property {String} input.origin schedule creator
+   * @property {String[]} input.script_arguments
    */
-  scheduleTask: function (input, done) {
-    var task = input.task
-    var customer = input.customer
-    var user = input.user
-    var schedule = input.schedule
+  scheduleTask (input, done) {
+    const task = input.task
+    const customer = input.customer
+    //const user = input.user
+    const schedule = input.schedule
 
     const data = {
-      task_id: task._id ,
-      host_id: task.host_id ,
-      script_id: task.script_id ,
-      name: task.name ,
-      user_id: user._id ,
-      customer_id: customer._id ,
-      customer_name: customer.name ,
-      lifecycle: LIFECYCLE.READY,
-      script_arguments: input.script_arguments ,
-      notify: input.notify ,
-      scheduleData: schedule
+      task_id: task._id,
+      host_id: task.host_id,
+      script_id: task.script_id,
+      name: task.name,
+      user_id: App.eventDispatcher.user._id,
+      customer_id: customer._id,
+      customer_name: customer.name,
+      lifecycle: LifecycleConstants.READY,
+      script_arguments: input.script_arguments,
+      notify: input.notify || false,
+      scheduleData: schedule,
+      origin: input.origin
     }
 
     // runDate is miliseconds
     var date = new Date(schedule.runDate);
     var frequency = schedule.repeatEvery || false;
 
-    var self = this;
-    this.schedule(date,"task",data,frequency, function(err,job){
+    this.schedule(date,"task",data,frequency, (err,job) => {
       if(err) return done(err);
       done(null,job);
       // If everything went well, ensure 'scheduled' tag on the task
-      self.tagThatTask(task,function(){});
-    });
+      this.tagThatTask(task,() => {})
+    })
   },
   /*
   * Given a task, this method will ensure it has a 'scheduled' tag
   */
-  tagThatTask: function(task, callback) {
+  tagThatTask (task, callback) {
     var tags = [].concat(task.tags);
 
     if (tags.indexOf("scheduled") === -1) {
@@ -130,7 +138,7 @@ Scheduler.prototype = {
     }
   },
   // When untaggin we only got ID, find and check
-  untagTask: function(task, callback) {
+  untagTask (task, callback) {
     var tags = [].concat(task.tags);
 
     if(tags.indexOf("scheduled") !== -1) {
@@ -140,7 +148,7 @@ Scheduler.prototype = {
       callback();
     }
   },
-  handleScheduledTag: function(task, callback) {
+  handleScheduledTag (task, callback) {
     if(!task) {
       var err = new Error('Missing task');
       err.statusCode = 400;
@@ -160,7 +168,7 @@ Scheduler.prototype = {
   /**
    * Schedules a job for its starting date and parsing its properties
    */
-  schedule: function(starting, jobName, data, interval, done) {
+  schedule (starting, jobName, data, interval, done) {
     var agendaJob = this.agenda.create(jobName, data);
     agendaJob.schedule(starting);
     logger.log("agendaJob.schedule %s", starting);
@@ -176,34 +184,34 @@ Scheduler.prototype = {
     this.agenda.jobs({
       $and:[
         {name: 'task'},
-        {'data.task_id': taskId}
+        {'data.task_id': taskId},
+        {nextRunAt: {$ne: null}}
       ]
     }, callback)
   },
   // searches for task jobs of a given customer id
   // TODO method naming could be improved if it's not gonna be a generic getter
-  getSchedules: function(cid, callback) {
-    if(!cid) {
+  getSchedules (cid, callback) {
+    if (!cid) {
       return callback(new Error('user id must be provided'));
     }
-    this.agenda.jobs(
-      {
-        $and:[
-          {name: 'task'},
-          {'data.customer_id': cid}
-        ]
-      },
-      callback);
+
+    this.agenda.jobs({
+      $and:[
+        {name: 'task'},
+        {'data.customer_id': cid}
+      ]
+    }, callback)
   },
   // Counts schedules for the given task
   // @param callback: Function (err, schedulesCount)
-  taskSchedulesCount: function(task, callback) {
+  taskSchedulesCount (task, callback) {
     this.getTaskSchedule(task._id, function(err, schedules){
       return callback(err, err ? 0 : schedules.length);
     });
   },
   //Cancels a specific scheduleId. Task is provided for further processing
-  cancelTaskSchedule: function(task, scheduleId, callback) {
+  cancelTaskSchedule (task, scheduleId, callback) {
     if(!scheduleId) return callback(new Error('schedule id must be provided'));
 
     var self = this;
@@ -221,7 +229,7 @@ Scheduler.prototype = {
     });
   },
   // deletes ALL schedules for a given task
-  unscheduleTask: function (task, callback) {
+  unscheduleTask (task, callback) {
     this.agenda.cancel({
       $and: [
         { name: 'task' },
@@ -229,19 +237,19 @@ Scheduler.prototype = {
       ]
     }, callback);
   },
-  taskProcessor: function(agendaJob, done) {
-    logger.log('////////////////////////////////////////');
-    logger.log('////////////////////////////////////////');
-    logger.log('Called agendaJob processor taskProcessor');
-    logger.log('////////////////////////////////////////');
-    logger.log('////////////////////////////////////////');
+  taskProcessor (agendaJob, done) {
+    logger.log('//////////////////////////////////////////')
+    logger.log('//////////////////////////////////////////')
+    logger.log(' Called agendaJob processor taskProcessor ')
+    logger.log('//////////////////////////////////////////')
+    logger.log('//////////////////////////////////////////')
 
     var jobData = agendaJob.attrs.data;
 
-    const JobError = (err) => {
+    function JobError (err) {
       agendaJob.fail(err)
       agendaJob.save()
-      done(err)
+      return done(err)
     }
 
     async.parallel({
@@ -250,29 +258,46 @@ Scheduler.prototype = {
       host: callback => Host.findById(jobData.host_id, callback),
       user: callback => User.findById(jobData.user_id, callback)
     }, function (err, data) {
+      const task = data.task
+
       if (err) {
         return new JobError(err)
       }
 
       // if any member isn't here: fail and done.
       var undefinedProperty = Object.keys(data).find(key => !data[key])
-
       if (undefinedProperty) {
         return JobError( new Error(`${undefinedProperty} (${jobData[undefinedProperty + '_id']}) is missing`) )
       }
 
-      JobDispatcher.create({
-        task: data.task,
-        user: data.user,
-        customer: data.customer,
-        script_arguments: jobData.script_arguments,
-        notify: true
-      }, (err,job)=>{
-        if(err) return new JobError(err);
-        done();
-      });
-    });
+      const prepareTaskArguments = (next) => {
+        if (task.type === TaskConstants.TYPE_SCRIPT) {
+          TaskManager.prepareTaskArgumentsValues(
+            task.script_arguments,
+            [], // only fixed-arguments allowed
+            (err,args) => {
+              if (err) return JobError(err)
+              next(null, args)
+            }
+          )
+        } else next()
+      }
+
+      prepareTaskArguments( (err, args) => {
+        JobDispatcher.create({
+          task: data.task,
+          user: data.user,
+          customer: data.customer,
+          notify: true,
+          script_arguments: args,
+          origin: JobConstants.ORIGIN_SCHEDULER
+        }, (err,job) => {
+          if (err) return new JobError(err)
+          done()
+        })
+      })
+    })
   }
-};
+}
 
 module.exports = new Scheduler();

@@ -10,6 +10,7 @@ const logger = require('../../lib/logger')(':events')
 const User = require('../../entity/user').Entity
 const Task = require('../../entity/task').Entity
 const CustomerService = require('../customer')
+const JobConstants = require('../../constants/jobs')
 
 class EventDispatcher extends EventEmitter {
 
@@ -86,15 +87,18 @@ module.exports = new EventDispatcher()
 
 /**
  * @author Facugon
- * @param {Array options}
+ * @param {Mixed[]} input
+ * @property {Task} input.task
+ * @property {User} input.user
+ * @property {Event} input.event
  * @access private
  */
-const createJob = (options) => {
-  const task = options.task
-  const user = options.user
-  const event = options.event
+const createJob = (input) => {
+  const task = input.task
+  const user = input.user
+  const event = input.event
 
-  logger.log('preparing to run task %s', task._id);
+  logger.log('preparing to run task %s', task._id)
 
   task.populate([
     { path: 'customer' },
@@ -125,10 +129,11 @@ const createJob = (options) => {
         customer: customer,
         notify: true,
         schedule: {
-          runDate: runDateMilliseconds,
-        }
-      },(err, agenda) => {
-        if (err) return logger.error(err);
+          runDate: runDateMilliseconds
+        },
+        origin: JobConstants.ORIGIN_WORKFLOW
+      }, (err, agenda) => {
+        if (err) return logger.error(err)
 
         CustomerService.getAlertEmails(customer.name,(err, emails)=>{
           App.jobDispatcher.sendJobCancelationEmail({
@@ -141,21 +146,22 @@ const createJob = (options) => {
             grace_time_mins: task.grace_time / 60,
             customer_name: customer.name,
             to: emails.join(',')
-          });
-        });
-      });
+          })
+        })
+      })
     } else {
       App.jobDispatcher.create({
         event: event,
         task: task,
         user: user,
         customer: customer,
-        notify: true
+        notify: true,
+        origin: JobConstants.ORIGIN_WORKFLOW
       }, (err, job) => {
         if (err) return logger.error(err);
         // job created
-        logger.log('automatic job created by event');
-      });
+        logger.log('job created by workflow')
+      })
     }
-  });
+  })
 }

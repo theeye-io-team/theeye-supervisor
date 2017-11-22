@@ -1,10 +1,11 @@
-/* global json */
 "use strict";
 
-var app = require('../app');
-var logger = require('../lib/logger')('controller:task-schedule');
-var router = require('../router');
-var resolver = router.resolve;
+const App = require('../app');
+const logger = require('../lib/logger')('controller:task-schedule');
+const router = require('../router');
+const resolver = router.resolve;
+
+const JobConstants = require('../constants/jobs')
 
 module.exports = function (server, passport) {
   var middlewares = [
@@ -13,12 +14,12 @@ module.exports = function (server, passport) {
     resolver.customerNameToEntity({required:true}),
     router.ensureCustomer,
     resolver.idToEntity({param:'task'})
-  ];
+  ]
 
   //server.post('/:customer/task/:task/schedule',middlewares,controller.create);
-  server.post('/:customer/task/:task/schedule',middlewares,controller.create);
-  server.get('/:customer/task/:task/schedule',middlewares,controller.fetch);
-  server.del('/:customer/task/:task/schedule/:schedule',middlewares,controller.remove);
+  server.post('/:customer/task/:task/schedule',middlewares,controller.create)
+  server.get('/:customer/task/:task/schedule',middlewares,controller.fetch)
+  server.del('/:customer/task/:task/schedule/:schedule',middlewares,controller.remove)
 
   // this is for the email cancelation
   // authenticate with a secret token
@@ -27,10 +28,10 @@ module.exports = function (server, passport) {
     resolver.idToEntity({param:'task',required:true}),
     router.requireSecret('task'),
     resolver.customerNameToEntity({required:true}),
-  ], controller.remove);
-};
+  ], controller.remove)
+}
 
-var controller = {
+const controller = {
   /**
    * Gets schedule data for a task
    * @author cg
@@ -41,7 +42,7 @@ var controller = {
    */
   fetch (req, res, next) {
     var task = req.task;
-    app.scheduler.getTaskSchedule(task._id, function (err, scheduleData) {
+    App.scheduler.getTaskSchedule(task._id, function (err, scheduleData) {
       if (err) {
         logger.error('Scheduler had an error retrieving data for %s',task._id)
         logger.error(err)
@@ -62,7 +63,7 @@ var controller = {
     var scheduleId = req.params.schedule;
     if (!scheduleId) res.send(400,'schedule id required');
 
-    app.scheduler.cancelTaskSchedule(task, scheduleId, function (err, qtyRemoved) {
+    App.scheduler.cancelTaskSchedule(task, scheduleId, function (err, qtyRemoved) {
       if (err) {
         logger.error('Scheduler had an error canceling schedule %s',scheduleId);
         logger.error(err);
@@ -87,7 +88,8 @@ var controller = {
       return res.send(400,json.error('Must have a date'))
     }
 
-    app.scheduler.scheduleTask({
+    App.scheduler.scheduleTask({
+      origin: JobConstants.ORIGIN_SCHEDULER,
       task: task,
       customer: customer,
       user: user,
@@ -97,7 +99,6 @@ var controller = {
         logger.error(err)
         return res.send(500, err)
       }
-
       res.send(200, schedule)
     })
   }

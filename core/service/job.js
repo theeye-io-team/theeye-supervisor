@@ -328,12 +328,12 @@ const createScriptJob = (input, done) => {
     job.notify = input.notify
     job.lifecycle = LIFECYCLE.READY
     job.event = input.event||null
+    job.origin = input.origin
     job.save(err => {
       if (err) {
         logger.error('%o',err)
         return done(err)
       }
-
       done(null, job)
     })
   })
@@ -357,7 +357,8 @@ const createScraperJob = (input, done) => {
   job.customer_name = input.customer.name;
   job.notify = input.notify;
   job.lifecycle = LIFECYCLE.READY
-  job.event = input.event||null;
+  job.event = input.event||null
+  job.origin = input.origin
   job.save(err => {
     if (err) {
       logger.error('%o',err)

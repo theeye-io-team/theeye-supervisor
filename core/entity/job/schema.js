@@ -24,7 +24,8 @@ function BaseSchema (specs) {
     creation_date: { type: Date, default: Date.now },
     last_update: { type: Date, default: Date.now },
     event: { type: ObjectId, ref: 'Event' },
-    event_id: { type: ObjectId }
+    event_id: { type: ObjectId },
+    origin: { type: String }
   }, specs),{
     collection: 'jobs',
     discriminatorKey: '_type'

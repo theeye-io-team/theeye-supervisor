@@ -175,6 +175,9 @@ module.exports = {
       "webhook": {
         "crud": "webhook-crud",
         "triggered": "triggered-webhook"
+      },
+      "scheduler": {
+        "crud": "scheduler-crud"
       }
     }
   },
