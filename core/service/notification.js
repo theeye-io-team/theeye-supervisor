@@ -6,15 +6,20 @@ var SNS = new AWS.SNS( new AWS.Config( config.aws ) );
 var request = require('request');
 var mailer = require('../lib/mailer');
 var debug = require('../lib/logger')('service:notification');
+const isURL = require('validator/lib/isURL')
 
 module.exports = {
-  sendSNSNotification (sns,options) {
+  sendSNSNotification (data,options) {
+    let message = JSON.stringify(data)
+    let topic = options.topic
+    let subject = options.subject
+
     if ( config.get('is_dev') ) {
       var websnscfg = config.get('web-sns');
       var webroute = config.get('system').web_url +
-        websnscfg.topicEndpoint[ options.topic ];
+        websnscfg.topicEndpoint[topic];
 
-      var params = { form: { Message: JSON.stringify(sns) } }
+      var params = { form: { Message: message } }
 
       debug.log('Submit Web SNS information(direct no AWS) to %s', webroute);
       const req = request.post(
@@ -35,9 +40,9 @@ module.exports = {
       const snscfg = config.get('sns');
 
       SNS.publish({
-        TopicArn: snscfg.topicArn[ options.topic ],
-        Message: JSON.stringify(sns),
-        Subject: options.subject
+        TopicArn: snscfg.topicArn[topic],
+        Message: message,
+        Subject: subject
       },function(error,data){
         if (error) {
           debug.error('SNS submit error')
@@ -46,6 +51,11 @@ module.exports = {
         else debug.log(data);
       });
     }
+
+    generateSystemNotification({
+      topic: topic,
+      data: data
+    })
   },
   sendEmailNotification (options) {
     mailer.sendMail({
@@ -62,4 +72,32 @@ module.exports = {
       }
     });
   }
+}
+
+/**
+ * @param {Object} payload
+ * @property {String} payload.data
+ * @property {String} payload.topic
+ */
+const generateSystemNotification = (payload) => {
+  const url = config.notifications.api.url
+  if (!url || !isURL(url)) return debug.error('notification event aborted. invalid url %o', url)
+  if (!payload || !payload.data) return debug.error('notification event aborted. invalid payload %o', payload)
+
+  request({
+    method: 'POST',
+    uri: url,
+    json: payload
+  }, function (error, response, body) {
+    if (error) {
+      debug.error('could not connect to local notification system')
+      debug.error(error)
+    } else if (response.statusCode != 200) {
+      debug.error('submit to local notification system failed')
+      debug.error('%s, %o', response.statusCode, body)
+    } else {
+      debug.log('notification registered')
+      debug.log(body.replace(/(\r\n|\n|\r)/gm,''))
+    }
+  })
 }

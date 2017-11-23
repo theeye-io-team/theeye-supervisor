@@ -6,8 +6,8 @@ var join = require('path').join;
 module.exports = {
   "is_dev": true,
   "system": {
-    "base_url": "http://localhost:60080",
-    "web_url": "http://localhost:6080",
+    "base_url": "http://127.0.0.1:60080",
+    "web_url": "http://127.0.0.1:6080",
     "file_upload_folder" : join(__dirname , '..', 'uploads')
   },
   "storage": {
@@ -23,12 +23,12 @@ module.exports = {
     "debug":false,
     "user": "",
     "password": "",
-    "hosts": "localhost:27017",
+    "hosts": "127.0.0.1:27017",
     "database": "theeye"
   },
   "elasticsearch": {
     "enabled": false,
-    "url":"http://localhost:9200" // via ssh tunnel
+    "url":"http://127.0.0.1:9200" // via ssh tunnel
   },
   "mailer": {
     "from": "The Eye Development %customer% <%customer%@theeye.io>",
@@ -38,6 +38,11 @@ module.exports = {
     "support": [],
     "transport": {
       "type":"sendmail"
+    }
+  },
+  "notifications": {
+    "api": {
+      "url": "http://127.0.0.1:6080/notification" // the same web server
     }
   }
 }

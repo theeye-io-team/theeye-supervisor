@@ -136,6 +136,9 @@ module.exports = {
     "url": "",
   },
   "notifications": {
+    "api": {
+      "url": "" || process.env.CONFIG_NOTIFICATIONS_API_URL
+    },
     "topics": {
       "agent": {
         "version": "agent-version"
