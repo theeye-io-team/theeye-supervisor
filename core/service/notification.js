@@ -6,7 +6,7 @@ var SNS = new AWS.SNS( new AWS.Config( config.aws ) );
 var request = require('request');
 var mailer = require('../lib/mailer');
 var debug = require('../lib/logger')('service:notification');
-const isURL = require('validator/lib/isURL')
+//const isURL = require('validator/lib/isURL')
 
 module.exports = {
   sendSNSNotification (data,options) {
@@ -81,7 +81,8 @@ module.exports = {
  */
 const generateSystemNotification = (payload) => {
   const url = config.notifications.api.url
-  if (!url || !isURL(url)) return debug.error('notification event aborted. invalid url %o', url)
+  //if (!url || !isURL(url)) return debug.error('notification event aborted. invalid url %o', url)
+  if (!url) return debug.error('notification event aborted. invalid url %o', url)
   if (!payload || !payload.data) return debug.error('notification event aborted. invalid payload %o', payload)
 
   request({

@@ -137,7 +137,7 @@ module.exports = {
   },
   "notifications": {
     "api": {
-      "url": "" || process.env.CONFIG_NOTIFICATIONS_API_URL
+      "url": "" || process.env.CONFIG_NOTIFICATIONS_API_URL // e.g. "url": "http://127.0.0.1:6080/notification" // the same web server
     },
     "topics": {
       "agent": {
