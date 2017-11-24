@@ -107,7 +107,6 @@ Scheduler.prototype = {
       customer_id: customer._id,
       customer_name: customer.name,
       lifecycle: LifecycleConstants.READY,
-      script_arguments: input.script_arguments,
       notify: input.notify || false,
       scheduleData: schedule,
       origin: input.origin
