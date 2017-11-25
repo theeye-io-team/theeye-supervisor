@@ -19,12 +19,10 @@ var Script = require('../entity/file').Script;
 var Customer = require('../entity/customer').Entity;
 var User = require('../entity/user').Entity;
 
-const TaskConstants = require('../constants/task')
 const JobConstants = require('../constants/jobs')
 const LifecycleConstants = require('../constants/lifecycle')
 
 const JobDispatcher = require('../service/job')
-const TaskManager = require('../service/task')
 
 function Scheduler() {
   EventEmitter.call(this);
@@ -269,31 +267,15 @@ Scheduler.prototype = {
         return JobError( new Error(`${undefinedProperty} (${jobData[undefinedProperty + '_id']}) is missing`) )
       }
 
-      const prepareTaskArguments = (next) => {
-        if (task.type === TaskConstants.TYPE_SCRIPT) {
-          TaskManager.prepareTaskArgumentsValues(
-            task.script_arguments,
-            [], // only fixed-arguments allowed
-            (err,args) => {
-              if (err) return JobError(err)
-              next(null, args)
-            }
-          )
-        } else next()
-      }
-
-      prepareTaskArguments( (err, args) => {
-        JobDispatcher.create({
-          task: data.task,
-          user: data.user,
-          customer: data.customer,
-          notify: true,
-          script_arguments: args,
-          origin: JobConstants.ORIGIN_SCHEDULER
-        }, (err,job) => {
-          if (err) return new JobError(err)
-          done()
-        })
+      JobDispatcher.create({
+        task: data.task,
+        user: data.user,
+        customer: data.customer,
+        notify: true,
+        origin: JobConstants.ORIGIN_SCHEDULER
+      }, (err,job) => {
+        if (err) return new JobError(err)
+        done()
       })
     })
   }

@@ -5,9 +5,10 @@ const async = require('async')
 const globalconfig = require('config')
 const logger = require('../lib/logger')('eye:jobs')
 const elastic = require('../lib/elastic')
-const LIFECYCLE = require('../constants/lifecycle')
-const JOBS = require('../constants/jobs')
-const CONSTANTS = require('../constants')
+const LifecycleConstants = require('../constants/lifecycle')
+const JobsConstants = require('../constants/jobs')
+const Constants = require('../constants')
+const TaskConstants = require('../constants/task')
 
 const JobModels = require('../entity/job')
 const Job = JobModels.Job
@@ -43,13 +44,13 @@ module.exports = {
    */
   getNextPendingJob(input,next) {
     const query = {
-      lifecycle: LIFECYCLE.READY,
+      lifecycle: LifecycleConstants.READY,
       host_id: input.host._id
     }
 
     Job.findOne(query, (error,job) => {
       if (job!==null) {
-        job.lifecycle = LIFECYCLE.ASSIGNED
+        job.lifecycle = LifecycleConstants.ASSIGNED
         job.save(error => {
           if (error) throw error
           next(null,job)
@@ -90,14 +91,12 @@ module.exports = {
 
       removeOldTaskJobs(task, () => {
         const created = (err, job) => {
-          if (err) {
-            return done(err)
-          }
+          if (err) { return done(err) }
 
           logger.log('script job created.')
 
           let topic = globalconfig.notifications.topics.job.crud
-          registerJobOperation(CONSTANTS.CREATE, topic, {
+          registerJobOperation(Constants.CREATE, topic, {
             task: task,
             job: job,
             user: input.user
@@ -106,9 +105,23 @@ module.exports = {
           done(null, job)
         }
 
-        if (type == 'script') {
-          createScriptJob(input, created)
-        } else if (type == 'scraper') {
+        const prepareTaskArguments = (args, next) => {
+          if (!args) {
+            App.taskManager.prepareTaskArgumentsValues(
+              task.script_arguments,
+              [], // only fixed-arguments if not specified
+              (err, args) => next(err, args)
+            )
+          } else next(null,args)
+        }
+
+        if (type == TaskConstants.TYPE_SCRIPT) {
+          prepareTaskArguments(input.script_arguments, (err,args) => {
+            if (err) return done(err)
+            input.script_arguments = args
+            createScriptJob(input, created)
+          })
+        } else if (type == TaskConstants.TYPE_SCRAPER) {
           createScraperJob(input, created)
         } else {
           err = new Error('invalid or undefined task type ' + task.type)
@@ -134,7 +147,7 @@ module.exports = {
     // if not failure, assume success
     var state = (result.state===STATE_FAILURE) ? STATE_FAILURE : STATE_SUCCESS
 
-    job.lifecycle = LIFECYCLE.FINISHED
+    job.lifecycle = LifecycleConstants.FINISHED
     job.state = state
     job.result = result.data
     job.save(err => {
@@ -143,10 +156,10 @@ module.exports = {
     })
 
     // if job is an agent update, skip notifications and events
-    if (job.name==JOBS.AGENT_UPDATE) return
+    if (job.name==JobsConstants.AGENT_UPDATE) return
 
     var topic = globalconfig.notifications.topics.job.crud
-    registerJobOperation(CONSTANTS.UPDATE, topic, {
+    registerJobOperation(Constants.UPDATE, topic, {
       task: job.task,
       job: job,
       user: user
@@ -160,7 +173,7 @@ module.exports = {
   },
   cancel (job, next) {
     next||(next=()=>{})
-    job.lifecycle = LIFECYCLE.CANCELED
+    job.lifecycle = LifecycleConstants.CANCELED
     job.save(err => {
       if (err) {
         logger.error('fail to cancel job %s', job._id)
@@ -200,8 +213,8 @@ module.exports = {
 
 const jobInProgress = (job) => {
   if (!job) return false
-  return job.lifecycle === LIFECYCLE.READY ||
-    job.lifecycle === LIFECYCLE.ASSIGNED
+  return job.lifecycle === LifecycleConstants.READY ||
+    job.lifecycle === LifecycleConstants.ASSIGNED
 }
 
 /**
@@ -326,7 +339,7 @@ const createScriptJob = (input, done) => {
     job.customer_id = input.customer._id
     job.customer_name = input.customer.name
     job.notify = input.notify
-    job.lifecycle = LIFECYCLE.READY
+    job.lifecycle = LifecycleConstants.READY
     job.event = input.event||null
     job.origin = input.origin
     job.save(err => {
@@ -356,7 +369,7 @@ const createScraperJob = (input, done) => {
   job.customer_id = input.customer._id;
   job.customer_name = input.customer.name;
   job.notify = input.notify;
-  job.lifecycle = LIFECYCLE.READY
+  job.lifecycle = LifecycleConstants.READY
   job.event = input.event||null
   job.origin = input.origin
   job.save(err => {
