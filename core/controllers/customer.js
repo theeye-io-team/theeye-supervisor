@@ -31,6 +31,12 @@ module.exports = function (server, passport) {
   //server.put('/customer/:customer',middlewares,controller.replace);
   server.del('/customer/:customer',middlewares,controller.remove);
   server.patch('/customer/:customer',middlewares,controller.patch);
+  server.patch('/customer/:customer/config',[
+    passport.authenticate('bearer',{session:false}),
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({param:'customer',required:true}),
+    router.ensureCustomer,
+  ],controller.updateconfig);
 
   server.get('/customer',[
     passport.authenticate('bearer',{session:false}),
@@ -162,6 +168,54 @@ var controller = {
     if (Array.isArray(updates.emails)) {
       customer.emails = updates.emails
     }
+
+    customer.save( (err,model) => {
+      if (err) {
+        res.send(500,err)
+      } else {
+        res.send(200, customer)
+      }
+      next()
+    })
+  },
+  /**
+   * @method PATCH
+   *
+   * @route /customer/:customer/config
+   */
+  updateconfig (req, res, next) {
+    const customer = req.customer
+    const config = req.params.config
+
+    if(!config) {
+      return res.send(400, json.error('Missing config values.'))
+    }
+
+    if (config.elasticsearch && config.elasticsearch.enabled === true) {
+      if (
+        ! isURL(config.elasticsearch.url,{
+          protocols: ['http','https'],
+          require_protocol: true
+        })
+      ) {
+        return res.send(400, json.error('elasticsearch url must be a valid URL'))
+      }
+    }
+
+    if (config.kibana) {
+      if (
+        ! isURL(config.kibana,{
+          protocols: ['http','https'],
+          require_protocol: true
+        })
+      ) {
+        return res.send(400, json.error('kibana iframe url must be a valid URL'))
+      }
+    } else {
+      config.kibana = null;
+    }
+
+    customer.config = merge({}, customer.config, config)
 
     customer.save( (err,model) => {
       if (err) {
