@@ -132,6 +132,8 @@ module.exports = {
   },
   /**
    *
+   * @summary Finalize task execution. Save result and submit result to elk
+   *
    * @param {Object} input
    * @property {Job} input.job
    * @property {User} input.user
@@ -159,7 +161,7 @@ module.exports = {
     if (job.name==JobsConstants.AGENT_UPDATE) return
 
     //var topic = globalconfig.notifications.topics.job.crud
-    registerJobOperation(Constants.UPDATE, 'task-execution', {
+    registerJobOperation(Constants.UPDATE, 'task-result', {
       task: job.task,
       job: job,
       user: user
