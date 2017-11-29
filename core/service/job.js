@@ -95,8 +95,8 @@ module.exports = {
 
           logger.log('script job created.')
 
-          let topic = globalconfig.notifications.topics.job.crud
-          registerJobOperation(Constants.CREATE, topic, {
+          //let topic = globalconfig.notifications.topics.job.crud
+          registerJobOperation(Constants.CREATE, 'task-execution', {
             task: task,
             job: job,
             user: input.user
@@ -158,8 +158,8 @@ module.exports = {
     // if job is an agent update, skip notifications and events
     if (job.name==JobsConstants.AGENT_UPDATE) return
 
-    var topic = globalconfig.notifications.topics.job.crud
-    registerJobOperation(Constants.UPDATE, topic, {
+    //var topic = globalconfig.notifications.topics.job.crud
+    registerJobOperation(Constants.UPDATE, 'task-execution', {
       task: job.task,
       job: job,
       user: user
