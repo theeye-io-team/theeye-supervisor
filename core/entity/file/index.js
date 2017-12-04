@@ -1,9 +1,9 @@
-'use strict';
+'use strict'
 
-const mongodb = require('../../lib/mongodb').db;
-const FileSchema = require('./schema');
+const mongodb = require('../../lib/mongodb').db
+const FileSchema = require('./schema')
 
-var ScriptSchema = new FileSchema();
+var ScriptSchema = new FileSchema()
 ScriptSchema.statics.create = function(data,next) {
   var options = {
     customer: data.customer,
@@ -20,29 +20,30 @@ ScriptSchema.statics.create = function(data,next) {
     description: (data.description||''),
     md5: data.md5,
     public: data.public
-  };
+  }
 
-  var script = new Script(options);
+  var script = new Script(options)
   script.save(function(error){
-    next(error,script);
-  });
+    next(error,script)
+  })
 }
 
-var File = mongodb.model('File', new FileSchema());
-var Script = File.discriminator('Script', ScriptSchema);
-
-File.ensureIndexes();
+var File = mongodb.model('File', new FileSchema({
+  _type: { type: String, default: 'File' }
+}))
+var Script = File.discriminator('Script', ScriptSchema)
+File.ensureIndexes()
 
 // called for both inserts and updates
 File.on('afterSave', function(model) {
-  model.last_update = new Date();
+  model.last_update = new Date()
   // do more stuff
-});
+})
 
 // create event
 //File.on('afterInsert',function(model){ });
 //File.on('afterUpdate',function(model){ });
 //File.on('afterRemove',function(model){ });
 
-exports.File = File;
-exports.Script = Script;
+exports.File = File
+exports.Script = Script

@@ -73,7 +73,7 @@ module.exports = function(server, passport){
   );
 }
 
-var controller = {
+const controller = {
   /**
    *
    * @method GET
@@ -237,4 +237,4 @@ var controller = {
       }
     });
   }
-};
+}

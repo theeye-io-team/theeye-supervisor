@@ -1,16 +1,16 @@
-'use strict';
+'use strict'
 
-const util = require('util');
-const async = require('async');
-const path = require('path');
-const BaseSchema = require('../base-schema');
-const FetchBy = require('../../lib/fetch-by');
-const config = require('config');
+const util = require('util')
+const async = require('async')
+const path = require('path')
+const BaseSchema = require('../base-schema')
+const FetchBy = require('../../lib/fetch-by')
+const config = require('config')
 
 function FileSchema (props) {
-  props||(props={});
+  props||(props={})
 
-  var specs = { collection: 'files' };
+  var specs = { collection: 'files' }
   var properties = {
     customer_id: { type: String },
     customer_name: { type: String },
@@ -23,65 +23,65 @@ function FileSchema (props) {
     description: { type: String, default:'' },
     md5: { type: String, default: null },
     public : { type: Boolean, default: false },
-    tags: { type:Array, default:[] }
+    tags: { type: Array, default:[] }
   }
 
-  BaseSchema.call(this, util._extend({}, properties, props), specs);
+  BaseSchema.call(this, util._extend({}, properties, props), specs)
 
   this.methods.getFullPath = function() {
-    const uploadPath = config.get('system').file_upload_folder;
+    const uploadPath = config.get('system').file_upload_folder
     return path.join(
       uploadPath,
       this.customer_name,
       'scripts',
       this.filename
-    );
+    )
   }
 
   this.methods.getCleanFilename = function(next) {
-    return this.keyname.replace(/\[ts:.*\]/,'');
+    return this.keyname.replace(/\[ts:.*\]/,'')
   }
 
   this.methods.publish = function(next) {
-    var data = this.toObject();
-    next(null, data);
-    return data;
+    var data = this.toObject()
+    next(null, data)
+    return data
   }
 
   this.methods.update = function(updates,next){
     for (var prop in updates) {
-      this[prop] = updates[prop];
+      this[prop] = updates[prop]
     }
-    this.save(err => next(err,this));
+    this.save(err => next(err,this))
   }
 
   this.statics.fetchBy = function(filter,next){
-    var publishedScripts = [];
+    var publishedScripts = []
     FetchBy.call(this,filter,function(err,scripts){
-      var notFound = (scripts===null||scripts instanceof Array && scripts.length===0);
+      var notFound = (scripts===null||scripts instanceof Array && scripts.length===0)
       if (notFound) {
-        next(null,[]);
+        next(null,[])
       } else {
-        var asyncTasks = [];
+        var asyncTasks = []
         scripts.forEach(function(script){
           asyncTasks.push(function(callback){
             script.publish(function(error, data){
-              publishedScripts.push(data);
-              callback();
-            });
-          });
-        });
+              publishedScripts.push(data)
+              callback()
+            })
+          })
+        })
 
         async.parallel(asyncTasks,function(){
-          next(null,publishedScripts);
-        });
+          next(null,publishedScripts)
+        })
       }
-    });
+    })
   }
 
-  return this;
+  return this
 }
 
-util.inherits(FileSchema, BaseSchema);
+util.inherits(FileSchema, BaseSchema)
 
-module.exports = FileSchema;
+module.exports = FileSchema
