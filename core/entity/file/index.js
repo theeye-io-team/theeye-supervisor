@@ -6,10 +6,10 @@ const FileSchema = require('./schema')
 var ScriptSchema = new FileSchema()
 ScriptSchema.statics.create = function(data,next) {
   var options = {
-    customer: data.customer,
-    customer_id: data.customer._id,
-    customer_name: data.customer.name,
-    user_id: data.user._id,
+    customer: data.customer_id,
+    customer_id: data.customer_id,
+    customer_name: data.customer_name,
+    user_id: data.user_id,
     filename: data.filename,
     keyname: data.keyname,
     mimetype: data.mimetype,

@@ -1,14 +1,15 @@
 'use strict';
 
-const fs = require('fs');
-const md5 = require('md5');
+const fs = require('fs')
+const md5 = require('md5')
 
-var router = require('../router');
-var logger = require('../lib/logger')('eye:controller:file');
-var audit = require('../lib/audit');
-var dbFilter = require('../lib/db-filter');
-var File = require('../entity/file').File;
-var FileHandler = require('../lib/file');
+var router = require('../router')
+var logger = require('../lib/logger')('eye:controller:file')
+var audit = require('../lib/audit')
+var dbFilter = require('../lib/db-filter')
+var File = require('../entity/file').File
+var Script = require('../entity/file').Script
+var FileHandler = require('../lib/file')
 
 module.exports = function(server, passport){
   var middlewares = [
@@ -145,14 +146,15 @@ const controller = {
           public: isPublic
         };
 
-        file.update(data,err => {
+        file.set(data)
+        file.save(err => {
           if (err) {
             logger.error(err);
             next(err);
           } else {
-            file.publish((err,data) => {
-              if (err) return next(err);
-              res.send(200,data);
+            file.publish((err,pub) => {
+              if (err) return next(err)
+              res.send(200,pub)
               next();
             });
           }
@@ -166,12 +168,11 @@ const controller = {
    *
    */
   create (req, res, next) {
-    var user = req.user,
-      //name = req.body.name,
-      customer = req.customer,
-      source = req.files.file,
-      description = req.body.description,
-      isPublic = (req.body.public||false);
+    var user = req.user
+    var customer = req.customer
+    var source = req.files.file
+    var description = req.body.description
+    var isPublic = (req.body.public||false)
 
     logger.log('creating file');
 
@@ -199,9 +200,9 @@ const controller = {
           keyname: storeData.keyname,
           md5: md5(buf),
           public: isPublic
-        };
+        }
 
-        File.create(data,(err,file) => {
+        Script.create(data,(err,file) => {
           if (err) {
             logger.error(err);
             next(err);

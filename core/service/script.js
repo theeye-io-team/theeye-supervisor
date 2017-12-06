@@ -79,8 +79,9 @@ module.exports = {
     next||(next=function(){});
     logger.log('creating script');
     var options = {
-      customer    : input.customer,
-      user        : input.user,
+      customer_id : input.customer._id,
+      customer_name: input.customer.name,
+      user_id     : input.user._id,
       description : (input.description||''),
       filename    : input.script.name,
       keyname     : input.script.keyname,
