@@ -16,7 +16,7 @@ const Scheduler = require('../service/scheduler')
 module.exports = {
   start: function () {
     const mconfig = config.get('monitor');
-    if (Boolean(process.env.MONITORING_DISABLED) === true) {
+    if (process.env.MONITORING_DISABLED == 'true') {
       logger.log('WARNING! Monitoring service is disabled via process.env');
       return
     } else if (mconfig.disabled === true) {
