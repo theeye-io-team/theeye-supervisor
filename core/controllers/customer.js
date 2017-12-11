@@ -7,6 +7,7 @@ var logger = require('../lib/logger')('controller:customer');
 var json = require('../lib/jsonresponse');
 var router = require('../router');
 
+var User = require("../entity/user").Entity;
 var CustomerService = require('../service/customer');
 var UserService = require('../service/user');
 var ResourceService = require('../service/resource');
@@ -165,8 +166,16 @@ var controller = {
     if (updates.description) {
       customer.description = updates.description
     }
-    if (Array.isArray(updates.emails)) {
-      customer.emails = updates.emails
+
+    if (updates.owner_id) {
+      User.findOne({ _id : updates.owner_id }, function (error, user) {
+        if(error)
+          res.send(500,error);
+        if(!user)
+          res.send(400,'Owner not found');
+        customer.owner_id = user._id;
+        customer.owner = user;
+      });
     }
 
     customer.save( (err,model) => {

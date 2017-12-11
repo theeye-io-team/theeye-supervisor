@@ -42,124 +42,80 @@ module.exports = function (server) {
       }
     );
     next();
-  });
+  })
+
   server.post('/register',[
     passport.authenticate('bearer', {session:false}),
     router.requireCredential('root'),
-  ], controller.register);
-};
+  ], controller.register)
+}
 
-var controller = {
-  register: function(req, res, next) {
-    if(!req.body.username) return res.send(400, 'name is required');
-    if(!req.body.email) return res.send(400, 'email is required');
-    if(!req.body.customername) return res.send(400, 'customername is required');
-
-    var newCustomer = {
-      name: req.body.customername,
-      emails: [req.body.email]
-    };
-
-    var agentUser, ownerUser = null;
-    Customer.findOne({ 'name': req.body.customername }, function(error, existentCustomer) {
-      if (error)
-        return responseError(error, res)
-      if (existentCustomer)
-        return responseError({statusCode: 400, message: 'Organization name already in use.'}, res)
-      User.findOne({ 'username': req.body.username }, function(error, existentUser) {
-        if (error)
-          return responseError(error, res)
-        if (existentUser)
-          return responseError({statusCode: 400, message: 'Username already in use.'}, res)
-
-        CustomerService.create(newCustomer, function(err,customer) {
-          if(err) {
-            logger.log(err);
-            err.statusCode || (err.statusCode = 500)
-            return responseError(err, res)
-          } else {
-            logger.log('new customer created');
-            async.parallel([
-              function(callback) {
-                UserService.create({
-                  email: customer.name + '-agent@theeye.io',
-                  customers: [ customer.name ],
-                  credential: 'agent',
-                  enabled: true,
-                  username: customer.name + '-agent@theeye.io'
-                }, function(error, user) {
-                  if(error) {
-                    callback(error, null);
-                    return;
-                  } else {
-                    agentUser = user;
-                    logger.log('user agent created');
-                    customer.agent = agentUser;
-
-                    customer.save(function(error) {
-                      if(error){
-                        callback(error, null);
-                        return;
-                      }
-                      logger.log('Customer agent updated.');
-                      callback(null, agentUser);
-                      return;
-                    });
-                  }
-                });
-              },
-              function(callback) {
-                UserService.create({
-                  email: req.body.email,
-                  customers: [ customer.name ],
-                  credential: 'owner',
-                  enabled: true,
-                  username: req.body.username
-                }, function(error, user) {
-                  if(error) {
-                    callback(error, null);
-                    return;
-                  }
-                  ownerUser = user;
-                  logger.log('Owner user created.');
-                  callback(null, ownerUser);
-                  return;
-                });
-              }
-            ], function(err, results) {
-              if (err) {
-                if (customer) {
-                  customer.remove(function(e){
-                    if(e) return logger.error(e);
-                    logger.log('customer %s removed', customer.name);
-                  });
-                }
-                if (agentUser) {
-                  agentUser.remove(function(e){
-                    if(e) return logger.error(e);
-                    logger.log('customer %s removed', agentUser.username);
-                  });
-                }
-                if (ownerUser) {
-                  ownerUser.remove(function(e){
-                    if(e) return logger.error(e);
-                    logger.log('customer %s removed', ownerUser.username);
-                  });
-                }
-
-                err.statusCode || (err.statusCode = 500)
-                return responseError(err, res)
-
-              } else {
-                return res.send(201, ownerUser);
-              }
-            });
-          }
-        });
-      });
-    });
+const rollback = (customer,agent,owner) => {
+  if (customer) {
+    customer.remove(function(e){
+      if (e) return logger.error(e)
+      logger.log('customer %s removed', customer.name)
+    })
   }
-};
+
+  if (agent) {
+    agent.remove(function(e){
+      if (e) return logger.error(e)
+      logger.log('customer %s removed', agent.username)
+    })
+  }
+
+  if (owner) {
+    owner.remove(function(e){
+      if (e) return logger.error(e)
+      logger.log('customer %s removed', owner.username)
+    })
+  }
+}
+
+const createCustomer = (input,done) => {
+  const name = input.name
+  CustomerService.create({ name: name }, (err,customer) => {
+    if (err) {
+      logger.log(err)
+      err.statusCode || (err.statusCode = 500)
+      return responseError(err, res)
+    }
+
+    logger.log('customer created')
+    async.mapValues({
+      agent: {
+        email: name + '-agent@theeye.io',
+        username: name + '-agent',
+        customers: [ name ],
+        credential: 'agent',
+        enabled: true,
+      },
+      owner: {
+        email: input.owner_email,
+        username: input.owner_username,
+        customers: [ name ],
+        credential: 'owner',
+        enabled: true
+      }
+    }, (data, name, next) => {
+      UserService.create(data, next)
+    }, (err, users) => {
+      console.log(err)
+      console.log(users)
+      if (err) {
+        rollback(customer,users.agent,users.owner)
+        return done(err)
+      }
+
+      customer.agent = users.agent
+      customer.owner = users.owner
+      customer.owner_id = users.owner._id
+      customer.save(err => { if (err) logger.error(err) })
+      done(null,customer)
+    })
+  })
+}
 
 const responseError = (e,res) => {
   //logger.error('%o',e)
@@ -171,4 +127,48 @@ const responseError = (e,res) => {
     errorRes.info.push( e.info.toString() )
   }
   res.send( e.statusCode || 500, errorRes )
+}
+
+const controller = {
+  register (req, res, next) {
+    if (!req.body.username) return res.send(400, 'name is required')
+    if (!req.body.email) return res.send(400, 'email is required')
+    if (!req.body.customername) return res.send(400, 'customername is required')
+
+    Customer.findOne({
+      name: req.body.customername
+    }, (error, customer) => {
+      if (error) return responseError(error, res)
+      if (customer) {
+        return responseError({
+          statusCode: 400,
+          message: 'Organization name already in use.'
+        }, res)
+      }
+
+      User.findOne({
+        username: req.body.username
+      }, (error, user) => {
+        if (error) return responseError(error, res)
+        if (user) {
+          return responseError({
+            statusCode: 400,
+            message: 'Username already in use.'
+          }, res)
+        }
+
+        createCustomer({
+          name: req.body.customername,
+          owner_username: req.body.username,
+          owner_email: req.body.email
+        }, (err, customer) => {
+          if (err) {
+            err.statusCode || (err.statusCode = 500)
+            return responseError(err, res)
+          }
+          return res.send(201, customer.owner)
+        })
+      })
+    })
+  }
 }

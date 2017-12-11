@@ -14,7 +14,8 @@ function Schema () {
       dropDups: true
     },
     description: { type: String, default: '' },
-    emails: { type: Array, default: [] },
+    owner_id: { type: mongoose.Schema.Types.ObjectId },
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     agent: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     config: { type: Object, default: function(){
       return {

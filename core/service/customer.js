@@ -17,7 +17,7 @@ module.exports = {
    */
   getAlertEmails (customerName, next) {
     const self = this
-    var emails
+    var emails = []
 
     Customer.findOne({ name: customerName },function(error, customer){
       if (error) {
@@ -31,7 +31,8 @@ module.exports = {
         return next(err,[]);
       }
 
-      emails = Array.isArray(customer.emails) ? customer.emails : [];
+      if(customer.owner && customer.owner.email)
+        emails.push(customer.owner.email)
 
       User.find({
         'customers._id': customer._id,
@@ -108,7 +109,6 @@ module.exports = {
    */
   create (input, next) {
     const data = {
-      emails: Array.isArray(input.emails) ? input.emails : [],
       name: input.name,
       description: (input.description || '')
     }
