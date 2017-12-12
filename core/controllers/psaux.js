@@ -28,10 +28,15 @@ module.exports = function(server, passport) {
 
 var controller = {
   create (req, res, next) {
-    var host = req.host;
-    var stats = req.params.psaux;
+    var host = req.host
+    var stats = req.params.psaux
 
-    if (!stats) return res.send(400,'psaux data required');
+    if (!host) {
+      var errmsg = 'host is not valid or was removed'
+      logger.error(errmsg)
+      return res.send(400,errmsg)
+    }
+    if (!stats) return res.send(400,'psaux data required')
 
     logger.log('Handling host psaux data');
 
