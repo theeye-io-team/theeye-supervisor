@@ -1,18 +1,19 @@
-"use strict";
+"use strict"
 
 const isURL = require('validator/lib/isURL')
 const assign = require('lodash/assign')
 
-var logger = require('../../lib/logger')('service:resource:monitor');
-var ErrorHandler = require('../../lib/error-handler');
-var router = require('../../router');
-var MonitorEntity = require('../../entity/monitor').Entity;
-var Job = require('../../entity/job').Job;
+const logger = require('../../lib/logger')('service:resource:monitor')
+const ErrorHandler = require('../../lib/error-handler')
+const router = require('../../router')
+const MonitorEntity = require('../../entity/monitor').Entity
+const Job = require('../../entity/job').Job
+const MonitorConstants = require('../../constants/monitors')
 
 if (!RegExp.escape) {
   RegExp.escape = function (s) {
-    return String(s).replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
-  };
+    return String(s).replace(/[\\^$*+?.()|[\]{}]/g, '\\$&')
+  }
 }
 
 function parseUnixId (id) {
@@ -35,7 +36,6 @@ function parseUnixOctalModeString (mode) {
   if (num > 777 || num <= 0) return null
   return mode
 }
-
 
 /**
  * Monitor object namespace for manipulating resources monitor
@@ -120,17 +120,17 @@ module.exports = {
    *
    */
   validateData (input) {
-    var errors = new ErrorHandler();
-    var type = (input.type||input.monitor_type);
+    var errors = new ErrorHandler()
+    var type = (input.type||input.monitor_type)
 
     if (!input.name) {
-      errors.required('name', input.name);
+      errors.required('name', input.name)
     }
     if (!type) {
-      errors.required('type', type);
+      errors.required('type', type)
     }
     if (!input.looptime || !parseInt(input.looptime)) {
-      errors.required('looptime', input.looptime);
+      errors.required('looptime', input.looptime)
     }
 
     var data = assign({},input,{
@@ -139,47 +139,48 @@ module.exports = {
       type: type,
       monitor_type: type,
       tags: router.filter.toArray(input.tags)
-    });
+    })
 
-    logger.log('setting up resource type & properties');
-    logger.data(data);
+    logger.log('setting up resource type & properties')
+    logger.data(data)
 
     switch (type) {
       case 'scraper':
-        var url = input.url;
-        if (!url) errors.required('url',url);
-        else if (!isURL(url,{require_protocol:true})) errors.invalid('url',url);
-        else data.url = url;
+        var url = input.url
+        if (!url) errors.required('url',url)
+        else if (!isURL(url,{require_protocol:true})) errors.invalid('url',url)
+        else data.url = url
 
-        data.timeout = input.timeout||10000;
+        data.timeout = input.timeout||10000
         //data.external_host_id = input.external_host_id;
         //if (!input.external_host_id) data.external = false;
-        data.external = false;
+        data.external = false
 
-        if (!input.parser) input.parser=null;
-        else if (input.parser != 'script' && input.parser != 'pattern')
-          errors.invalid('parser',input.parser);
+        if (!input.parser) input.parser=null
+        else if (input.parser != 'script' && input.parser != 'pattern') {
+          errors.invalid('parser',input.parser)
+        }
 
         // identify how to parse api response selected option by user
         if (!input.status_code&&!input.pattern&&!input.script){
-          errors.required('status code or parser');
+          errors.required('status code or parser')
         } else {
           if (input.parser) {
             if (input.parser=='pattern' && !input.pattern) {
-              errors.invalid('pattern',input.pattern);
+              errors.invalid('pattern',input.pattern)
             } else if (input.parser=='script' && !input.script) {
-              errors.invalid('script',input.script);
+              errors.invalid('script',input.script)
             }
           }
-       }
-        break;
+        }
+        break
       case 'process':
         const values = assign({},input,input.ps||{})
-        data.raw_search = values.raw_search || errors.required('raw_search');
-        data.psargs = values.psargs || 'aux';
-        data.is_regexp = Boolean(values.is_regexp=='true'||values.is_regexp===true);
-        data.pattern = !values.is_regexp ? RegExp.escape(values.raw_search) : values.raw_search;
-        break;
+        data.raw_search = values.raw_search || errors.required('raw_search')
+        data.psargs = values.psargs || 'aux'
+        data.is_regexp = Boolean(values.is_regexp=='true'||values.is_regexp===true)
+        data.pattern = !values.is_regexp ? RegExp.escape(values.raw_search) : values.raw_search
+        break
       case 'file':
         var mode = input.permissions
         var os_user = input.os_username
@@ -208,38 +209,38 @@ module.exports = {
         data.dirname = (input.dirname||errors.required('dirname'))
         data.basename = input.basename
         data.file = (input.file||errors.required('file'))
-        break;
+        break
       case 'script':
-        var scriptArgs = router.filter.toArray(input.script_arguments);
-        data.script_arguments = scriptArgs;
-        data.script_id = input.script_id||errors.required('script_id',input.script_id);
+        var scriptArgs = router.filter.toArray(input.script_arguments)
+        data.script_arguments = scriptArgs
+        data.script_id = input.script_id||errors.required('script_id',input.script_id)
         if (input.script_runas) {
           if (/%script%/.test(input.script_runas)===false) {
-            data.script_runas = errors.invalid('script_runas',input.script_runas);
+            data.script_runas = errors.invalid('script_runas',input.script_runas)
           } else {
-            data.script_runas = input.script_runas;
+            data.script_runas = input.script_runas
           }
         } else {
-          data.script_runas = '';
+          data.script_runas = ''
         }
-        break;
+        break
       case 'dstat':
-        data.cpu = input.cpu||60;
-        data.mem = input.mem||60;
-        data.cache = input.cache||60;
-        data.disk = input.disk||60;
-        break;
-      case 'psaux': break;
-      case 'host': break;
+        data.cpu = input.cpu || MonitorConstants.DEFAULT_HEALTH_THRESHOLD_CPU
+        data.disk = input.disk || MonitorConstants.DEFAULT_HEALTH_THRESHOLD_DISK
+        data.mem = input.mem ||MonitorConstants.DEFAULT_HEALTH_THRESHOLD_MEM 
+        data.cache = input.cache || MonitorConstants.DEFAULT_HEALTH_THRESHOLD_CACHE
+        break
+      case 'psaux': break
+      case 'host': break
       default:
-        errors.invalid('type', type);
-        break;
+        errors.invalid('type', type)
+        break
     }
 
     return {
       data: data,
       errors: errors.hasErrors() ? errors : null
-    };
+    }
   },
   createMonitor (type, input, next) {
     next||(next=function(){});
@@ -425,10 +426,10 @@ function setMonitorForDstat(input){
 		looptime: (input.looptime || 10000),
 		config: {
 			limit: {
-				cpu: input.cpu || 50,
-				disk: input.disk || 90,
-				mem: input.mem || 70,
-				cache: input.cache || 70
+				cpu: input.cpu || MonitorConstants.DEFAULT_HEALTH_THRESHOLD_CPU,
+				disk: input.disk || MonitorConstants.DEFAULT_HEALTH_THRESHOLD_DISK,
+				mem: input.mem || MonitorConstants.DEFAULT_HEALTH_THRESHOLD_MEM,
+				cache: input.cache || MonitorConstants.DEFAULT_HEALTH_THRESHOLD_CACHE
 			}
 		}
 	})

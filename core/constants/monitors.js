@@ -1,6 +1,10 @@
 'use strict';
 
 module.exports = Object.freeze({
+  DEFAULT_HEALTH_THRESHOLD_CPU: 80,
+  DEFAULT_HEALTH_THRESHOLD_MEM: 85,
+  DEFAULT_HEALTH_THRESHOLD_CACHE: 85,
+  DEFAULT_HEALTH_THRESHOLD_DISK: 90,
   SUCCESS_STATES: [ 'success', 'ok', 'normal' ],
   FAILURE_STATES: [ 'fail', 'failure' ],
   // MONITOR STATES
@@ -39,6 +43,6 @@ module.exports = Object.freeze({
       this.MONITOR_SEVERITY_LOW,
       this.MONITOR_SEVERITY_HIGH,
       this.MONITOR_SEVERITY_CRITICAL
-    ];
+    ]
   }
-});
+})
