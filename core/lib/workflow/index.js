@@ -1,8 +1,9 @@
-"use strict";
+'use strict'
 
 const graphlib = require('graphlib');
 const Graph = graphlib.Graph;
 const EventEmitter = require('events').EventEmitter;
+const logger = require('../logger')('lib:workflow')
 
 function Workflow () {
 
@@ -21,27 +22,35 @@ function Workflow () {
   this.fromEvents = function (events) {
     var g = _graph;
 
-    if (!events||!Array.isArray(events)||!(events.length>0)) return;
+    if (!events || !Array.isArray(events) || events.length<=0) return
 
-    function createNodeEvent ( event ) {
-      var a = event.emitter;
-      var b = event;
+    for (let event in events) {
+      if (event) {
+        logger.debug('processing event %o',event)
 
-      if (!g.node(a._id)) { g.setNode(a._id, a); }
-      if (!g.node(b._id)) { g.setNode(b._id, b); }
-      g.setEdge(a._id, b._id);
+        let a = event.emitter
+        let b = event
 
-      if (Array.isArray(a.triggers) && a.triggers.length > 0) {
-        // triggers is an array of event ids
-        a.triggers.forEach( trigger => {
-          g.setEdge(trigger, a._id);
-        });
+        if (!a) {
+          throw new Error(`event id ${event._id} named ${event.name} has no valid emitter`)
+        }
+
+        if (!g.node(a._id)) { g.setNode(a._id, a) }
+        if (!g.node(b._id)) { g.setNode(b._id, b) }
+        g.setEdge(a._id, b._id)
+
+        if (Array.isArray(a.triggers) && a.triggers.length > 0) {
+          // triggers is an array of event ids
+          a.triggers.forEach( trigger => {
+            g.setEdge(trigger, a._id)
+          })
+        }
+      } else {
+        // event is undefined
       }
     }
 
-    events.forEach( event => createNodeEvent(event) );
-
-    return;
+    return
   }
 
   this.getPath = function (node) {

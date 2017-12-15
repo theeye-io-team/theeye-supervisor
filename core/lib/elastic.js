@@ -6,8 +6,9 @@ const extend = require('util')._extend
 const CustomerService = require('../service/customer')
 const logger = require('./logger')(':elastic')
 const fs = require('fs')
+const gconfig = require('config').elasticsearch
 const request = require("request").defaults({
-  timeout: 5000,
+  timeout: gconfig.timeout,
   json: true,
   gzip: true
 })
@@ -21,7 +22,14 @@ module.exports = {
   submit (customerName, topic, data) {
     const query = { name: customerName }
     CustomerService.getCustomerConfig(query, (err,config) => {
-      var specs, elastic
+
+      if (gconfig.enabled===false) {
+        logger.error('elasticsearch disabled by system config')
+        return
+      }
+
+      var specs
+      var elastic
 
       if (err||!config) {
         logger.error('customer elasticsearch configuration not found. elasticsearch submit aborted')
@@ -47,8 +55,8 @@ module.exports = {
         if (isURL(elastic.url)) {
           request.post(specs,(err,respose,body) => {
             if (err) {
-              logger.error('Request Error : %j', err);
-              logger.error('Error data sent: %j', specs);
+              logger.error('Request Error %s', err.message)
+              logger.data('Error data sent %j', specs)
               return;
             }
             logger.log('submit done to %s', specs.url);

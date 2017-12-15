@@ -5,6 +5,7 @@ var resolve = router.resolve;
 var async = require('async');
 var Event = require('../entity/event').Event;
 var Workflow = require('../lib/workflow');
+const logger = require('../lib/logger')('controller:workflow')
 
 module.exports = function (server, passport) {
   var middlewares = [
@@ -30,20 +31,30 @@ var controller = {
     var node = req.params.node;
 
     Event.fetch({ customer: req.customer._id },(err,events) => {
-      if(err) res.send(500);
-      if(!events||events.length==0){
-        return res.send(500,'workflow unavailable');
+      if (err) {
+        logger.error(err.message)
+        logger.debug('%o',err)
+        return res.send(500, err)
       }
 
-      var workflow = new Workflow();
-      workflow.fromEvents(events);
-
-      if( ! node ) {
-        return res.send( 200, workflow.graph );
-      } else {
-        return res.send( 200, workflow.getPath(node) );
+      if (!events||events.length==0) {
+        return res.send(500, 'workflow is not available')
       }
 
+      try {
+        var workflow = new Workflow()
+        workflow.fromEvents(events)
+
+        if (!node) {
+          return res.send(200, workflow.graph)
+        } else {
+          return res.send(200, workflow.getPath(node))
+        }
+      } catch (err) {
+        logger.error(err.message)
+        logger.debug('%o',err)
+        return res.send(500, err)
+      }
     })
   },
 }

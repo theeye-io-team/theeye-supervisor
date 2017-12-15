@@ -4,7 +4,7 @@ var extend = require('lodash/assign');
 var dbFilter = require('../lib/db-filter');
 var logger = require('../lib/logger')('eye:controller:webhook');
 const audit = require('../lib/audit');
-var router = require('../router');
+const router = require('../router');
 
 const EventDispatcher = require('../service/events');
 const WebhookEvent = require('../entity/event').WebhookEvent;
