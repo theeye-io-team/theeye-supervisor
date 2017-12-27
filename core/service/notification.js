@@ -1,14 +1,11 @@
-'use strict'
-
-var config = require('config');
-var AWS = require('aws-sdk'); 
-var SNS = new AWS.SNS( new AWS.Config( config.aws ) );
-var request = require('request');
-var mailer = require('../lib/mailer');
-var debug = require('../lib/logger')('service:notification');
-//const isURL = require('validator/lib/isURL')
+const config = require('config')
+const request = require('request')
+const mailer = require('../lib/mailer')
+const debug = require('../lib/logger')('service:notification')
+const uuidv1 = require('uuid/v1')
 
 module.exports = {
+  /**
   sendSNSNotification (data,options) {
     let message = JSON.stringify(data)
     let topic = options.topic
@@ -52,11 +49,12 @@ module.exports = {
       });
     }
 
-    generateSystemNotification({
+    this.generateSystemNotification({
       topic: topic,
       data: data
     })
   },
+  */
   sendEmailNotification (options) {
     mailer.sendMail({
       customer_name: options.customer_name,
@@ -71,34 +69,38 @@ module.exports = {
         debug.log('Message sent: ' + JSON.stringify(info)); 
       }
     });
+  },
+  /**
+   * @param {Object} payload
+   * @property {String} payload.data
+   * @property {String} payload.topic
+   */
+  generateSystemNotification (payload) {
+    const url = config.notifications.api.url
+    //if (!url || !isURL(url)) return debug.error('notification event aborted. invalid url %o', url)
+    if (!url) return debug.error('notification event aborted. invalid url %o', url)
+    if (!payload) return debug.error('notification event aborted. invalid payload %o', payload)
+    if (!payload.topic) return debug.error('notification event aborted. invalid payload topic %o', payload)
+    if (!payload.data) return debug.error('notification event aborted. invalid payload data %o', payload)
+
+    payload.id = uuidv1()
+
+    request({
+      followRedirect: false,
+      method: 'POST',
+      uri: url,
+      json: payload
+    }, function (error, response, body) {
+      if (error) {
+        debug.error('could not connect to local notification system')
+        debug.error(error)
+      } else if (response.statusCode != 200) {
+        debug.error('submit to local notification system failed')
+        debug.error('%s, %o', response.statusCode, body)
+      } else {
+        debug.log('notification registered')
+        debug.log(body.replace(/(\r\n|\n|\r)/gm,''))
+      }
+    })
   }
-}
-
-/**
- * @param {Object} payload
- * @property {String} payload.data
- * @property {String} payload.topic
- */
-const generateSystemNotification = (payload) => {
-  const url = config.notifications.api.url
-  //if (!url || !isURL(url)) return debug.error('notification event aborted. invalid url %o', url)
-  if (!url) return debug.error('notification event aborted. invalid url %o', url)
-  if (!payload || !payload.data) return debug.error('notification event aborted. invalid payload %o', payload)
-
-  request({
-    method: 'POST',
-    uri: url,
-    json: payload
-  }, function (error, response, body) {
-    if (error) {
-      debug.error('could not connect to local notification system')
-      debug.error(error)
-    } else if (response.statusCode != 200) {
-      debug.error('submit to local notification system failed')
-      debug.error('%s, %o', response.statusCode, body)
-    } else {
-      debug.log('notification registered')
-      debug.log(body.replace(/(\r\n|\n|\r)/gm,''))
-    }
-  })
 }

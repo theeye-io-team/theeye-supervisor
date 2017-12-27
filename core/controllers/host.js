@@ -12,6 +12,9 @@ const HostService = require('../service/host');
 const NotificationService = require('../service/notification');
 const dbFilter = require('../lib/db-filter');
 
+const Constants = require('../constants')
+const TopicsConstants = require('../constants/topics')
+
 module.exports = function(server, passport) {
   var middlewares = [
     passport.authenticate('bearer',{session:false}),
@@ -125,7 +128,7 @@ const controller = {
       const response = lodash.assign({
         resource_id: resource ? resource._id : null,
         host_id: host._id
-      }, config.get('agent.core_workers.host_ping'))
+      }, config.agent.core_workers.host_ping)
 
       res.send(200, response); 
       next();
@@ -138,8 +141,8 @@ const controller = {
   config (req, res, next) {
     const customer = req.customer
     const host = req.host
-    HostService.config(host, customer, (err, config) => {
-      res.send(200,config)
+    HostService.config(host, customer, (err, cfg) => {
+      res.send(200,cfg)
     })
   }
 }
@@ -182,14 +185,15 @@ const registerHostname = (input, done) => {
 
         const host = res.host
 
-        NotificationService.sendSNSNotification({
-          resource: 'host',
-          event: 'host_registered',
-          customer_name: host.customer_name,
-          hostname: host.hostname
-        },{
-          topic: 'events',
-          subject: 'host_registered'
+        NotificationService.generateSystemNotification({
+          topic: TopicsConstants.host.registered,
+          data: {
+            model_type:'Host',
+            model: host,
+            hostname: host.hostname,
+            organization: host.customer_name,
+            operations: Constants.CREATE
+          }
         })
       })
     } else {
@@ -218,8 +222,8 @@ const registerHostname = (input, done) => {
             version: host.agent_version
           }
 
-          const topic = config.notifications.topics.agent.version
-          elastic.submit(customer.name, topic, data) // topic = config.notifications.topics.agent.version
+          const topic = TopicsConstants.agent.version
+          elastic.submit(customer.name, topic, data) // topic = topics.agent.version
         })
       }
 

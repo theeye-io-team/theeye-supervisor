@@ -9,6 +9,7 @@ const LifecycleConstants = require('../constants/lifecycle')
 const JobsConstants = require('../constants/jobs')
 const Constants = require('../constants')
 const TaskConstants = require('../constants/task')
+const TopicsConstants = require('../constants/topics')
 
 const JobModels = require('../entity/job')
 const Job = JobModels.Job
@@ -55,6 +56,13 @@ module.exports = {
           if (error) throw error
           next(null,job)
         })
+
+        let topic = TopicsConstants.task.sent // sent to agent
+        registerJobOperation(Constants.UPDATE, topic, {
+          task: job.task,
+          job: job,
+          user: input.user
+        })
       } else {
         next(null,null)
       }
@@ -89,32 +97,29 @@ module.exports = {
         return done(err, taskData.lastjob)
       }
 
+      const created = (err, job) => {
+        if (err) { return done(err) }
+        logger.log('script job created.')
+        let topic = TopicsConstants.task.execution
+        registerJobOperation(Constants.CREATE, topic, {
+          task: task,
+          job: job,
+          user: input.user
+        })
+        done(null, job)
+      }
+
+      const prepareTaskArguments = (args, next) => {
+        if (!args) {
+          App.taskManager.prepareTaskArgumentsValues(
+            task.script_arguments,
+            [], // only fixed-arguments if not specified
+            (err, args) => next(err, args)
+          )
+        } else next(null,args)
+      }
+
       removeOldTaskJobs(task, () => {
-        const created = (err, job) => {
-          if (err) { return done(err) }
-
-          logger.log('script job created.')
-
-          //let topic = globalconfig.notifications.topics.job.crud
-          registerJobOperation(Constants.CREATE, 'task-execution', {
-            task: task,
-            job: job,
-            user: input.user
-          })
-
-          done(null, job)
-        }
-
-        const prepareTaskArguments = (args, next) => {
-          if (!args) {
-            App.taskManager.prepareTaskArgumentsValues(
-              task.script_arguments,
-              [], // only fixed-arguments if not specified
-              (err, args) => next(err, args)
-            )
-          } else next(null,args)
-        }
-
         if (type == TaskConstants.TYPE_SCRIPT) {
           prepareTaskArguments(input.script_arguments, (err,args) => {
             if (err) return done(err)
@@ -160,8 +165,8 @@ module.exports = {
     // if job is an agent update, skip notifications and events
     if (job.name==JobsConstants.AGENT_UPDATE) return
 
-    //var topic = globalconfig.notifications.topics.job.crud
-    registerJobOperation(Constants.UPDATE, 'task-result', {
+    let topic = TopicsConstants.task.result
+    registerJobOperation(Constants.UPDATE, topic, {
       task: job.task,
       job: job,
       user: user
@@ -181,9 +186,17 @@ module.exports = {
         logger.error('fail to cancel job %s', job._id)
         logger.data(job)
         logger.error(err)
+        return next(err)
       }
+
       logger.log('job %s canceled', job._id)
-      next(err)
+
+      let topic = TopicsConstants.task.cancelation // cancelation
+      registerJobOperation(Constants.UPDATE, topic, {
+        task: job.task,
+        job: job,
+        user: user
+      })
     })
   },
   // automatic job scheduled . send cancelation
@@ -283,7 +296,18 @@ const registerJobOperation = (operation, topic, input) => {
 
     if (job.result) payload.result = job.result
 
-    elastic.submit(job.customer_name, topic, payload) // topic = globalconfig.notifications.topics.job.crud , CREATE/UPDATE
+    elastic.submit(job.customer_name, topic, payload) // topic = topics.task.execution/result , CREATE/UPDATE
+
+    NotificationService.generateSystemNotification({
+      topic: TopicsConstants.job.crud,
+      data: {
+        hostname: job.hostname,
+        organization: job.customer_name,
+        operation: operation,
+        model_type: job._type,
+        model: job
+      }
+    })
   })
 }
 

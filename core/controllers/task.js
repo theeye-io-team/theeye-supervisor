@@ -11,7 +11,7 @@ const ErrorHandler = require('../lib/error-handler');
 const audit = require('../lib/audit')
 const TASK = require('../constants/task')
 
-module.exports = function(server, passport){
+module.exports = (server, passport) => {
   server.get('/:customer/task', [
     passport.authenticate('bearer', {session:false}),
     router.resolve.customerNameToEntity({required:true}),
@@ -42,7 +42,6 @@ module.exports = function(server, passport){
       router.resolve.idToEntity({ param: 'script', entity: 'file' }),
       router.resolve.idToEntity({ param: 'host' })
     ]),
-    //controller.bulkCreate
     controller.create,
     audit.afterCreate('task',{ display: 'name' })
   )
@@ -80,37 +79,37 @@ const controller = {
    * @author Facugon
    *
    */
-  bulkCreate (req, res, next) {
-    var errors = new ErrorHandler()
-    var input = extend({},req.body,{
-      customer: req.customer,
-      user: req.user,
-      script: req.script
-    })
+  //bulkCreate (req, res, next) {
+  //  var errors = new ErrorHandler()
+  //  var input = extend({},req.body,{
+  //    customer: req.customer,
+  //    user: req.user,
+  //    script: req.script
+  //  })
 
-    input.hosts || (input.hosts=req.body.host)
+  //  input.hosts || (input.hosts=req.body.host)
 
-    if (!input.type) return res.send(400, errors.required('type', input.type))
-    if (!input.hosts) return res.send(400, errors.required('hosts', input.hosts))
-    if (Array.isArray(input.hosts)) {
-      if (input.hosts.length===0) {
-        return res.send(400, errors.required('hosts', input.hosts));
-      }
-    } else {
-      input.hosts = [ input.hosts ];
-    }
+  //  if (!input.type) return res.send(400, errors.required('type', input.type))
+  //  if (!input.hosts) return res.send(400, errors.required('hosts', input.hosts))
+  //  if (Array.isArray(input.hosts)) {
+  //    if (input.hosts.length===0) {
+  //      return res.send(400, errors.required('hosts', input.hosts));
+  //    }
+  //  } else {
+  //    input.hosts = [ input.hosts ];
+  //  }
 
-    if (!input.name) return res.send(400, errors.required('name', input.name));
+  //  if (!input.name) return res.send(400, errors.required('name', input.name));
 
-    TaskService.createManyTasks(input, function(err, tasks){
-      if (err) {
-        logger.error('%o',err)
-        return res.sendError(err)
-      }
-      res.send(200, tasks)
-      next()
-    })
-  },
+  //  TaskService.createManyTasks(input, function(err, tasks){
+  //    if (err) {
+  //      logger.error('%o',err)
+  //      return res.sendError(err)
+  //    }
+  //    res.send(200, tasks)
+  //    next()
+  //  })
+  //},
   create (req, res, next) {
     const errors = new ErrorHandler()
     const input = extend({},req.body,{

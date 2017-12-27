@@ -4,7 +4,7 @@ const util = require('util');
 const Schema = require('mongoose').Schema;
 const ObjectId = Schema.Types.ObjectId;
 
-function BaseSchema (specs) {
+function BaseSchema (props) {
 
   // Schema constructor
   Schema.call(this, util._extend({
@@ -26,7 +26,7 @@ function BaseSchema (specs) {
     event: { type: ObjectId, ref: 'Event' },
     event_id: { type: ObjectId },
     origin: { type: String }
-  }, specs),{
+  }, props),{
     collection: 'jobs',
     discriminatorKey: '_type'
   });

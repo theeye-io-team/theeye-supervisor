@@ -18,6 +18,8 @@ const Task = require('../../entity/task').Entity
 const Resource = require('../../entity/resource').Entity
 const AgentUpdateJob = require('../../entity/job').AgentUpdate
 const createMonitor = ResourceService.createResourceOnHosts
+const Constants = require('../../constants')
+const TopicsConstants = require('../../constants/topics')
 
 function HostService (host) {
   this.host = host
@@ -486,30 +488,33 @@ const sendEventNotification = (host,vent) => {
       break;
   }
 
-  var template = 'email/host/' + vent;
-  var params = { 'hostname': host.hostname };
+  var template = 'email/host/' + vent
+  var params = { 'hostname': host.hostname }
 
   Handlebars.render(template, params, function(content){
     CustomerService.getAlertEmails(host.customer_name,
     function(error,emails){
       NotificationService.sendEmailNotification({
-        'to': emails.join(','),
-        'customer_name': host.customer_name,
-        'subject': subject,
-        'content': content
-      });
-    });
-  });
+        to: emails.join(','),
+        customer_name: host.customer_name,
+        subject: subject,
+        content: content
+      })
+    })
+  })
 
-  NotificationService.sendSNSNotification({
-    'resource': 'host',
-    'event': vent,
-    'customer_name': host.customer_name,
-    'hostname': host.hostname
-  },{
-    'topic': 'events',
-    'subject': 'host_update'
-  });
+  const topic = TopicsConstants.host.state
+  NotificationService.generateSystemNotification({
+    topic: topic,
+    data: {
+      model_type: 'Host',
+      model: host,
+      organization: host.customer_name,
+      host_event: vent,
+      hostname: host.hostname,
+      operation: Constants.UPDATE
+    }
+  })
 }
 
 /**

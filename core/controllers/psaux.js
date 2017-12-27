@@ -1,12 +1,15 @@
 'use strict';
 
-const MONITORS = require('../constants/monitors')
+const Constants = require('../constants')
+const MonitorsConstants = require('../constants/monitors')
 var json = require('../lib/jsonresponse');
 var HostStats = require('../entity/host/stats').Entity;
 var NotificationService = require('../service/notification');
 var logger = require('../lib/logger')('controller:dstat');
 var router = require('../router');
 var ResourceManager = require('../service/resource');
+
+const TopicsConstants = require('../constants/topics')
 
 module.exports = function(server, passport) {
   var middlewares = [
@@ -26,7 +29,7 @@ module.exports = function(server, passport) {
 	server.post('/psaux/:hostname',middlewares,controller.create);
 }
 
-var controller = {
+const controller = {
   create (req, res, next) {
     var host = req.host
     var stats = req.params.psaux
@@ -40,23 +43,48 @@ var controller = {
 
     logger.log('Handling host psaux data');
 
+    const topic = TopicsConstants.host.processes
+
     HostStats.findOne({
       host_id: host._id,
       type: 'psaux'
     },function(error,psaux){
-      if(error) {
-        logger.error(error);
-      } else if(psaux == null) {
-        logger.log('creating host psaux');
-        HostStats.create(host,'psaux',stats);
-      } else {
-        logger.log('updating host psaux');
+      if (error) {
+        return logger.error(error);
+      }
 
-        var date = new Date();
-        psaux.last_update = date ;
-        psaux.last_update_timestamp = date.getTime() ;
-        psaux.stats = stats ;
-        psaux.save();
+      if (psaux === null) {
+        logger.log('creating host psaux');
+        HostStats.create(host,'psaux',stats,(err,psaux) => {
+          NotificationService.generateSystemNotification({
+            topic: topic,
+            data: {
+              model_type: 'HostStats',
+              model: psaux,
+              hostname: host.hostname,
+              organization: host.customer_name,
+              operation: Constants.CREATE
+            }
+          })
+        })
+      } else {
+        logger.log('updating host psaux')
+        var date = new Date()
+        psaux.last_update = date
+        psaux.last_update_timestamp = date.getTime()
+        psaux.stats = stats
+        psaux.save()
+
+        NotificationService.generateSystemNotification({
+          topic: topic,
+          data: {
+            model_type: 'HostStats',
+            model: psaux,
+            hostname: host.hostname,
+            organization: host.customer_name,
+            operation: Constants.REPLACE
+          }
+        })
       }
     });
 
@@ -66,21 +94,10 @@ var controller = {
     },(err,resource)=>{
       if(err||!resource)return;
       var handler = new ResourceManager(resource);
-      handler.handleState({ state: MONITORS.RESOURCE_NORMAL })
+      handler.handleState({ state: MonitorsConstants.RESOURCE_NORMAL })
     });
 
-    NotificationService.sendSNSNotification({
-      'timestamp': (new Date()).getTime(),
-      'stat': req.params.psaux,
-      'customer_name': host.customer_name,
-      'hostname': host.hostname,
-      'type': 'psaux'
-    },{
-      'topic': 'host-stats',
-      'subject': 'psaux_update'
-    });
-
-    res.send(200); 
-    return next();
+    res.send(200)
+    return next()
   }
 };

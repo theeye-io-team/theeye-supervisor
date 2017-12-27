@@ -7,7 +7,7 @@ const logger = require('../lib/logger')('eye:controller:hostgroup')
 const HostGroup = require('../entity/host/group').Entity
 const HostGroupService = require('../service/host/group')
 const audit = require('../lib/audit')
-const config = require('config')
+const TopicsConstants = require('../constants/topics')
 
 /**
  *
@@ -16,7 +16,7 @@ const config = require('config')
  *
  */
 module.exports = function(server, passport) {
-  const crudTopic = config.notifications.topics.hostgroup.crud
+  const crudTopic = TopicsConstants.hostgroup.crud
   const middleware = [
     passport.authenticate('bearer', {session:false}),
     router.requireCredential('admin'),

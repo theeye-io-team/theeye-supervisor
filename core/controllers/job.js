@@ -7,6 +7,7 @@ const router = require('../router')
 const Job = require('../entity/job').Job
 const TaskConstants = require('../constants/task')
 const JobConstants = require('../constants/jobs')
+const audit = require('../lib/audit')
 
 module.exports = (server, passport) => {
   var middlewares = [
@@ -14,11 +15,6 @@ module.exports = (server, passport) => {
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer
   ]
-
-  server.put('/:customer/job/:job', middlewares.concat(
-    router.requireCredential('agent',{exactMatch:true}),
-    router.resolve.idToEntity({param:'job',required:true})
-  ), controller.update)
 
   /**
    *
@@ -35,11 +31,27 @@ module.exports = (server, passport) => {
     router.resolve.hostnameToHost({required:true})
   ), controller.fetch)
 
-  server.post('/:customer/job', middlewares.concat(
-    router.requireCredential('user'),
-    router.resolve.idToEntity({param:'task',required:true}),
-    router.ensureAllowed({entity:{name:'task'}})
-  ), controller.create)
+  //server.patch( // should be patch
+  server.put(
+    '/:customer/job/:job',
+    middlewares.concat(
+      router.requireCredential('agent',{exactMatch:true}),
+      router.resolve.idToEntity({param:'job',required:true})
+    ),
+    controller.update
+    //audit.afterUpdate('job',{ display: 'name' })
+  )
+
+  server.post(
+    '/:customer/job',
+    middlewares.concat(
+      router.requireCredential('user'),
+      router.resolve.idToEntity({param:'task',required:true}),
+      router.ensureAllowed({entity:{name:'task'}})
+    ),
+    controller.create
+    //audit.afterCreate('job',{ display: 'name' })
+  )
 }
 
 const controller = {
@@ -56,7 +68,10 @@ const controller = {
       return res.send(404, 'host is not valid')
     }
     const customer = req.customer
-    const input = { host: req.host }
+    const input = {
+      host: req.host,
+      user: req.user
+    }
 
     if (req.params.process_next) {
       App.jobDispatcher.getNextPendingJob(input,function(error,job){
@@ -124,6 +139,8 @@ const controller = {
           }
         }
         res.send(200,job)
+        req.job = job
+        next()
       })
     }
 

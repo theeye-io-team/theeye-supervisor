@@ -6,13 +6,21 @@ const BaseSchema = require('./schema')
 const AgentUpdateJobSchema = require('./agent-update')
 const ScriptJobSchema = require('./script')
 
-const jobSchema = new BaseSchema()
-jobSchema.post('save', middleware.postSave)
 
-const Job = mongodb.model('Job',jobSchema)
+const JobSchema = new BaseSchema({
+  _type: { type: String, default: 'Job' }
+})
+const ScraperSchema = new BaseSchema()
+
+//JobSchema.post('save', middleware.postSave)
+//ScraperSchema.post('save', middleware.postSave)
+//AgentUpdateJobSchema.post('save', middleware.postSave)
+//ScriptJobSchema.post('save', middleware.postSave)
+
+const Job = mongodb.model('Job',JobSchema)
 const AgentUpdateJob = Job.discriminator('AgentUpdateJob', AgentUpdateJobSchema)
 const ScriptJob = Job.discriminator('ScriptJob', ScriptJobSchema)
-const ScraperJob = Job.discriminator('ScraperJob', new BaseSchema())
+const ScraperJob = Job.discriminator('ScraperJob', ScraperSchema)
 
 Job.ensureIndexes()
 AgentUpdateJob.ensureIndexes()

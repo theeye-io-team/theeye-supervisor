@@ -10,7 +10,6 @@ const lodashAssign = require('lodash/assign')
 const lodashAfter = require('lodash/after')
 const lodashExtend = require('lodash/extend')
 
-const config = require('config')
 const Tag = require('../entity/tag').Entity
 const Host = require('../entity/host').Entity
 const Task = require('../entity/task').Entity
@@ -123,54 +122,50 @@ const TaskService = {
    * @param {Function} next
    *
    */
-  createManyTasks (input, next) {
-    const hosts = input.hosts
-    logger.log('creating tasks')
-    asyncMap( hosts, (hostId, done) => {
-      if (isMongoId(hostId)) {
-        logger.log('creating task on hosts %j', hosts)
-        Host.findById(hostId, function(error, host){
-          if (error) return done(error)
-          if (!host) return done(new Error('not found host id ' + hostId))
+  //createManyTasks (input, next) {
+  //  const hosts = input.hosts
+  //  logger.log('creating tasks')
+  //  asyncMap( hosts, (hostId, done) => {
+  //    if (isMongoId(hostId)) {
+  //      logger.log('creating task on hosts %j', hosts)
+  //      Host.findById(hostId, function(error, host){
+  //        if (error) return done(error)
+  //        if (!host) return done(new Error('not found host id ' + hostId))
 
-          const data = lodashExtend({}, input, {
-            host: host,
-            host_id: host._id,
-            customer_id: input.customer._id,
-            customer: input.customer._id,
-            user_id: input.user._id
-          })
+  //        const data = lodashExtend({}, input, {
+  //          host: host,
+  //          host_id: host._id,
+  //          customer_id: input.customer._id,
+  //          customer: input.customer._id,
+  //          user_id: input.user._id
+  //        })
 
-          TaskService.create(data, (err,task) => {
+  //        TaskService.create(data, (err,task) => {
 
-            /**
-             * @todo submit here instead of using lib/audit middleware because
-             * audit middleware cannot be used with bulk creation
-             */
-            const topic = config.notifications.topics.task.crud
-            elastic.submit(input.customer.name, topic, { // topic = config.notifications.topics.task.crud , BULK CREATE
-              hostname: task.hostname || 'undefined',
-              model_id: task._id,
-              model_name: task.name,
-              model_type: task._type,
-              organization: input.customer.name,
-              user_id: input.user._id,
-              user_name: input.user.username,
-              user_email: input.user.email,
-              operation: Constants.CREATE
-            })
+  //          const topic = config.notifications.topics.task.crud
+  //          elastic.submit(input.customer.name, topic, { // topic = config.notifications.topics.task.crud , BULK CREATE
+  //            hostname: task.hostname || 'undefined',
+  //            model_id: task._id,
+  //            model_name: task.name,
+  //            model_type: task._type,
+  //            organization: input.customer.name,
+  //            user_id: input.user._id,
+  //            user_name: input.user.username,
+  //            user_email: input.user.email,
+  //            operation: Constants.CREATE
+  //          })
 
-            // turn task object into plain object, populate subdocuments
-            TaskService.populate(task, done)
-          })
-        })
-      } else {
-        done(new Error('invalid host id ' + hostId), null)
-      }
-    }, (err, tasks) => {
-      next(err, tasks)
-    })
-  },
+  //          // turn task object into plain object, populate subdocuments
+  //          TaskService.populate(task, done)
+  //        })
+  //      })
+  //    } else {
+  //      done(new Error('invalid host id ' + hostId), null)
+  //    }
+  //  }, (err, tasks) => {
+  //    next(err, tasks)
+  //  })
+  //},
   /**
    *
    * @author Facundo

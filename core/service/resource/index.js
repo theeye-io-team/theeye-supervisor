@@ -3,10 +3,10 @@
 const App = require('../../app')
 const after = require('lodash/after')
 const assign = require('lodash/assign')
-const globalconfig = require('config')
 const logger = require('../../lib/logger')('service:resource')
 const elastic = require('../../lib/elastic')
-const CONSTANTS = require('../../constants')
+const TopicsConstants = require('../../constants/topics')
+const Constants = require('../../constants')
 const MONITORS = require('../../constants/monitors')
 const Lifecycle = require('../../constants/lifecycle')
 const CustomerService = require('../customer')
@@ -34,17 +34,24 @@ function Service (resource) {
       id: resource._id,
       name: resource.name,
       type: resource.type,
-      operation: CONSTANTS.UPDATE
+      operation: Constants.UPDATE
     }
-
-    const topic = globalconfig.notifications.topics.monitor.state
-    elastic.submit(resource.customer_name, topic, data) // topic = globalconfig.notifications.topics.monitor.state
+    const topic = TopicsConstants.monitor.state
+    elastic.submit(resource.customer_name, topic, data) // topic = topics.monitor.state
   }
 
-  function dispatchStateChangeSNS (resource, options) {
-    NotificationService.sendSNSNotification(resource,{
-      topic:'events',
-      subject:'resource_update'
+  const sendStateChangeEventNotification = (resource, eventName) => {
+    const topic = TopicsConstants.monitor.state
+    NotificationService.generateSystemNotification({
+      topic: topic,
+      data: {
+        model_type: 'Resource',
+        model: resource,
+        hostname: resource.hostname,
+        organization: resource.customer_name,
+        operation: Constants.UPDATE,
+        monitor_event: eventName
+      }
     })
   }
 
@@ -150,10 +157,7 @@ function Service (resource) {
 
         sendResourceEmailAlert(resource,input);
         logStateChange(resource,input);
-        dispatchStateChangeSNS(resource,{
-          message:'monitor failure',
-          data:input
-        });
+        sendStateChangeEventNotification(resource,input.event)
         dispatchResourceEvent(resource,MONITORS.RESOURCE_FAILURE);
       }
     }
@@ -177,8 +181,8 @@ function Service (resource) {
         if (isRecoveredFromFailure) {
           input.event||(input.event=input.state);
         } else {
-          // is recovered from "stop sending updates"
-          input.event = MONITORS.RESOURCE_RECOVERED;
+          // is recovered from updates_stopped
+          input.event = MONITORS.RESOURCE_STARTED;
         }
 
         input.failure_severity = getEventSeverity(input.event,resource);
@@ -193,10 +197,7 @@ function Service (resource) {
 
         logStateChange(resource,input);
         dispatchResourceEvent(resource,MONITORS.RESOURCE_RECOVERED);
-        dispatchStateChangeSNS(resource,{
-          message:(input.message||'monitor normal'),
-          data:input
-        });
+        sendStateChangeEventNotification(resource,input.event)
       }
 
       logger.log('state restarted');
@@ -229,10 +230,7 @@ function Service (resource) {
 
       logStateChange(resource,input)
       dispatchResourceEvent(resource,MONITORS.RESOURCE_STOPPED)
-      dispatchStateChangeSNS(resource,{
-        message: 'updates stopped',
-        data: input
-      })
+      sendStateChangeEventNotification(resource,input.event)
     }
 
     /**
@@ -283,10 +281,7 @@ function Service (resource) {
     sendResourceEmailAlert(resource,input);
     dispatchResourceEvent(resource,MONITORS.RESOURCE_CHANGED);
     logStateChange(resource,input);
-    dispatchStateChangeSNS(resource,{
-      message: 'file changed',
-      data: input
-    });
+    sendStateChangeEventNotification(resource,input.event)
   }
 
   /**
@@ -307,7 +302,7 @@ function Service (resource) {
       return MONITORS.RESOURCE_ERROR
     }
 
-    // is a recognized state
+    // state is a recognized state
     if (MONITORS.MONITOR_STATES.indexOf(state) !== -1) {
       return state
     }
@@ -379,14 +374,14 @@ function Service (resource) {
         model_name: resource.name,
         model_type: resource.type,
         model_id: resource._id,
-        operation: CONSTANTS.UPDATE,
+        operation: Constants.UPDATE,
         result: resource.last_event.data,
         state: resource.state
       }
 
       // submit monitor result to elastic search
-      var topic = globalconfig.notifications.topics.monitor.execution
-      elastic.submit(resource.customer_name, topic, payload) // topic = globalconfig.notifications.topics.monitor.execution
+      const topic = TopicsConstants.monitor.execution
+      elastic.submit(resource.customer_name, topic, payload) // topic = topics.monitor.execution
 
       next()
     })
@@ -472,8 +467,8 @@ Service.create = function (input, next) {
       var resource = result.resource;
       logger.log('resource & monitor created');
 
-      const topic = globalconfig.notifications.topics.monitor.crud
-      elastic.submit(monitor.customer_name, topic, { // topic = globalconfig.notifications.topics.monitor.crud , BULK CREATE
+      const topic = TopicsConstants.monitor.crud
+      elastic.submit(monitor.customer_name, topic, { // topic = topics.monitor.crud , BULK CREATE
         hostname: monitor.hostname,
         organization: monitor.customer_name,
         model_id: monitor._id,
@@ -482,7 +477,7 @@ Service.create = function (input, next) {
         user_id: input.user._id,
         user_email: input.user.email,
         user_name: input.user.username,
-        operation: CONSTANTS.CREATE
+        operation: Constants.CREATE
       })
 
       Service.createDefaultEvents(monitor,input.customer)

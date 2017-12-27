@@ -116,21 +116,6 @@ module.exports = {
        */
     }
   },
-  "sns": {
-    "topicArn": {
-      "events": "",
-      "host-stats": "",
-      "jobs": ""
-    }
-  },
-  // direct [ supervisor > web ] notifications - no AWS-SNS endpoints
-  "web-sns":{
-    "topicEndpoint": {
-      "events": "/events/update",
-      "host-stats": "/hoststats/update",
-      "jobs": "/palanca/update"
-    }
-  },
   "elasticsearch": {
     "timeout": 5000,
     "enabled": true,
@@ -140,50 +125,6 @@ module.exports = {
     "api": {
       "timeout": 5000,
       "url": "" || process.env.CONFIG_NOTIFICATIONS_API_URL // e.g. "url": "http://127.0.0.1:6080/notification" // the same web server
-    },
-    "topics": {
-      "agent": {
-        "version": "agent-version"
-      },
-      "host": {
-        "stats": "host-stats",
-      },
-      //"resource": {
-      //  "stats": "resource-stats",
-      //},
-      "monitor": {
-        "crud": "monitor-crud",
-        "execution": "monitor-execution",
-        "state": "monitor-state",
-      },
-      "script": {
-        "crud": "script-crud"
-      },
-      "file": {
-        "crud": "file-crud"
-      },
-      "hostgroup": {
-        "crud": "provisioning-crud",
-      },
-      "host": {
-        "crud": "host-crud",
-        "stats": "host-stats"
-      },
-      "task": {
-        "crud": "task-crud",
-        "execution": "task-execution",
-        "result": "task-result"
-      },
-      "job": {
-        "crud": "job-crud"
-      },
-      "webhook": {
-        "crud": "webhook-crud",
-        "triggered": "triggered-webhook"
-      },
-      "scheduler": {
-        "crud": "scheduler-crud"
-      }
     }
   },
   "events": {

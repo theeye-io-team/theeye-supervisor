@@ -13,10 +13,10 @@ const router = require('../router');
 const dbFilter = require('../lib/db-filter');
 const audit = require('../lib/audit')
 const ACL = require('../lib/acl');
-const config = require('config')
+const TopicsConstants = require('../constants/topics')
 
 module.exports = function (server, passport) {
-  const crudTopic = config.notifications.topics.monitor.crud
+  const crudTopic = TopicsConstants.monitor.crud
 
   // default middlewares
   var middlewares = [
