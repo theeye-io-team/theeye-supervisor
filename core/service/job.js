@@ -49,15 +49,25 @@ module.exports = {
       host_id: input.host._id
     }
 
-    Job.findOne(query, (error,job) => {
-      if (job!==null) {
-        job.lifecycle = LifecycleConstants.ASSIGNED
-        job.save(error => {
-          if (error) throw error
-          next(null,job)
-        })
+    var topic
 
-        let topic = TopicsConstants.task.sent // sent to agent
+    Job.findOne(query, (err,job) => {
+      if (err) next(err)
+
+      if (job!==null) {
+        if (!job.task) {
+          job.lifecycle = LifecycleConstants.CANCELED
+          job.save(err => next(err,null)) // job with error
+          topic = TopicsConstants.task.cancelation // cancel
+        } else {
+          job.lifecycle = LifecycleConstants.ASSIGNED
+          job.save(err => {
+            if (err) next(err)
+            next(null,job)
+          })
+          topic = TopicsConstants.task.sent // sent to agent
+        }
+
         registerJobOperation(Constants.UPDATE, topic, {
           task: job.task,
           job: job,
@@ -82,6 +92,11 @@ module.exports = {
   create (input, done) {
     const task = input.task
     const type = task.type
+
+    if (!task) {
+      err = new Error('task is required')
+      return done(err)
+    }
 
     App.taskManager.populate(task, (err, taskData) => {
       if (err) return done(err);

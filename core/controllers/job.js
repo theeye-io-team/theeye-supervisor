@@ -80,6 +80,7 @@ const controller = {
         res.send(200, { jobs : jobs })
       })
     } else {
+      // find all
       Job.find({
         host_id: host.id,
         customer_name: customer.name
