@@ -276,8 +276,8 @@ const removeOldTaskJobs = (task, next) => {
  *
  */
 const registerJobOperation = (operation, topic, input) => {
-  const task = input.task
   const job = input.job
+  const task = input.task || job.task || {}
   const user = input.user
 
   // submit job operation to elastic search
@@ -298,10 +298,10 @@ const registerJobOperation = (operation, topic, input) => {
     }
 
     if (job._type == 'ScraperJob') {
-      payload.url = job.task.url
-      payload.method = job.task.method
-      payload.statuscode = job.task.status_code 
-      payload.pattern = job.task.pattern
+      payload.url = task.url
+      payload.method = task.method
+      payload.statuscode = task.status_code 
+      payload.pattern = task.pattern
     } else {
       payload.filename = job.script.filename
       payload.md5 = job.script.md5
