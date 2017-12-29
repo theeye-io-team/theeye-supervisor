@@ -303,10 +303,11 @@ const registerJobOperation = (operation, topic, input) => {
       payload.statuscode = task.status_code 
       payload.pattern = task.pattern
     } else {
-      payload.filename = job.script.filename
-      payload.md5 = job.script.md5
-      payload.mtime = job.script.last_update
-      payload.mimetype = job.script.mimetype
+      const script = job.script || {}
+      payload.filename = script.filename
+      payload.md5 = script.md5
+      payload.mtime = script.last_update
+      payload.mimetype = script.mimetype
     }
 
     if (job.result) payload.result = job.result
