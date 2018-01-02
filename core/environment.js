@@ -10,7 +10,7 @@ function setenv(next) {
 
   var config = require('config');
 
-  if (!config.get("is_dev")) {
+  if (!config.get("is_dev")) { // then configure AWS SDK
     var AWS = require('aws-sdk'); 
     AWS.config.update( config.get('aws') );
   }

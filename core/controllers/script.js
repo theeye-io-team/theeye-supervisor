@@ -178,9 +178,15 @@ const controller = {
       return res.send(400,'script file is required')
     }
 
+    delete params.customer
+    delete params.customer_id
+    delete params.user
+    delete params.user_id
+
     var input = extend(params,{
-      customer: req.customer,
-      user: req.user,
+      //customer_id: req.customer._id,
+      //customer: req.customer,
+      //user: req.user,
       script: script,
       file: file
     })

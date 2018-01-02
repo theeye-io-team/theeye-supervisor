@@ -294,20 +294,35 @@ const registerJobOperation = (operation, topic, input) => {
       user_id: user._id,
       user_name: user.email,
       user_email: user.username,
-      operation: operation
+      operation: operation,
+      job_type: job._type
     }
 
     if (job._type == 'ScraperJob') {
+      if (!task) {
+        const msg = `job ${job._id}/${job._type} task is not valid or undefined`
+        logger.error(new Error(msg))
+      }
+
       payload.url = task.url
       payload.method = task.method
       payload.statuscode = task.status_code 
       payload.pattern = task.pattern
-    } else {
+    } else if (job._type == 'ScriptJob') {
+      if (!job.script) {
+        const msg = `job ${job._id}/${job._type} script is not valid or undefined`
+        logger.error(new Error(msg))
+      }
+
       const script = job.script || {}
       payload.filename = script.filename
       payload.md5 = script.md5
       payload.mtime = script.last_update
       payload.mimetype = script.mimetype
+    } else if (job._type == 'AgentUpdateJob') {
+      // nothing yet
+    } else {
+      // unhandled job type
     }
 
     if (job.result) payload.result = job.result

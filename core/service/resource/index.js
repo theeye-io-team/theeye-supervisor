@@ -962,11 +962,11 @@ function detachMonitorScript (monitor, done) {
 */
 function notifyScriptMonitorsUpdate (script) {
   var query = {
-    'type':'script',
-    'script':script._id
-  };
+    type: 'script',
+    script: script._id
+  }
   ResourceMonitorService.findBy(query,function(error, monitors){
-    if(!monitors||monitors.length==0){
+    if (!monitors||monitors.length==0) {
       logger.log('no monitors with this script attached found.');
       return;
     }
