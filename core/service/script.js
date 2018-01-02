@@ -103,30 +103,29 @@ module.exports = {
    * @author Facundo
    * @param {Object} input
    */
-  update: function(input, next)
-  {
+  update (input, next) {
     next||(next=function(){});
-    var script = input.script;
-    var file = input.file;
+    var script = input.script
+    var file = input.file
 
     updateScriptFile(file, script, (error, data) => {
       var updates = extend(input,{
-        'keyname': data.keyname,
-        'md5': data.md5,
-        'filename': file.name,
-        'mimetype': file.mimetype,
-        'size': file.size,
-        'extension': file.extension,
-        'last_update': new Date()
-      });
+        keyname: data.keyname,
+        md5: data.md5,
+        filename: file.name,
+        mimetype: file.mimetype,
+        size: file.size,
+        extension: file.extension,
+        last_update: new Date()
+      })
 
-      logger.log('updating script');
+      logger.log('updating script')
       script.update(updates,error => {
-        if(error) return next(error);
-        logger.log('script updated');
-        next(null,script);
-      });
-    });
+        if(error) return next(error)
+        logger.log('script updated')
+        next(null,script)
+      })
+    })
   },
   remove : function(input,next)
   {

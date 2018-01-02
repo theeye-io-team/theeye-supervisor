@@ -5,56 +5,6 @@ const debug = require('../lib/logger')('service:notification')
 const uuidv1 = require('uuid/v1')
 
 module.exports = {
-  /**
-  sendSNSNotification (data,options) {
-    let message = JSON.stringify(data)
-    let topic = options.topic
-    let subject = options.subject
-
-    if ( config.get('is_dev') ) {
-      var websnscfg = config.get('web-sns');
-      var webroute = config.get('system').web_url +
-        websnscfg.topicEndpoint[topic];
-
-      var params = { form: { Message: message } }
-
-      debug.log('Submit Web SNS information(direct no AWS) to %s', webroute);
-      const req = request.post(
-        webroute,
-        params,
-        function (error, response, body) {
-          if( error || response.statusCode != 200 ) {
-            debug.error('could not connect to local web');
-            debug.error(error);
-          } else {
-            debug.log('web publishing success');
-            debug.log(body.replace(/(\r\n|\n|\r)/gm,''));
-          }
-        }
-      )
-    } else {
-      debug.log('Submit SNS information');
-      const snscfg = config.get('sns');
-
-      SNS.publish({
-        TopicArn: snscfg.topicArn[topic],
-        Message: message,
-        Subject: subject
-      },function(error,data){
-        if (error) {
-          debug.error('SNS submit error')
-          debug.error(error)
-        }
-        else debug.log(data);
-      });
-    }
-
-    this.generateSystemNotification({
-      topic: topic,
-      data: data
-    })
-  },
-  */
   sendEmailNotification (options) {
     mailer.sendMail({
       customer_name: options.customer_name,
