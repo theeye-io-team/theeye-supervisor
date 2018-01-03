@@ -531,11 +531,11 @@ Service.update = function(input,next) {
 
   logger.log('updating monitor %j',updates);
 
-  // remove from updates if present
+  // remove cannot change from updates if present
   delete updates.monitor
   delete updates.customer
-  delete updates.user_id // cannot be changed
-  delete updates.user // cannot be changed
+  delete updates.user_id
+  delete updates.user
 
   // if model is changed just remove the template link
   updates.template = null
@@ -559,15 +559,22 @@ Service.update = function(input,next) {
       }
 
       var previous_host_id = monitor.host_id
+      var new_host_id
+      if (updates.host_id) {
+        new_host_id = updates.host_id.toString() // mongo ObjectID
+      } else {
+        new_host_id = monitor.host_id // current
+      }
+
       monitor.update(updates,(err) => {
         if (err) {
           logger.error(err)
           return next(err)
         }
 
-        AgentUpdateJob.create({ host_id: updates.host_id })
-        // if monitor host changes, the new and the old agents should be notified
-        if (previous_host_id != updates.host_id) {
+        AgentUpdateJob.create({ host_id: new_host_id })
+        // if monitor host is changed, the new and the old agents should be notified
+        if (new_host_id !== null && previous_host_id != new_host_id) {
           AgentUpdateJob.create({ host_id: previous_host_id })
         }
 

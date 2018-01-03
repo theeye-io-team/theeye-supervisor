@@ -152,8 +152,6 @@ module.exports = {
         else data.url = url
 
         data.timeout = input.timeout||10000
-        //data.external_host_id = input.external_host_id;
-        //if (!input.external_host_id) data.external = false;
         data.external = false
 
         if (!input.parser) input.parser=null

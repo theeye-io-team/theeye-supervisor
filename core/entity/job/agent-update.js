@@ -1,8 +1,7 @@
 "use strict";
 
 const BaseSchema = require('./schema');
-const Job = require('./index');
-const logger = require('../../lib/logger');
+const logger = require('../../lib/logger')('entity:job:agent-update')
 const LIFECYCLE = require('../../constants/lifecycle')
 const JOBS = require('../../constants/jobs')
 
@@ -45,6 +44,7 @@ AgentUpdateJobSchema.statics.create = function (specs, next) {
         logger.error(err)
         return next(err)
       }
+      logger.log('agent update job created')
       next(null,job)
     })
   })

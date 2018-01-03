@@ -55,7 +55,7 @@ module.exports = {
       if (err) next(err)
 
       if (job!==null) {
-        if (!job.task) {
+        if (jobMustHaveATask(job) && !job.task) {
           job.lifecycle = LifecycleConstants.CANCELED
           job.save(err => next(err,null)) // job with error
           topic = TopicsConstants.task.cancelation // cancel
@@ -241,6 +241,10 @@ module.exports = {
   }
 }
 
+const jobMustHaveATask = (job) => {
+  return job._type === 'ScraperJob' || job._type === 'ScriptJob'
+}
+
 const jobInProgress = (job) => {
   if (!job) return false
   return job.lifecycle === LifecycleConstants.READY ||
@@ -298,12 +302,12 @@ const registerJobOperation = (operation, topic, input) => {
       job_type: job._type
     }
 
-    if (job._type == 'ScraperJob') {
-      if (!task) {
-        const msg = `job ${job._id}/${job._type} task is not valid or undefined`
-        logger.error(new Error(msg))
-      }
+    if (jobMustHaveATask(job) && !task) {
+      const msg = `job ${job._id}/${job._type} task is not valid or undefined`
+      logger.error(new Error(msg))
+    }
 
+    if (job._type == 'ScraperJob') {
       payload.url = task.url
       payload.method = task.method
       payload.statuscode = task.status_code 
