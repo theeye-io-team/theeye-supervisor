@@ -23,21 +23,27 @@ module.exports = {
     const query = { name: customerName }
     CustomerService.getCustomerConfig(query, (err,config) => {
 
-      if (gconfig.enabled===false) {
-        logger.error('elasticsearch disabled by system config')
+      if (gconfig.enabled===false) { // global elasticsearch settings
+        logger.error('ABORTED. elasticsearch disabled by system config')
         return
       }
 
       var specs
       var elastic
 
-      if (err||!config) {
-        logger.error('customer elasticsearch configuration not found. elasticsearch submit aborted')
+      if (err) {
+        logger.error('ERROR. fetching customer configuration.')
+        logger.error(err.message)
+        return
+      }
+      
+      if (!config) {
+        logger.error('ABORTED. customer configuration not found.')
         return
       }
 
       if (!config.elasticsearch) {
-        logger.error('customer elasticsearch configuration key not set. elasticsearch submit aborted')
+        logger.error('ABORTED. customer elasticsearch integration not set.')
         return
       }
 
@@ -62,21 +68,22 @@ module.exports = {
             logger.log('submit done to %s', specs.url);
           })
         } else {
-          logger.error('customer elasticsearch configuration url invalid')
+          logger.error('customer elasticsearch configuration url is not valid')
         }
       } else {
-        logger.log('customer elasticsearch service disabled')
+        logger.log('customer elasticsearch integration is not enabled')
       }
 
-      if (process.env.NODE_ENV='development' && elastic.debug===true) {
-        logger.log('elasticsearch debug enabled')
-        debug(elastic.debug_file,specs)
+      // dump audit data to file
+      if (elastic.dump === true && elastic.dump_file) {
+        logger.log('elk data dump enabled')
+        dump(elastic.dump_file, specs)
       }
     })
   }
 }
 
-const debug = (filename, data) => {
+const dump = (filename, data) => {
   if (!filename) {
     return logger.error('no filename provided')
   }

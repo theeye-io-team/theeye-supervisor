@@ -27,8 +27,7 @@ module.exports = {
     "database": "theeye"
   },
   "elasticsearch": {
-    "enabled": false,
-    "url":"http://127.0.0.1:9200" // via ssh tunnel
+    "enabled": true
   },
   "mailer": {
     "from": "The Eye Development %customer% <%customer%@theeye.io>",

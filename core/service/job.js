@@ -286,7 +286,8 @@ const registerJobOperation = (operation, topic, input) => {
 
   // submit job operation to elastic search
   job.populate([
-    { path: 'host' }
+    { path: 'host' },
+    { path: 'user' }
   ], (err) => {
     const payload = {
       hostname: job.host.hostname,
