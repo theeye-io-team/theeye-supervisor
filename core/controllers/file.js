@@ -10,13 +10,14 @@ var dbFilter = require('../lib/db-filter')
 var File = require('../entity/file').File
 var Script = require('../entity/file').Script
 var FileHandler = require('../lib/file')
+var FileService = require('../service/file')
 
 module.exports = function(server, passport){
   var middlewares = [
     passport.authenticate('bearer', {session:false}),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer
-  ];
+  ]
 
   // FETCH
   server.get('/:customer/file', middlewares, controller.fetch);
@@ -50,15 +51,15 @@ module.exports = function(server, passport){
   );
 
   // DELETE
-  //server.del(
-  //  '/:customer/file/:file',
-  //  middlewares.concat(
-  //    router.requireCredential('admin'),
-  //    router.resolve.idToEntity({ param:'file', required:true })
-  //  ),
-  //  controller.remove,
-  //  audit.afterRemove('file',{display:'filename'})
-  //);
+  server.del(
+    '/:customer/file/:file',
+    middlewares.concat(
+      router.requireCredential('admin'),
+      router.resolve.idToEntity({ param:'file', required:true })
+    ),
+    controller.remove,
+    audit.afterRemove('file',{display:'filename'})
+  );
 
   // users can download scripts
   server.get(
@@ -72,6 +73,17 @@ module.exports = function(server, passport){
     ],
     controller.download
   );
+
+  // get file linked models
+  //
+  // API V3
+  server.get(
+    '/file/:file/linkedmodels',
+    middlewares.concat(
+      router.resolve.idToEntity({ param:'file', required:true })
+    ),
+    controller.getLinkedModels
+  )
 }
 
 const controller = {
@@ -237,5 +249,64 @@ const controller = {
         stream.pipe(res);
       }
     });
+  },
+  /**
+   *
+   * @method DELETE
+   *
+   */
+  remove (req, res, next) {
+    if (!req.file) {
+      return res.send(400,'file is required.');
+    }
+
+    var file = req.file;
+
+    FileService.getLinkedModels({
+      file: file,
+    },function (err,models) {
+      if (err) {
+        logger.error(err)
+        return res.send(500)
+      }
+
+      if (models.length > 0) {
+        res.send(400, 'Cannot delete this file. It is being used by tasks or monitors')
+        return next()
+      } else {
+        FileService.remove({
+          file: file,
+          user: req.user,
+          customer: req.customer
+        }, function (err,data) {
+          if (err) {
+            logger.error(err)
+            return res.send(500)
+          }
+
+          res.send(204)
+          return next()
+        })
+      }
+    })
+  },
+  /**
+   *
+   * GET LINKED MODELS
+   *
+   */
+  getLinkedModels (req, res, next) {
+    const file = req.file
+
+    FileService.getLinkedModels({
+      file: file,
+    },function (err,models) {
+      if (err) {
+        logger.error(err)
+        return res.send(500)
+      }
+      res.send(200, models)
+      next()
+    })
   }
 }

@@ -48,7 +48,7 @@ module.exports = {
     source.keyname = keyname;
     specs = {
       script: source,
-      customer_name: pathname 
+      customer_name: pathname
     }
 
     storage.save(specs,function(err,data){
@@ -84,7 +84,7 @@ module.exports = {
 
     specs = {
       script: source,
-      customer_name: pathname 
+      customer_name: pathname
     };
 
     storage.save(specs,function(error,data){

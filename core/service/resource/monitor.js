@@ -225,7 +225,7 @@ module.exports = {
       case 'dstat':
         data.cpu = input.cpu || MonitorConstants.DEFAULT_HEALTH_THRESHOLD_CPU
         data.disk = input.disk || MonitorConstants.DEFAULT_HEALTH_THRESHOLD_DISK
-        data.mem = input.mem ||MonitorConstants.DEFAULT_HEALTH_THRESHOLD_MEM 
+        data.mem = input.mem ||MonitorConstants.DEFAULT_HEALTH_THRESHOLD_MEM
         data.cache = input.cache || MonitorConstants.DEFAULT_HEALTH_THRESHOLD_CACHE
         break
       case 'psaux': break
@@ -281,6 +281,8 @@ module.exports = {
    * @property {string} filters.host_id - valid mongo id string
    * @param {Function} doneFn
    *
+   * DO NOT USE - DEPRECATED !
+   *
    */
   findBy (filters, options, doneFn) {
     var query = {};
@@ -299,11 +301,14 @@ module.exports = {
       switch (prop) {
         case 'enable':
         case 'host_id':
-        case 'type': 
-          query[prop] = value; 
+        case 'type':
+          query[prop] = value;
           break;
         case 'script':
           query['config.script_id'] = value.toString(); // why to string is required to get it work ??? WTF ???
+          break;
+        case 'file':
+          query['config.file'] = value.toString();
           break;
       }
     }
@@ -329,7 +334,7 @@ module.exports = {
         .find(query)
         .exec(doneExec);
     }
-  },
+  }
 }
 
 /**

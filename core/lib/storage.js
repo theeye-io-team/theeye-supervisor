@@ -24,7 +24,7 @@ var S3Storage = {
 
     s3.upload({ Body : body })
       .on('httpUploadProgress', function(evt) {
-        debug('upload progress %j', evt); 
+        debug('upload progress %j', evt);
       })
       .send(function(error, data) {
         if(error) {
@@ -38,7 +38,6 @@ var S3Storage = {
   },
   remove : function(file,next) {
     if(!next) next = function(){};
-
     var params = {
       'Bucket': config.get('s3').bucket,
       'Key': file.name
@@ -156,7 +155,7 @@ var LocalStorage = {
           } else {
             next(null,{
               path: targetPath,
-              filename: filename 
+              filename: filename
             });
           }
         });
