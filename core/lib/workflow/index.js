@@ -24,7 +24,8 @@ function Workflow () {
 
     if (!events || !Array.isArray(events) || events.length<=0) return
 
-    for (let event in events) {
+    for (let idx in events) {
+      let event = events[idx]
       if (event) {
         logger.debug('processing event %o',event)
 
