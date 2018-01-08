@@ -972,7 +972,7 @@ function notifyScriptMonitorsUpdate (script) {
     type: 'script',
     script: script._id
   }
-  ResourceMonitorService.findBy(query,function(error, monitors){
+  ResourceMonitorService.findBy(query, function (error, monitors) {
     if (!monitors||monitors.length==0) {
       logger.log('no monitors with this script attached found.');
       return;
@@ -989,10 +989,10 @@ function notifyScriptMonitorsUpdate (script) {
 
     for(var i=0;i<hosts.length;i++){
       var host = hosts[i];
-      logger.log('notifying host "%s"', host);
-      AgentUpdateJob.create({ host_id: host });
+      logger.log('notifying host "%s"', host)
+      AgentUpdateJob.create({ host_id: host })
     }
-  });
+  })
 }
 
 Service.onScriptRemoved = function (script) {

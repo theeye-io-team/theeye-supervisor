@@ -28,7 +28,11 @@ module.exports = {
 
     Task
       .find({ script_id: file._id })
-      .select({ name: 1, _type: 1 })
+      .select({
+        name: 1,
+        _type: 1,
+        host_id: 1
+      })
       .exec(function(error,tasks) {
         if (error) return next(error)
         if (tasks && tasks.length > 0) {
@@ -44,7 +48,7 @@ module.exports = {
           { $and: [{ type: 'file' }, { 'config.file': file._id.toString() }] }
         ]
       })
-      .select({ name: 1, _type: 1 })
+      .select({ name: 1, _type: 1, host_id: 1 })
       .exec(function(error, monitors) {
         if (error) return next (error)
         if (monitors && monitors.length > 0) {

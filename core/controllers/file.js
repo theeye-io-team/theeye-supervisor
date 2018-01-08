@@ -11,6 +11,7 @@ var File = require('../entity/file').File
 var Script = require('../entity/file').Script
 var FileHandler = require('../lib/file')
 var FileService = require('../service/file')
+const AgentUpdateJob = require('../entity/job').AgentUpdate
 
 module.exports = function(server, passport){
   var middlewares = [
@@ -132,7 +133,7 @@ const controller = {
       description = req.body.description,
       isPublic = (req.body.public||false);
 
-    if (!source) return res.send(400,'file is required');
+    if (!source) return res.send(400,'file is required')
 
     FileHandler.replace({
       file: file,
@@ -140,11 +141,11 @@ const controller = {
       pathname: customer.name
     },function(err,storeData){
       if (err) {
-        logger.error(err);
-        return next(err);
+        logger.error(err)
+        return next(err)
       } else {
 
-        var buf = fs.readFileSync(source.path);
+        var buf = fs.readFileSync(source.path)
 
         var data = {
           filename: source.name,
@@ -156,7 +157,7 @@ const controller = {
           keyname: storeData.keyname,
           md5: md5(buf),
           public: isPublic
-        };
+        }
 
         file.set(data)
         file.save(err => {
@@ -164,11 +165,13 @@ const controller = {
             logger.error(err);
             next(err);
           } else {
+            checkLinkedMonitors(file)
+
             file.publish((err,pub) => {
               if (err) return next(err)
               res.send(200,pub)
-              next();
-            });
+              next()
+            })
           }
         })
       }
@@ -309,4 +312,20 @@ const controller = {
       next()
     })
   }
+}
+
+const checkLinkedMonitors = (file) => {
+  FileService.getLinkedModels({
+    file: file
+  }, (err, models) => {
+    if (err) return res.send(500,err)
+    if (Array.isArray(models) && models.length>0) {
+      for (let idx=0; idx<models.length; idx++) {
+        let model = models[idx]
+        if (model._type === 'ResourceMonitor') {
+          AgentUpdateJob.create({ host_id: model.host_id })
+        }
+      }
+    }
+  })
 }
