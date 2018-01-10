@@ -14,7 +14,7 @@ const MONITORS = require('../constants/monitors')
 const Scheduler = require('../service/scheduler')
 
 module.exports = {
-  start: function () {
+  start () {
     const mconfig = config.get('monitor');
     if (process.env.MONITORING_DISABLED == 'true') {
       logger.log('WARNING! Monitoring service is disabled via process.env');
@@ -34,7 +34,7 @@ module.exports = {
       );
 
       Scheduler.agenda.every(`${interval} seconds`,'monitoring');
-      logger.log('monitoring started');
+      logger.log('supervisor monitoring is running')
     }
   }
 }

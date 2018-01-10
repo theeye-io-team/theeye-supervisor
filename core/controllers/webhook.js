@@ -6,7 +6,7 @@ var logger = require('../lib/logger')('eye:controller:webhook');
 const audit = require('../lib/audit');
 const router = require('../router');
 
-const EventDispatcher = require('../service/events');
+const App = require('../app');
 const WebhookEvent = require('../entity/event').WebhookEvent;
 const Webhook = require('../entity/webhook').Webhook;
 
@@ -177,7 +177,7 @@ var controller = {
       if (err) return res.send(500, err);
       if (!event) return res.send(500);
 
-      EventDispatcher.dispatch(event);
+      App.eventDispatcher.dispatch(event);
       res.send(200,{ message: 'success' });
       next();
     });

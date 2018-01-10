@@ -2,12 +2,10 @@
 
 const EventEmitter = require('events').EventEmitter
 const util = require('util')
-const config = require('config')
 const ObjectId = require('mongoose').Types.ObjectId
 
 const App = require('../../app')
 const logger = require('../../lib/logger')(':events')
-const User = require('../../entity/user').Entity
 const Task = require('../../entity/task').Entity
 const CustomerService = require('../customer')
 const JobConstants = require('../../constants/jobs')
@@ -16,34 +14,8 @@ class EventDispatcher extends EventEmitter {
 
   constructor ( options ) {
     super ()
-    // theeye user , used to automatic jobs
-    this.user = null
-  }
-
-  initialize (done) {
-    const next = () => {
-      logger.log('events dispatcher is ready')
-      done()
-    }
-
-    if (this.user) {
-      return next(null,user)
-    } else {
-      User.findOne(config.system.user,(err, user) => {
-        if (err) throw err;
-        if (!user) {
-          // system user not found. create one
-          this.user = new User(config.system.user)
-          this.user.save( err => {
-            if (err) throw err
-            else next(null, this.user)
-          });
-        } else {
-          this.user = user
-          next(null, user)
-        }
-      });
-    }
+    // theeye user, require to preform automatic actions
+    this.user = options.user
   }
 
   /**
@@ -83,7 +55,7 @@ class EventDispatcher extends EventEmitter {
   }
 }
 
-module.exports = new EventDispatcher()
+module.exports = EventDispatcher
 
 /**
  * @author Facugon

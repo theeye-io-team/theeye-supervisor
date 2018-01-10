@@ -101,7 +101,7 @@ Scheduler.prototype = {
       host_id: task.host_id,
       script_id: task.script_id,
       name: task.name,
-      user_id: App.eventDispatcher.user._id,
+      user_id: App.user._id,
       customer_id: customer._id,
       customer_name: customer.name,
       lifecycle: LifecycleConstants.READY,

@@ -12,7 +12,6 @@ const Lifecycle = require('../../constants/lifecycle')
 const CustomerService = require('../customer')
 const NotificationService = require('../notification')
 const ResourceMonitorService = require('./monitor')
-const EventDispatcher = require('../events')
 const ResourcesNotifications = require('./notifications')
 // Entities
 const AgentUpdateJob = require('../../entity/job').AgentUpdate
@@ -22,6 +21,7 @@ const MonitorModel = require('../../entity/monitor').Entity
 const MonitorTemplate = require('../../entity/monitor/template').Entity
 const Host = require('../../entity/host').Entity
 const Tag = require('../../entity/tag').Entity
+//const dbFilter = require('../lib/db-filter')
 
 function Service (resource) {
   var _resource = resource;
@@ -119,7 +119,7 @@ function Service (resource) {
         if (err) return logger.error(err);
         else if (!event) return;
 
-        EventDispatcher.dispatch(event);
+        App.eventDispatcher.dispatch(event)
       });
     });
   }
@@ -209,7 +209,6 @@ function Service (resource) {
   const handleUpdatesStoppedState = (resource,input,config) => {
     const newState = MONITORS.RESOURCE_STOPPED;
     const failure_threshold = config.fails_count_alert;
-    const isHost = (resource.type === MONITORS.RESOURCE_TYPE_HOST)
     resource.fails_count++;
 
     logger.log(
@@ -233,29 +232,6 @@ function Service (resource) {
       sendStateChangeEventNotification(resource,input.event)
     }
 
-    /**
-     * if any job is assigned to the host's agent cancel it.
-     */
-    const cancelAssignedJobs = () => {
-      const query = {
-        host: { _id: resource.host_id }
-      }
-
-      App.jobDispatcher.fetchBy(query, (err, jobs) => {
-        if (jobs.length===0) {
-          // nothing to do
-          return
-        }
-
-        // search for jobs to cancel
-        jobs.filter(job => {
-          return job.lifecycle === Lifecycle.ASSIGNED
-        }).forEach(job => {
-          App.jobDispatcher.cancel(job)
-        })
-      })
-    }
-
     // current resource state
     if (resourceUpdatesStopped) {
       logger.log('resource "%s" notifications stopped', resource.name)
@@ -263,8 +239,12 @@ function Service (resource) {
       input.failure_severity = getEventSeverity(input.event, resource)
       resource.state = newState
       dispatchNotifications()
+
       // if the resource is a host
-      if (isHost) cancelAssignedJobs()
+      const isHost = (resource.type === MONITORS.RESOURCE_TYPE_HOST)
+      if (isHost) {
+        cancelAssignedJobsToHost(resource.host_id)
+      }
     }
   }
 
@@ -1001,4 +981,31 @@ Service.onScriptRemoved = function (script) {
 
 Service.onScriptUpdated = function(script){
   notifyScriptMonitorsUpdate(script);
+}
+
+/**
+ * if any job is assigned to the host's agent cancel it.
+ */
+const cancelAssignedJobsToHost = (host_id) => {
+  const user = App.user // automatic job cancelation
+  const filter = {
+    where: {
+      host_id: host_id
+    }
+  }
+
+  // search for jobs to cancel
+  logger.log('searching for jobs to cancel')
+  App.jobDispatcher.fetchBy(filter, (err, jobs) => {
+    if (err) return logger.error(err)
+
+    if (jobs.length===0) {
+      // nothing to do
+      return
+    }
+
+    jobs
+      .filter(job => job.lifecycle === Lifecycle.ASSIGNED)
+      .forEach(job => App.jobDispatcher.cancel({ job, user }))
+  })
 }

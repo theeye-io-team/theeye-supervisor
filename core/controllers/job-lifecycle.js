@@ -1,5 +1,6 @@
 'use strict'
 
+const App = require('../app')
 const debug = require('../lib/logger')('controller:job-lifecycle')
 const router = require('../router')
 const LIFECYCLE = require('../constants/lifecycle')
@@ -58,8 +59,8 @@ const controller = {
   },
   cancel (req, res, next) {
     const job = req.job
-    job.lifecycle = LIFECYCLE.CANCELED
-    job.save(err => {
+    const user = req.user
+    App.jobDispatcher.cancel({ job, user }, err => {
       if (err) {
         logger.error('Failed to cancel job')
         logger.error(err)

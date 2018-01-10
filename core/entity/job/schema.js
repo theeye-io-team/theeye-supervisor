@@ -3,6 +3,7 @@
 const util = require('util');
 const Schema = require('mongoose').Schema;
 const ObjectId = Schema.Types.ObjectId;
+const FetchBy = require('../../lib/fetch-by');
 
 function BaseSchema (props) {
 
@@ -30,6 +31,10 @@ function BaseSchema (props) {
     collection: 'jobs',
     discriminatorKey: '_type'
   });
+
+  this.statics.fetchBy = function (filter, next) {
+    FetchBy.call(this,filter,next)
+  }
 
   // Duplicate the ID field.
   this.virtual('id').get(function(){

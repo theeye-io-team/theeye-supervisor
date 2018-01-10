@@ -36,26 +36,25 @@ require('./environment').setenv(function(){
 
     logger.log('initializing scheduler');
     const scheduler = require('./service/scheduler')
-    scheduler.initialize(function(){
+    const EventDispatcher = require('./service/events')
 
-      logger.log('initializing events dispatcher')
-      const dispatcher = require('./service/events')
-      dispatcher.initialize(function(){
+    scheduler.initialize(() => {
+      require('./service/monitor').start()
 
-        require('./service/monitor').start()
+      logger.log('initializing server')
 
-        logger.log('initializing server')
-
-        const App = require('./app')
+      const App = require('./app')
+      App.initialize(err => {
         App.jobDispatcher = require('./service/job')
         App.taskManager = require('./service/task')
-        App.eventDispatcher = dispatcher
+        App.eventDispatcher = new EventDispatcher({ user: App.user }) 
         App.scheduler = scheduler
         App.customer = require('./service/customer')
         App.start()
 
-        logger.log('supervisor is running')
+        logger.log('supervisor api is running')
       })
+
     })
   })
 })

@@ -18,24 +18,29 @@ const ScraperJob = JobModels.Scraper
 const Script = require('../entity/file').Script
 
 const TaskEvent = require('../entity/event').TaskEvent
-const EventDispatcher = require('./events')
 const NotificationService = require('./notification')
 
 const STATE_SUCCESS = 'success'
 const STATE_FAILURE = 'failure'
 
 module.exports = {
-  /**
-   * @param {Object} input
-   * @param {Function} next
-   */
-  fetchBy (input,next) {
-    const query = {}
-    if (input.host) query.host_id = input.host._id
-    if (input.state) query.state = input.state
-    if (input.lifecycle) query.lifecycle = input.lifecycle
-
-    Job.find(query,next)
+  ///**
+  // * @param {Object} input
+  // * @param {Function} next
+  // */
+  //fetchBy (input,next) {
+  //  const query = {}
+  //  if (input.host) query.host_id = input.host._id
+  //  if (input.state) query.state = input.state
+  //  if (input.lifecycle) query.lifecycle = input.lifecycle
+  //  Job.find(query,next)
+  //},
+  fetchBy (filter, next) {
+    return Job.fetchBy(filter, (err,jobs) => {
+      if (err) return next(err)
+      if (jobs.length===0) return next(null,[])
+      next(null, jobs)
+    })
   },
   /**
    *
@@ -193,7 +198,10 @@ module.exports = {
     // trigger result event
     new ResultEvent ( job )
   },
-  cancel (job, next) {
+  cancel (input, next) {
+    const job = input.job
+    const user = input.user
+
     next||(next=()=>{})
     job.lifecycle = LifecycleConstants.CANCELED
     job.save(err => {
@@ -203,6 +211,8 @@ module.exports = {
         logger.error(err)
         return next(err)
       }
+
+      next(null, job)
 
       logger.log('job %s canceled', job._id)
 
@@ -460,7 +470,7 @@ function ResultEvent (job) {
       return logger.error(err);
     }
 
-    EventDispatcher.dispatch(event);
+    App.eventDispatcher.dispatch(event);
   });
 }
 
