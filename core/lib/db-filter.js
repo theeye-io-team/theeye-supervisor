@@ -1,16 +1,16 @@
 "use strict"
 
-const extend = require('util')._extend
+const assign = require('lodash/assign')
 
 module.exports = function(input, defaults){
   var filter = {}
 
   defaults||(defaults={})
 
-  filter.where = extend({}, (defaults.where||{}), (input.where||{}))
+  filter.where = assign({}, (defaults.where||{}), (input.where||{}))
   filter.limit = parseInt(input.limit) || null
-  filter.sort = extend({}, (defaults.sort||{}), (input.sort||{}))
-  filter.include = extend({}, (defaults.include||{}), (input.include||{}))
+  filter.sort = assign({}, (defaults.sort||{}), (input.sort||{}))
+  filter.include = assign({}, (defaults.include||{}), (input.include||{}))
 
   if (input.populate) filter.populate = input.populate
 
