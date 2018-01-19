@@ -4,14 +4,14 @@ const BaseSchema = require('../base-schema')
 const properties = require('./properties')
 const util = require('util')
 
-function ReceiptSchema () {
+function RecipeSchema () {
   BaseSchema.call(this, properties, {
-    collection: 'receipts'
+    collection: 'recipe'
   })
   
   return this
 }
 
-util.inherits(ReceiptSchema, BaseSchema)
+util.inherits(RecipeSchema, BaseSchema)
 
-module.exports = ReceiptSchema
+module.exports = RecipeSchema

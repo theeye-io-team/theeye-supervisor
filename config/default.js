@@ -124,7 +124,7 @@ module.exports = {
   "notifications": {
     "api": {
       "timeout": 5000,
-      "url": "" || process.env.CONFIG_NOTIFICATIONS_API_URL // e.g. "url": "http://127.0.0.1:6080/notification" // the same web server
+      "url": process.env.CONFIG_NOTIFICATIONS_API_URL || "" // e.g. "url": "http://127.0.0.1:6080/notification" // the same web server
     }
   },
   "events": {
