@@ -20,8 +20,15 @@ module.exports = {
    * @param {Object} data
    */
   submit (customerName, topic, data) {
-    const query = { name: customerName }
-    CustomerService.getCustomerConfig(query, (err,config) => {
+    if (!customerName) {
+      let err = new Error('customerName is required to submit elk')
+      err.context = { customerName, topic, data }
+      logger.error('%o', err)
+      return
+    }
+
+    const filters = { name: customerName }
+    CustomerService.getCustomerConfig(filters, (err,config) => {
 
       if (gconfig.enabled===false) { // global elasticsearch settings
         logger.error('ABORTED. elasticsearch disabled by system config')

@@ -9,7 +9,7 @@ exports.script = {
 exports.agent = {
   version: 'agent-version'
 }
-exports.file  = {
+exports.file = {
   crud: 'file-crud'
 }
 exports.hostgroup = {
@@ -27,7 +27,8 @@ exports.task = {
   execution: 'task-execution', // create/start job
   sent: 'task-sent', // sent to agent
   result: 'task-result', // update/finalize job
-  cancelation: 'task-cancelation' // cancel job
+  cancelation: 'task-cancelation', // cancel job
+  terminate: 'task-terminate' // terminate a job
 }
 exports.job = {
   crud: 'job-crud'

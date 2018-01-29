@@ -76,8 +76,8 @@ module.exports = {
 
       if (!customer) {
         const err = new Error('customer not found')
-        err.query = query
-        logger.error(err)
+        err.filters = filters 
+        logger.error('%o',err)
         return next(err)
       }
 

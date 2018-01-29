@@ -38,7 +38,7 @@ AgentUpdateJobSchema.statics.create = function (specs, next) {
     })
 
     const job = new Job(specs)
-    job.host = specs.host_id // enforce host_id, just to be redundant
+    job.host = specs.host_id // enforce host_id, just in case
     job.save(err => {
       if (err) {
         logger.error(err)

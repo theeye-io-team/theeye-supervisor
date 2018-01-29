@@ -379,6 +379,7 @@ HostService.register = (input,next) => {
 
     createHostResources(host, data, (err, payload) => {
       if (err) return next(err)
+      logger.log('host %s resources created', hostname)
       next(null, payload)
     })
   })
@@ -436,9 +437,13 @@ HostService.disableHostsByCustomer = (customer, doneFn) => {
  * @summary Create host resources, orchestrate basic or template resources
  * @param {Host} host
  * @param {Object} data
+ * @property {Customer} data.customer
+ * @property {Mixed} ... many more properties
  * @param {Function(Error,Object)} next
  */
 const createHostResources = (host, data, next) => {
+  const customer = data.customer
+
   ResourceService.create(data, (err, result) => {
     if (err) {
       logger.error(err)
@@ -457,15 +462,11 @@ const createHostResources = (host, data, next) => {
 
       if (!groups||!Array.isArray(groups)||groups.length===0) {
         // create resources and notify agent
-        createBaseMonitors(
-          Object.assign({}, data, {
-            host: host,
-            resource: resource
-          }),
-          () => {
-            AgentUpdateJob.create({ host_id: host._id })
-          }
-        )
+        const monitorData = Object.assign({}, data, { host: host, resource: resource })
+
+        createBaseMonitors(monitorData, () => {
+          AgentUpdateJob.create({ host_id: host._id })
+        })
       } else {
         AgentUpdateJob.create({ host_id: host._id })
       }

@@ -10,6 +10,7 @@ const JobsConstants = require('../constants/jobs')
 const Constants = require('../constants')
 const TaskConstants = require('../constants/task')
 const TopicsConstants = require('../constants/topics')
+const StateConstants = require('../constants/states')
 
 const JobModels = require('../entity/job')
 const Job = JobModels.Job
@@ -19,9 +20,6 @@ const Script = require('../entity/file').Script
 
 const TaskEvent = require('../entity/event').TaskEvent
 const NotificationService = require('./notification')
-
-const STATE_SUCCESS = 'success'
-const STATE_FAILURE = 'failure'
 
 module.exports = {
   ///**
@@ -45,16 +43,18 @@ module.exports = {
   /**
    *
    * @param {Object} input
+   * @property {User} input.user
+   * @property {Host} input.host
+   * @property {Customer} input.customer
    * @param {Function} next
    *
    */
-  getNextPendingJob(input,next) {
+  getNextPendingJob (input, next) {
+    var topic
     const query = {
       lifecycle: LifecycleConstants.READY,
       host_id: input.host._id
     }
-
-    var topic
 
     Job.findOne(query, (err,job) => {
       if (err) next(err)
@@ -76,7 +76,8 @@ module.exports = {
         registerJobOperation(Constants.UPDATE, topic, {
           task: job.task,
           job: job,
-          user: input.user
+          user: input.user,
+          customer: input.customer
         })
       } else {
         next(null,null)
@@ -124,7 +125,8 @@ module.exports = {
         registerJobOperation(Constants.CREATE, topic, {
           task: task,
           job: job,
-          user: input.user
+          user: input.user,
+          customer: input.customer
         })
         done(null, job)
       }
@@ -157,53 +159,78 @@ module.exports = {
   },
   /**
    *
-   * @summary Finalize task execution. Save result and submit result to elk
+   * @summary Finalize task execution. Save result and submit to elk
    *
    * @param {Object} input
    * @property {Job} input.job
    * @property {User} input.user
+   * @property {Customer} input.customer
    * @property {Object} input.result
    * @param {Function} done
    *
    */
-  update (input, done) {
+  finish (input, done) {
     const job = input.job
     const user = input.user
+    const customer = input.customer
     const result = input.result
 
-    // if not failure, assume success
-    var state = (result.state===STATE_FAILURE) ? STATE_FAILURE : STATE_SUCCESS
+    // if it is not a declared failure, assume success
+    var state = ((input.state||result.state)===StateConstants.FAILURE)?StateConstants.FAILURE:StateConstants.SUCCESS
 
-    job.lifecycle = LifecycleConstants.FINISHED
     job.state = state
+    job.lifecycle = LifecycleConstants.FINISHED
     job.result = result.data
     job.save(err => {
-      if (err) logger.log(err)
-      done(err, job)
+      if (err) {
+        logger.log(err)
+        return
+      }
+
+      done(err, job) // continue process in paralell
+      
+      //if (job.name==JobsConstants.AGENT_UPDATE) {
+      //  return // if job is an agent update, skip notifications and events
+      //}
+
+      let topic = TopicsConstants.task.result
+      registerJobOperation(Constants.UPDATE, topic, {
+        job, user, customer, task: job.task
+      })
+
+      //new ResultMail(job) // job completed mail
+      new ResultEvent(job) // trigger result event
     })
-
-    // if job is an agent update, skip notifications and events
-    if (job.name==JobsConstants.AGENT_UPDATE) return
-
-    let topic = TopicsConstants.task.result
-    registerJobOperation(Constants.UPDATE, topic, {
-      task: job.task,
-      job: job,
-      user: user
-    })
-
-    // job completed mail.
-    //new ResultMail ( job )
-
-    // trigger result event
-    new ResultEvent ( job )
   },
+  /**
+   *
+   * @summary Cancel Job execution.
+   * Cancel if READY or Terminate if ASSIGNED.
+   * Else abort
+   *
+   * @param {Object} input
+   * @property {Job} input.job
+   * @property {Customer} input.customer
+   * @property {User} input.user
+   *
+   */
   cancel (input, next) {
     const job = input.job
+    const task = job.task
+    const customer = input.customer
     const user = input.user
 
+    let lifecycle = cancelJobNextLifecycle(job)
+    if (!lifecycle) {
+      let err = new Error(`cannot cancel job. current state lifecycle "${job.lifecycle}" does not allow the transition`)
+      err.statusCode = 400
+      return next(err)
+    }
+
     next||(next=()=>{})
-    job.lifecycle = LifecycleConstants.CANCELED
+    job.lifecycle = lifecycle
+    job.result = {}
+    job.state = StateConstants.CANCELED
     job.save(err => {
       if (err) {
         logger.error('fail to cancel job %s', job._id)
@@ -214,13 +241,12 @@ module.exports = {
 
       next(null, job)
 
-      logger.log('job %s canceled', job._id)
+      logger.log('job %s terminated', job._id)
 
-      let topic = TopicsConstants.task.cancelation // cancelation
+      let topic = TopicsConstants.task.terminate // terminated
       registerJobOperation(Constants.UPDATE, topic, {
-        task: job.task,
-        job: job,
-        user: user
+        customer: input.customer,
+        task, job, user
       })
     })
   },
@@ -287,12 +313,16 @@ const removeOldTaskJobs = (task, next) => {
  * @property {Job} input.job
  * @property {User} input.user
  * @property {Task} input.task
+ * @property {Customer} input.customer
  *
  */
 const registerJobOperation = (operation, topic, input) => {
-  const job = input.job
-  const task = input.task || job.task || {}
-  const user = input.user
+  //const job = input.job
+  //const task = input.task || job.task || {}
+  //const user = input.user
+  //const customer = input.customer
+  let { job, user, customer } = input
+  const task = (input.task || job.task || {})
 
   // submit job operation to elastic search
   job.populate([
@@ -305,7 +335,7 @@ const registerJobOperation = (operation, topic, input) => {
       lifecycle: job.lifecycle,
       name: task.name,
       type: task.type,
-      organization: job.customer_name,
+      organization: customer.name,
       user_id: user._id,
       user_name: user.email,
       user_email: user.username,
@@ -342,13 +372,13 @@ const registerJobOperation = (operation, topic, input) => {
 
     if (job.result) payload.result = job.result
 
-    elastic.submit(job.customer_name, topic, payload) // topic = topics.task.execution/result , CREATE/UPDATE
+    elastic.submit(customer.name, topic, payload) // topic = topics.task.execution/result , CREATE/UPDATE
 
     NotificationService.generateSystemNotification({
       topic: TopicsConstants.job.crud,
       data: {
         hostname: job.hostname,
-        organization: job.customer_name,
+        organization: customer.name,
         operation: operation,
         model_type: job._type,
         model: job
@@ -455,9 +485,29 @@ const createScraperJob = (input, done) => {
 
 /**
  *
+ * @summary obtain next valid lifecycle state if apply for current job.lifecycle
+ * @param {Job} job
+ * @return {String} lifecycle string
+ *
+ */
+const cancelJobNextLifecycle = (job) => {
+  if (job.lifecycle===LifecycleConstants.READY) {
+    return LifecycleConstants.CANCELED
+  } else if (job.lifecycle===LifecycleConstants.ASSIGNED) {
+    return LifecycleConstants.TERMINATED
+  } else {
+    // current state cannot be canceled or terminated
+    return null
+  }
+}
+
+/**
+ *
  *
  */
 function ResultEvent (job) {
+  if (!job.task) return // cannot determine events without a task
+
   TaskEvent.findOne({
     emitter_id: job.task.id,
     enable: true,

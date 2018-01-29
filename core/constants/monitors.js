@@ -1,12 +1,12 @@
-'use strict';
+'use strict'
 
 module.exports = Object.freeze({
   DEFAULT_HEALTH_THRESHOLD_CPU: 80,
   DEFAULT_HEALTH_THRESHOLD_MEM: 85,
   DEFAULT_HEALTH_THRESHOLD_CACHE: 85,
   DEFAULT_HEALTH_THRESHOLD_DISK: 90,
-  SUCCESS_STATES: ['success','ok','normal'],
-  FAILURE_STATES: ['error','fail','failure'],
+  SUCCESS_STATES: ['success', 'ok', 'normal'],
+  FAILURE_STATES: ['error', 'fail', 'failure'],
   // MONITOR STATES
   RESOURCE_FAILURE: 'failure',
   RESOURCE_NORMAL: 'normal',
@@ -37,7 +37,7 @@ module.exports = Object.freeze({
       this.RESOURCE_CHANGED,
       this.RESOURCE_ERROR,
       this.AGENT_STOPPED
-    ];
+    ]
   },
   get MONITOR_SEVERITIES () {
     return [

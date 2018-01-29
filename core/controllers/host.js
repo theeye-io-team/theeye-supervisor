@@ -125,10 +125,13 @@ const controller = {
 
       logger.error('host "%s" registration completed.', hostname);
 
-      const response = lodash.assign({
-        resource_id: resource ? resource._id : null,
-        host_id: host._id
-      }, config.agent.core_workers.host_ping)
+      const response = lodash.assign(
+        {
+          resource_id: resource ? resource._id : null,
+          host_id: host._id
+        },
+        config.agent.core_workers.host_ping
+      )
 
       res.send(200, response); 
       next();

@@ -13,5 +13,5 @@ exports.ARGUMENT_TYPE_SELECT = ARGUMENT_TYPE_SELECT
 exports.ARGUMENT_TYPES = Object.freeze([
   { id: ARGUMENT_TYPE_FIXED, text: 'Fixed' },
   { id: ARGUMENT_TYPE_INPUT, text: 'Input' },
-  { id: ARGUMENT_TYPE_SELECT, text: 'Select' },
+  { id: ARGUMENT_TYPE_SELECT, text: 'Select' }
 ])

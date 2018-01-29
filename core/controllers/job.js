@@ -21,15 +21,23 @@ module.exports = (server, passport) => {
    * users can trigger tasks
    *
    */
-  server.get('/:customer/job/:job', middlewares.concat(
-    router.requireCredential('user'),
-    router.resolve.idToEntity({param:'job',required:true})
-  ), controller.get)
+  server.get(
+    '/:customer/job/:job',
+    middlewares.concat(
+      router.requireCredential('user'),
+      router.resolve.idToEntity({param:'job',required:true})
+    ),
+    controller.get
+  )
 
-  server.get('/:customer/job', middlewares.concat(
-    router.requireCredential('user'),
-    router.resolve.hostnameToHost({required:true})
-  ), controller.fetch)
+  server.get(
+    '/:customer/job',
+    middlewares.concat(
+      router.requireCredential('user'),
+      router.resolve.hostnameToHost({ required: true })
+    ),
+    controller.fetch
+  )
 
   //server.patch( // should be patch
   server.put(
@@ -38,7 +46,7 @@ module.exports = (server, passport) => {
       router.requireCredential('agent',{exactMatch:true}),
       router.resolve.idToEntity({param:'job',required:true})
     ),
-    controller.update
+    controller.finish
     //audit.afterUpdate('job',{ display: 'name' })
   )
 
@@ -60,25 +68,21 @@ const controller = {
     res.send(200,{ job: job })
   },
   fetch (req,res,next) {
+    const host = req.host
+    const customer = req.customer
+    const user = req.user
+
     logger.log('querying jobs')
 
-    const host = req.host
-    if (!host) {
-      logger.log('host %s not found', req.params.hostname)
-      return res.send(404, 'host is not valid')
-    }
-    const customer = req.customer
-    const input = {
-      host: req.host,
-      user: req.user
-    }
-
     if (req.params.process_next) {
-      App.jobDispatcher.getNextPendingJob(input,function(error,job){
-        var jobs = []
-        if (job != null) jobs.push(job)
-        res.send(200, { jobs : jobs })
-      })
+      App.jobDispatcher.getNextPendingJob(
+        { customer, host, user },
+        (error,job) => {
+          var jobs = []
+          if (job != null) jobs.push(job)
+          res.send(200, { jobs : jobs })
+        }
+      )
     } else {
       // find all
       Job.find({
@@ -89,7 +93,7 @@ const controller = {
       })
     }
   },
-  update (req, res, next) {
+  finish (req, res, next) {
     var result = req.params.result
     if (!result) {
       return res.send(400, 'result data is required')
@@ -97,10 +101,11 @@ const controller = {
 
     if (!result.state && !result.data) return res.send(400)
 
-    App.jobDispatcher.update({
+    App.jobDispatcher.finish({
       job: req.job,
       result: result,
       user: req.user,
+      customer: req.customer
     }, (err, job) => {
       if (err) return res.send(500)
       res.send(200, job)
