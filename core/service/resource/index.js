@@ -151,7 +151,7 @@ function Service (resource) {
       if (resource.fails_count >= failure_threshold) {
         logger.log('resource "%s" state failure', resource.name);
 
-        input.event||(input.event=input.state);
+        input.event = MONITORS.RESOURCE_FAILURE
         input.failure_severity = getEventSeverity(input.event,resource);
         resource.state = newState;
 
@@ -179,13 +179,13 @@ function Service (resource) {
         logger.log('"%s" has been restored', resource.name);
 
         if (isRecoveredFromFailure) {
-          input.event||(input.event=input.state);
+          input.event = MONITORS.RESOURCE_RECOVERED
         } else {
           // is recovered from updates_stopped
-          input.event = MONITORS.RESOURCE_STARTED;
+          input.event = MONITORS.RESOURCE_STARTED
         }
 
-        input.failure_severity = getEventSeverity(input.event,resource);
+        input.failure_severity = getEventSeverity(input.event, resource);
 
         if (!isRecoveredFromFailure) {
           if (needToSendUpdatesStoppedEmail(resource)) {
@@ -196,8 +196,8 @@ function Service (resource) {
         }
 
         logStateChange(resource,input);
-        dispatchResourceEvent(resource,MONITORS.RESOURCE_RECOVERED);
-        sendStateChangeEventNotification(resource,input.event)
+        dispatchResourceEvent(resource, MONITORS.RESOURCE_RECOVERED);
+        sendStateChangeEventNotification(resource, input.event)
       }
 
       logger.log('state restarted');
@@ -228,14 +228,14 @@ function Service (resource) {
       }
 
       logStateChange(resource,input)
-      dispatchResourceEvent(resource,MONITORS.RESOURCE_STOPPED)
-      sendStateChangeEventNotification(resource,input.event)
+      dispatchResourceEvent(resource, MONITORS.RESOURCE_STOPPED)
+      sendStateChangeEventNotification(resource, input.event)
     }
 
     // current resource state
     if (resourceUpdatesStopped) {
       logger.log('resource "%s" notifications stopped', resource.name)
-      input.event||(input.event = input.state) // state = agent or resource stopped
+      input.event = MONITORS.RESOURCE_STOPPED
       input.failure_severity = getEventSeverity(input.event, resource)
       resource.state = newState
       dispatchNotifications()
@@ -256,12 +256,13 @@ function Service (resource) {
    *
    */
   function handleChangedStateEvent (resource,input,config) {
-    resource.last_event = input;
-    input.failure_severity = getEventSeverity(input.event,resource);
-    sendResourceEmailAlert(resource,input);
-    dispatchResourceEvent(resource,MONITORS.RESOURCE_CHANGED);
-    logStateChange(resource,input);
-    sendStateChangeEventNotification(resource,input.event)
+    resource.last_event = input
+    input.event = MONITORS.RESOURCE_CHANGED
+    input.failure_severity = getEventSeverity(input.event, resource)
+    sendResourceEmailAlert(resource, input)
+    dispatchResourceEvent(resource, MONITORS.RESOURCE_CHANGED)
+    logStateChange(resource, input)
+    sendStateChangeEventNotification(resource, input.event)
   }
 
   /**
