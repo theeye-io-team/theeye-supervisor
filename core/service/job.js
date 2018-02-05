@@ -516,7 +516,7 @@ function ResultEvent (job) {
   if (!job.task) return // cannot determine events without a task
 
   TaskEvent.findOne({
-    emitter_id: job.task.id,
+    emitter_id: job.task_id,
     enable: true,
     name: job.state
   }, (err, event) => {

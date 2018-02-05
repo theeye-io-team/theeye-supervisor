@@ -62,7 +62,8 @@ var mongodb = require( appRoot + '/lib/mongodb' ).connect(() => {
 
       var event = new Event.TaskEvent({
         customer: t.customer_id,
-        emitter: t,
+        emitter: t._id,
+        emitter_id: t._id,
         name:'success'
       });
       event.save( err => {
@@ -71,7 +72,8 @@ var mongodb = require( appRoot + '/lib/mongodb' ).connect(() => {
 
         var event = new Event.TaskEvent({
           customer: t.customer_id,
-          emitter: t,
+          emitter: t._id,
+          emitter_id: t._id,
           name:'failure'
         });
         event.save( err => {
