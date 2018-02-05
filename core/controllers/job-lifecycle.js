@@ -1,7 +1,7 @@
 'use strict'
 
 const App = require('../app')
-const debug = require('../lib/logger')('controller:job-lifecycle')
+const logger = require('../lib/logger')('controller:job-lifecycle')
 const router = require('../router')
 const LifecycleConstants = require('../constants/lifecycle')
 
