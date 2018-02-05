@@ -57,7 +57,10 @@ module.exports = {
     }
 
     Job.findOne(query, (err,job) => {
-      if (err) next(err)
+      if (err) {
+        logger.error('%o',err)
+        next(err)
+      }
 
       if (job!==null) {
         if (jobMustHaveATask(job) && !job.task) {
@@ -67,7 +70,11 @@ module.exports = {
         } else {
           job.lifecycle = LifecycleConstants.ASSIGNED
           job.save(err => {
-            if (err) next(err)
+            if (err) {
+              logger.error('%o',err)
+              return next(err)
+            }
+
             next(null,job)
           })
           topic = TopicsConstants.task.sent // sent to agent

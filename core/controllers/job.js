@@ -77,10 +77,14 @@ const controller = {
     if (req.params.process_next) {
       App.jobDispatcher.getNextPendingJob(
         { customer, host, user },
-        (error,job) => {
+        (err,job) => {
+          if (err) {
+            return res.send(500, err.message)
+          }
+
           var jobs = []
           if (job != null) jobs.push(job)
-          res.send(200, { jobs : jobs })
+          res.send(200, { jobs })
         }
       )
     } else {
