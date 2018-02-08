@@ -85,7 +85,7 @@ module.exports = {
         logger.debug('instances of "%s" found', options.param);
         req[targetName] = resource;
         next(null, resource);
-      });
+      })
     }
   },
   hostnameToHost (options) {

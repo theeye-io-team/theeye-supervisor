@@ -16,6 +16,9 @@ exports.hostgroup = {
   crud: 'provisioning-crud'
 }
 exports.host = {
+  integrations: {
+    crud: 'host-integrations-crud'
+  },
   crud: 'host-crud',
   state: 'host-state',
   processes: 'host-processes',

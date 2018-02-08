@@ -20,9 +20,18 @@ function Schema () {
     config: { type: Object, default: function(){
       return {
         monitor: {},
-        elasticsearch: { enabled: false },
-        kibana: null
-      };
+        kibana: null,
+        elasticsearch: {
+          enabled: false,
+          url: ''
+        },
+        ngrok: {
+          enabled: false,
+          authtoken: '',
+          address: '',
+          protocol: ''
+        }
+      }
     } },
     creation_date: {
       type: Date,

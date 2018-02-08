@@ -73,8 +73,8 @@ const controller = {
    *
    */
   get (req,res,next) {
-    var host = req.host;
-    res.send(200, host.toObject());
+    var host = req.host
+    res.send(200, host.toObject())
   },
   /**
    *
@@ -92,8 +92,11 @@ const controller = {
         logger.error(err)
         return res.send(500, err)
       }
-      res.send(200, hosts || [])
-      next()
+
+      HostService.populate(hosts, () => {
+        res.send(200, hosts||[])
+        next()
+      })
     })
   },
   /**

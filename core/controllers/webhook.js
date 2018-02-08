@@ -9,6 +9,7 @@ const router = require('../router');
 const App = require('../app');
 const WebhookEvent = require('../entity/event').WebhookEvent;
 const Webhook = require('../entity/webhook').Webhook;
+const EventConstants = require('../constants/events')
 
 module.exports = function (server, passport) {
   var middlewares = [
@@ -172,14 +173,20 @@ var controller = {
     var webhook = req.webhook;
 
     WebhookEvent.findOne({
-      emitter_id: webhook._id
-    },(err, event) => {
-      if (err) return res.send(500, err);
-      if (!event) return res.send(500);
+      emitter_id: webhook._id,
+      enable: true,
+      name: 'trigger'
+    }, (err, event) => {
+      if (err) return res.send(500, err)
+      if (!event) return res.send(500)
 
-      App.eventDispatcher.dispatch(event);
-      res.send(200,{ message: 'success' });
-      next();
-    });
+      App.eventDispatcher.dispatch({
+        eventName: EventConstants.WORKFLOW_EVENT,
+        event
+      })
+
+      res.send(200,{ message: 'success' })
+      next()
+    })
   }
 }

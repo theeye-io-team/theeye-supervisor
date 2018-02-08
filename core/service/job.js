@@ -1,22 +1,23 @@
 "use strict"
 
-const App = require('../app')
 const async = require('async')
+const merge = require('lodash/merge')
 const globalconfig = require('config')
+const App = require('../app')
 const logger = require('../lib/logger')('eye:jobs')
 const elastic = require('../lib/elastic')
+
+const Constants = require('../constants')
 const LifecycleConstants = require('../constants/lifecycle')
 const JobsConstants = require('../constants/jobs')
-const Constants = require('../constants')
 const TaskConstants = require('../constants/task')
 const TopicsConstants = require('../constants/topics')
 const StateConstants = require('../constants/states')
+const EventConstants = require('../constants/events')
 
 const JobModels = require('../entity/job')
-const Job = JobModels.Job
-const ScriptJob = JobModels.Script
-const ScraperJob = JobModels.Scraper
 const Script = require('../entity/file').Script
+//const AgentUpdateJob = require('../entity/job').AgentUpdate
 
 const TaskEvent = require('../entity/event').TaskEvent
 const NotificationService = require('./notification')
@@ -31,10 +32,10 @@ module.exports = {
   //  if (input.host) query.host_id = input.host._id
   //  if (input.state) query.state = input.state
   //  if (input.lifecycle) query.lifecycle = input.lifecycle
-  //  Job.find(query,next)
+  //  JobModels.Job.find(query,next)
   //},
   fetchBy (filter, next) {
-    return Job.fetchBy(filter, (err,jobs) => {
+    return JobModels.Job.fetchBy(filter, (err,jobs) => {
       if (err) return next(err)
       if (jobs.length===0) return next(null,[])
       next(null, jobs)
@@ -56,7 +57,7 @@ module.exports = {
       host_id: input.host._id
     }
 
-    Job.findOne(query, (err,job) => {
+    JobModels.Job.findOne(query, (err,job) => {
       if (err) {
         logger.error('%o',err)
         next(err)
@@ -105,6 +106,7 @@ module.exports = {
   create (input, done) {
     const task = input.task
     const type = task.type
+    var err
 
     if (!task) {
       err = new Error('task is required')
@@ -114,8 +116,15 @@ module.exports = {
     App.taskManager.populate(task, (err, taskData) => {
       if (err) return done(err);
 
+      if (!task.customer) {
+        err = new Error('FATAL. Task ' + task._id + 'does not has a customer')
+        logger.error('%o',err)
+        return done(err)
+      }
+
       if (!task.host) {
-        err = new Error('invalid task ' + task._id  + ' does not has a host assigned');
+        err = new Error('invalid task ' + task._id  + ' does not has a host assigned')
+        logger.error('%o',err)
         return done(err)
       }
 
@@ -181,9 +190,11 @@ module.exports = {
     const user = input.user
     const customer = input.customer
     const result = input.result
+    const task = job.task
 
     // if it is not a declared failure, assume success
-    var state = ((input.state||result.state)===StateConstants.FAILURE)?StateConstants.FAILURE:StateConstants.SUCCESS
+    var state = ( (input.state||result.state) === StateConstants.FAILURE ) ?
+      StateConstants.FAILURE : StateConstants.SUCCESS
 
     job.state = state
     job.lifecycle = LifecycleConstants.FINISHED
@@ -196,17 +207,13 @@ module.exports = {
 
       done(err, job) // continue process in paralell
       
-      //if (job.name==JobsConstants.AGENT_UPDATE) {
-      //  return // if job is an agent update, skip notifications and events
-      //}
-
       let topic = TopicsConstants.task.result
       registerJobOperation(Constants.UPDATE, topic, {
-        job, user, customer, task: job.task
+        job, user, customer, task
       })
 
       //new ResultMail(job) // job completed mail
-      new ResultEvent(job) // trigger result event
+      dispatchWorkflowEvent (job.task_id, state)
     })
   },
   /**
@@ -281,7 +288,76 @@ module.exports = {
       content: html,
       to: input.to
     });
+  },
+  /**
+   *
+   * @summary create an integration job for the agent.
+   *
+   * @param {Object}
+   * @property {String} integration
+   * @property {String} operation
+   * @property {Host} host
+   * @property {Object} options integration options and configuration
+   *
+   */
+  createIntegrationJob ({ integration, operation, host, config }, next) {
+    const factoryCreate = JobModels.IntegrationsFactory.create
+
+    let props = merge({
+      lifecycle: LifecycleConstants.READY,
+      origin: 'user',
+      operation,
+      host,
+      host_id: host._id,
+      notify: true
+    }, config)
+
+    const job = factoryCreate({ integration, props })
+    currentIntegrationJob(job, (err, currentJob) => {
+      if (err) return next(err)
+      if (jobInProgress(currentJob) === true) {
+        err = new Error('integration job already started')
+        err.statusCode = 423
+        return next(err, currentJob)
+      }
+      removeOldJobs(job, () => {
+        job.save(err => {
+          if (err) logger.error('%o', err)
+          next(err, job)
+        })
+      })
+    })
   }
+}
+
+const currentIntegrationJob = (job, next) => {
+  JobModels.Job
+    .findOne({
+      _type: job._type,
+      host_id: job.host_id
+    })
+    .exec( (err, inprogressjob) => {
+      if (err) {
+        logger.error('Failed to fetch old jobs')
+        logger.error('%o',err)
+      }
+      next(err, inprogressjob||null)
+    })
+}
+
+const removeOldJobs = (job, next) => {
+  JobModels.Job
+    .remove({
+      _type: job._type,
+      host_id: job.host_id
+    })
+    .exec(err => {
+      if (err) {
+        logger.error('Failed to remove old jobs')
+        logger.error('%o',err)
+      }
+      next(err)
+    })
 }
 
 const jobMustHaveATask = (job) => {
@@ -302,7 +378,7 @@ const jobInProgress = (job) => {
  */
 const removeOldTaskJobs = (task, next) => {
   logger.log('removing old jobs of task %s', task._id)
-  Job.remove({ task_id: task._id }, function(err) {
+  JobModels.Job.remove({ task_id: task._id }, function(err) {
     if (err) {
       logger.error('Failed to remove old jobs registry for task %s', task._id)
       logger.error(err)
@@ -425,7 +501,7 @@ const createScriptJob = (input, done) => {
   prepareScript(task.script_id, (err,script) => {
     if (err) return done(err)
 
-    const job = new ScriptJob()
+    const job = new JobModels.Script()
     job.script = script.toObject() // >>> add .id 
     job.script_id = script._id
     job.script_arguments = input.script_arguments
@@ -467,7 +543,7 @@ const createScriptJob = (input, done) => {
  */
 const createScraperJob = (input, done) => {
   const task = input.task
-  const job = new ScraperJob()
+  const job = new JobModels.Scraper()
   job.task = task.toObject(); // >>> add .id 
   job.task_id = task._id;
   job.user = input.user;
@@ -510,25 +586,31 @@ const cancelJobNextLifecycle = (job) => {
 
 /**
  *
+ * @param {String} task_id
+ * @param {String} eventName
  *
  */
-function ResultEvent (job) {
-  if (!job.task) return // cannot determine events without a task
+const dispatchWorkflowEvent = (task_id, eventName) => {
+  // cannot trigger a workflow event without a task
+  if (!task_id) return
 
   TaskEvent.findOne({
-    emitter_id: job.task_id,
+    emitter_id: task_id,
     enable: true,
-    name: job.state
+    name: eventName
   }, (err, event) => {
     if (err) return logger.error(err);
 
     if (!event) {
-      var err = new Error('no event handler defined for state "' + job.state + '" on task ' + job.task.id);
-      return logger.error(err);
+      var err = new Error('no handler defined for event named "' + eventName + '" on task ' + task_id)
+      return logger.error(err)
     }
 
-    App.eventDispatcher.dispatch(event);
-  });
+    App.eventDispatcher.dispatch({
+      eventName: EventConstants.WORKFLOW_EVENT,
+      event
+    })
+  })
 }
 
 //function ResultMail ( job ) {

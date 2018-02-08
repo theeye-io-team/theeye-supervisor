@@ -14,12 +14,14 @@ module.exports = {
   requireSecret: require('./require-secret'),
   ensureCustomer: require('./ensure-customer'),
   ensureAllowed: require('./ensure-allowed'),
+  ensureHeader: require('./ensure-header'),
   loadControllers (server, passport) {
     // avoiding dynamic linker
     logger.log('loading controllers');
     require('../controllers/index')(server,passport);
     require('../controllers/agent')(server,passport);
     require('../controllers/auth')(server);
+    require('../controllers/status')(server,passport);
     require('../controllers/customer')(server,passport);
     require('../controllers/dstat')(server,passport);
     require('../controllers/event')(server,passport);
@@ -42,5 +44,6 @@ module.exports = {
     require('../controllers/webhook')(server,passport);
     require('../controllers/workflow')(server,passport);
     require('../controllers/member')(server,passport);
+    require('../controllers/integrations')(server,passport);
   },
 }

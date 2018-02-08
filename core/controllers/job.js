@@ -5,9 +5,15 @@ const json = require('../lib/jsonresponse')
 const logger = require('../lib/logger')('controller:job')
 const router = require('../router')
 const Job = require('../entity/job').Job
+const Host = require('../entity/host').Entity
+const Constants = require('../constants/task')
 const TaskConstants = require('../constants/task')
 const JobConstants = require('../constants/jobs')
+const StateConstants = require('../constants/states')
+const TopicsConstants = require('../constants/topics')
+const IntegrationConstants = require('../constants/integrations')
 const audit = require('../lib/audit')
+const merge = require('lodash/merge')
 
 module.exports = (server, passport) => {
   var middlewares = [
@@ -39,15 +45,14 @@ module.exports = (server, passport) => {
     controller.fetch
   )
 
-  //server.patch( // should be patch
   server.put(
     '/:customer/job/:job',
     middlewares.concat(
-      router.requireCredential('agent',{exactMatch:true}),
-      router.resolve.idToEntity({param:'job',required:true})
+      router.requireCredential('agent', { exactMatch: true }),
+      router.resolve.idToEntity({ param: 'job', required: true })
     ),
-    controller.finish
-    //audit.afterUpdate('job',{ display: 'name' })
+    controller.finish,
+    afterFinishJobHook
   )
 
   server.post(
@@ -64,8 +69,8 @@ module.exports = (server, passport) => {
 
 const controller = {
   get (req,res,next) {
-    var job = req.job;
-    res.send(200,{ job: job })
+    var job = req.job
+    res.send(200, job)
   },
   fetch (req,res,next) {
     const host = req.host
@@ -93,18 +98,12 @@ const controller = {
         host_id: host.id,
         customer_name: customer.name
       }).exec(function(err,jobs){
-        res.send(200, { jobs : jobs })
+        res.send(200, { jobs })
       })
     }
   },
   finish (req, res, next) {
-    var result = req.params.result
-    if (!result) {
-      return res.send(400, 'result data is required')
-    }
-
-    if (!result.state && !result.data) return res.send(400)
-
+    var result = req.params.result || {}
     App.jobDispatcher.finish({
       job: req.job,
       result: result,
@@ -173,5 +172,82 @@ const controller = {
     }
 
     prepareTaskArguments(() => { createJob() })
+  }
+}
+
+const afterFinishJobHook = (req, res, next) => {
+  const job = req.job
+
+  const updateHostIntegration = () => {
+    switch (job._type) {
+      case 'NgrokIntegrationJob':
+        updateNgrokHostIntegration()
+        break;
+      default:
+        // any other integration ?
+        break;
+    }
+  }
+
+  const updateNgrokHostIntegration = () => {
+    const host = job.host
+    var ngrok = host.integrations.ngrok
+    if (job.state === StateConstants.SUCCESS) {
+      if (job.operation === IntegrationConstants.OPERATION_START) {
+        // obtain tunnel url
+        ngrok.active = true
+        ngrok.last_update = new Date()
+        ngrok.url = job.result.url
+      }
+      if (job.operation === IntegrationConstants.OPERATION_STOP) {
+        // tunnel closed. url is no longer valid
+        ngrok.active = false
+        ngrok.last_update = new Date()
+        ngrok.url = ''
+      }
+
+      let integrations = merge({}, host.integrations, { ngrok })
+      Host.update(
+        { _id: host._id },
+        {
+          $set: { integrations: integrations.toObject() }
+        },
+        (err) => {
+          if (err) logger.error('%o', err)
+
+          App.notifications.generateSystemNotification({
+            topic: TopicsConstants.host.integrations.crud,
+            data: {
+              hostname: host.hostname,
+              organization: req.customer.name,
+              operation: Constants.UPDATE,
+              model_type: host._type,
+              model: {
+                id: host._id,
+                integrations: { ngrok: host.integrations.ngrok }
+              }
+            }
+          })
+
+          next()
+        }
+      )
+    }
+
+    if (job.state === StateConstants.FAILURE) {
+      logger.error('integration job failed to ejecute. %o', job)
+      // ??
+    }
+  }
+
+  // is an integration job ?
+  if (job.isIntegrationJob()===true) {
+    if (job.populated('host')===undefined) {
+      job.populate('host', () => {
+        updateHostIntegration()
+      })
+    } else {
+      updateHostIntegration()
+    }
   }
 }

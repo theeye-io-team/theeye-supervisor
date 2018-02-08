@@ -5,14 +5,16 @@ const after = require('lodash/after')
 const assign = require('lodash/assign')
 const logger = require('../../lib/logger')('service:resource')
 const elastic = require('../../lib/elastic')
-const TopicsConstants = require('../../constants/topics')
-const Constants = require('../../constants')
-const MONITORS = require('../../constants/monitors')
-const Lifecycle = require('../../constants/lifecycle')
 const CustomerService = require('../customer')
 const NotificationService = require('../notification')
 const ResourceMonitorService = require('./monitor')
 const ResourcesNotifications = require('./notifications')
+
+const EventConstants = require('../../constants/events')
+const TopicsConstants = require('../../constants/topics')
+const Constants = require('../../constants')
+const MONITORS = require('../../constants/monitors')
+const Lifecycle = require('../../constants/lifecycle')
 // Entities
 const AgentUpdateJob = require('../../entity/job').AgentUpdate
 const MonitorEvent = require('../../entity/event').MonitorEvent
@@ -112,14 +114,16 @@ function Service (resource) {
 
       MonitorEvent.findOne({
         emitter_id: monitor._id,
-        //emitter: monitor._id,
         enable: true,
         name: eventName
       },function(err, event){
         if (err) return logger.error(err);
         else if (!event) return;
 
-        App.eventDispatcher.dispatch(event)
+        App.eventDispatcher.dispatch({
+          eventName: EventConstants.WORKFLOW_EVENT,
+          event
+        })
       });
     });
   }

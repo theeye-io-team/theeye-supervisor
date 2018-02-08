@@ -1,6 +1,6 @@
 'use strict'
 
-const lodash = require('lodash')
+const after = require('lodash/after')
 const async = require('async')
 const NotificationService = require('../notification')
 const CustomerService = require('../customer')
@@ -71,7 +71,7 @@ HostService.prototype = {
       logger.log('processing "%s" event',vent)
       sendEventNotification(host,vent)
     }
-  }
+  },
 }
 
 //
@@ -79,6 +79,22 @@ HostService.prototype = {
 // Static Methods
 //
 //
+/**
+ *
+ * @param {Array<Host>} hosts
+ * @param {Function}
+ *
+ */
+HostService.populate = (hosts, next) => {
+  let done = after(hosts.length, next)
+
+  hosts.forEach(host => {
+    host.populate('last_job', (err, h) => {
+      if (err) logger.error('%o',err)
+      done()
+    })
+  })
+}
 
 /**
  *
@@ -151,7 +167,7 @@ HostService.removeHostResource = function (input, done) {
         return
       }
       if (!Array.isArray(resources)||resources.length===0) return
-      const resourceRemoved = lodash.after(resources.length, () => {
+      const resourceRemoved = after(resources.length, () => {
         // all resources && monitors removed
       })
 
@@ -232,7 +248,7 @@ HostService.config = (host, customer, next) => {
       if (err) return done()
       if (!resources||resources.length===0) return done()
 
-      const completed = lodash.after(resources.length, done)
+      const completed = after(resources.length, done)
 
       resources.forEach(resource => {
         resource.last_event = null
@@ -257,7 +273,7 @@ HostService.config = (host, customer, next) => {
       if (!tasks||tasks.length===0) return done()
       //data.tasks = tasks
 
-      const completed = lodash.after(tasks.length, done)
+      const completed = after(tasks.length, done)
 
       tasks.forEach(task => {
         task.populateTriggers(() => {

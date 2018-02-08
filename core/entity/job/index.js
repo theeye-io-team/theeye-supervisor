@@ -6,16 +6,12 @@ const BaseSchema = require('./schema')
 const AgentUpdateJobSchema = require('./agent-update')
 const ScriptJobSchema = require('./script')
 
+const IntegrationConstants = require('../../constants/integrations')
 
 const JobSchema = new BaseSchema({
   _type: { type: String, default: 'Job' }
 })
 const ScraperSchema = new BaseSchema()
-
-//JobSchema.post('save', middleware.postSave)
-//ScraperSchema.post('save', middleware.postSave)
-//AgentUpdateJobSchema.post('save', middleware.postSave)
-//ScriptJobSchema.post('save', middleware.postSave)
 
 const Job = mongodb.model('Job',JobSchema)
 const AgentUpdateJob = Job.discriminator('AgentUpdateJob', AgentUpdateJobSchema)
@@ -31,3 +27,29 @@ exports.Job = Job
 exports.AgentUpdate = AgentUpdateJob
 exports.Script = ScriptJob
 exports.Scraper = ScraperJob
+
+/**
+ *
+ *
+ * Integrations
+ *
+ *
+ */
+const NgrokIntegrationJobSchema = require('./integrations/ngrok')
+const NgrokIntegrationJob = Job.discriminator('NgrokIntegrationJob', NgrokIntegrationJobSchema)
+NgrokIntegrationJob.ensureIndexes()
+
+exports.IntegrationsFactory = {
+  create ({ integration, props }) {
+    let job = null
+    switch (integration) {
+      case IntegrationConstants.NGROK:
+        job = new NgrokIntegrationJob(props)
+        break;
+      //default:
+      //  ERROR !!!
+      //  break
+    }
+    return job
+  }
+}

@@ -1,7 +1,6 @@
 "use strict"
 
 const BaseSchema = require('./schema')
-const Job = require('./index')
 
 const ScriptSchema = new BaseSchema({
   script_id: { type: String },
@@ -10,4 +9,4 @@ const ScriptSchema = new BaseSchema({
   script: { type: Object }, // embedded not reference
 })
 
-module.exports = ScriptSchema;
+module.exports = ScriptSchema

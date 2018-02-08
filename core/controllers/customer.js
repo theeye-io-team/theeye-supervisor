@@ -194,9 +194,9 @@ var controller = {
    */
   updateconfig (req, res, next) {
     const customer = req.customer
-    const config = req.params.config
+    const config = req.body
 
-    if(!config) {
+    if (!config) {
       return res.send(400, json.error('Missing config values.'))
     }
 
@@ -224,13 +224,16 @@ var controller = {
       config.kibana = null;
     }
 
+    if (config.ngrok) {
+    }
+
     customer.config = merge({}, customer.config, config)
 
     customer.save( (err,model) => {
       if (err) {
         res.send(500,err)
       } else {
-        res.send(200, customer)
+        res.send(200, customer.config)
       }
       next()
     })

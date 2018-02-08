@@ -55,6 +55,13 @@ function BaseSchema (props) {
   this.set('toJSON'  , def);
   this.set('toObject', def);
 
+  /*
+   * @return {Boolean}
+   */
+  this.methods.isIntegrationJob = function () {
+    return ( /IntegrationJob/.test(this._type) === true )
+  }
+
   return this;
 }
 
