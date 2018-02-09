@@ -193,17 +193,16 @@ module.exports = {
     const task = job.task
 
     // if it is not a declared failure, assume success
-    var state = ( (input.state||result.state) === StateConstants.FAILURE ) ?
+    let state = (input.state||result.state||StateConstants.SUCCESS)
+    var event_name = (state === StateConstants.FAILURE) ?
       StateConstants.FAILURE : StateConstants.SUCCESS
 
     job.state = state
+    job.last_event_name = event_name
     job.lifecycle = LifecycleConstants.FINISHED
     job.result = result.data
     job.save(err => {
-      if (err) {
-        logger.log(err)
-        return
-      }
+      if (err) logger.log('%o',err)
 
       done(err, job) // continue process in paralell
       
@@ -213,7 +212,7 @@ module.exports = {
       })
 
       //new ResultMail(job) // job completed mail
-      dispatchWorkflowEvent (job.task_id, state)
+      dispatchWorkflowEvent (job.task_id, event_name)
     })
   },
   /**
@@ -525,7 +524,7 @@ const createScriptJob = (input, done) => {
     job.customer_name = input.customer.name
     job.notify = input.notify
     job.lifecycle = LifecycleConstants.READY
-    job.event = input.event||null
+    job.event = input.event || null
     job.origin = input.origin
     job.save(err => {
       if (err) {
@@ -555,7 +554,7 @@ const createScraperJob = (input, done) => {
   job.customer_name = input.customer.name;
   job.notify = input.notify;
   job.lifecycle = LifecycleConstants.READY
-  job.event = input.event||null
+  job.event = input.event || null
   job.origin = input.origin
   job.save(err => {
     if (err) {
@@ -587,22 +586,22 @@ const cancelJobNextLifecycle = (job) => {
 /**
  *
  * @param {String} task_id
- * @param {String} eventName
+ * @param {String} trigger triggered event name
  *
  */
-const dispatchWorkflowEvent = (task_id, eventName) => {
+const dispatchWorkflowEvent = (task_id, trigger) => {
   // cannot trigger a workflow event without a task
   if (!task_id) return
 
   TaskEvent.findOne({
     emitter_id: task_id,
     enable: true,
-    name: eventName
+    name: trigger 
   }, (err, event) => {
     if (err) return logger.error(err);
 
     if (!event) {
-      var err = new Error('no handler defined for event named "' + eventName + '" on task ' + task_id)
+      var err = new Error('no handler defined for event named "' + trigger + '" on task ' + task_id)
       return logger.error(err)
     }
 

@@ -192,52 +192,49 @@ const afterFinishJobHook = (req, res, next) => {
   const updateNgrokHostIntegration = () => {
     const host = job.host
     var ngrok = host.integrations.ngrok
-    if (job.state === StateConstants.SUCCESS) {
-      if (job.operation === IntegrationConstants.OPERATION_START) {
-        // obtain tunnel url
+    ngrok.result = job.result
+    ngrok.last_update = new Date()
+
+    if (job.state === StateConstants.INTEGRATION_STARTED) {
+      // obtain tunnel url
+      if (job.result && job.result.url) {
         ngrok.active = true
-        ngrok.last_update = new Date()
         ngrok.url = job.result.url
       }
-      if (job.operation === IntegrationConstants.OPERATION_STOP) {
-        // tunnel closed. url is no longer valid
-        ngrok.active = false
-        ngrok.last_update = new Date()
-        ngrok.url = ''
-      }
-
-      let integrations = merge({}, host.integrations, { ngrok })
-      Host.update(
-        { _id: host._id },
-        {
-          $set: { integrations: integrations.toObject() }
-        },
-        (err) => {
-          if (err) logger.error('%o', err)
-
-          App.notifications.generateSystemNotification({
-            topic: TopicsConstants.host.integrations.crud,
-            data: {
-              hostname: host.hostname,
-              organization: req.customer.name,
-              operation: Constants.UPDATE,
-              model_type: host._type,
-              model: {
-                id: host._id,
-                integrations: { ngrok: host.integrations.ngrok }
-              }
-            }
-          })
-
-          next()
-        }
-      )
-    }
-
-    if (job.state === StateConstants.FAILURE) {
+    } else if (job.state === StateConstants.INTEGRATION_STOPPED) {
+      // tunnel closed. url is no longer valid
+      ngrok.active = false
+      ngrok.url = ''
+    } else if (job.state === StateConstants.FAILURE) {
       logger.error('integration job failed to ejecute. %o', job)
-      // ??
     }
+
+    let integrations = merge({}, host.integrations, { ngrok })
+    Host.update(
+      { _id: host._id },
+      {
+        $set: { integrations: integrations.toObject() }
+      },
+      (err) => {
+        if (err) logger.error('%o', err)
+
+        App.notifications.generateSystemNotification({
+          topic: TopicsConstants.host.integrations.crud,
+          data: {
+            hostname: host.hostname,
+            organization: req.customer.name,
+            operation: Constants.UPDATE,
+            model_type: host._type,
+            model: {
+              id: host._id,
+              integrations: { ngrok: host.integrations.ngrok }
+            }
+          }
+        })
+
+        next()
+      }
+    )
   }
 
   // is an integration job ?
