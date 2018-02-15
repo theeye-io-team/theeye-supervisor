@@ -16,7 +16,7 @@ module.exports = function (payload) {
  * @param {Event} event entity to process
  * @param {Object} event_data event extra data generated
  */
-const executeWorkflowTasks = ({ event }) => {
+const executeWorkflowTasks = ({ event, data }) => {
   Task.find({ triggers: event._id }, (err, tasks) => {
     if (err) {
       logger.error(err)
@@ -29,7 +29,7 @@ const executeWorkflowTasks = ({ event }) => {
         user: App.user,
         task: tasks[i],
         event: event,
-        event_data: {}
+        event_data: data
       })
     }
   })
@@ -43,7 +43,7 @@ const executeWorkflowTasks = ({ event }) => {
  * @property {Event} input.event
  * @access private
  */
-const createJob = ({ task, user, event }) => {
+const createJob = ({ task, user, event, event_data }) => {
   logger.log('preparing to run task %s', task._id)
 
   task.populate([
@@ -69,10 +69,11 @@ const createJob = ({ task, user, event }) => {
     if (task.grace_time > 0) {
       // schedule the task
       App.scheduler.scheduleTask({
-        event: event,
-        task: task,
-        user: user,
-        customer: customer,
+        event,
+        event_data,
+        task,
+        user,
+        customer,
         notify: true,
         schedule: {
           runDate: runDateMilliseconds
@@ -97,10 +98,11 @@ const createJob = ({ task, user, event }) => {
       })
     } else {
       App.jobDispatcher.create({
-        event: event,
-        task: task,
-        user: user,
-        customer: customer,
+        event,
+        event_data,
+        task,
+        user,
+        customer,
         notify: true,
         origin: JobConstants.ORIGIN_WORKFLOW
       }, (err, job) => {

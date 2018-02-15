@@ -101,31 +101,38 @@ function Service (resource) {
       })
   }
 
-  function dispatchResourceEvent (resource,eventName){
+  /**
+   *
+   * @param {String} resource_id
+   * @param {String} trigger triggered event name
+   *
+   */
+  const dispatchWorkflowEvent = (resource_id, trigger, data) => {
     MonitorModel.findOne({
-      resource_id: resource._id
-    },function(err,monitor){
+      resource_id: resource_id
+    }, function (err,monitor) {
       if (!monitor) {
-        logger.error('resource monitor not found %j', resource);
+        logger.error('resource monitor not found %s', resource_id);
         return;
       }
 
-      logger.log('searching monitor %s event %s ', monitor.name, eventName);
+      logger.log('searching monitor %s event %s ', monitor.name, trigger);
 
       MonitorEvent.findOne({
         emitter_id: monitor._id,
         enable: true,
-        name: eventName
+        name: trigger
       },function(err, event){
         if (err) return logger.error(err);
         else if (!event) return;
 
         App.eventDispatcher.dispatch({
           eventName: EventConstants.WORKFLOW_EVENT,
-          event
+          event,
+          data
         })
-      });
-    });
+      })
+    })
   }
 
   function needToSendUpdatesStoppedEmail (resource) {
@@ -162,7 +169,7 @@ function Service (resource) {
         sendResourceEmailAlert(resource,input);
         logStateChange(resource,input);
         sendStateChangeEventNotification(resource,input.event)
-        dispatchResourceEvent(resource,MONITORS.RESOURCE_FAILURE);
+        dispatchWorkflowEvent(resource._id, MONITORS.RESOURCE_FAILURE, input.data)
       }
     }
   }
@@ -200,7 +207,7 @@ function Service (resource) {
         }
 
         logStateChange(resource,input);
-        dispatchResourceEvent(resource, MONITORS.RESOURCE_RECOVERED);
+        dispatchWorkflowEvent(resource._id, MONITORS.RESOURCE_RECOVERED, input.data)
         sendStateChangeEventNotification(resource, input.event)
       }
 
@@ -232,7 +239,7 @@ function Service (resource) {
       }
 
       logStateChange(resource,input)
-      dispatchResourceEvent(resource, MONITORS.RESOURCE_STOPPED)
+      dispatchWorkflowEvent(resource._id, MONITORS.RESOURCE_STOPPED, input.data)
       sendStateChangeEventNotification(resource, input.event)
     }
 
@@ -264,7 +271,7 @@ function Service (resource) {
     input.event = MONITORS.RESOURCE_CHANGED
     input.failure_severity = getEventSeverity(input.event, resource)
     sendResourceEmailAlert(resource, input)
-    dispatchResourceEvent(resource, MONITORS.RESOURCE_CHANGED)
+    dispatchWorkflowEvent(resource._id, MONITORS.RESOURCE_CHANGED, input.data)
     logStateChange(resource, input)
     sendStateChangeEventNotification(resource, input.event)
   }
@@ -283,7 +290,7 @@ function Service (resource) {
     return MONITORS.FAILURE_STATES.indexOf(state.toLowerCase()) != -1
   }
   function filterStateEvent (state) {
-    if (!state||typeof state != 'string') {
+    if (!state || typeof state != 'string') {
       return MONITORS.RESOURCE_ERROR
     }
 

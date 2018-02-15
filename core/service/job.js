@@ -96,6 +96,7 @@ module.exports = {
    * @author Facugon
    * @param {Object} input
    * @property {Event} input.event
+   * @property {Event} input.event_data
    * @property {Task} input.task
    * @property {User} input.user
    * @property {Customer} input.customer
@@ -194,11 +195,11 @@ module.exports = {
 
     // if it is not a declared failure, assume success
     let state = (input.state||result.state||StateConstants.SUCCESS)
-    var event_name = (state === StateConstants.FAILURE) ?
+    var trigger_name = (state === StateConstants.FAILURE) ?
       StateConstants.FAILURE : StateConstants.SUCCESS
 
     job.state = state
-    job.last_event_name = event_name
+    job.trigger_name = trigger_name
     job.lifecycle = LifecycleConstants.FINISHED
     job.result = result.data
     job.save(err => {
@@ -212,7 +213,7 @@ module.exports = {
       })
 
       //new ResultMail(job) // job completed mail
-      dispatchWorkflowEvent (job.task_id, event_name)
+      dispatchWorkflowEvent (job.task_id, trigger_name, result.data)
     })
   },
   /**
@@ -509,8 +510,8 @@ const createScriptJob = (input, done) => {
 
     /**
      * @todo should remove hereunder line in the future.
-     * only keep for backward compatibility with agents with version number equal or older than version 0.11.3.
-     * at this moment this is overwriting saved job.task.script_arguments definition.
+     * only keep for backward compatibility with agent versions number equal or older than version 0.11.3.
+     * this is overwriting saved job.task.script_arguments definition.
      */
     job.task.script_arguments = input.script_arguments
 
@@ -525,6 +526,8 @@ const createScriptJob = (input, done) => {
     job.notify = input.notify
     job.lifecycle = LifecycleConstants.READY
     job.event = input.event || null
+    //job.event_id = (input.event_id) || null
+    job.event_data = input.event_data || {}
     job.origin = input.origin
     job.save(err => {
       if (err) {
@@ -555,6 +558,8 @@ const createScraperJob = (input, done) => {
   job.notify = input.notify;
   job.lifecycle = LifecycleConstants.READY
   job.event = input.event || null
+  //job.event_id = input.event_id || null
+  job.event_data = input.event_data || {}
   job.origin = input.origin
   job.save(err => {
     if (err) {
@@ -589,14 +594,14 @@ const cancelJobNextLifecycle = (job) => {
  * @param {String} trigger triggered event name
  *
  */
-const dispatchWorkflowEvent = (task_id, trigger) => {
+const dispatchWorkflowEvent = (task_id, trigger, data) => {
   // cannot trigger a workflow event without a task
   if (!task_id) return
 
   TaskEvent.findOne({
     emitter_id: task_id,
     enable: true,
-    name: trigger 
+    name: trigger
   }, (err, event) => {
     if (err) return logger.error(err);
 
@@ -607,7 +612,8 @@ const dispatchWorkflowEvent = (task_id, trigger) => {
 
     App.eventDispatcher.dispatch({
       eventName: EventConstants.WORKFLOW_EVENT,
-      event
+      event,
+      data
     })
   })
 }

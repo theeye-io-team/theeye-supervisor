@@ -25,8 +25,9 @@ function BaseSchema (props) {
     creation_date: { type: Date, default: Date.now },
     last_update: { type: Date, default: Date.now },
     event: { type: ObjectId, ref: 'Event' }, // last workflow event
-    last_event_name: { type: String },
+    trigger_name: { type: String },
     event_id: { type: ObjectId },
+    event_data: { type: Object, default: () => { return {} } },
     origin: { type: String }
   }, props),{
     collection: 'jobs',
