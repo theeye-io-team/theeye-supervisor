@@ -93,6 +93,11 @@ const controller = {
         return res.send(500, err)
       }
 
+      if (!hosts||hosts.length===0) {
+        res.send(200, [])
+        return next()
+      }
+
       HostService.populate(hosts, () => {
         res.send(200, hosts||[])
         next()
