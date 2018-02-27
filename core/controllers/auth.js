@@ -101,8 +101,6 @@ const createCustomer = (input,done) => {
     }, (data, name, next) => {
       UserService.create(data, next)
     }, (err, users) => {
-      console.log(err)
-      console.log(users)
       if (err) {
         rollback(customer,users.agent,users.owner)
         return done(err)
