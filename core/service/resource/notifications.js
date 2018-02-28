@@ -68,20 +68,19 @@ const ResourceTypes = {
         return `[${this.severity}] ${resource.name} failure`
       },
 			message: function(resource, event_data) {
-				let result
         // use an empty object if not set
-        if (!resource.last_event||!resource.last_event.script_result) {
-          result = {}
-        } else {
-          result = resource.last_event.script_result
-        }
+        let result = (resource.last_event && resource.last_event.data) ? resource.last_event.data : {}
 
 				const lastline = result.lastline ? result.lastline.trim() : 'no data'
 				const stdout = result.stdout ? result.stdout.trim() : 'no data'
 				const stderr = result.stderr ? result.stderr.trim() : 'no data'
 				const code = result.code || 'no data'
-				const html = `
-					<p>${resource.name} on ${resource.hostname} checks failed.</p>
+
+				let html = `<p>${resource.name} on ${resource.hostname} checks failed.</p>`
+
+        if (!resource.last_event.data) return html
+
+        html += `
 					<span>Monitor output</span>
 					<pre>
 						<ul>
@@ -90,7 +89,8 @@ const ResourceTypes = {
 							<li>stderr : ${stderr}</li>
 							<li>code : ${code}</li>
 						</ul>
-					</pre>`
+          </pre>
+          `
 
 				return html
 			}

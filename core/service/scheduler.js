@@ -97,6 +97,8 @@ Scheduler.prototype = {
     const schedule = input.schedule
 
     const data = {
+      event: input.event,
+      event_data: input.event_data,
       task_id: task._id,
       host_id: task.host_id,
       script_id: task.script_id,
@@ -111,12 +113,12 @@ Scheduler.prototype = {
     }
 
     // runDate is miliseconds
-    var date = new Date(schedule.runDate);
-    var frequency = schedule.repeatEvery || false;
+    var date = new Date(schedule.runDate)
+    var frequency = schedule.repeatEvery || false
 
-    this.schedule(date,"task",data,frequency, (err,job) => {
-      if(err) return done(err);
-      done(null,job);
+    this.schedule(date, "task", data, frequency, (err,job) => {
+      if (err) return done(err)
+      done(null,job)
       // If everything went well, ensure 'scheduled' tag on the task
       this.tagThatTask(task,() => {})
     })
@@ -268,6 +270,8 @@ Scheduler.prototype = {
       }
 
       JobDispatcher.create({
+        event: jobData.event,
+        event_data: jobData.event_data,
         task: data.task,
         user: data.user,
         customer: data.customer,

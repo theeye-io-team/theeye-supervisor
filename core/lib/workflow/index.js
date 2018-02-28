@@ -27,7 +27,7 @@ function Workflow () {
     for (let idx in events) {
       let event = events[idx]
       if (event) {
-        logger.debug('processing event %o',event)
+        //logger.debug('processing event %o',event)
 
         let a = event.emitter
         let b = event

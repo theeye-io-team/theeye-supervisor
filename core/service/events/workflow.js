@@ -41,6 +41,7 @@ const executeWorkflowTasks = ({ event, data }) => {
  * @property {Task} input.task
  * @property {User} input.user
  * @property {Event} input.event
+ * @property {Object} input.event_data
  * @access private
  */
 const createJob = ({ task, user, event, event_data }) => {
@@ -64,23 +65,25 @@ const createJob = ({ task, user, event, event_data }) => {
     }
 
     const customer = task.customer
-    const runDateMilliseconds =  Date.now() + task.grace_time * 1000
+    const runDate =  Date.now() + task.grace_time * 1000
 
     if (task.grace_time > 0) {
       // schedule the task
-      App.scheduler.scheduleTask({
-        event,
+      let data = {
+        event: event._id,
         event_data,
         task,
         user,
         customer,
         notify: true,
-        schedule: {
-          runDate: runDateMilliseconds
-        },
+        schedule: { runDate },
         origin: JobConstants.ORIGIN_WORKFLOW
-      }, (err, agenda) => {
-        if (err) return logger.error(err)
+      }
+      App.scheduler.scheduleTask(data, (err, agenda) => {
+        if (err) {
+          logger.error('cannot schedule workflow job')
+          return logger.error(err)
+        }
 
         CustomerService.getAlertEmails(customer.name,(err, emails)=>{
           App.jobDispatcher.sendJobCancelationEmail({
@@ -89,7 +92,7 @@ const createJob = ({ task, user, event, event_data }) => {
             schedule_id: agenda.attrs._id,
             task_name: task.name,
             hostname: task.host.hostname,
-            date: new Date(runDateMilliseconds).toISOString(),
+            date: new Date(runDate).toISOString(),
             grace_time_mins: task.grace_time / 60,
             customer_name: customer.name,
             to: emails.join(',')
@@ -106,7 +109,10 @@ const createJob = ({ task, user, event, event_data }) => {
         notify: true,
         origin: JobConstants.ORIGIN_WORKFLOW
       }, (err, job) => {
-        if (err) return logger.error(err);
+        if (err) {
+          logger.error('cannot create workflow job')
+          return logger.error(err)
+        }
         // job created
         logger.log('job created by workflow')
       })
