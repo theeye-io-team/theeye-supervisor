@@ -78,7 +78,7 @@ const ResourceTypes = {
 
 				let html = `<p>${resource.name} on ${resource.hostname} checks failed.</p>`
 
-        if (!resource.last_event.data) return html
+        if (!resource.last_event||!resource.last_event.data) return html
 
         html += `
 					<span>Monitor output</span>
@@ -246,13 +246,14 @@ function searchTypeEvent (type,event_name) {
  * @param {Object} specs
  * @param {Resource} specs.resource
  * @param {String} specs.event
+ * @param {String} specs.event_name
  * @param {Object} specs.data
  * @param {String} specs.failure_severity
  */
 module.exports = function (specs, done) {
   const resource = specs.resource
   const type = resource.type
-  const event_name = specs.event || resource.state
+  const event_name = specs.event_name // || resource.state
   const event_data = specs.data || {}
   const severity = specs.failure_severity
   var typeEvent

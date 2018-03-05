@@ -31,6 +31,7 @@ function Service (resource) {
   function logStateChange (resource,input) {
     const data = {
       hostname: resource.hostname,
+      event_name: input.event_name,
       state: input.state,
       organization: resource.customer_name,
       id: resource._id,
@@ -162,19 +163,20 @@ function Service (resource) {
       if (resource.fails_count >= failure_threshold) {
         logger.log('resource "%s" state failure', resource.name);
 
-        input.event = MONITORS.RESOURCE_FAILURE
-        input.failure_severity = getEventSeverity(input.event,resource);
+        input.event_name = input.event || newState
+        input.failure_severity = getEventSeverity(input.event_name,resource);
         resource.state = newState;
 
         sendResourceEmailAlert(resource,input);
         logStateChange(resource,input);
-        sendStateChangeEventNotification(resource,input.event)
-        dispatchWorkflowEvent(resource._id, MONITORS.RESOURCE_FAILURE, input.data)
+        sendStateChangeEventNotification(resource,input.event_name)
+        dispatchWorkflowEvent(resource._id, input.event_name, input.data)
       }
     }
   }
 
   const handleNormalState = (resource,input,config) => {
+    const newState = MONITORS.RESOURCE_NORMAL
     logger.log('"%s"("%s") state is normal', resource.name, resource.type);
 
     const failure_threshold = config.fails_count_alert;
@@ -183,20 +185,25 @@ function Service (resource) {
     resource.last_event = input;
 
     // failed at least once
-    if (resource.fails_count!==0||resource.state!==MONITORS.RESOURCE_NORMAL) {
-      resource.state = MONITORS.RESOURCE_NORMAL;
+    if (resource.fails_count!==0||resource.state!==newState) {
+      resource.state = newState;
       // resource failure was alerted ?
       if (resource.fails_count >= failure_threshold) {
         logger.log('"%s" has been restored', resource.name);
 
-        if (isRecoveredFromFailure) {
-          input.event = MONITORS.RESOURCE_RECOVERED
+        if (input.event) {
+          input.event_name = input.event
         } else {
-          // is recovered from updates_stopped
-          input.event = MONITORS.RESOURCE_STARTED
+          // to trigger the state change event
+          if (isRecoveredFromFailure) {
+            input.event_name = MONITORS.RESOURCE_RECOVERED
+          } else {
+            // is recovered from updates_stopped
+            input.event_name = MONITORS.RESOURCE_STARTED
+          }
         }
 
-        input.failure_severity = getEventSeverity(input.event, resource);
+        input.failure_severity = getEventSeverity(input.event_name, resource);
 
         if (!isRecoveredFromFailure) {
           if (needToSendUpdatesStoppedEmail(resource)) {
@@ -207,8 +214,8 @@ function Service (resource) {
         }
 
         logStateChange(resource,input);
-        dispatchWorkflowEvent(resource._id, MONITORS.RESOURCE_RECOVERED, input.data)
-        sendStateChangeEventNotification(resource, input.event)
+        dispatchWorkflowEvent(resource._id, input.event_name, input.data)
+        sendStateChangeEventNotification(resource, input.event_name)
       }
 
       logger.log('state restarted');
@@ -218,9 +225,9 @@ function Service (resource) {
   }
 
   const handleUpdatesStoppedState = (resource,input,config) => {
-    const newState = MONITORS.RESOURCE_STOPPED;
-    const failure_threshold = config.fails_count_alert;
-    resource.fails_count++;
+    const newState = MONITORS.RESOURCE_STOPPED
+    const failure_threshold = config.fails_count_alert
+    resource.fails_count++
 
     logger.log(
       'resource %s[%s] notifications stopped count %s/%s',
@@ -228,7 +235,7 @@ function Service (resource) {
       resource._id,
       resource.fails_count,
       failure_threshold
-    );
+    )
 
     const resourceUpdatesStopped = resource.state != newState &&
       resource.fails_count >= failure_threshold
@@ -239,15 +246,15 @@ function Service (resource) {
       }
 
       logStateChange(resource,input)
-      dispatchWorkflowEvent(resource._id, MONITORS.RESOURCE_STOPPED, input.data)
-      sendStateChangeEventNotification(resource, input.event)
+      dispatchWorkflowEvent(resource._id, input.event_name, input.data)
+      sendStateChangeEventNotification(resource, input.event_name)
     }
 
     // current resource state
     if (resourceUpdatesStopped) {
       logger.log('resource "%s" notifications stopped', resource.name)
-      input.event = MONITORS.RESOURCE_STOPPED
-      input.failure_severity = getEventSeverity(input.event, resource)
+      input.event_name = input.event || MONITORS.RESOURCE_STOPPED
+      input.failure_severity = getEventSeverity(input.event_name, resource)
       resource.state = newState
       dispatchNotifications()
 
@@ -265,15 +272,19 @@ function Service (resource) {
    * the resource was updated or changed or was not present and currently created.
    * the monitor trigger the changed event and the supervisor emit the event internally
    *
+   * this is emitted only once to trigger the change event
+   *
    */
   function handleChangedStateEvent (resource,input,config) {
+    const newState = MONITORS.RESOURCE_NORMAL
     resource.last_event = input
-    input.event = MONITORS.RESOURCE_CHANGED
-    input.failure_severity = getEventSeverity(input.event, resource)
+    resource.state = newState
+    input.event_name = input.event || MONITORS.RESOURCE_CHANGED
+    input.failure_severity = getEventSeverity(input.event_name, resource)
     sendResourceEmailAlert(resource, input)
-    dispatchWorkflowEvent(resource._id, MONITORS.RESOURCE_CHANGED, input.data)
+    dispatchWorkflowEvent(resource._id, input.event_name, input.data)
     logStateChange(resource, input)
-    sendStateChangeEventNotification(resource, input.event)
+    sendStateChangeEventNotification(resource, input.event_name)
   }
 
   /**

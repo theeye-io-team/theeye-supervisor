@@ -41,6 +41,7 @@
     "core": "DEBUG='*eye*' NODE_TLS_REJECT_UNAUTHORIZED=0 node --harmony_proxies `pwd`/core/main.js",
     "devel": "/bin/bash ./run.debug.sh",
     "local": "NODE_ENV=localdev NODE_TLS_REJECT_UNAUTHORIZED=0 ./node_modules/.bin/nodemon --harmony_proxies --ignore 'uploads/*' `pwd`/core/main.js",
+    "inspector": "NODE_ENV=localdev NODE_TLS_REJECT_UNAUTHORIZED=0 ./node_modules/.bin/nodemon --inspect --harmony_proxies --ignore 'uploads/*' `pwd`/core/main.js",
     "elastic_tunnel": "ssh -L 9200:elasticsearch.theeye.io:9200 awsnodep02.theeye.io ",
     "test": "NODE_ENV=localdev ./node_modules/.bin/mocha --harmony_proxies --exit"
   },
