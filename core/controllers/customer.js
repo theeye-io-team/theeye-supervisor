@@ -1,7 +1,8 @@
 'use strict';
 
 const merge = require('lodash/merge');
-const isURL = require('validator/lib/isURL')
+const assign = require('lodash/assign');
+const isURL = require('validator/lib/isURL');
 
 var logger = require('../lib/logger')('controller:customer');
 var json = require('../lib/jsonresponse');
@@ -194,49 +195,53 @@ var controller = {
    */
   updateconfig (req, res, next) {
     const customer = req.customer
-    const config = req.body
-
-    if (!config) {
+    const config = req.body.config
+    const integration = req.body.integration
+    if (!config || !integration) {
       return res.send(400, json.error('Missing config values.'))
     }
 
-    if (config.elasticsearch && config.elasticsearch.enabled === true) {
-      if (
-        ! isURL(config.elasticsearch.url,{
-          protocols: ['http','https'],
-          require_protocol: true
-        })
-      ) {
-        return res.send(400, json.error('elasticsearch url must be a valid URL'))
-      }
+    switch (integration) {
+      case 'elasticsearch':
+        if (config.enabled === true) {
+          if (
+            !isURL(config.url, {
+              protocols: ['http','https'],
+              require_protocol: true
+            })
+          ) {
+            return res.send(400, json.error('elasticsearch url must be a valid URL'));
+          }
+        }
+        break;
+      case 'kibana':
+        if (
+          ! isURL(config,{
+            protocols: ['http','https'],
+            require_protocol: true
+          })
+        ) {
+          return res.send(400, json.error('kibana iframe url must be a valid URL'));
+        }
+        break;
+      case 'ngrok':
+        break;
+      default:
+        break;
     }
 
-    if (config.kibana) {
-      if (
-        ! isURL(config.kibana,{
-          protocols: ['http','https'],
-          require_protocol: true
-        })
-      ) {
-        return res.send(400, json.error('kibana iframe url must be a valid URL'))
-      }
-    } else {
-      config.kibana = null;
-    }
-
-    if (config.ngrok) {
-    }
-
-    customer.config = merge({}, customer.config, config)
+    var newConfig = {};
+    newConfig[integration] = config;
+    customer.config = assign({}, customer.config, newConfig);
 
     customer.save( (err,model) => {
       if (err) {
-        res.send(500,err)
+        res.send(500,err);
       } else {
-        res.send(200, customer.config)
+        res.send(200, customer.config);
       }
-      next()
-    })
+      next();
+    });
   },
   /**
    *
