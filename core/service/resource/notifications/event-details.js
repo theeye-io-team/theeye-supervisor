@@ -63,7 +63,7 @@ module.exports = {
         const lastline = result.lastline ? result.lastline.trim() : 'no data'
         const stdout = result.stdout ? result.stdout.trim() : 'no data'
         const stderr = result.stderr ? result.stderr.trim() : 'no data'
-        const code = result.code || 'no data'
+        const code = (typeof result.code == 'number' ? result.code : 'no data')
 
         let html = `<p>${resource.name} on ${resource.hostname} checks failed.</p>`
 
