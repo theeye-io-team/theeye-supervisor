@@ -465,7 +465,7 @@ Service.create = function (input, next) {
         type: type,
       }),
       monitor_data: monitor_data
-    },function(error,result){
+    }, function (error,result) {
       var monitor = result.monitor;
       var resource = result.resource;
       logger.log('resource & monitor created');

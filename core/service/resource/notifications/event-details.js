@@ -88,7 +88,7 @@ module.exports = {
   file: {
     type: 'file', 
     events: [{
-      name: 'monitor:file:changed',
+      name: 'file:restored',
       message: function(resource, event_data) { return `${resource.hostname} file ${resource.monitor.config.path} stats has been changed or was not present in the filesystem. It was replaced with the saved version.`; },
       subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} file ${resource.monitor.config.basename} was restored`; }
     }]
