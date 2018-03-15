@@ -60,7 +60,7 @@ function defaultTypeEvent (event_name) {
     case Constants.RESOURCE_RECOVERED:
       spec = {
         message: function(resource, event_data) {
-          return `${resource.hostname} ${resource.name} start reporting updates again.`
+          return `${resource.hostname} ${resource.name} started reporting updates again.`
         } ,
         subject: function(resource, event_data) {
           return `[${this.severity}] ${resource.name} recovered`
