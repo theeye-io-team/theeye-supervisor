@@ -10,6 +10,7 @@ module.exports = Object.freeze({
   // MONITOR STATES
   RESOURCE_FAILURE: 'failure',
   RESOURCE_NORMAL: 'normal',
+  RESOURCE_SUCCESS: 'success',
   RESOURCE_RECOVERED: 'recovered',
   RESOURCE_STOPPED: 'updates_stopped',
   RESOURCE_STARTED: 'updates_started',

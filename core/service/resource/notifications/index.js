@@ -47,6 +47,7 @@ module.exports = function (specs, done) {
 function defaultTypeEvent (event_name) {
   var spec ;
   switch (event_name) {
+    case Constants.RESOURCE_SUCCESS:
     case Constants.RESOURCE_NORMAL:
       spec = {
         message: function(resource, event_data) {

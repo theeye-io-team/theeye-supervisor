@@ -49,42 +49,6 @@ module.exports = {
   process: { type: 'process', events: [] },
   scraper: { type: 'scraper', events: [] },
   service: { type: 'service', events: [] },
-  script: {
-    type: 'script',
-    events: [{
-      name: Constants.RESOURCE_FAILURE,
-      subject: function(resource, event_data) {
-        return `[${this.severity}] ${resource.name} failure`
-      },
-      message: function(resource, event_data) {
-        // use an empty object if not set
-        let result = (resource.last_event && resource.last_event.data) ? resource.last_event.data : {}
-
-        const lastline = result.lastline ? result.lastline.trim() : 'no data'
-        const stdout = result.stdout ? result.stdout.trim() : 'no data'
-        const stderr = result.stderr ? result.stderr.trim() : 'no data'
-        const code = (typeof result.code == 'number' ? result.code : 'no data')
-
-        let html = `<p>${resource.name} on ${resource.hostname} checks failed.</p>`
-
-        if (!resource.last_event||!resource.last_event.data) return html
-
-        html += `
-          <span>Monitor output</span>
-          <pre>
-          <ul>
-          <li>lastline : ${lastline}</li>
-          <li>stdout : ${stdout}</li>
-          <li>stderr : ${stderr}</li>
-          <li>code : ${code}</li>
-          </ul>
-          </pre>
-          `
-
-        return html
-      }
-    }]
-  },
   file: {
     type: 'file', 
     events: [{
@@ -92,5 +56,43 @@ module.exports = {
       message: function(resource, event_data) { return `${resource.hostname} file ${resource.monitor.config.path} stats has been changed or was not present in the filesystem. It was replaced with the saved version.`; },
       subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} file ${resource.monitor.config.basename} was restored`; }
     }]
+  },
+  script: {
+    type: 'script',
+    events: [
+      {
+        name: Constants.RESOURCE_FAILURE,
+        subject: function(resource, event_data) {
+          return `[${this.severity}] ${resource.name} failure`
+        },
+        message: function(resource, event_data) {
+          // use an empty object if not set
+          let result = (resource.last_event && resource.last_event.data) ? resource.last_event.data : {}
+
+          const lastline = result.lastline ? result.lastline.trim() : ''
+          const stdout = result.stdout ? result.stdout.trim() : ''
+          const stderr = result.stderr ? result.stderr.trim() : ''
+          const code = result.code
+
+          let html = `<p>${resource.name} on ${resource.hostname} checks failed.</p>`
+
+          if (!resource.last_event||!resource.last_event.data) return html
+
+          html += `
+            <span>Monitor output</span>
+            <pre>
+              <ul>
+                <li>lastline : ${lastline}</li>
+                <li>stdout : ${stdout}</li>
+                <li>stderr : ${stderr}</li>
+                <li>code : ${code}</li>
+              </ul>
+            </pre>
+            `
+
+          return html
+        }
+      }
+    ]
   },
 }

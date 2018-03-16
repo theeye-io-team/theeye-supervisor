@@ -65,40 +65,40 @@ function Service (resource) {
     let query = MonitorModel.findOne({ resource_id: resource._id })
     query.exec(function(err,monitor){
       resource.monitor = monitor
-      var specs = assign({},input,{ resource: resource });
+      var specs = assign({},input,{ resource })
 
-      ResourcesNotifications(specs,(error,details) => {
+      ResourcesNotifications(specs, (error, details) => {
         if (error) {
-          if ( /event ignored/.test(error.message) === false ) {
-            logger.error(error);
+          if (/event ignored/.test(error.message)===false) {
+            logger.error(error)
           }
-          logger.log('email alerts not sent.');
-          return;
+          logger.log('email alerts not sent.')
+          return
         }
 
-        logger.log('sending email alerts');
+        logger.log('sending email alerts')
         CustomerService.getAlertEmails(
           resource.customer_name,
           (error,emails) => {
-            var mailTo, extraEmail=[];
+            var mailTo, extraEmail=[]
 
             if (Array.isArray(resource.acl) && resource.acl.length>0) {
               extraEmail = resource.acl.filter(email => {
                 emails.indexOf(email) === -1
-              });
+              })
             }
 
-            mailTo = (extraEmail.length>0) ? emails.concat(extraEmail) : emails;
+            mailTo = (extraEmail.length>0) ? emails.concat(extraEmail) : emails
 
             NotificationService.sendEmailNotification({
               to: mailTo.join(','),
               customer_name: resource.customer_name,
               subject: details.subject,
               content: details.content
-            });
+            })
           }
-        );
-      });
+        )
+      })
     })
   }
 
