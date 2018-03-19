@@ -197,7 +197,11 @@ var controller = {
     const customer = req.customer
     const config = req.body.config
     const integration = req.body.integration
-    if (!config || !integration) {
+    if (!integration) {
+      return res.send(400, json.error('Missing config values.'))
+    }
+
+    if (!config && (integration !== 'kibana')) {
       return res.send(400, json.error('Missing config values.'))
     }
 
@@ -216,6 +220,7 @@ var controller = {
         break;
       case 'kibana':
         if (
+          config &&
           ! isURL(config,{
             protocols: ['http','https'],
             require_protocol: true
