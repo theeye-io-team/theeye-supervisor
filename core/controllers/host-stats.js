@@ -22,7 +22,7 @@ const controller = {
 
     var query = {
       host_id: host._id,
-      customer_id: customer._id
+      customer_name: customer.name
     }
 
     if (type) query.type = type
