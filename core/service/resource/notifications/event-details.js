@@ -1,4 +1,4 @@
-const Constants = require('../../../constants/monitors');
+const MonitorConstants = require('../../../constants/monitors');
 
 module.exports = {
   dstat: {
@@ -29,7 +29,7 @@ module.exports = {
   host: {
     type: 'host',
     events: [{
-      name: Constants.RESOURCE_STOPPED,
+      name: MonitorConstants.RESOURCE_STOPPED,
       subject: function(resource, event_data) {
         return `[${this.severity}] ${resource.hostname} unreachable`
       },
@@ -37,7 +37,7 @@ module.exports = {
         return `Host ${resource.hostname.toUpperCase()} stopped reporting updates.`
       }
     },{
-      name: Constants.RESOURCE_RECOVERED,
+      name: MonitorConstants.RESOURCE_STARTED,
       subject: function(resource, event_data) {
         return `[${this.severity}] ${resource.hostname} recovered`
       },
@@ -61,7 +61,7 @@ module.exports = {
     type: 'script',
     events: [
       {
-        name: Constants.RESOURCE_FAILURE,
+        name: MonitorConstants.RESOURCE_FAILURE,
         subject: function(resource, event_data) {
           return `[${this.severity}] ${resource.name} failure`
         },
