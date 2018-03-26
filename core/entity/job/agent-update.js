@@ -2,12 +2,12 @@
 
 const BaseSchema = require('./schema');
 const logger = require('../../lib/logger')('entity:job:agent-update')
-const LIFECYCLE = require('../../constants/lifecycle')
+const LifecycleConstants = require('../../constants/lifecycle')
 const JOBS = require('../../constants/jobs')
 
 const AgentUpdateJobSchema = new BaseSchema({
   name: { type: String, default: JOBS.AGENT_UPDATE },
-  lifecycle: { type: String, default: LIFECYCLE.READY },
+  lifecycle: { type: String, default: LifecycleConstants.READY },
   notify: { type: Boolean, default: false },
 });
 
@@ -20,7 +20,7 @@ AgentUpdateJobSchema.statics.create = function (specs, next) {
   const Job = this
   const query = Job.find({
     host_id: specs.host_id,
-    lifecycle: LIFECYCLE.READY
+    lifecycle: LifecycleConstants.READY
   })
 
   // check if there are update jobs already created for this host

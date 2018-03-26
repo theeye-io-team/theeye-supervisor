@@ -16,7 +16,6 @@ module.exports = function (specs, done) {
   const resource = specs.resource
   const type = resource.type
   const event_name = specs.event_name // || resource.state
-  const event_data = specs.data || {}
   const severity = specs.failure_severity
   var typeEvent
 
@@ -33,8 +32,8 @@ module.exports = function (specs, done) {
   typeEvent.severity = severity ? severity.toUpperCase() : 'HIGH'
 
   return done(null,{
-    content: typeEvent.message(resource, event_data),
-    subject: typeEvent.subject(resource, event_data)
+    content: typeEvent.message(resource, specs),
+    subject: typeEvent.subject(resource, specs)
   })
 }
 
@@ -131,25 +130,12 @@ function defaultTypeEvent (event_name) {
  * @param String event_name
  * @return {Object} {String severity, String message, String subject}
  */
-function searchTypeEvent (type,event_name) {
+function searchTypeEvent (type, event_name) {
   var typeEvent = undefined;
   event_name || (event_name=null)
 
   if (!ResourceTypes.hasOwnProperty(type)) {
     throw new Error('resource type "' + type + '" is invalid or not defined');
-  }
-
-  if (
-    type == Constants.RESOURCE_TYPE_DSTAT ||
-    type == Constants.RESOURCE_TYPE_PSAUX
-  ) {
-    if (
-      event_name === Constants.RESOURCE_STOPPED ||
-      event_name === Constants.RESOURCE_RECOVERED ||
-      !event_name
-    ) {
-      throw new Error(type + '/' + event_name + ' event ignored.');
-    }
   }
 
   var resourceType = ResourceTypes[type]

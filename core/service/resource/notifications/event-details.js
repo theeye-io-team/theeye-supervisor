@@ -1,60 +1,93 @@
 const MonitorConstants = require('../../../constants/monitors');
 
+const CPU_ALERT = 'host:stats:cpu:high'
+const MEM_ALERT = 'host:stats:mem:high'
+const CACHE_ALERT = 'host:stats:cache:high'
+const DISK_ALERT = 'host:stats:disk:high'
+const STATS_NORMAL = 'host:stats:normal'
+
 module.exports = {
   dstat: {
-    type: 'dstat',
-    events:[{
-      name: 'host:stats:cpu:high',
-      message: function(resource, event_data) { return `${resource.hostname} cpu check failed. ${Number(event_data.cpu).toFixed(2)}% CPU in use`; },
-      subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} CPU alert`; }
+    type: MonitorConstants.RESOURCE_TYPE_DSTAT,
+    events: [{
+      name: MonitorConstants.RESOURCE_FAILURE,
+      message: function (resource, event_data) {
+        let msg
+        switch (event_data.custom_event) {
+          case CPU_ALERT:
+            msg = `${resource.hostname} cpu check failed. ${Number(event_data.data.cpu).toFixed(2)}% CPU in use`
+            break;
+          case MEM_ALERT:
+            msg = `${resource.hostname} mem check failed. ${Number(event_data.data.mem).toFixed(2)}% MEM in use`
+            break;
+          case CACHE_ALERT:
+            msg = `${resource.hostname} cache check failed. ${Number(event_data.data.cache).toFixed(2)}% CACHE in use`
+            break;
+          case DISK_ALERT:
+            msg = `${resource.hostname} disks check failed.`
+            break;
+        }
+        return msg
+      },
+      subject: function (resource, event_data) {
+        let subj
+        switch (event_data.custom_event) {
+          case CPU_ALERT:
+            subj = `[${this.severity}] ${resource.hostname} CPU alert`
+            break;
+          case MEM_ALERT:
+            subj = `[${this.severity}] ${resource.hostname} MEM alert`
+            break;
+          case CACHE_ALERT:
+            subj = `[${this.severity}] ${resource.hostname} CACHE alert`
+            break;
+          case DISK_ALERT:
+            subj = `[${this.severity}] ${resource.hostname} DISK alert`
+            break;
+        }
+        return subj
+      }
     },{
-      name: 'host:stats:mem:high',
-      message: function(resource, event_data) { return `${resource.hostname} mem check failed. ${Number(event_data.mem).toFixed(2)}% MEM in use`; },
-      subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} MEM alert`; }
-    },{
-      name: 'host:stats:cache:high',
-      message: function(resource, event_data) { return `${resource.hostname} cache check failed. ${Number(event_data.cache).toFixed(2)}% CACHE in use`; },
-      subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} CACHE alert`; }
-    },{
-      name: 'host:stats:disk:high',
-      message: function(resource, event_data) { return `${resource.hostname} disks check failed.`; },
-      subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} DISK alert`; }
-    },{
-      name:'host:stats:normal',
-      message: function(resource, event_data) { return `${resource.hostname} stats recovered.`; },
-      subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} STATS recovered`; }
+      name: MonitorConstants.RESOURCE_RECOVERED,
+      message: function (resource, event_data) {
+        msg = `${resource.hostname} stats recovered.`
+        return msg
+      },
+      subject: function (resource, event_data) {
+        subj = `[${this.severity}] ${resource.hostname} STATS recovered`
+        return subj
+      }
     }]
   },
-  psaux: { type: 'psaux', events: [] },
+  psaux: { type: MonitorConstants.RESOURCE_TYPE_PSAUX, events: [] },
   host: {
-    type: 'host',
+    type: MonitorConstants.RESOURCE_TYPE_HOST,
     events: [{
       name: MonitorConstants.RESOURCE_STOPPED,
-      subject: function(resource, event_data) {
+      subject: function(resource) {
         return `[${this.severity}] ${resource.hostname} unreachable`
       },
-      message: function(resource, event_data) {
+      message: function(resource) {
         return `Host ${resource.hostname.toUpperCase()} stopped reporting updates.`
       }
     },{
       name: MonitorConstants.RESOURCE_STARTED,
-      subject: function(resource, event_data) {
+      subject: function(resource) {
         return `[${this.severity}] ${resource.hostname} recovered`
       },
-      message: function(resource, event_data) {
+      message: function(resource) {
         return `Host ${resource.hostname.toUpperCase()} started reporting again.`
       }
     }]
   },
-  process: { type: 'process', events: [] },
-  scraper: { type: 'scraper', events: [] },
-  service: { type: 'service', events: [] },
+  process: { type: MonitorConstants.RESOURCE_TYPE_PROCESS, events: [] },
+  scraper: { type: MonitorConstants.RESOURCE_TYPE_SCRAPER, events: [] },
   file: {
-    type: 'file', 
+    type: MonitorConstants.RESOURCE_TYPE_FILE, 
     events: [{
-      name: 'file:restored',
-      message: function(resource, event_data) { return `${resource.hostname} file ${resource.monitor.config.path} stats has been changed or was not present in the filesystem. It was replaced with the saved version.`; },
-      subject: function(resource, event_data) { return `[${this.severity}] ${resource.hostname} file ${resource.monitor.config.basename} was restored`; }
+      name: MonitorConstants.RESOURCE_CHANGED,
+      message: function(resource) { return `${resource.hostname} file ${resource.monitor.config.path} stats has been changed or was not present in the filesystem. It was replaced with the saved version.`; },
+      subject: function(resource) { return `[${this.severity}] ${resource.hostname} file ${resource.monitor.config.basename} was restored`; }
     }]
   },
   script: {
@@ -62,10 +95,10 @@ module.exports = {
     events: [
       {
         name: MonitorConstants.RESOURCE_FAILURE,
-        subject: function(resource, event_data) {
+        subject: function(resource) {
           return `[${this.severity}] ${resource.name} failure`
         },
-        message: function(resource, event_data) {
+        message: function(resource) {
           // use an empty object if not set
           let result = (resource.last_event && resource.last_event.data) ? resource.last_event.data : {}
 

@@ -20,7 +20,7 @@ const Script = require('../entity/file').Script
 //const AgentUpdateJob = require('../entity/job').AgentUpdate
 
 const TaskEvent = require('../entity/event').TaskEvent
-const NotificationService = require('./notification')
+//const NotificationService = require('./notification')
 
 module.exports = {
   ///**
@@ -282,7 +282,7 @@ module.exports = {
     To cancel the Task <a href="${url}">press here</a> or copy/paste the following link in the browser of your preference : <br/>${url}<br/>.
     `;
 
-    NotificationService.sendEmailNotification({
+    App.notifications.sendEmailNotification({
       customer_name: input.customer_name,
       subject: `[TASK] Task ${input.task_name} execution on ${input.hostname} cancelation`,
       content: html,
@@ -457,7 +457,7 @@ const registerJobOperation = (operation, topic, input) => {
 
     elastic.submit(customer.name, topic, payload) // topic = topics.task.execution/result , CREATE/UPDATE
 
-    NotificationService.generateSystemNotification({
+    App.notifications.generateSystemNotification({
       topic: TopicsConstants.job.crud,
       data: {
         hostname: job.hostname,
@@ -668,7 +668,7 @@ const dispatchWorkflowEvent = (task_id, trigger, data) => {
 //
 //    html += `<span>Script execution log </span><br/>` + log;
 //
-//    NotificationService.sendEmailNotification({
+//    App.notifications.sendEmailNotification({
 //      customer_name: job.customer_name,
 //      subject: `[TASK] ${job.task.name} executed on ${job.host.hostname} ${state}`,
 //      content: html,
@@ -685,7 +685,7 @@ const dispatchWorkflowEvent = (task_id, trigger, data) => {
 //  this.ScraperJob = function (job,emails) {
 //    var html = `<h3>Task ${job.task.name} execution completed on ${job.host.hostname}.</h3>`;
 //
-//    NotificationService.sendEmailNotification({
+//    App.notifications.sendEmailNotification({
 //      customer_name: job.customer_name,
 //      subject: `[TASK] ${job.task.name} executed on ${job.host.hostname}`,
 //      content: html,

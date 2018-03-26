@@ -13,7 +13,7 @@ const ResourcesNotifications = require('./notifications')
 const EventConstants = require('../../constants/events')
 const TopicsConstants = require('../../constants/topics')
 const Constants = require('../../constants')
-const MONITORS = require('../../constants/monitors')
+const MonitorConstants = require('../../constants/monitors')
 const Lifecycle = require('../../constants/lifecycle')
 // Entities
 const AgentUpdateJob = require('../../entity/job').AgentUpdate
@@ -26,12 +26,18 @@ const Tag = require('../../entity/tag').Entity
 //const dbFilter = require('../lib/db-filter')
 
 function Service (resource) {
-  var _resource = resource;
+  const _resource = resource
 
-  function logStateChange (resource,input) {
+  const needToSendUpdatesStoppedEmail = (resource) => {
+    return resource.type === MonitorConstants.RESOURCE_TYPE_HOST ||
+      resource.failure_severity === MonitorConstants.MONITOR_SEVERITY_CRITICAL;
+  }
+
+  const logStateChange = (resource,input) => {
     const data = {
       hostname: resource.hostname,
-      event_name: input.event_name,
+      monitor_event: input.event_name,
+      custom_event: input.custom_event,
       state: input.state,
       organization: resource.customer_name,
       id: resource._id,
@@ -43,7 +49,7 @@ function Service (resource) {
     elastic.submit(resource.customer_name, topic, data) // topic = topics.monitor.state
   }
 
-  const sendStateChangeEventNotification = (resource, eventName) => {
+  const sendStateChangeEventNotification = (resource, eventName, customEvent) => {
     const topic = TopicsConstants.monitor.state
     NotificationService.generateSystemNotification({
       topic: topic,
@@ -53,16 +59,17 @@ function Service (resource) {
         hostname: resource.hostname,
         organization: resource.customer_name,
         operation: Constants.UPDATE,
-        monitor_event: eventName
+        monitor_event: eventName,
+        custom_event: customEvent
       }
     })
   }
 
   const sendResourceEmailAlert = (resource,input) => {
     if (resource.alerts===false) return
-    if (resource.failure_severity=='low'.toUpperCase()) return
+    if (resource.failure_severity=='LOW') return
 
-    let query = MonitorModel.findOne({ resource_id: resource._id })
+    const query = MonitorModel.findOne({ resource_id: resource._id })
     query.exec(function(err,monitor){
       resource.monitor = monitor
       var specs = assign({},input,{ resource })
@@ -136,13 +143,45 @@ function Service (resource) {
     })
   }
 
-  function needToSendUpdatesStoppedEmail (resource) {
-    return resource.type === MONITORS.RESOURCE_TYPE_HOST ||
-      resource.failure_severity === MONITORS.MONITOR_SEVERITY_CRITICAL;
+  /**
+   *
+   * @private
+   * @param String state
+   * @return String
+   *
+   */
+  const isSuccess = (state) => {
+    return MonitorConstants.SUCCESS_STATES.indexOf(state.toLowerCase()) != -1
+  }
+  const isFailure = (state) => {
+    return MonitorConstants.FAILURE_STATES.indexOf(state.toLowerCase()) != -1
+  }
+  const filterStateEvent = (state) => {
+    if (!state || typeof state != 'string') {
+      return MonitorConstants.RESOURCE_ERROR
+    }
+
+    // state is a recognized state
+    if (MonitorConstants.MONITOR_STATES.indexOf(state) !== -1) {
+      return state
+    }
+
+    if (isSuccess(state)) {
+      return MonitorConstants.RESOURCE_NORMAL
+    }
+    if (isFailure(state)) {
+      return MonitorConstants.RESOURCE_FAILURE
+    }
+    return MonitorConstants.RESOURCE_ERROR
   }
 
+  /**
+   *
+   * state change handlers
+   *
+   */
   const handleFailureState = (resource,input,config) => {
-    const newState = MONITORS.RESOURCE_FAILURE;
+    const newState = MonitorConstants.RESOURCE_FAILURE
     const failure_threshold = config.fails_count_alert;
     logger.log('resource "%s" check fails.', resource.name);
 
@@ -163,24 +202,25 @@ function Service (resource) {
       if (resource.fails_count >= failure_threshold) {
         logger.log('resource "%s" state failure', resource.name);
 
-        input.event_name = input.event || newState
-        input.failure_severity = getEventSeverity(input.event_name,resource);
-        resource.state = newState;
+        input.event_name = MonitorConstants.RESOURCE_FAILURE
+        input.custom_event = input.event
+        input.failure_severity = getEventSeverity(resource)
+        resource.state = newState
 
-        sendResourceEmailAlert(resource,input);
-        logStateChange(resource,input);
-        sendStateChangeEventNotification(resource,input.event_name)
+        logStateChange(resource, input)
         dispatchWorkflowEvent(resource._id, input.event_name, input.data)
+        sendStateChangeEventNotification(resource, input.event_name, input.custom_event)
+        sendResourceEmailAlert(resource, input)
       }
     }
   }
 
   const handleNormalState = (resource,input,config) => {
-    const newState = MONITORS.RESOURCE_NORMAL
+    const newState = MonitorConstants.RESOURCE_NORMAL
     logger.log('"%s"("%s") state is normal', resource.name, resource.type);
 
     const failure_threshold = config.fails_count_alert;
-    const isRecoveredFromFailure = Boolean(resource.state===MONITORS.RESOURCE_FAILURE);
+    const isRecoveredFromFailure = Boolean(resource.state===MonitorConstants.RESOURCE_FAILURE);
 
     resource.last_event = input;
 
@@ -191,31 +231,23 @@ function Service (resource) {
       if (resource.fails_count >= failure_threshold) {
         logger.log('"%s" has been restored', resource.name);
 
-        if (input.event) {
-          input.event_name = input.event
-        } else {
-          // to trigger the state change event
-          if (isRecoveredFromFailure) {
-            input.event_name = MONITORS.RESOURCE_RECOVERED
-          } else {
-            // is recovered from updates_stopped
-            input.event_name = MONITORS.RESOURCE_STARTED
-          }
-        }
-
-        input.failure_severity = getEventSeverity(input.event_name, resource);
+        input.custom_event = input.event
+        input.failure_severity = getEventSeverity(resource);
 
         if (!isRecoveredFromFailure) {
+          // is recovered from updates_stopped
+          input.event_name = MonitorConstants.RESOURCE_STARTED
           if (needToSendUpdatesStoppedEmail(resource)) {
-            sendResourceEmailAlert(resource,input);
+            sendResourceEmailAlert(resource, input)
           }
         } else {
-          sendResourceEmailAlert(resource,input);
+          input.event_name = MonitorConstants.RESOURCE_RECOVERED
+          sendResourceEmailAlert(resource, input)
         }
 
-        logStateChange(resource,input);
+        logStateChange(resource, input)
         dispatchWorkflowEvent(resource._id, input.event_name, input.data)
-        sendStateChangeEventNotification(resource, input.event_name)
+        sendStateChangeEventNotification(resource, input.event_name, input.custom_event)
       }
 
       logger.log('state restarted');
@@ -225,7 +257,7 @@ function Service (resource) {
   }
 
   const handleUpdatesStoppedState = (resource,input,config) => {
-    const newState = MONITORS.RESOURCE_STOPPED
+    const newState = MonitorConstants.RESOURCE_STOPPED
     const failure_threshold = config.fails_count_alert
     resource.fails_count++
 
@@ -242,24 +274,27 @@ function Service (resource) {
 
     const dispatchNotifications = () => {
       if (needToSendUpdatesStoppedEmail(resource)) {
-        sendResourceEmailAlert(resource,input)
+        sendResourceEmailAlert(resource, input)
       }
 
-      logStateChange(resource,input)
+      logStateChange(resource, input)
       dispatchWorkflowEvent(resource._id, input.event_name, input.data)
-      sendStateChangeEventNotification(resource, input.event_name)
+      sendStateChangeEventNotification(resource, input.event_name, input.custom_event)
     }
 
     // current resource state
     if (resourceUpdatesStopped) {
       logger.log('resource "%s" notifications stopped', resource.name)
-      input.event_name = input.event || MONITORS.RESOURCE_STOPPED
-      input.failure_severity = getEventSeverity(input.event_name, resource)
+
+      input.event_name = MonitorConstants.RESOURCE_STOPPED // generic event
+      input.custom_event = input.event // specific event reported
+
+      input.failure_severity = getEventSeverity(resource)
       resource.state = newState
       dispatchNotifications()
 
       // if the resource is a host
-      const isHost = (resource.type === MONITORS.RESOURCE_TYPE_HOST)
+      const isHost = (resource.type === MonitorConstants.RESOURCE_TYPE_HOST)
       if (isHost) {
         cancelAssignedJobsToHost(resource.host_id)
       }
@@ -275,48 +310,19 @@ function Service (resource) {
    * this is emitted only once to trigger the change event
    *
    */
-  function handleChangedStateEvent (resource,input,config) {
-    const newState = MONITORS.RESOURCE_NORMAL
+  const handleChangedStateEvent = (resource,input,config) => {
+    const newState = MonitorConstants.RESOURCE_NORMAL
     resource.last_event = input
     resource.state = newState
-    input.event_name = input.event || MONITORS.RESOURCE_CHANGED
-    input.failure_severity = getEventSeverity(input.event_name, resource)
-    sendResourceEmailAlert(resource, input)
-    dispatchWorkflowEvent(resource._id, input.event_name, input.data)
+
+    input.event_name = MonitorConstants.RESOURCE_CHANGED
+    input.custom_event = input.event
+
+    input.failure_severity = getEventSeverity(resource)
     logStateChange(resource, input)
-    sendStateChangeEventNotification(resource, input.event_name)
-  }
-
-  /**
-   *
-   * @private
-   * @param String state
-   * @return String
-   *
-   */
-  function isSuccess (state) {
-    return MONITORS.SUCCESS_STATES.indexOf(state.toLowerCase()) != -1
-  }
-  function isFailure (state) {
-    return MONITORS.FAILURE_STATES.indexOf(state.toLowerCase()) != -1
-  }
-  function filterStateEvent (state) {
-    if (!state || typeof state != 'string') {
-      return MONITORS.RESOURCE_ERROR
-    }
-
-    // state is a recognized state
-    if (MONITORS.MONITOR_STATES.indexOf(state) !== -1) {
-      return state
-    }
-
-    if (isSuccess(state)) {
-      return MONITORS.RESOURCE_NORMAL
-    }
-    if (isFailure(state)) {
-      return MONITORS.RESOURCE_FAILURE
-    }
-    return MONITORS.RESOURCE_ERROR
+    dispatchWorkflowEvent(resource._id, input.event_name, input.data)
+    sendStateChangeEventNotification(resource, input.event_name, input.custom_event)
+    sendResourceEmailAlert(resource, input)
   }
 
   /**
@@ -328,8 +334,7 @@ function Service (resource) {
   this.handleState = function (input,next) {
     next || (next=function(){})
     const resource = _resource
-    const state = filterStateEvent(input.state)
-    input.state = state
+    input.state = filterStateEvent(input.state)
 
     resource.last_check = new Date()
 
@@ -340,20 +345,20 @@ function Service (resource) {
 
       const monitorConfig = config.monitor
 
-      switch (state) {
-        case MONITORS.RESOURCE_CHANGED:
+      switch (input.state) {
+        case MonitorConstants.RESOURCE_CHANGED:
           handleChangedStateEvent(resource, input, monitorConfig)
           break
-        case MONITORS.AGENT_STOPPED:
-        case MONITORS.RESOURCE_STOPPED:
+        case MonitorConstants.AGENT_STOPPED:
+        case MonitorConstants.RESOURCE_STOPPED:
           handleUpdatesStoppedState(resource, input, monitorConfig)
           break
-        case MONITORS.RESOURCE_NORMAL:
+        case MonitorConstants.RESOURCE_NORMAL:
           resource.last_update = new Date()
           handleNormalState(resource, input, monitorConfig)
           break
         default:
-        case MONITORS.RESOURCE_FAILURE:
+        case MonitorConstants.RESOURCE_FAILURE:
           resource.last_update = new Date()
           handleFailureState(resource, input, monitorConfig)
           break
@@ -502,21 +507,21 @@ Service.createDefaultEvents = (monitor,customer,done) => {
 
   MonitorEvent.create(
     // NORMAL state does not trigger EVENT
-    //{ customer: customer, emitter: monitor, name: MONITORS.RESOURCE_NORMAL } ,
-    Object.assign({}, base, { name: MONITORS.RESOURCE_RECOVERED }) ,
-    Object.assign({}, base, { name: MONITORS.RESOURCE_STOPPED }) ,
-    Object.assign({}, base, { name: MONITORS.RESOURCE_FAILURE }) ,
+    //{ customer: customer, emitter: monitor, name: MonitorConstants.RESOURCE_NORMAL } ,
+    Object.assign({}, base, { name: MonitorConstants.RESOURCE_RECOVERED }) ,
+    Object.assign({}, base, { name: MonitorConstants.RESOURCE_STOPPED }) ,
+    Object.assign({}, base, { name: MonitorConstants.RESOURCE_FAILURE }) ,
     (err) => {
       if (err) logger.error(err)
     }
   );
 
-  if (monitor.type === MONITORS.RESOURCE_TYPE_FILE) {
+  if (monitor.type === MonitorConstants.RESOURCE_TYPE_FILE) {
     MonitorEvent.create({
       customer: customer,
       emitter: monitor,
       emitter_id: monitor._id,
-      name: MONITORS.RESOURCE_CHANGED
+      name: MonitorConstants.RESOURCE_CHANGED
     }, err => {
       if (err) logger.error(err);
     });
@@ -588,11 +593,10 @@ Service.update = function(input,next) {
   })
 }
 
-function getEventSeverity (event,resource) {
-  logger.log('resource event is "%s"', event);
+const getEventSeverity = (resource) => {
 
   const hasSeverity = resource.failure_severity &&
-    MONITORS.MONITOR_SEVERITIES.indexOf(
+    MonitorConstants.MONITOR_SEVERITIES.indexOf(
       resource.failure_severity.toUpperCase()
     ) !== -1
 
@@ -600,11 +604,7 @@ function getEventSeverity (event,resource) {
   if (hasSeverity) return resource.failure_severity;
 
   // else try to determine the severity
-  if (event && /^host:stats:.*$/.test(event)) {
-    return 'LOW'
-  } else {
-    return 'HIGH'
-  }
+  return (resource.type == MonitorConstants.RESOURCE_TYPE_DSTAT) ? 'LOW' : 'HIGH'
 }
 
 /**
