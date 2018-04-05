@@ -13,7 +13,8 @@ const INITIAL_STATE = 'normal'
  * Extended Schema. Includes non template attributes
  */
 var ResourceSchema = BaseSchema.EntitySchema.extend({
-  host_id: { type: String, required: true },
+  //host_id: { type: String, required: true },
+  host_id: { type: String },
   monitor_id: { type: ObjectId },
   template_id: { type: ObjectId },
   hostname: { type: String },
@@ -39,11 +40,11 @@ ResourceSchema.statics.create = function(input, next){
   var entity = new Entity(input);
   entity.host_id = input.host_id;
   entity.hostname = input.hostname;
-  entity.template = input.template||null;
+  entity.template = input.template || null;
   entity.save(function(err, instance){
-    if(err) throw err;
-    next(null, instance);
-  });
+    if (err) return next (err)
+    next(null, instance)
+  })
 }
 
 /**

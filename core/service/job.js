@@ -13,7 +13,6 @@ const JobsConstants = require('../constants/jobs')
 const TaskConstants = require('../constants/task')
 const TopicsConstants = require('../constants/topics')
 const StateConstants = require('../constants/states')
-const EventConstants = require('../constants/events')
 
 const JobModels = require('../entity/job')
 const Script = require('../entity/file').Script
@@ -611,7 +610,7 @@ const dispatchWorkflowEvent = (task_id, trigger, data) => {
     }
 
     App.eventDispatcher.dispatch({
-      eventName: EventConstants.WORKFLOW_EVENT,
+      topic: TopicsConstants.task.execution,
       event,
       data
     })

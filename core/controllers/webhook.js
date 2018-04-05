@@ -9,7 +9,7 @@ const router = require('../router');
 const App = require('../app');
 const WebhookEvent = require('../entity/event').WebhookEvent;
 const Webhook = require('../entity/webhook').Webhook;
-const EventConstants = require('../constants/events')
+const TopicsConstants = require('../constants/topics')
 
 module.exports = function (server, passport) {
   var middlewares = [
@@ -181,7 +181,7 @@ var controller = {
       if (!event) return res.send(500)
 
       App.eventDispatcher.dispatch({
-        eventName: EventConstants.WORKFLOW_EVENT,
+        topic: TopicsConstants.task.execution,
         event
       })
 

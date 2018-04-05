@@ -1,6 +1,7 @@
 "use strict"
 
 const isURL = require('validator/lib/isURL')
+const isMongoId = require('validator/lib/isMongoId')
 const assign = require('lodash/assign')
 
 const logger = require('../../lib/logger')('service:resource:monitor')
@@ -68,38 +69,42 @@ module.exports = {
    *
    *
    */
-  setMonitorData (type, input, next){
+  setMonitorData (type, input, next) {
     var monitor;
     logger.log('setting up monitor data');
     logger.data('%j', input);
     try {
-      switch(type) {
-        case 'scraper':
+      switch (type) {
+        case MonitorConstants.RESOURCE_TYPE_SCRAPER:
           monitor = setMonitorForScraper(input);
           next(null, monitor);
           break;
-        case 'process':
+        case MonitorConstants.RESOURCE_TYPE_PROCESS:
           monitor = setMonitorForProcess(input);
           next(null, monitor);
           break;
-        case 'script':
+        case MonitorConstants.RESOURCE_TYPE_SCRIPT:
           monitor = setMonitorForScript(input);
           next(null, monitor);
           break;
-        case 'file':
+        case MonitorConstants.RESOURCE_TYPE_FILE:
           monitor = setMonitorForFile(input);
           next(null, monitor);
           break;
-        case 'dstat':
+        case MonitorConstants.RESOURCE_TYPE_DSTAT:
           monitor = setMonitorForDstat(input);
           next(null, monitor);
           break;
-        case 'psaux':
+        case MonitorConstants.RESOURCE_TYPE_PSAUX:
           monitor = setMonitorForPsaux(input);
           next(null, monitor);
           break;
-        case 'host':
+        case MonitorConstants.RESOURCE_TYPE_HOST:
           monitor = setMonitorForHost(input);
+          next(null, monitor);
+          break;
+        case MonitorConstants.RESOURCE_TYPE_NESTED:
+          monitor = setMonitorForNestedMonitors(input);
           next(null, monitor);
           break;
         default:
@@ -123,13 +128,9 @@ module.exports = {
     var errors = new ErrorHandler()
     var type = (input.type||input.monitor_type)
 
-    if (!input.name) {
-      errors.required('name', input.name)
-    }
-    if (!type) {
-      errors.required('type', type)
-    }
-    if (!input.looptime || !parseInt(input.looptime)) {
+    if (!input.name) errors.required('name', input.name)
+    if (!type) errors.required('type', type)
+    if (type!=='nested' && (!input.looptime || !parseInt(input.looptime))) {
       errors.required('looptime', input.looptime)
     }
 
@@ -145,7 +146,7 @@ module.exports = {
     logger.data(data)
 
     switch (type) {
-      case 'scraper':
+      case MonitorConstants.RESOURCE_TYPE_SCRAPER:
         var url = input.url
         if (!url) errors.required('url',url)
         else if (!isURL(url,{require_protocol:true})) errors.invalid('url',url)
@@ -171,15 +172,17 @@ module.exports = {
             }
           }
         }
-        break
-      case 'process':
+        break;
+
+      case MonitorConstants.RESOURCE_TYPE_PROCESS:
         const values = assign({},input,input.ps||{})
         data.raw_search = values.raw_search || errors.required('raw_search')
         data.psargs = values.psargs || 'aux'
         data.is_regexp = Boolean(values.is_regexp=='true'||values.is_regexp===true)
         data.pattern = !values.is_regexp ? RegExp.escape(values.raw_search) : values.raw_search
-        break
-      case 'file':
+        break;
+
+      case MonitorConstants.RESOURCE_TYPE_FILE:
         var mode = input.permissions
         var os_user = input.os_username
         var os_group = input.os_groupname
@@ -207,8 +210,9 @@ module.exports = {
         data.dirname = (input.dirname||errors.required('dirname'))
         data.basename = input.basename
         data.file = (input.file||errors.required('file'))
-        break
-      case 'script':
+        break;
+
+      case MonitorConstants.RESOURCE_TYPE_SCRIPT:
         var scriptArgs = router.filter.toArray(input.script_arguments)
         data.script_arguments = scriptArgs
         data.script_id = input.script_id||errors.required('script_id',input.script_id)
@@ -221,18 +225,40 @@ module.exports = {
         } else {
           data.script_runas = ''
         }
-        break
-      case 'dstat':
+        break;
+
+      case MonitorConstants.RESOURCE_TYPE_DSTAT:
         data.cpu = input.cpu || MonitorConstants.DEFAULT_HEALTH_THRESHOLD_CPU
         data.disk = input.disk || MonitorConstants.DEFAULT_HEALTH_THRESHOLD_DISK
-        data.mem = input.mem ||MonitorConstants.DEFAULT_HEALTH_THRESHOLD_MEM
+        data.mem = input.mem || MonitorConstants.DEFAULT_HEALTH_THRESHOLD_MEM
         data.cache = input.cache || MonitorConstants.DEFAULT_HEALTH_THRESHOLD_CACHE
-        break
-      case 'psaux': break
-      case 'host': break
+        break;
+
+      case MonitorConstants.RESOURCE_TYPE_NESTED:
+        let filteredMonitors = []
+        if (!Array.isArray(input.monitors)) {
+          errors.required('monitors', input.monitors)
+        } else if (input.monitors.length === 0) {
+          errors.required('monitors', input.monitors)
+        } else {
+          input.monitors.forEach(monitor => {
+            let id =
+              isMongoId(monitor) ? monitor :
+              (typeof monitor === 'object' && isMongoId(monitor.id)) ? monitor.id : null
+
+            if (!id) errors.invalid('monitors', input.monitors)
+
+            filteredMonitors.push({ _id })
+          })
+        }
+        data.monitors = filteredMonitors
+        break;
+
+      case MonitorConstants.RESOURCE_TYPE_PSAUX: break;
+      case MonitorConstants.RESOURCE_TYPE_HOST: break;
       default:
-        errors.invalid('type', type)
-        break
+        errors.invalid('type', type);
+        break;
     }
 
     return {
@@ -344,8 +370,8 @@ module.exports = {
  */
 function setMonitorForScraper (input) {
 	return assign({},input,{
-		name: input.name || 'scraper',
-		type: 'scraper',
+		name: (input.name || MonitorConstants.RESOURCE_TYPE_SCRAPER),
+		type: MonitorConstants.RESOURCE_TYPE_SCRAPER,
     config: {
       external: false,
       url: input.url,
@@ -362,10 +388,10 @@ function setMonitorForScraper (input) {
 	})
 }
 
-function setMonitorForFile(input) {
+function setMonitorForFile (input) {
 	return assign({},input,{
-    name: input.name || 'file',
-		type: 'file',
+		name: (input.name || MonitorConstants.RESOURCE_TYPE_FILE),
+		type: MonitorConstants.RESOURCE_TYPE_FILE,
     config: {
       file: input.file,
       file_id: input.file._id,
@@ -380,11 +406,11 @@ function setMonitorForFile(input) {
 	})
 }
 
-function setMonitorForProcess(input) {
+const setMonitorForProcess = (input) => {
   var is_regexp = Boolean(input.is_regexp=='true'||input.is_regexp===true);
   return assign({},input,{
-    name: input.name || 'process',
-    type: 'process',
+		name: (input.name || MonitorConstants.RESOURCE_TYPE_PROCESS),
+		type: MonitorConstants.RESOURCE_TYPE_PROCESS,
     config: {
       ps: {
         is_regexp: is_regexp,
@@ -396,10 +422,10 @@ function setMonitorForProcess(input) {
   })
 }
 
-function setMonitorForScript(input) {
+const setMonitorForScript = (input) => {
 	return assign({},input,{
-		name: (input.name || 'script'),
-		type: 'script',
+		name: (input.name || MonitorConstants.RESOURCE_TYPE_SCRIPT),
+		type: MonitorConstants.RESOURCE_TYPE_SCRIPT,
 		config: {
 			script_id: input.script_id,
 			script_arguments: input.script_arguments,
@@ -408,24 +434,24 @@ function setMonitorForScript(input) {
 	})
 }
 
-function setMonitorForHost(input){
+const setMonitorForHost = (input) => {
 	return {
     tags: input.tags,
     customer_name: input.customer_name,
 		host: input.host_id,
 		host_id: input.host_id,
-		type:'host',
-		name: (input.name || 'host'),
+		name: (input.name || MonitorConstants.RESOURCE_TYPE_HOST),
+		type: MonitorConstants.RESOURCE_TYPE_HOST,
 		looptime: (input.looptime || 10000),
 		config: { }
 	};
 }
 
-function setMonitorForDstat(input){
+const setMonitorForDstat = (input) => {
 	return assign({},input,{
 		host: input.host_id,
-		type: 'dstat',
-		name: (input.name || 'dstat'),
+		name: (input.name || MonitorConstants.RESOURCE_TYPE_DSTAT),
+		type: MonitorConstants.RESOURCE_TYPE_DSTAT,
 		looptime: (input.looptime || 10000),
 		config: {
 			limit: {
@@ -438,12 +464,21 @@ function setMonitorForDstat(input){
 	})
 }
 
-function setMonitorForPsaux(input){
+const setMonitorForPsaux = (input) => {
 	return assign({},input,{
 		host: input.host_id,
-		name: (input.name || 'psaux'),
-		type: 'psaux',
+		name: (input.name || MonitorConstants.RESOURCE_TYPE_PSAUX),
+		type: MonitorConstants.RESOURCE_TYPE_PSAUX,
 		looptime: (input.looptime || 15000),
 		config: {}
+	})
+}
+
+const setMonitorForNestedMonitors = (input) => {
+	return assign({}, input, {
+		name: (input.name || MonitorConstants.RESOURCE_TYPE_NESTED),
+		type: MonitorConstants.RESOURCE_TYPE_NESTED,
+		looptime: 0,
+		config: { monitors: input.monitors }
 	})
 }

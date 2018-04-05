@@ -1,19 +1,19 @@
 'use strict';
 
-const logger = require('../lib/logger')('controller:resource');
-const json = require('../lib/jsonresponse');
-const ResourceManager = require('../service/resource');
-const HostsManager = require('../service/host');
-const MonitorManager = require('../service/resource/monitor');
-const Resource = require('../entity/resource').Entity;
-const Monitor = require('../entity/monitor').Entity;
-const Host = require('../entity/host').Entity;
-const Job = require('../entity/job').Job;
-const router = require('../router');
-const dbFilter = require('../lib/db-filter');
-const audit = require('../lib/audit')
-const ACL = require('../lib/acl');
-const TopicsConstants = require('../constants/topics')
+const logger = require('../../lib/logger')('controller:resource');
+const json = require('../../lib/jsonresponse');
+const ResourceManager = require('../../service/resource');
+const HostsManager = require('../../service/host');
+const MonitorManager = require('../../service/resource/monitor');
+const Resource = require('../../entity/resource').Entity;
+const Monitor = require('../../entity/monitor').Entity;
+const Host = require('../../entity/host').Entity;
+const Job = require('../../entity/job').Job;
+const router = require('../../router');
+const dbFilter = require('../../lib/db-filter');
+const audit = require('../../lib/audit')
+const ACL = require('../../lib/acl');
+const TopicsConstants = require('../../constants/topics')
 
 module.exports = function (server, passport) {
   const crudTopic = TopicsConstants.monitor.crud
@@ -61,15 +61,14 @@ module.exports = function (server, passport) {
     ]),
     controller.remove,
     audit.afterRemove('resource',{ display: 'name', topic: crudTopic })
-  );
-
+  )
 
   var updateMiddlewares = middlewares.concat([
     router.requireCredential('agent'),
     router.resolve.idToEntity({param:'resource',required:true}),
     //router.resolve.idToEntity({param:'host_id',entity:'host',into:'host'}),
     router.filter.spawn({filter:'emailArray',param:'acl'})
-  ]);
+  ])
 
   server.patch(
     '/:customer/resource/:resource',
@@ -295,7 +294,6 @@ const controller = {
 
     const doUpdate = () => {
       ResourceManager.update({
-        user_id: req.user._id,
         resource: resource,
         updates: updates
       },(err,resource) => {

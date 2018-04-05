@@ -33,6 +33,7 @@ module.exports = {
     require('../controllers/psaux')(server,passport);
     require('../controllers/monitor')(server,passport);
     require('../controllers/resource')(server,passport);
+    require('../controllers/resource/nested')(server,passport);
     require('../controllers/script')(server,passport);
     require('../controllers/file')(server,passport);
     require('../controllers/recipe')(server,passport);

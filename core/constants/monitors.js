@@ -27,24 +27,41 @@ module.exports = Object.freeze({
   RESOURCE_TYPE_PROCESS: 'process',
   RESOURCE_TYPE_SCRAPER: 'scraper',
   RESOURCE_TYPE_FILE: 'file',
+  RESOURCE_TYPE_NESTED: 'nested',
   MONITOR_SEVERITY_LOW: 'LOW',
   MONITOR_SEVERITY_HIGH: 'HIGH',
   MONITOR_SEVERITY_CRITICAL: 'CRITICAL',
   get MONITOR_STATES () {
     return [
-      this.RESOURCE_FAILURE,
       this.RESOURCE_NORMAL,
-      this.RESOURCE_STOPPED,
       this.RESOURCE_CHANGED,
+      this.RESOURCE_FAILURE,
+      this.RESOURCE_STOPPED,
+      this.AGENT_STOPPED,
       this.RESOURCE_ERROR,
-      this.AGENT_STOPPED
+    ]
+  },
+  //
+  // STATES SORT ORDER
+  //
+  // Monitors can be in only one of the following states at the time.
+  //
+  // normal, failure, updates_stopped. 
+  //
+  // Can change from one state to another
+  //
+  get MONITOR_STATES_ORDER () {
+    return [
+      this.RESOURCE_STOPPED,
+      this.RESOURCE_FAILURE,
+      this.RESOURCE_NORMAL
     ]
   },
   get MONITOR_SEVERITIES () {
     return [
-      this.MONITOR_SEVERITY_LOW,
+      this.MONITOR_SEVERITY_CRITICAL,
       this.MONITOR_SEVERITY_HIGH,
-      this.MONITOR_SEVERITY_CRITICAL
+      this.MONITOR_SEVERITY_LOW
     ]
   }
 })

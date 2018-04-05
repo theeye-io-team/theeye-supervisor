@@ -39,23 +39,20 @@ require('./environment').setenv(function(){
     const Events = require('./service/events')
 
     scheduler.initialize(() => {
-      require('./service/monitor').start()
-
       logger.log('initializing server')
-
       const App = require('./app')
       App.initialize(err => {
         App.jobDispatcher = require('./service/job')
         App.taskManager = require('./service/task')
         App.customer = require('./service/customer')
+        App.resource = require('./service/resource')
         App.scheduler = scheduler
         App.eventDispatcher = Events.createDispatcher() 
         App.notifications = require('./service/notification')
         App.start()
-
         logger.log('supervisor api is running')
+        require('./service/monitor').start()
       })
-
     })
   })
 })

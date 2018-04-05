@@ -32,7 +32,7 @@ module.exports = function (server, passport) {
     router.resolve.customerNameToEntity({}),
     router.ensureCustomer,
     router.resolve.hostnameToHost({})
-  ], controller.fetch)
+  ], controller.config)
 
   server.get('/:customer/agent/credentials', [
     passport.authenticate('bearer', {session:false}),
@@ -91,7 +91,7 @@ const controller = {
    * @path /:customer/agent/:hostname/config
    *
    */
-  fetch (req, res, next) {
+  config (req, res, next) {
     const user = req.user
     const host = req.host
     const customer = req.customer
@@ -145,7 +145,7 @@ const controller = {
   }
 }
 
-function generateAgentConfig (monitors,next) {
+const generateAgentConfig = (monitors,next) => {
   var workers = [];
   async.each(monitors,function(monitor,doneIteration){
     var config = {

@@ -245,7 +245,7 @@ Scheduler.prototype = {
 
     var jobData = agendaJob.attrs.data;
 
-    function JobError (err) {
+    const JobError = (err) => {
       agendaJob.fail(err)
       agendaJob.save()
       return done(err)
@@ -259,15 +259,11 @@ Scheduler.prototype = {
     }, function (err, data) {
       const task = data.task
 
-      if (err) {
-        return new JobError(err)
-      }
-
-      // if any member isn't here: fail and done.
-      var undefinedProperty = Object.keys(data).find(key => !data[key])
-      if (undefinedProperty) {
-        return JobError( new Error(`${undefinedProperty} (${jobData[undefinedProperty + '_id']}) is missing`) )
-      }
+      if (err) return new JobError(err)
+      if (!data.customer) return new JobError( new Error('customer %s is missing', jobData.customer_id) )
+      if (!data.task) return new JobError( new Error('task %s is missing', jobData.task_id) )
+      if (!data.host) return new JobError( new Error('host %s is missing', jobData.host_id) )
+      if (!data.user) return new JobError( new Error('user %s is missing', jobData.user_id) )
 
       JobDispatcher.create({
         event: jobData.event,

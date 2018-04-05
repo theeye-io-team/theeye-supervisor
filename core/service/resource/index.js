@@ -10,7 +10,6 @@ const NotificationService = require('../notification')
 const ResourceMonitorService = require('./monitor')
 const ResourcesNotifications = require('./notifications')
 
-const EventConstants = require('../../constants/events')
 const TopicsConstants = require('../../constants/topics')
 const Constants = require('../../constants')
 const MonitorConstants = require('../../constants/monitors')
@@ -49,7 +48,7 @@ function Service (resource) {
     elastic.submit(resource.customer_name, topic, data) // topic = topics.monitor.state
   }
 
-  const sendStateChangeEventNotification = (resource, eventName, customEvent) => {
+  const sendStateChangeEventNotification = (resource, input) => {
     const topic = TopicsConstants.monitor.state
     NotificationService.generateSystemNotification({
       topic: topic,
@@ -59,10 +58,12 @@ function Service (resource) {
         hostname: resource.hostname,
         organization: resource.customer_name,
         operation: Constants.UPDATE,
-        monitor_event: eventName,
-        custom_event: customEvent
+        monitor_event: input.event_name,
+        custom_event: input.custom_event
       }
     })
+
+    App.eventDispatcher.dispatch({ topic, resource, input })
   }
 
   const sendResourceEmailAlert = (resource,input) => {
@@ -109,6 +110,19 @@ function Service (resource) {
     })
   }
 
+  const getEventSeverity = (resource) => {
+    const hasSeverity = resource.failure_severity &&
+      MonitorConstants.MONITOR_SEVERITIES.indexOf(
+        resource.failure_severity.toUpperCase()
+      ) !== -1
+
+    // severity is set and is valid
+    if (hasSeverity) return resource.failure_severity;
+
+    // else try to determine the severity
+    return (resource.type == MonitorConstants.RESOURCE_TYPE_DSTAT) ? 'LOW' : 'HIGH'
+  }
+
   /**
    *
    * @param {String} resource_id
@@ -135,7 +149,7 @@ function Service (resource) {
         else if (!event) return;
 
         App.eventDispatcher.dispatch({
-          eventName: EventConstants.WORKFLOW_EVENT,
+          topic: TopicsConstants.task.execution,
           event,
           data
         })
@@ -209,7 +223,7 @@ function Service (resource) {
 
         logStateChange(resource, input)
         dispatchWorkflowEvent(resource._id, input.event_name, input.data)
-        sendStateChangeEventNotification(resource, input.event_name, input.custom_event)
+        sendStateChangeEventNotification(resource, input)
         sendResourceEmailAlert(resource, input)
       }
     }
@@ -247,7 +261,7 @@ function Service (resource) {
 
         logStateChange(resource, input)
         dispatchWorkflowEvent(resource._id, input.event_name, input.data)
-        sendStateChangeEventNotification(resource, input.event_name, input.custom_event)
+        sendStateChangeEventNotification(resource, input)
       }
 
       logger.log('state restarted');
@@ -279,7 +293,7 @@ function Service (resource) {
 
       logStateChange(resource, input)
       dispatchWorkflowEvent(resource._id, input.event_name, input.data)
-      sendStateChangeEventNotification(resource, input.event_name, input.custom_event)
+      sendStateChangeEventNotification(resource, input)
     }
 
     // current resource state
@@ -321,7 +335,7 @@ function Service (resource) {
     input.failure_severity = getEventSeverity(resource)
     logStateChange(resource, input)
     dispatchWorkflowEvent(resource._id, input.event_name, input.data)
-    sendStateChangeEventNotification(resource, input.event_name, input.custom_event)
+    sendStateChangeEventNotification(resource, input)
     sendResourceEmailAlert(resource, input)
   }
 
@@ -399,7 +413,18 @@ function Service (resource) {
 module.exports = Service;
 
 Service.populate = function (resource,done) {
-  return resource.populate({},done)
+  //return resource.populate({},done)
+  MonitorModel
+    .findOne({ resource_id: resource._id })
+    .exec((err, monitor) => {
+      if (err) {
+        logger.error(err)
+        return done(err)
+      }
+
+      resource.monitor = monitor
+      done(null, resource)
+    })
 }
 
 Service.populateAll = function (resources,next) {
@@ -447,6 +472,7 @@ Service.findHostResources = function(host,options,done) {
  * create entities
  * @author Facugon
  * @param {Object} input
+ * @property {} input.
  *
  */
 Service.create = function (input, next) {
@@ -455,9 +481,7 @@ Service.create = function (input, next) {
   var type = (input.type||input.monitor_type)
 
   ResourceMonitorService.setMonitorData(type,input,function(error,monitor_data){
-    if (error) {
-      return next(error)
-    }
+    if (error) return next(error)
     if (!monitor_data) {
       var e = new Error('invalid resource data')
       e.statusCode = 400
@@ -470,9 +494,12 @@ Service.create = function (input, next) {
         type: type,
       }),
       monitor_data: monitor_data
-    }, function (error,result) {
+    }, function (err,result) {
+      if (err) return next(err)
+
       var monitor = result.monitor;
       var resource = result.resource;
+      resource.monitor = monitor
       logger.log('resource & monitor created');
 
       const topic = TopicsConstants.monitor.crud
@@ -496,7 +523,7 @@ Service.create = function (input, next) {
   })
 }
 
-Service.createDefaultEvents = (monitor,customer,done) => {
+Service.createDefaultEvents = function (monitor,customer,done) {
   // CREATE DEFAULT EVENT
   const base = {
     customer_id: customer._id,
@@ -537,19 +564,19 @@ Service.update = function(input,next) {
   const updates = input.updates
   const resource = input.resource
 
-  logger.log('updating monitor %j',updates);
+  logger.log('updating monitor %j', updates)
 
-  // remove cannot change from updates if present
+  // remove properties that cannot be changed from updates, if present
   delete updates.monitor
   delete updates.customer
   delete updates.user_id
   delete updates.user
 
-  // if model is changed just remove the template link
+  // when model is changed remove the linked template
   updates.template = null
   updates.template_id = null
 
-  resource.update(updates,(err) => {
+  resource.update(updates, (err) => {
     if (err) {
       logger.error(err)
       return next(err)
@@ -557,7 +584,7 @@ Service.update = function(input,next) {
 
     MonitorModel.findOne({
       resource_id: resource._id
-    },function(error,monitor){
+    }, function (error,monitor) {
       if (error) {
         logger.error(err)
         return next(error)
@@ -591,20 +618,6 @@ Service.update = function(input,next) {
       })
     })
   })
-}
-
-const getEventSeverity = (resource) => {
-
-  const hasSeverity = resource.failure_severity &&
-    MonitorConstants.MONITOR_SEVERITIES.indexOf(
-      resource.failure_severity.toUpperCase()
-    ) !== -1
-
-  // severity is set and is valid
-  if (hasSeverity) return resource.failure_severity;
-
-  // else try to determine the severity
-  return (resource.type == MonitorConstants.RESOURCE_TYPE_DSTAT) ? 'LOW' : 'HIGH'
 }
 
 /**
@@ -848,6 +861,62 @@ Service.createFromTemplate = function(options) {
   })
 }
 
+Service.onScriptRemoved = function (script) {
+  updateMonitorsWithDeletedScript(script);
+}
+
+Service.onScriptUpdated = function (script) {
+  notifyScriptMonitorsUpdate(script);
+}
+
+/**
+ *
+ * @param {Array<Resource>} resources models
+ * @return {Resource} model
+ *
+ */
+Service.getResourcesWorstState = function (resources) {
+  // check first if resources are ok
+  let workingFine = true
+  resources.forEach(r => {
+    // is a recognized state
+    if (MonitorConstants.MONITOR_STATES_ORDER.indexOf(r.state) !== -1) {
+      // ... and is not normal
+      if (r.state !== MonitorConstants.RESOURCE_NORMAL) {
+        workingFine = false
+      }
+    } else {
+      // or state is not recognized ?
+      workingFine = false
+    }
+  })
+
+  if (workingFine) {
+    return MonitorConstants.RESOURCE_NORMAL
+  }
+
+  // then sort by state
+  resources.sort( (ra, rb) => {
+    let stOrderA = MonitorConstants.MONITOR_STATES_ORDER.indexOf(ra.state)
+    let stOrderB = MonitorConstants.MONITOR_STATES_ORDER.indexOf(rb.state)
+
+    // compare state order
+    if (stOrderA < stOrderB) { return -1 } // go first
+    if (stOrderA > stOrderB) { return 1 } // go after
+    else {
+      // if same state, compare failure severity order
+      let sevOrderA = MonitorConstants.MONITOR_SEVERITIES.indexOf(ra.failure_severity)
+      let sevOrderB = MonitorConstants.MONITOR_SEVERITIES.indexOf(rb.failure_severity)
+      if (sevOrderA < sevOrderB) { return -1 } // go first
+      if (sevOrderA > sevOrderB) { return 1 } // go after
+      return 0 // mantain order
+    }
+  })
+
+  // return the state of the first element in the list
+  return resources[0].state
+}
+
 /**
  *
  *
@@ -877,14 +946,16 @@ const handleHostIdAndData = (hostId, input, doneFn) => {
  * create entities
  *
  */
-function createResourceAndMonitor (input, done) {
+const createResourceAndMonitor = (input, done) => {
   var monitor_data = input.monitor_data;
   var resource_data = input.resource_data;
 
   logger.log('creating resource');
-  ResourceModel.create(resource_data, function(error,resource){
-    if(error) throw error;
-    else {
+  ResourceModel.create(resource_data, function(err,resource){
+    if (err) {
+      logger.error('%o',err)
+      return done(err)
+    } else {
       logger.log('creating resource %s monitor', resource._id);
       logger.log(monitor_data);
 
@@ -895,7 +966,11 @@ function createResourceAndMonitor (input, done) {
       MonitorModel.create(
         monitor_data,
         function(error, monitor){
-          if(error) throw error;
+          if (error) {
+            logger.error('%o',err)
+            return done(err)
+          }
+
           return done(null,{
             'resource': resource, 
             'monitor': monitor 
@@ -913,7 +988,7 @@ function createResourceAndMonitor (input, done) {
  * @return null
  *
  */
-function updateMonitorsWithDeletedScript (script,done) {
+const updateMonitorsWithDeletedScript = (script,done) => {
   done=done||function(){};
 
   logger.log('searching script "%s" resource-monitor', script._id);
@@ -937,7 +1012,7 @@ function updateMonitorsWithDeletedScript (script,done) {
   );
 }
 
-function detachMonitorScript (monitor, done) {
+const detachMonitorScript = (monitor, done) => {
   done=done||function(){};
   if (!monitor.resource._id) {
     var err = new Error('populate monitor first. resource object required');
@@ -970,7 +1045,7 @@ function detachMonitorScript (monitor, done) {
 * @return null
 *
 */
-function notifyScriptMonitorsUpdate (script) {
+const notifyScriptMonitorsUpdate = (script) => {
   var query = {
     type: 'script',
     script: script._id
@@ -996,14 +1071,6 @@ function notifyScriptMonitorsUpdate (script) {
       AgentUpdateJob.create({ host_id: host })
     }
   })
-}
-
-Service.onScriptRemoved = function (script) {
-  updateMonitorsWithDeletedScript(script);
-}
-
-Service.onScriptUpdated = function(script){
-  notifyScriptMonitorsUpdate(script);
 }
 
 /**

@@ -3,18 +3,17 @@ const App = require('../../app')
 const Task = require('../../entity/task').Entity
 const CustomerService = require('../customer')
 const JobConstants = require('../../constants/jobs')
-
-const WORKFLOW_EVENT = 'workflow-event'
+const TopicConstants = require('../../constants/topics')
 
 module.exports = function (payload) {
-  if (payload.eventName === WORKFLOW_EVENT) {
+  if (payload.topic === TopicConstants.task.execution) {
     executeWorkflowTasks(payload)
   }
 }
 
 /**
  * @param {Event} event entity to process
- * @param {Object} event_data event extra data generated
+ * @param {Object} data event extra data generated
  */
 const executeWorkflowTasks = ({ event, data }) => {
   Task.find({ triggers: event._id }, (err, tasks) => {

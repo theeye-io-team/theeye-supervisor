@@ -1,9 +1,10 @@
 'use strict';
 
-const Schema = require('mongoose').Schema;
-const ObjectId = Schema.Types.ObjectId;
-const debug = require('debug')('eye:entity:monitor');
-const _ = require('lodash');
+const Schema = require('mongoose').Schema
+const ObjectId = Schema.Types.ObjectId
+const debug = require('debug')('eye:entity:monitor')
+const lodashAssign = require('lodash/assign')
+const lodashAfter = require('lodash/after')
 
 if (!RegExp.escape) {
   RegExp.escape = function(s){
@@ -62,7 +63,7 @@ EntitySchema.statics.publishAll = function(entities, next){
   if(!entities || entities.length == 0) return next([]);
 
   var published = [];
-  var donePublish = _.after(entities.length, function(){
+  var donePublish = lodashAfter(entities.length, function(){
     next(null, published);
   });
 
@@ -93,7 +94,7 @@ EntitySchema.statics.publishAll = function(entities, next){
  * resource/monitor.js
  *
  *
- * UGLY LIKE SHIT I KNOW....
+ * UGLY SHIT, I KNOW....
  *
  *
  *
@@ -122,7 +123,10 @@ EntitySchema.methods.setUpdates = function(input, next) {
   monitor.template_id = null
 
   var config = monitor.config;
-  if (input.config) _.assign(input, input.config);
+  if (input.config) {
+    lodashAssign(input, input.config);
+  }
+
   switch (type) {
     case 'scraper':
       //monitor.host_id = input.external_host_id || input.host_id;
@@ -170,18 +174,20 @@ EntitySchema.methods.setUpdates = function(input, next) {
       if (input.script_runas) config.script_runas = input.script_runas;
       break;
     case 'dstat':
-      if (input.limit) _.assign(input, input.limit);
+      if (input.limit) lodashAssign(input, input.limit);
       if (input.cpu) config.limit.cpu = input.cpu;
       if (input.mem) config.limit.mem = input.mem;
       if (input.cache) config.limit.cache = input.cache;
       if (input.disk) config.limit.disk = input.disk;
       break;
+    case 'nested':
+      config.monitors = input.monitors
     case 'host':
     case 'psaux':
       // no custom configuration
       break;
     default: 
-      var error = new Error('monitor type "' + type + '" unsupported') ;
+      var error = new Error('monitor type "' + type + '" unsupported')
       debug(error.message);
       return next(error); 
       break;
