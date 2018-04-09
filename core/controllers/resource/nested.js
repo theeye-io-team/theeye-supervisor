@@ -26,7 +26,7 @@ module.exports = (server, passport) => {
     controller.create
   )
 
-  server.patch(
+  server.put(
     '/resource/nested/:resource',
     middlewares.concat([
       router.requireCredential('admin'),
@@ -39,7 +39,7 @@ module.exports = (server, passport) => {
         param: 'acl'
       })
     ]),
-    controller.update
+    controller.replace
   )
 }
 
@@ -51,7 +51,7 @@ const controller = {
     const customer = req.customer
     const body = req.body
 
-    let params = MonitorManager.validateData(body)
+    let params = MonitorManager.validateData(filterRequestBody(body))
     if (params.errors && params.errors.hasErrors()) {
       return res.send(400, params.errors)
     }
@@ -61,10 +61,6 @@ const controller = {
     input.customer = customer
     input.customer_id = customer.id
     input.customer_name = customer.name
-    input.type = MonitorConstants.RESOURCE_TYPE_NESTED
-    // clean
-    input.template = null
-    input.monitor = null // will be created automatically
 
     App.resource.create(input, (err, result) => {
       if (err) {
@@ -76,24 +72,25 @@ const controller = {
     })
   },
   /**
-   * @method PATCH
+   * @method PUT
    */
-  update (req, res, next) {
+  replace (req, res, next) {
     const resource = req.resource
     const body = req.body
-    var updates
 
-    const params = MonitorManager.validateData(body)
+    const params = MonitorManager.validateData(
+      filterRequestBody(
+        Object.assign({}, body, { acl: req.acl })
+      )
+    )
+
     if (params.errors && params.errors.hasErrors()) {
       return res.send(400, params.errors)
     }
 
-    updates = params.data
-    updates.acl = req.acl
-
     App.resource.update({
       resource,
-      updates
+      updates: params.data 
     }, (err, resource) => {
       if (err) {
         logger.error(err)
@@ -105,5 +102,17 @@ const controller = {
         })
       }
     })
+  }
+}
+
+const filterRequestBody = (body) => {
+  return {
+    name: body.name,
+    tags: body.tags,
+    acl: body.acl,
+    monitors: body.monitors,
+    description: body.description,
+    failure_severity: body.failure_severity,
+    type: MonitorConstants.RESOURCE_TYPE_NESTED
   }
 }

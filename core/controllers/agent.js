@@ -216,11 +216,14 @@ const generateAgentConfig = (monitors,next) => {
         case 'host':
           configDone();
           break;
+        case 'nested':
+          configDone();
+          break;
         default:
-          let msg=`unhandled monitor type ${monitor.type}`;
-          let error = new Error();
-          logger.log(error);
-          configDone(error);
+          let msg=`unhandled monitor type ${monitor.type}`
+          let err = new Error(msg)
+          logger.log(err)
+          configDone(err)
           break;
       }
     })(function(error, config){

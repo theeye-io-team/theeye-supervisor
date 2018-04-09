@@ -122,9 +122,9 @@ EntitySchema.methods.setUpdates = function(input, next) {
   monitor.template = null
   monitor.template_id = null
 
-  var config = monitor.config;
+  var config = monitor.config || {}
   if (input.config) {
-    lodashAssign(input, input.config);
+    lodashAssign(input, input.config)
   }
 
   switch (type) {

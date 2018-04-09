@@ -576,7 +576,7 @@ Service.update = function(input,next) {
   updates.template = null
   updates.template_id = null
 
-  resource.update(updates, (err) => {
+  resource.update(Object.assign({},updates), (err) => {
     if (err) {
       logger.error(err)
       return next(err)

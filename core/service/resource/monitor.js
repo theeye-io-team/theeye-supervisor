@@ -242,13 +242,15 @@ module.exports = {
           errors.required('monitors', input.monitors)
         } else {
           input.monitors.forEach(monitor => {
-            let id =
+            let _id =
               isMongoId(monitor) ? monitor :
               (typeof monitor === 'object' && isMongoId(monitor.id)) ? monitor.id : null
 
-            if (!id) errors.invalid('monitors', input.monitors)
-
-            filteredMonitors.push({ _id })
+            if (!_id) {
+              errors.invalid('monitors', input.monitors)
+            } else {
+              filteredMonitors.push({ _id, id: _id })
+            }
           })
         }
         data.monitors = filteredMonitors
