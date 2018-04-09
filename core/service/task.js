@@ -341,7 +341,7 @@ const TaskService = {
       App.scheduler.getTaskSchedule(task._id, (err, schedules) => {
         if (err) {
           return next(err)
-        } else { 
+        } else {
           data.schedules = schedules
           next(null, schedules)
         }
@@ -382,7 +382,9 @@ const TaskService = {
             filteredArguments[order] = def.value
           } else if (
             def.type === TaskConstants.ARGUMENT_TYPE_INPUT ||
-            def.type === TaskConstants.ARGUMENT_TYPE_SELECT
+            def.type === TaskConstants.ARGUMENT_TYPE_SELECT ||
+            def.type === TaskConstants.ARGUMENT_TYPE_DATE ||
+            def.type === TaskConstants.ARGUMENT_TYPE_FILE
           ) {
             // require user input
             const found = argumentsValues.find(reqArg => {
