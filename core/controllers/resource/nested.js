@@ -112,7 +112,7 @@ const filterRequestBody = (body) => {
     acl: body.acl,
     monitors: body.monitors,
     description: body.description,
-    failure_severity: body.failure_severity,
+    failure_severity: body.failure_severity || MonitorConstants.MONITOR_SEVERITY_HIGH,
     type: MonitorConstants.RESOURCE_TYPE_NESTED
   }
 }
