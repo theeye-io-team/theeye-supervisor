@@ -48,19 +48,10 @@ function defaultTypeEvent (event_name) {
   switch (event_name) {
     case Constants.RESOURCE_SUCCESS:
     case Constants.RESOURCE_NORMAL:
-      spec = {
-        message: function(resource, event_data) {
-          return `${resource.hostname} ${resource.name} checks recovered.`
-        } ,
-        subject: function(resource, event_data) {
-          return `[${this.severity}] ${resource.name} recovered`
-        }
-      };
-      break;
     case Constants.RESOURCE_RECOVERED:
       spec = {
         message: function(resource, event_data) {
-          return `${resource.hostname} ${resource.name} started reporting updates again.`
+          return `${resource.hostname||''} ${resource.name} is now ok.`
         } ,
         subject: function(resource, event_data) {
           return `[${this.severity}] ${resource.name} recovered`
@@ -70,7 +61,7 @@ function defaultTypeEvent (event_name) {
     case Constants.RESOURCE_STOPPED:
       spec = {
         message: function(resource, event_data) {
-          return `${resource.hostname} ${resource.name} stopped reporting updates.`
+          return `${resource.hostname} ${resource.name} stopped reporting.`
         } ,
         subject: function(resource, event_data) {
           return `[${this.severity}] ${resource.name} unreachable`
@@ -80,7 +71,7 @@ function defaultTypeEvent (event_name) {
     case Constants.AGENT_STOPPED:
       spec = {
         message: function(resource, event_data) {
-          return `${resource.hostname} host agent stopped reporting updates.`
+          return `${resource.hostname} host agent stopped reporting.`
         } ,
         subject: function(resource, event_data) {
           return `[${this.severity}] ${resource.hostname} unreachable`
@@ -92,7 +83,7 @@ function defaultTypeEvent (event_name) {
     default:
       spec = {
         message: function(resource, event_data) {
-          return `${resource.hostname} ${resource.name} checks failed.`
+          return `${resource.hostname||''} ${resource.name} checks failed.`
         } ,
         subject: function(resource, event_data) {
           return `[${this.severity}] ${resource.name} failure`

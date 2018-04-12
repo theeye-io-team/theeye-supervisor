@@ -82,6 +82,7 @@ module.exports = {
   },
   process: { type: MonitorConstants.RESOURCE_TYPE_PROCESS, events: [] },
   scraper: { type: MonitorConstants.RESOURCE_TYPE_SCRAPER, events: [] },
+  nested: { type: MonitorConstants.RESOURCE_TYPE_NESTED, events: [] },
   file: {
     type: MonitorConstants.RESOURCE_TYPE_FILE, 
     events: [{
