@@ -852,18 +852,21 @@ const copyResourcesToHost = (host, templates, customer, next) => {
   if (templates.length===0) return next(null,[])
 
   for (let i=0; i<templates.length; i++) {
-    ResourceService.createFromTemplate({
-      customer: customer,
-      template: templates[i],
-      host: host,
-      done: (err, resource) => {
-        if (err) {
-          logger.error('%o',err)
-        } else {
-          resources.push(resource)
+    let template = templates[i]
+    template.populate({}, (err) => {
+      ResourceService.createFromTemplate({
+        customer: customer,
+        template: template,
+        host: host,
+        done: (err, resource) => {
+          if (err) {
+            logger.error('%o',err)
+          } else {
+            resources.push(resource)
+          }
+          done()
         }
-        done()
-      }
+      })
     })
   }
 }

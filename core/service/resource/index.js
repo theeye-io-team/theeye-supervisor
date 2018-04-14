@@ -821,14 +821,14 @@ Service.createFromTemplate = function(options) {
   const input = template.toObject()
   input.monitor_template = template.monitor_template.toObject()
 
-  //if (template.type === 'dstat') {
-  //  input.name = 'Health'
-  //  input.monitor_template.name = 'Health'
-  //}
-  //if (template.type === 'psaux') {
-  //  input.name = 'Process List'
-  //  input.monitor_template.name = 'Process List'
-  //}
+  if (template.type === 'dstat') {
+    input.name = 'Health'
+    input.monitor_template.name = 'Health'
+  }
+  if (template.type === 'psaux') {
+    input.name = 'Processes List'
+    input.monitor_template.name = 'Process List'
+  }
 
   var resource = generateResourceModel(input)
   var monitor = generateMonitorModel(input)
