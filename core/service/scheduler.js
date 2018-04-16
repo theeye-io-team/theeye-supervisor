@@ -245,7 +245,7 @@ Scheduler.prototype = {
 
     var jobData = agendaJob.attrs.data;
 
-    const JobError = (err) => {
+    function JobError (err) {
       agendaJob.fail(err)
       agendaJob.save()
       return done(err)
