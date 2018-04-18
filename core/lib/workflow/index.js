@@ -55,27 +55,24 @@ function Workflow () {
   }
 
   this.getPath = function (node) {
-    var paths = graphlib.alg.dijkstra(_graph, node);
-
     var g = new Graph();
 
-    Object.keys(paths).forEach( node => {
-      var path = paths[node];
-      if( !isNaN(parseInt(path.distance)) && isFinite(path.distance) ){
-        if( !g.node(node) ){
-          g.setNode( node, _graph.node(node) );
-        }
+    if( !g.node(node) ){
+      g.setNode( node, _graph.node(node) )
+    }
 
-        if( path.hasOwnProperty('predecessor') ) {
-          var predecessor = path.predecessor;
-
-          if( !g.node(predecessor) ){
-            g.setNode( predecessor, _graph.node(predecessor) );
-          }
-          g.setEdge( predecessor, node );
+    function addSuccessors(node) {
+      var successors = _graph.successors(node)
+      successors.forEach(function(succesor) {
+        if( !g.node(succesor) ){
+          g.setNode( succesor, _graph.node(succesor) )
         }
-      }
-    });
+        g.setEdge( node, succesor );
+        addSuccessors(succesor)
+      })
+    }
+
+    addSuccessors(node)
 
     return graphlib.json.write(g);
   }
