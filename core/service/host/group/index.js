@@ -171,8 +171,6 @@ const Service = module.exports = {
             Service.populate(group,(err) => {
               if (err) return next(err)
 
-              next(err, group)
-
               if (group.hosts.length > 0) {
                 /**
                  * copy template configs to the attached hosts.
@@ -189,7 +187,11 @@ const Service = module.exports = {
               }
 
               if (input.host_origin) {
-                addHostOriginToGroup(input.host_origin, group, customer, user)
+                addHostOriginToGroup(input.host_origin, group, customer, user, function (err) {
+                  next(err, group)
+                })
+              } else {
+                next(err, group)
               }
             })
           })
@@ -233,7 +235,7 @@ const Service = module.exports = {
     // input.hosts is an array of strings
     const newHosts = input.hosts.filter(idstr => group.hosts.indexOf(idstr) === -1)
 
-    /* 
+    /*
      * @todo match hosts with hostname_regex, add matches to group.hosts
      */
     //const regexHasChanged = Boolean(input.hostname_regex !== group.hostname_regex)
@@ -400,11 +402,11 @@ const createRecipe = (options) => {
 
 /**
  *
- * @summary remove host task & resources and add to the template 
+ * @summary remove host task & resources and add to the template
  * @param {String} host_id
  * @param {HostGroup} group
  * @param {Customer} customer
- * @param {User} user 
+ * @param {User} user
  * @param {Function(Error)} next
  */
 const addHostOriginToGroup = (host_id, group, customer, user, next) => {
@@ -571,7 +573,7 @@ const generateHostGroupTemplates = (group,tasks,resources,triggers,customer,user
  *
  * (source_model_id is available when the template was generated from another model)
  *
- * Here source_model_id is used to match the trigger of the original task to 
+ * Here source_model_id is used to match the trigger of the original task to
  * the task template and register triggers relations within the host template.
  * This enables the template to recreate tasks and monitors relations at the
  * moment of host registration.
