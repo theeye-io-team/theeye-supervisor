@@ -310,7 +310,8 @@ const TaskService = {
             def.type === TaskConstants.ARGUMENT_TYPE_INPUT ||
             def.type === TaskConstants.ARGUMENT_TYPE_SELECT ||
             def.type === TaskConstants.ARGUMENT_TYPE_DATE ||
-            def.type === TaskConstants.ARGUMENT_TYPE_FILE
+            def.type === TaskConstants.ARGUMENT_TYPE_FILE ||
+            def.type === TaskConstants.ARGUMENT_TYPE_REMOTE_OPTIONS
           ) {
             // require user input
             const found = argumentsValues.find(reqArg => {
