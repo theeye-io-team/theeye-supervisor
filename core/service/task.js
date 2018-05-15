@@ -118,56 +118,6 @@ const TaskService = {
   },
   /**
    *
-   * @param {Object} input
-   * @param {Function} next
-   *
-   */
-  //createManyTasks (input, next) {
-  //  const hosts = input.hosts
-  //  logger.log('creating tasks')
-  //  asyncMap( hosts, (hostId, done) => {
-  //    if (isMongoId(hostId)) {
-  //      logger.log('creating task on hosts %j', hosts)
-  //      Host.findById(hostId, function(error, host){
-  //        if (error) return done(error)
-  //        if (!host) return done(new Error('not found host id ' + hostId))
-
-  //        const data = lodashExtend({}, input, {
-  //          host: host,
-  //          host_id: host._id,
-  //          customer_id: input.customer._id,
-  //          customer: input.customer._id,
-  //          user_id: input.user._id
-  //        })
-
-  //        TaskService.create(data, (err,task) => {
-
-  //          const topic = config.notifications.topics.task.crud
-  //          elastic.submit(input.customer.name, topic, { // topic = config.notifications.topics.task.crud , BULK CREATE
-  //            hostname: task.hostname || 'undefined',
-  //            model_id: task._id,
-  //            model_name: task.name,
-  //            model_type: task._type,
-  //            organization: input.customer.name,
-  //            user_id: input.user._id,
-  //            user_name: input.user.username,
-  //            user_email: input.user.email,
-  //            operation: Constants.CREATE
-  //          })
-
-  //          // turn task object into plain object, populate subdocuments
-  //          TaskService.populate(task, done)
-  //        })
-  //      })
-  //    } else {
-  //      done(new Error('invalid host id ' + hostId), null)
-  //    }
-  //  }, (err, tasks) => {
-  //    next(err, tasks)
-  //  })
-  //},
-  /**
-   *
    * @author Facundo
    * @param {Object} options
    * @property {TaskTemplate} options.template
@@ -201,7 +151,6 @@ const TaskService = {
     delete data.user_id
 
     self.create(data,(err,task) => {
-      //self.populate(task,done)
       done(err, task)
     })
   },
@@ -225,29 +174,6 @@ const TaskService = {
       logger.data('%j', task)
       return done(null,task)
     }
-    const createTaskEvents = (task) => {
-      TaskEvent.create(
-        {
-          name: 'success',
-          customer: customer,
-          customer_id: customer._id,
-          emitter: task,
-          emitter_id: task._id,
-        },
-        {
-          name: 'failure',
-          customer: customer,
-          customer_id: customer._id,
-          emitter: task,
-          emitter_id: task._id,
-        },
-        (err) => {
-          if (err) {
-            logger.error(err)
-          }
-        }
-      )
-    }
     const createTags = (tags) => {
       if (tags && Array.isArray(tags)) {
         Tag.create(tags, customer)
@@ -264,7 +190,7 @@ const TaskService = {
         return done(err)
       }
       createTags(input.tags)
-      createTaskEvents(task)
+      createTaskEvents(task, customer)
       created(task)
     })
   },
@@ -419,6 +345,20 @@ const TaskService = {
       return next(err)
     }
     next(null,filteredArguments)
+  },
+  /**
+   *
+   * Given a task document, replace its id and set to new, ready to persist.
+   * Also create new events
+   *
+   * @param {Task} task
+   * @param {Function} next
+   *
+   */
+  mutateNew (task, next) {
+    task.mutateNew()
+    task.save()
+    createTaskEvents(task, task.customer, next)
   }
 }
 
@@ -515,4 +455,29 @@ const taskToTemplate = (id, next) => {
 
     task.toTemplate(next);
   });
+}
+
+const createTaskEvents = (task, customer, next) => {
+  next||(next=function(){})
+
+  TaskEvent.create(
+    {
+      name: 'success',
+      customer: customer,
+      customer_id: customer._id,
+      emitter: task,
+      emitter_id: task._id,
+    },
+    {
+      name: 'failure',
+      customer: customer,
+      customer_id: customer._id,
+      emitter: task,
+      emitter_id: task._id,
+    },
+    (err, events) => {
+      if (err) { logger.error(err) }
+      return next(err, events)
+    }
+  )
 }

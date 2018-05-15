@@ -164,10 +164,9 @@ const generateAgentConfig = (monitors,next) => {
             if (err) {
               configDone(err);
             } else if (file===null) {
-              var error = new Error('Invalid or not present file id in worker config. File specification not available');
-              error.statusCode = 500;
-              throw error;
-              configDone(error);
+              var err = new Error('Invalid or not present file id in worker config. File specification not available');
+              err.statusCode = 500;
+              configDone(err);
             } else {
               monitor.publish({},(err,m) => {
                 file.publish((err,f) => {
@@ -192,10 +191,10 @@ const generateAgentConfig = (monitors,next) => {
             if (err) {
               return configDone(err);
             } else if (script==null) {
-              var error = new Error('invalid script id for worker config. script not available');
-              error.statusCode = 500;
-              throw error;
-              configDone(error);
+              var err = new Error('invalid script id for worker config. script not available');
+              err.statusCode = 500;
+              logger.error(err)
+              configDone(err)
             } else {
               script.publish(function(err,data){
                 config.script = data;
@@ -222,7 +221,7 @@ const generateAgentConfig = (monitors,next) => {
         default:
           let msg=`unhandled monitor type ${monitor.type}`
           let err = new Error(msg)
-          logger.log(err)
+          logger.error(err)
           configDone(err)
           break;
       }

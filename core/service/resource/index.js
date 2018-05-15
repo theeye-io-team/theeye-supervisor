@@ -524,6 +524,7 @@ Service.create = function (input, next) {
 }
 
 Service.createDefaultEvents = function (monitor,customer,done) {
+  done || (done=function(){})
   // CREATE DEFAULT EVENT
   const base = {
     customer_id: customer._id,
@@ -539,20 +540,24 @@ Service.createDefaultEvents = function (monitor,customer,done) {
     Object.assign({}, base, { name: MonitorConstants.RESOURCE_STOPPED }) ,
     Object.assign({}, base, { name: MonitorConstants.RESOURCE_FAILURE }) ,
     (err) => {
-      if (err) logger.error(err)
-    }
-  );
+      if (err) {
+        logger.error(err)
+        return done(err)
+      }
 
-  if (monitor.type === MonitorConstants.RESOURCE_TYPE_FILE) {
-    MonitorEvent.create({
-      customer: customer,
-      emitter: monitor,
-      emitter_id: monitor._id,
-      name: MonitorConstants.RESOURCE_CHANGED
-    }, err => {
-      if (err) logger.error(err);
-    });
-  }
+      if (monitor.type === MonitorConstants.RESOURCE_TYPE_FILE) {
+        MonitorEvent.create({
+          customer: customer,
+          emitter: monitor,
+          emitter_id: monitor._id,
+          name: MonitorConstants.RESOURCE_CHANGED
+        }, err => {
+          if (err) logger.error(err)
+          done(err)
+        })
+      } else { done() }
+    }
+  )
 }
 
 /**

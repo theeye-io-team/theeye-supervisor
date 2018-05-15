@@ -13,5 +13,7 @@ module.exports = {
   triggers: [{ type: ObjectId, ref: 'Event' }],
   acl: [{ type: String }],
   secret: { type: String, default: randomSecret }, // one way hash
-  grace_time: { type: Number, default: 0 }
+  grace_time: { type: Number, default: 0 },
+  workflow_id: { type: ObjectId },
+  workflow: { type: ObjectId, ref: 'Workflow' }
 }

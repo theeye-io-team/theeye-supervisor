@@ -11,6 +11,8 @@ function BaseSchema (props) {
   Schema.call(this, util._extend({
     task_id: { type: String },
     task: { type: Object }, // embedded
+    workflow_id: { type: String },
+    workflow: { type: ObjectId, ref:'Workflow' },
     host_id: { type: String },
     host: { type: ObjectId, ref:'Host' },
     user_id: { type: String },
@@ -29,7 +31,7 @@ function BaseSchema (props) {
     event_id: { type: ObjectId },
     event_data: { type: Object, default: () => { return {} } },
     origin: { type: String }
-  }, props),{
+  }, props), {
     collection: 'jobs',
     discriminatorKey: '_type'
   });

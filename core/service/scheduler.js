@@ -18,6 +18,7 @@ var Task = require('../entity/task').Entity;
 var Script = require('../entity/file').Script;
 var Customer = require('../entity/customer').Entity;
 var User = require('../entity/user').Entity;
+var Workflow = require('../entity/workflow').Workflow;
 
 const JobConstants = require('../constants/jobs')
 const LifecycleConstants = require('../constants/lifecycle')
@@ -87,21 +88,26 @@ Scheduler.prototype = {
   /**
    * schedules a task
    * @param {Object} input data
-   * @property {String} input.origin schedule creator
+   * @property {String} input.origin job schedule creator
+   * @property {Task} input.task the task definition
+   * @property {Workflow} input.workflow to which workflow this job belongs, or undefined
    * @property {String[]} input.script_arguments
    */
   scheduleTask (input, done) {
     const task = input.task
+    const workflow = input.workflow
     const customer = input.customer
-    //const user = input.user
+    const user = input.user
     const schedule = input.schedule
 
     const data = {
       event: input.event,
       event_data: input.event_data,
       task_id: task._id,
+      task_id: task._id,
       host_id: task.host_id,
       script_id: task.script_id,
+      workflow_id: workflow._id,
       name: task.name,
       user_id: App.user._id,
       customer_id: customer._id,
@@ -255,7 +261,8 @@ Scheduler.prototype = {
       customer: callback => Customer.findById(jobData.customer_id, callback),
       task: callback => Task.findById(jobData.task_id, callback),
       host: callback => Host.findById(jobData.host_id, callback),
-      user: callback => User.findById(jobData.user_id, callback)
+      user: callback => User.findById(jobData.user_id, callback),
+      workflow: callback => Workflow.findById(jobData.workflow_id, callback),
     }, function (err, data) {
       const task = data.task
 
@@ -269,6 +276,7 @@ Scheduler.prototype = {
         event: jobData.event,
         event_data: jobData.event_data,
         task: data.task,
+        workflow: data.workflow,
         user: data.user,
         customer: data.customer,
         notify: true,

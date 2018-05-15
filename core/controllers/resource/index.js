@@ -1,5 +1,6 @@
 'use strict';
 
+const App = require('../../app')
 const logger = require('../../lib/logger')('controller:resource');
 const json = require('../../lib/jsonresponse');
 const ResourceManager = require('../../service/resource');
@@ -31,7 +32,7 @@ module.exports = function (server, passport) {
       router.requireCredential('viewer'),
     ]),
     controller.fetch
-  );
+  )
 
   server.get(
     '/:customer/resource/:resource',
@@ -41,7 +42,7 @@ module.exports = function (server, passport) {
       router.ensureAllowed({entity:{name:'resource'}})
     ]),
     controller.get
-  );
+  )
 
   server.post(
     '/:customer/resource',
@@ -157,7 +158,7 @@ const controller = {
       filter.where.acl = req.user.email
     }
 
-    ResourceManager.fetchBy(filter,(err,resources) => {
+    App.resource.fetchBy(filter,(err,resources) => {
       if (err) {
         logger.error(err)
         res.send(500)
@@ -201,7 +202,7 @@ const controller = {
       next()
     } else {
       logger.log('removing resource')
-      ResourceManager.remove({
+      App.resource.remove({
         resource: resource,
         notifyAgents: true,
         user: req.user
@@ -245,7 +246,7 @@ const controller = {
     input.customer_id = customer.id
     input.customer_name = customer.name
 
-    ResourceManager.createResourceOnHosts(hosts, input, (error,results) => {
+    App.resource.createResourceOnHosts(hosts, input, (error,results) => {
       if (error) {
         if (error.errors) {
           var messages=[]
@@ -293,7 +294,7 @@ const controller = {
     }
 
     const doUpdate = () => {
-      ResourceManager.update({
+      App.resource.update({
         resource: resource,
         updates: updates
       },(err,resource) => {

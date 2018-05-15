@@ -10,7 +10,7 @@ var EntitySchema = Schema({
   client_id: { type:String, index:true },
   client_secret: { type:String },
   username: { type:String, required:false, 'default':null },
-  email: { type:String, unique:true, required:true, dropDups:true },
+  email: { type:String, unique:true, required:true },
   emails: { type:Array, 'default':[] },
   customers: [{
     customer: { type:Schema.Types.ObjectId, ref:'Customer' },

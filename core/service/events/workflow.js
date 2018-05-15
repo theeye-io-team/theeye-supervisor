@@ -1,13 +1,17 @@
-const logger = require('../../lib/logger')(':events:workflow')
 const App = require('../../app')
+const logger = require('../../lib/logger')(':events:workflow')
+const Workflow = require('../../entity/workflow').Workflow
 const Task = require('../../entity/task').Entity
-const CustomerService = require('../customer')
-const JobConstants = require('../../constants/jobs')
 const TopicConstants = require('../../constants/topics')
+const JobConstants = require('../../constants/jobs')
+const createJob = require('./create-job')
+const graphlib = require('graphlib')
 
 module.exports = function (payload) {
-  if (payload.topic === TopicConstants.task.execution) {
-    executeWorkflowTasks(payload)
+  if (payload.topic === TopicConstants.workflow.execution) {
+    // something has trigger a request for a task execution
+    // can be a webhook, a task or a monitor state change
+    handleWorkflowEvent(payload)
   }
 }
 
@@ -15,106 +19,46 @@ module.exports = function (payload) {
  * @param {Event} event entity to process
  * @param {Object} data event extra data generated
  */
-const executeWorkflowTasks = ({ event, data }) => {
-  Task.find({ triggers: event._id }, (err, tasks) => {
+const handleWorkflowEvent = ({ event, workflow_id, data }) => {
+  // search workflow step by generated event
+  let query = Workflow.findById(workflow_id)
+  query.exec((err, workflow) => {
     if (err) {
       logger.error(err)
+      return
     }
 
-    if (tasks.length == 0) return
+    if (!workflow) { return }
 
-    for (var i=0; i<tasks.length; i++) {
-      createJob({
-        user: App.user,
-        task: tasks[i],
-        event: event,
-        event_data: data
-      })
-    }
+    executeWorkflowStep(workflow, event, data)
   })
 }
 
-/**
- * @author Facugon
- * @param {Object} input
- * @property {Task} input.task
- * @property {User} input.user
- * @property {Event} input.event
- * @property {Object} input.event_data
- * @access private
- */
-const createJob = ({ task, user, event, event_data }) => {
-  logger.log('preparing to run task %s', task._id)
+const executeWorkflowStep = (workflow, event, data) => {
+  var graph = new graphlib.json.read(workflow.graph)
+  var nodes = graph.successors(event._id.toString()) // should return tasks nodes
+  if (!nodes) return
+  if (nodes.length === 0) return
 
-  task.populate([
-    { path: 'customer' },
-    { path: 'host' }
-  ], err => {
-    if (err) {
-      logger.error(err)
-      return
-    }
-    if (!task.customer) {
-      logger.error('FATAL. Task %s does not has a customer', task._id)
-      return
-    }
-    if (!task.host) {
-      logger.error('WARNING. Task %s does not has a host. Cannot execute', task._id)
-      return
-    }
-
-    const customer = task.customer
-    const runDate =  Date.now() + task.grace_time * 1000
-
-    if (task.grace_time > 0) {
-      // schedule the task
-      let data = {
-        event: event._id,
-        event_data,
-        task,
-        user,
-        customer,
-        notify: true,
-        schedule: { runDate },
-        origin: JobConstants.ORIGIN_WORKFLOW
+  Task
+    .find({ '_id': { $in: nodes } })
+    .exec((err, tasks) => {
+      if (err) {
+        logger.error(err)
+        return
       }
-      App.scheduler.scheduleTask(data, (err, agenda) => {
-        if (err) {
-          logger.error('cannot schedule workflow job')
-          return logger.error(err)
-        }
 
-        CustomerService.getAlertEmails(customer.name,(err, emails)=>{
-          App.jobDispatcher.sendJobCancelationEmail({
-            task_secret: task.secret,
-            task_id: task.id,
-            schedule_id: agenda.attrs._id,
-            task_name: task.name,
-            hostname: task.host.hostname,
-            date: new Date(runDate).toISOString(),
-            grace_time_mins: task.grace_time / 60,
-            customer_name: customer.name,
-            to: emails.join(',')
-          })
+      if (tasks.length == 0) { return }
+
+      for (var i=0; i<tasks.length; i++) {
+        createJob({
+          user: App.user,
+          event,
+          event_data: data,
+          task: tasks[i],
+          origin: JobConstants.ORIGIN_WORKFLOW,
+          workflow
         })
-      })
-    } else {
-      App.jobDispatcher.create({
-        event,
-        event_data,
-        task,
-        user,
-        customer,
-        notify: true,
-        origin: JobConstants.ORIGIN_WORKFLOW
-      }, (err, job) => {
-        if (err) {
-          logger.error('cannot create workflow job')
-          return logger.error(err)
-        }
-        // job created
-        logger.log('job created by workflow')
-      })
-    }
-  })
+      }
+    })
 }

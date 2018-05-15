@@ -1,5 +1,6 @@
 'use strict'
 
+const App = require('../../../app')
 const after = require('lodash/after')
 const assign = require('lodash/assign')
 const config = require('config')
@@ -20,8 +21,6 @@ const Monitor = require('../../../entity/monitor').Entity
 const Resource = require('../../../entity/resource').Entity
 const Task = require('../../../entity/task').Entity
 const AgentUpdateJob = require('../../../entity/job').AgentUpdate
-const TaskService = require('../../../service/task')
-const ResourceService = require('../../../service/resource')
 const ResourceTemplateService = require('../../../service/resource/template')
 
 //exports.Monitor = require('./monitor')
@@ -289,8 +288,8 @@ const Service = module.exports = {
     group.populateAll(error => {
       if (error) throw error
 
-      ResourceService.populateAll(group.resources, (err) => {
-        TaskService.populateAll(group.tasks, (err) => {
+      App.resource.populateAll(group.resources, (err) => {
+        App.task.populateAll(group.tasks, (err) => {
           var data = group.toObject()
           next(null, data)
         })
@@ -417,7 +416,7 @@ const addHostOriginToGroup = (host_id, group, customer, user, next) => {
    */
   const removeHostTasks = (host, next) => {
     const removeTask = (task, done) => {
-      TaskService.remove({
+      App.task.remove({
         customer: customer,
         user: user,
         task: task,
@@ -462,7 +461,7 @@ const addHostOriginToGroup = (host_id, group, customer, user, next) => {
    */
   const removeHostResources = (host, next) => {
     const removeResource = (resource, done) => {
-      ResourceService.remove({
+      App.resource.remove({
         resource: resource,
         notifyAgents: false,
         user: user
@@ -541,7 +540,7 @@ const addHostOriginToGroup = (host_id, group, customer, user, next) => {
 const generateHostGroupTemplates = (group,tasks,resources,triggers,customer,user,done) => {
   // create tasks and monitors templates
   async.series({
-    tasks: (done) => TaskService.createTemplates(
+    tasks: (done) => App.task.createTemplates(
       group, tasks, customer, user, done
     ),
     resources: (done) => ResourceTemplateService.createTemplates(
@@ -821,7 +820,7 @@ const copyTasksToHost = (host, templates, customer, next) => {
   if (templates.length===0) return next()
 
   for (let i=0; i<templates.length; i++) {
-    TaskService.createFromTemplate({
+    App.task.createFromTemplate({
       customer: customer,
       template: templates[i],
       host: host,
@@ -856,7 +855,7 @@ const copyResourcesToHost = (host, templates, customer, next) => {
   for (let i=0; i<templates.length; i++) {
     let template = templates[i]
     template.populate({}, (err) => {
-      ResourceService.createFromTemplate({
+      App.resource.createFromTemplate({
         customer: customer,
         template: template,
         host: host,

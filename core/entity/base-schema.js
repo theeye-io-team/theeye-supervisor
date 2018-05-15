@@ -1,7 +1,8 @@
 'use strict'
 
 const util = require('util')
-const Schema = require('mongoose').Schema
+const mongoose = require('mongoose')
+const Schema = mongoose.Schema
 const lifecicle = require('mongoose-lifecycle')
 const FetchBy = require('../lib/fetch-by');
 const baseProperties = require('./base-schema-properties')
@@ -34,24 +35,15 @@ function BaseSchema (props, specs) {
 
   this.plugin(lifecicle)
 
-  /**
-   *
-   * helper update method
-   *
-   */
-  //this.methods.update = function(updates, next){
-  //  var model = this
-  //  var data = model.toObject()
-  //  for (var key in updates) {
-  //    if (data.hasOwnProperty(key)) {
-  //      model[key] = updates[key]
-  //    }
-  //  }
-  //  model.save( err => next(err,model) )
-  //}
-
   this.statics.fetchBy = function (filter, next) {
     FetchBy.call(this,filter,next)
+  }
+
+  // turn into a new document
+  this.methods.mutateNew = function () {
+    this._id = mongoose.Types.ObjectId()
+    this.isNew = true
+    return this
   }
 
   return this

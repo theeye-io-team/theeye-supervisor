@@ -60,7 +60,9 @@ module.exports = (server, passport) => {
     middlewares.concat(
       router.requireCredential('user'),
       router.resolve.idToEntity({param:'task',required:true}),
-      router.ensureAllowed({entity:{name:'task'}})
+      router.resolve.idToEntity({param:'workflow'}),
+      router.ensureAllowed({entity:{name:'task'}}),
+      router.ensureAllowed({entity:{name:'workflow'}, required: false})
     ),
     controller.create
     //audit.afterCreate('job',{ display: 'name' })
@@ -120,13 +122,14 @@ const controller = {
    * @param {Object[]} req.params.task_arguments an array of objects with { order, label, value } arguments definition
    *
    */
-  create (req,res,next) {
-    const task = req.task
+  create (req, res, next) {
+    let { task, workflow, user, customer } = req
 
-    let jobData = {
-      task: task,
-      user: req.user,
-      customer: req.customer,
+    const jobData = {
+      workflow,
+      task,
+      user,
+      customer,
       notify: true,
       origin: JobConstants.ORIGIN_USER
     }

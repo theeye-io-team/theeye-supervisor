@@ -7,6 +7,7 @@ module.exports.createDispatcher = (props) => {
 }
 
 const registerCallbacks = (dispatcher) => {
+  dispatcher.register( require('./task-trigger-by') )
   dispatcher.register( require('./workflow') )
   dispatcher.register( require('./nested-monitor') )
 }

@@ -33,6 +33,9 @@ exports.task = {
   cancelation: 'task-cancelation', // cancel job
   terminate: 'task-terminate' // terminate a job
 }
+exports.workflow = {
+  execution: 'workflow-execution'
+}
 exports.job = {
   crud: 'job-crud'
 }

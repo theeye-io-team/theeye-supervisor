@@ -4,7 +4,7 @@ const async = require('async')
 const merge = require('lodash/merge')
 const globalconfig = require('config')
 const App = require('../app')
-const logger = require('../lib/logger')('eye:jobs')
+const logger = require('../lib/logger')('service:jobs')
 const elastic = require('../lib/elastic')
 
 const Constants = require('../constants')
@@ -96,6 +96,7 @@ module.exports = {
    * @param {Object} input
    * @property {Event} input.event
    * @property {Event} input.event_data
+   * @property {Workflow} input.workflow
    * @property {Task} input.task
    * @property {User} input.user
    * @property {Customer} input.customer
@@ -104,8 +105,7 @@ module.exports = {
    * @param {Function(Error,Job)} done
    */
   create (input, done) {
-    const task = input.task
-    const type = task.type
+    let { task, workflow } = input
     var err
 
     if (!task) {
@@ -113,63 +113,27 @@ module.exports = {
       return done(err)
     }
 
-    App.taskManager.populate(task, (err, taskData) => {
-      if (err) return done(err);
+    verifyTaskBeforeExecution(task, (err) => {
+      if (err) { return done(err) }
 
-      if (!task.customer) {
-        err = new Error('FATAL. Task ' + task._id + 'does not has a customer')
-        logger.error('%o',err)
-        return done(err)
-      }
-
-      if (!task.host) {
-        err = new Error('invalid task ' + task._id  + ' does not has a host assigned')
-        logger.error('%o',err)
-        return done(err)
-      }
-
-      if (jobInProgress(taskData.lastjob) === true) {
-        err = new Error('job in progress')
-        err.statusCode = 423
-        return done(err, taskData.lastjob)
-      }
-
-      const created = (err, job) => {
+      removeOldTaskJobs(task, (err) => {
         if (err) { return done(err) }
-        logger.log('script job created.')
-        let topic = TopicsConstants.task.execution
-        registerJobOperation(Constants.CREATE, topic, {
-          task: task,
-          job: job,
-          user: input.user,
-          customer: input.customer
-        })
-        done(null, job)
-      }
 
-      const prepareTaskArguments = (args, next) => {
-        if (!args) {
-          App.taskManager.prepareTaskArgumentsValues(
-            task.script_arguments,
-            [], // only fixed-arguments if not specified
-            (err, args) => next(err, args)
-          )
-        } else next(null,args)
-      }
+        jobFactory(task, input, (err, job) => {
+          if (err) { return done(err) }
 
-      removeOldTaskJobs(task, () => {
-        if (type == TaskConstants.TYPE_SCRIPT) {
-          prepareTaskArguments(input.script_arguments, (err,args) => {
-            if (err) return done(err)
-            input.script_arguments = args
-            createScriptJob(input, created)
+          logger.log('job created.')
+          let topic = TopicsConstants.task.execution
+          registerJobOperation(Constants.CREATE, topic, {
+            workflow: workflow,
+            task: task,
+            job: job,
+            user: input.user,
+            customer: input.customer
           })
-        } else if (type == TaskConstants.TYPE_SCRAPER) {
-          createScraperJob(input, created)
-        } else {
-          err = new Error('invalid or undefined task type ' + task.type)
-          return done(err)
-        }
+
+          done(null, job)
+        })
       })
     })
   },
@@ -212,7 +176,7 @@ module.exports = {
       })
 
       //new ResultMail(job) // job completed mail
-      dispatchWorkflowEvent (job.task_id, trigger_name, result.data)
+      dispatchFinishedTaskExecutionEvent (job, trigger_name, result.data)
     })
   },
   /**
@@ -315,8 +279,9 @@ module.exports = {
     currentIntegrationJob(job, (err, currentJob) => {
       if (err) return next(err)
       if (jobInProgress(currentJob) === true) {
-        err = new Error('integration job already started')
+        err = new Error('integration job in progress')
         err.statusCode = 423
+        logger.error('%o',err)
         return next(err, currentJob)
       }
       removeOldJobs(job, () => {
@@ -327,6 +292,33 @@ module.exports = {
       })
     })
   }
+}
+
+const verifyTaskBeforeExecution = (task, next) => {
+  App.taskManager.populate(task, (err, taskData) => {
+    if (err) return next(err);
+
+    if (!task.customer) {
+      err = new Error('FATAL. Task ' + task._id + 'does not has a customer')
+      logger.error('%o',err)
+      return next(err)
+    }
+
+    if (!task.host) {
+      err = new Error('invalid task ' + task._id  + ' does not has a host assigned')
+      logger.error('%o',err)
+      return next(err)
+    }
+
+    if (jobInProgress(taskData.lastjob) === true) {
+      err = new Error('job in progress')
+      err.statusCode = 423
+      logger.error('%o',err)
+      return next(err, taskData.lastjob)
+    }
+
+    next()
+  })
 }
 
 const currentIntegrationJob = (job, next) => {
@@ -365,19 +357,38 @@ const jobMustHaveATask = (job) => {
 
 const jobInProgress = (job) => {
   if (!job) return false
-  return job.lifecycle === LifecycleConstants.READY ||
-    job.lifecycle === LifecycleConstants.ASSIGNED
+  let inProgress = (
+    job.lifecycle === LifecycleConstants.READY ||
+    job.lifecycle === LifecycleConstants.ASSIGNED 
+  )
+  return inProgress
 }
 
 /**
  *
- * remove old jobs status, the history is keept in historical database
- * this registry is just for operations
+ * @summary remove old job status, the history is kept in historical database. If workflow is provided, only remove task status within that workflow.
+ * @param {Task} task
+ * @param {Workflow} workflow
+ * @param {Function} next
  *
  */
 const removeOldTaskJobs = (task, next) => {
   logger.log('removing old jobs of task %s', task._id)
-  JobModels.Job.remove({ task_id: task._id }, function(err) {
+
+  let filters = {task_id: task._id}
+  //if (workflow && workflow._id) {
+  //  filters['$or'] = [
+  //    { workflow_id: workflow._id },
+  //    { workflow: workflow._id }
+  //  ]
+  //} else {
+  //  filters['$and'] = [
+  //    { workflow_id: { $exists: false, $eq: null } },
+  //    { workflow: { $exists: false, $eq: null } }
+  //  ]
+  //}
+
+  JobModels.Job.remove(filters, function (err) {
     if (err) {
       logger.error('Failed to remove old jobs registry for task %s', task._id)
       logger.error(err)
@@ -454,7 +465,7 @@ const registerJobOperation = (operation, topic, input) => {
 
     if (job.result) payload.result = job.result
 
-    elastic.submit(customer.name, topic, payload) // topic = topics.task.execution/result , CREATE/UPDATE
+    elastic.submit(customer.name, topic, payload) // topic = topics.task.[execution||result] , CREATE/UPDATE
 
     App.notifications.generateSystemNotification({
       topic: TopicsConstants.job.crud,
@@ -491,6 +502,49 @@ const prepareScript = (script_id, next) =>  {
 }
 
 /**
+ *
+ * @param {Task} task
+ * @param {Object} input
+ * @param {Function} next
+ *
+ */
+const jobFactory = (task, input, next) => {
+  if (task.type === TaskConstants.TYPE_SCRIPT) {
+    prepareTaskArguments(task, input.script_arguments, (err, args) => {
+      if (err) {
+        return next(err)
+      }
+      input.script_arguments = args
+      createScriptJob(input, next)
+    })
+  } else if (task.type === TaskConstants.TYPE_SCRAPER) {
+    createScraperJob(input, next)
+  } else {
+    err = new Error(`invalid or undefined task type ${task.type}`)
+    return next(err)
+  }
+}
+
+/**
+ *
+ * @param {Task} task
+ * @param {String[]} args
+ * @param {Function} next
+ *
+ */
+const prepareTaskArguments = (task, args, next) => {
+  if (!args) {
+    App.taskManager.prepareTaskArgumentsValues(
+      task.script_arguments,
+      [], // use only fixed-arguments if not specified
+      next
+    )
+  } else {
+    next(null,args)
+  }
+}
+
+/**
  * @param {Object} input
  * @property {String} input.script_id
  * @property {String[]} input.script_arguments ordered script arguments values
@@ -501,12 +555,14 @@ const createScriptJob = (input, done) => {
     if (err) return done(err)
 
     const job = new JobModels.Script()
-    job.script = script.toObject() // >>> add .id 
+    job.script = script.toObject() // >>> add .id  / embedded
     job.script_id = script._id
     job.script_arguments = input.script_arguments
     job.script_runas = task.script_runas
-    job.task = task.toObject() // >>> add .id 
 
+    // copy embedded task object
+    job.task = task.toObject() // >>> add .id  / embedded
+    job.task_id = task._id
     /**
      * @todo should remove hereunder line in the future.
      * only keep for backward compatibility with agent versions number equal or older than version 0.11.3.
@@ -514,7 +570,10 @@ const createScriptJob = (input, done) => {
      */
     job.task.script_arguments = input.script_arguments
 
-    job.task_id = task._id
+    if (input.workflow && input.workflow._id) {
+      job.workflow = input.workflow
+      job.workflow_id = input.workflow._id
+    }
     job.user = input.user
     job.user_id = input.user._id
     job.host_id = task.host_id
@@ -545,8 +604,12 @@ const createScriptJob = (input, done) => {
 const createScraperJob = (input, done) => {
   const task = input.task
   const job = new JobModels.Scraper()
-  job.task = task.toObject(); // >>> add .id 
+  job.task = task.toObject(); // >>> add .id / embedded
   job.task_id = task._id;
+  if (input.workflow && input.workflow._id) {
+    job.workflow = input.workflow
+    job.workflow_id = input.workflow._id
+  }
   job.user = input.user;
   job.user_id = input.user._id;
   job.host_id = task.host_id;
@@ -589,29 +652,42 @@ const cancelJobNextLifecycle = (job) => {
 
 /**
  *
- * @param {String} task_id
+ * @summary The task execution is finished.
+ * @param {Job} job
  * @param {String} trigger triggered event name
+ * @param {Object} data 
  *
  */
-const dispatchWorkflowEvent = (task_id, trigger, data) => {
+const dispatchFinishedTaskExecutionEvent = (job, trigger, data) => {
+  let { task_id, workflow_id } = job
+  let topic
+
   // cannot trigger a workflow event without a task
-  if (!task_id) return
+  if (!task_id) { return }
 
   TaskEvent.findOne({
     emitter_id: task_id,
     enable: true,
     name: trigger
   }, (err, event) => {
-    if (err) return logger.error(err);
+    if (err) { return logger.error(err); }
 
     if (!event) {
       var err = new Error('no handler defined for event named "' + trigger + '" on task ' + task_id)
       return logger.error(err)
     }
 
+    // trigger task execution event within a workflow
+    if (workflow_id) {
+      topic = TopicsConstants.workflow.execution
+    } else {
+      topic = TopicsConstants.task.execution
+    }
+
     App.eventDispatcher.dispatch({
-      topic: TopicsConstants.task.execution,
+      topic,
       event,
+      workflow_id,
       data
     })
   })

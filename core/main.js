@@ -46,6 +46,7 @@ require('./environment').setenv(function(){
         App.taskManager = require('./service/task')
         App.customer = require('./service/customer')
         App.resource = require('./service/resource')
+        App.task = require('./service/task')
         App.scheduler = scheduler
         App.eventDispatcher = Events.createDispatcher() 
         App.notifications = require('./service/notification')
