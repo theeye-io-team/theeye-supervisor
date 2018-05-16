@@ -96,7 +96,6 @@ module.exports = {
    * @param {Object} input
    * @property {Event} input.event
    * @property {Event} input.event_data
-   * @property {Workflow} input.workflow
    * @property {Task} input.task
    * @property {User} input.user
    * @property {Customer} input.customer
@@ -105,7 +104,7 @@ module.exports = {
    * @param {Function(Error,Job)} done
    */
   create (input, done) {
-    let { task, workflow } = input
+    let { task } = input
     var err
 
     if (!task) {
@@ -125,7 +124,6 @@ module.exports = {
           logger.log('job created.')
           let topic = TopicsConstants.task.execution
           registerJobOperation(Constants.CREATE, topic, {
-            workflow: workflow,
             task: task,
             job: job,
             user: input.user,
@@ -366,9 +364,8 @@ const jobInProgress = (job) => {
 
 /**
  *
- * @summary remove old job status, the history is kept in historical database. If workflow is provided, only remove task status within that workflow.
+ * @summary remove old job status, the history is kept in historical database.
  * @param {Task} task
- * @param {Workflow} workflow
  * @param {Function} next
  *
  */
@@ -376,17 +373,6 @@ const removeOldTaskJobs = (task, next) => {
   logger.log('removing old jobs of task %s', task._id)
 
   let filters = {task_id: task._id}
-  //if (workflow && workflow._id) {
-  //  filters['$or'] = [
-  //    { workflow_id: workflow._id },
-  //    { workflow: workflow._id }
-  //  ]
-  //} else {
-  //  filters['$and'] = [
-  //    { workflow_id: { $exists: false, $eq: null } },
-  //    { workflow: { $exists: false, $eq: null } }
-  //  ]
-  //}
 
   JobModels.Job.remove(filters, function (err) {
     if (err) {
@@ -570,10 +556,11 @@ const createScriptJob = (input, done) => {
      */
     job.task.script_arguments = input.script_arguments
 
-    if (input.workflow && input.workflow._id) {
-      job.workflow = input.workflow
-      job.workflow_id = input.workflow._id
+    if (task.workflow_id) {
+      job.workflow = task.workflow_id
+      job.workflow_id = task.workflow_id
     }
+
     job.user = input.user
     job.user_id = input.user._id
     job.host_id = task.host_id
@@ -606,10 +593,12 @@ const createScraperJob = (input, done) => {
   const job = new JobModels.Scraper()
   job.task = task.toObject(); // >>> add .id / embedded
   job.task_id = task._id;
-  if (input.workflow && input.workflow._id) {
-    job.workflow = input.workflow
-    job.workflow_id = input.workflow._id
+
+  if (task.workflow_id) {
+    job.workflow = task.workflow_id
+    job.workflow_id = task.workflow_id
   }
+
   job.user = input.user;
   job.user_id = input.user._id;
   job.host_id = task.host_id;

@@ -60,9 +60,7 @@ module.exports = (server, passport) => {
     middlewares.concat(
       router.requireCredential('user'),
       router.resolve.idToEntity({param:'task',required:true}),
-      router.resolve.idToEntity({param:'workflow'}),
-      router.ensureAllowed({entity:{name:'task'}}),
-      router.ensureAllowed({entity:{name:'workflow'}, required: false})
+      router.ensureAllowed({entity:{name:'task'}})
     ),
     controller.create
     //audit.afterCreate('job',{ display: 'name' })
@@ -123,10 +121,9 @@ const controller = {
    *
    */
   create (req, res, next) {
-    let { task, workflow, user, customer } = req
+    let { task, user, customer } = req
 
     const jobData = {
-      workflow,
       task,
       user,
       customer,

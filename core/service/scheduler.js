@@ -267,10 +267,11 @@ Scheduler.prototype = {
       const task = data.task
 
       if (err) return new JobError(err)
-      if (!data.customer) return new JobError( new Error('customer %s is missing', jobData.customer_id) )
-      if (!data.task) return new JobError( new Error('task %s is missing', jobData.task_id) )
-      if (!data.host) return new JobError( new Error('host %s is missing', jobData.host_id) )
-      if (!data.user) return new JobError( new Error('user %s is missing', jobData.user_id) )
+      if (!data.customer) return new JobError( new Error('customer %s is no longer available', jobData.customer_id) )
+      if (!data.workflow) return new JobError( new Error('workflow %s is no longer available', jobData.workflow_id) )
+      if (!data.task) return new JobError( new Error('task %s is no longer available', jobData.task_id) )
+      if (!data.host) return new JobError( new Error('host %s is no longer available', jobData.host_id) )
+      if (!data.user) return new JobError( new Error('user %s is no longer available', jobData.user_id) )
 
       JobDispatcher.create({
         event: jobData.event,

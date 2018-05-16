@@ -17,10 +17,14 @@ function WorkflowSchema (props) {
     user_id: { type: ObjectId },
     user: { type: ObjectId, ref: 'User' },
     graph: { type: Object },
-    first_task_id: { type: ObjectId },
-    first_task: { type: ObjectId, ref: 'Task' },
-    last_task_id: { type: ObjectId },
-    last_task: { type: ObjectId, ref: 'Task' },
+    lifecycle: { type: String },
+    state: { type: String },
+    current_task_id: { type: ObjectId }, // current task being executed
+    current_task: { type: ObjectId, ref: 'Task' },
+    start_task_id: { type: ObjectId },
+    start_task: { type: ObjectId, ref: 'Task' },
+    end_task_id: { type: ObjectId },
+    end_task: { type: ObjectId, ref: 'Task' },
     _type: {
       type: String,
       default: 'Workflow'
