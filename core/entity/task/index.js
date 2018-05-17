@@ -4,7 +4,7 @@ const mongodb = require('../../lib/mongodb').db
 const ObjectId = require('mongoose').Schema.Types.ObjectId
 const BaseSchema = require('./schema')
 const Template = require('./template').Entity
-const TASK = require('../../constants/task')
+const TaskConstants = require('../../constants/task')
 const ScraperTask = require('./scraper').Entity
 
 /**
@@ -89,10 +89,10 @@ exports.ScraperTask = ScraperTask
 
 exports.Factory = {
   create (input) {
-    if (input.type == TASK.TYPE_SCRAPER) {
+    if (input.type == TaskConstants.TYPE_SCRAPER) {
       return new ScraperTask(input)
     }
-    if (input.type == TASK.TYPE_SCRIPT) {
+    if (input.type == TaskConstants.TYPE_SCRIPT) {
       return new Task(input)
     }
     throw new Error('invalid error type ' + input.type)

@@ -107,6 +107,13 @@ const controller = {
    *
    */
   remove (req, res, next) {
+    var workflow = req.workflow
+    workflow.remove(err => {
+      if (err) return res.send(500,err)
+
+      unlinkWorkflowTasks(req)
+      res.send(200)
+    })
   },
   /**
    *
@@ -154,7 +161,7 @@ const createWorkflow = (req, next) => {
     })
   )
 
-  workflow.save((err) => {
+  workflow.save(err => {
     if (err) { logger.error('%o', err) }
     req.workflow = workflow
     return next(err, workflow)
@@ -196,6 +203,29 @@ const assignTasksToWorkflow = (req, next) => {
   })
 
   next()
+}
+
+const unlinkWorkflowTasks = (req) => {
+  var graph = graphlib.json.read(req.workflow.graph)
+  graph.nodes().forEach(node => {
+    var data = graph.node(node)
+    if (!/Event/.test(data._type)) {
+      Task
+        .findById(data.id)
+        .exec((err, task) => {
+          if (err) {
+            logger.error(err)
+            return 
+          }
+          if (!task) return
+          task.workflow_id = null
+          task.workflow = null
+          task.save(err => {
+            if (err) logger.error(err)
+          })
+        })
+    }
+  })
 }
 
 //

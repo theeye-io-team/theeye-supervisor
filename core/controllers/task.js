@@ -9,7 +9,7 @@ const dbFilter = require('../lib/db-filter');
 const ACL = require('../lib/acl');
 const ErrorHandler = require('../lib/error-handler');
 const audit = require('../lib/audit')
-const TASK = require('../constants/task')
+const TaskConstants = require('../constants/task')
 
 module.exports = (server, passport) => {
   server.get('/:customer/task', [
@@ -127,13 +127,13 @@ const controller = {
     input.host = req.host._id
     input.host_id = req.host._id
 
-    if (input.type===TASK.TYPE_SCRIPT) {
+    if (input.type===TaskConstants.TYPE_SCRIPT) {
       if (!req.script) {
         errors[!req.body.script?'required':'invalid']('script', req.script)
       }
       input.script = req.script
     }
-    if (input.type===TASK.TYPE_SCRAPER) { }
+    if (input.type===TaskConstants.TYPE_SCRAPER) { }
 
     if (errors.hasErrors()){
       return res.send(400,errors)
