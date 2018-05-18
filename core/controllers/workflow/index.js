@@ -1,4 +1,5 @@
 
+const graphlib = require('graphlib')
 const App = require('../../app')
 const TopicsConstants = require('../../constants/topics')
 const logger = require('../../lib/logger')('controller:workflow')
@@ -6,7 +7,7 @@ const router = require('../../router')
 // const audit = require('../../lib/audit')
 const Workflow = require('../../entity/workflow').Workflow
 const Task = require('../../entity/task').Entity
-const graphlib = require('graphlib')
+const Tag = require('../../entity/tag').Entity
 
 const ACL = require('../../lib/acl');
 const dbFilter = require('../../lib/db-filter');
@@ -121,6 +122,12 @@ const controller = {
    *
    */
   replace (req, res, next) {
+    replaceWorkflow(req, (err) => {
+      if (err) {
+        return res.send(err.statusCode || 500, err)
+      }
+      res.send(200, req.workflow)
+    })
   },
   /**
    *
@@ -143,28 +150,30 @@ const controller = {
 const createWorkflow = (req, next) => {
   const customer = req.customer
   const body = req.body
+  const graph = graphlib.json.read(body.graph)
 
-  var graph = graphlib.json.read(body.graph)
-  if (graph.nodes().length === 0 || graph.edges().length === 0) {
-    let err = new Error('invalid graph definition')
-    err.statusCode = 400
-    return next(err)
-  }
+  validateGraph(graph, (err) => {
+    if (err) {
+      err.statusCode = 400
+      return next(err)
+    }
 
-  var workflow = new Workflow(
-    Object.assign({}, body, {
-      _type: 'Workflow',
-      customer: customer._id,
-      customer_id: customer._id,
-      user: req.user._id,
-      user_id: req.user._id
+    var workflow = new Workflow(
+      Object.assign({}, body, {
+        _type: 'Workflow',
+        customer: customer._id,
+        customer_id: customer._id,
+        user: req.user._id,
+        user_id: req.user._id
+      })
+    )
+
+    workflow.save(err => {
+      if (err) { logger.error('%o', err) }
+      req.workflow = workflow
+      createTags(body.tags, customer)
+      return next(err, workflow)
     })
-  )
-
-  workflow.save(err => {
-    if (err) { logger.error('%o', err) }
-    req.workflow = workflow
-    return next(err, workflow)
   })
 }
 
@@ -179,26 +188,8 @@ const assignTasksToWorkflow = (req, next) => {
 
   graph.nodes().forEach(id => {
     let node = graph.node(id)
-    if (/Task/.test(node._type)) {
-      Task.findById(id, (err, task) => {
-        if (err) {
-          logger.error(err)
-          return next(err)
-        }
-
-        if (!task) {
-          logger.error('Workflow task not found!')
-          return
-        }
-
-        task.workflow_id = workflow._id
-        task.workflow = workflow._id
-        task.save(err => {
-          if (err) {
-            logger.error(err)
-          } 
-        })
-      })
+    if (!/Event/.test(node._type)) {
+      App.task.assignTaskToWorkflow(id, workflow)
     }
   })
 
@@ -210,127 +201,66 @@ const unlinkWorkflowTasks = (req) => {
   graph.nodes().forEach(node => {
     var data = graph.node(node)
     if (!/Event/.test(data._type)) {
-      Task
-        .findById(data.id)
-        .exec((err, task) => {
-          if (err) {
-            logger.error(err)
-            return 
-          }
-          if (!task) return
-          task.workflow_id = null
-          task.workflow = null
-          task.save(err => {
-            if (err) logger.error(err)
-          })
-        })
+      App.task.unlinkTaskFromWorkflow(data.id)
     }
   })
 }
 
-//
-// NOTA MENTAL.
-// No estamos preparados todavía para hacer esto
-// La idea aca era que a partir de un workflow creado desde la interfaz se clone completo
-// todas las tareas y eventos y se vincule todo recorriendo el workflow armado.
-// esto puede traer algunos problemas al momento de intentar hacerlo. quedo sin terminar
-//
-///**
-// *
-// *
-// *
-// * @param {Boolean} body.copy_tasks clone all the tasks and events of the workflow
-// * @param {Object} body.graph graphlib.json.read compatible object
-// *
-// */
-//const createWorkflow = (req, next) => {
-//  const customer = req.customer
-//  const body = req.body
-//  const copy_tasks = (req.query.copy_tasks == 'true')
-//
-//  const saveWorkflow = (graph) => {
-//    var workflow = new Workflow(
-//      Object.assign({}, body, {
-//        _type: 'Workflow',
-//        customer: customer._id,
-//        customer_id: customer._id,
-//        user: req.user._id,
-//        user_id: req.user._id,
-//        graph: graphlib.json.write(graph)
-//      })
-//    )
-//
-//    workflow.save((err) => {
-//      if (err) { logger.error('%o', err) }
-//      req.workflow = workflow
-//      return next(err, workflow)
-//    })
-//  }
-//
-//  var graph = graphlib.json.read(body.graph)
-//  if (graph.nodes().length === 0 || graph.edges().length === 0) {
-//    let err = new Error('invalid graph definition')
-//    err.statusCode = 400
-//    return next(err)
-//  }
-//
-//  if (copy_tasks===true) {
-//    let first = body.first_task_id
-//    buildWorkflowGraphTasks(customer, first, graph, (err, graph) => {
-//      if (err) return next(err)
-//      saveWorkflow(graph)
-//    })
-//  } else {
-//    saveWorkflow(graph)
-//  }
-//}
-//
-///**
-// * @param {Customer} customer
-// * @param {String} first
-// * @param {graphlib.Graph} graph 
-// */
-//const buildWorkflowGraphTasks = (customer, first, graph, next) => {
-//  const workflow = new graphlib.Graph()
-//  let isAcyclic = graphlib.alg.isAcyclic(graph)
-//  if (isAcyclic) {
-//    var node = first // this must be a task id
-//  } else {
-//    const err = new Error('workflows with cycles are not allowed right now')
-//    return next(err)
-//  }
-//}
-//
-//const walkGraph = (graph, previous, node, end) => {
-//  var data = graph.node(node)
-//  var successors = graph.successors(node)
-//  if (successors.length===0) {
-//    logger.log('no more to walk')
-//    return end()
-//  }
-//
-//  if (successors.length>1) {
-//    return end( new Error('cannot create a workflow with multiple paths') )
-//  }
-//
-//  if (/Task/.test(data._type)) {
-//    Task.findById(node, (err, task) => {
-//      if (err) {
-//        logger.error(err)
-//        return next(err)
-//      }
-//
-//      task.customer = customer
-//      App.task.mutateNew(task, (err) => {
-//        if (err) {
-//          logger.error(err)
-//          return end(err)
-//        }
-//
-//        walkGraph(graph, task, successors[0], end)
-//      })
-//    })
-//  } else if (/Event/.test(data._type)) {
-//    // use previous node task to link this event to the new task created event
-//  }
-//}
+const replaceWorkflow = (req, next) => {
+  const workflow = req.workflow
+  const body = req.body
+  const newgraph = graphlib.json.read(body.graph)
+  const oldgraph = graphlib.json.read(workflow.graph)
+
+  validateGraph(newgraph, (err) => {
+    if (err) {
+      err.statusCode = 400
+      return next(err)
+    }
+
+    workflow.update(body, (err) => {
+      if (err) {
+        logger.error(err)
+      }
+
+      updateWorkflowGraphDiferences(oldgraph, newgraph, workflow)
+      createTags(body.tags, req.customer)
+
+      next(err, workflow)
+    })
+  })
+}
+
+const createTags = (tags, customer) => {
+  if (tags && Array.isArray(tags)) {
+    Tag.create(tags, customer)
+  }
+}
+
+const validateGraph = (graph, next) => {
+  if (graph.nodes().length === 0 || graph.edges().length === 0) {
+    return next(new Error('invalid graph definition'))
+  }
+  return next()
+}
+
+const updateWorkflowGraphDiferences = (oldgraph, newgraph, workflow) => {
+  newgraph.nodes().forEach(id => {
+    let node = oldgraph.node(id)
+    if (!node) { // is new
+      node = newgraph.node(id)
+      if (!/Event/.test(node._type)) {
+        App.task.assignTaskToWorkflow(id, workflow)
+      }
+    }
+  })
+  oldgraph.nodes().forEach(id => {
+    let node = newgraph.node(id)
+    if (!node) { // is no more in the workflow
+      node = oldgraph.node(id)
+      if (!/Event/.test(node._type)) {
+        App.task.unlinkTaskFromWorkflow(id)
+      }
+    }
+  })
+}

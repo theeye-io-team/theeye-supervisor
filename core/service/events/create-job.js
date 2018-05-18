@@ -5,14 +5,13 @@ const logger = require('../../lib/logger')(':events:create-job')
  * @author Facugon
  * @param {Object} input
  * @property {Task} input.task
- * @property {Workflow} input.workflow
  * @property {String} input.origin job creation origin
  * @property {User} input.user
  * @property {Event} input.event
  * @property {Object} input.event_data
  * @access private
  */
-module.exports = ({ task, workflow, origin, user, event, event_data }) => {
+module.exports = ({ task, origin, user, event, event_data }) => {
   logger.log('preparing to run task %s', task._id)
 
   task.populate([
@@ -41,7 +40,6 @@ module.exports = ({ task, workflow, origin, user, event, event_data }) => {
         event: event._id,
         event_data,
         task,
-        workflow,
         user,
         customer,
         notify: true,
@@ -73,7 +71,6 @@ module.exports = ({ task, workflow, origin, user, event, event_data }) => {
         event,
         event_data,
         task,
-        workflow,
         user,
         customer,
         notify: true,

@@ -6,8 +6,14 @@ const JobConstants = require('../../constants/jobs')
 const createJob = require('./create-job')
 
 module.exports = function (payload) {
-  if (payload.topic === TopicConstants.task.execution) {
-    // a task completed its execution and triggered an event
+  // a task completed its execution and triggered an event
+  // or a monitor has changed its state
+  if (
+    payload.topic === TopicConstants.task.execution ||
+    payload.topic === TopicConstants.monitor.state ||
+    payload.topic === TopicConstants.webhook.triggered ||
+    payload.topic === TopicConstants.workflow.execution
+  ) {
     runTriggeredTaskByEvent(payload)
   }
 }
@@ -18,7 +24,14 @@ module.exports = function (payload) {
  */
 const runTriggeredTaskByEvent = ({ event, data }) => {
   // search all task triggered by the event
-  let query = Task.find({ triggers: event._id })
+  let query = Task.find({
+    triggers: event._id,
+    $or: [
+      { workflow_id: { $eq: null } },
+      { workflow_id: { $exists: false } }
+    ]
+  })
+
   query.exec((err, tasks) => {
     if (err) {
       logger.error(err)

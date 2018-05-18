@@ -181,7 +181,7 @@ var controller = {
       if (!event) return res.send(500)
 
       App.eventDispatcher.dispatch({
-        topic: TopicsConstants.task.execution,
+        topic: TopicsConstants.workflow.execution,
         event
       })
 

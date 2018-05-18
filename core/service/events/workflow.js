@@ -9,9 +9,16 @@ const graphlib = require('graphlib')
 
 module.exports = function (payload) {
   if (payload.topic === TopicConstants.workflow.execution) {
-    // something has trigger a request for a task execution
-    // can be a webhook, a task or a monitor state change
+    // a task belonging to a workflow has finished
     handleWorkflowEvent(payload)
+  } else if (
+    payload.topic === TopicConstants.task.execution ||
+    payload.topic === TopicConstants.monitor.state ||
+    payload.topic === TopicConstants.webhook.triggered ||
+    payload.topic === TopicConstants.workflow.execution
+  ) {
+    // workflow trigger has occur
+    triggerWorkflowByEvent(payload)
   }
 }
 
@@ -56,9 +63,47 @@ const executeWorkflowStep = (workflow, event, data) => {
           event,
           event_data: data,
           task: tasks[i],
-          origin: JobConstants.ORIGIN_WORKFLOW,
-          workflow
+          origin: JobConstants.ORIGIN_WORKFLOW
         })
       }
     })
+}
+
+const triggerWorkflowByEvent = ({ event, data }) => {
+  let query = Workflow.find({ triggers: event._id })
+  query.exec((err, workflows) => {
+    if (err) {
+      logger.error(err)
+      return
+    }
+    if (workflows.length===0) return
+    for (var i=0; i<workflows.length; i++) {
+      executeFirstWorkflowTask(workflows[i], event, data)
+    }
+  })
+}
+
+const executeFirstWorkflowTask = (workflow, event, data) => {
+  workflow.start_task = workflow.start_task_id
+  workflow.populate([
+    { path: 'start_task' }
+  ], err => {
+    if (err) {
+      logger.error(err)
+      return
+    }
+
+    if (!workflow.start_task) {
+      logger.error('could not populate workflow start_task %s', workflow.start_task_id)
+      return
+    }
+
+    createJob({
+      task: workflow.start_task,
+      user: App.user,
+      event,
+      event_data: data,
+      origin: JobConstants.ORIGIN_TRIGGER_BY
+    })
+  })
 }

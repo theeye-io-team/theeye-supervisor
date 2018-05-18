@@ -62,8 +62,45 @@ function Service (resource) {
         custom_event: input.custom_event
       }
     })
+  }
 
-    App.eventDispatcher.dispatch({ topic, resource, input })
+  /**
+   *
+   * @param {String} resource_id
+   * @param {Object} input
+   * @property {Object} input.data
+   *
+   */
+  const dispatchStateChangeEvent = (resource, input) => {
+    var resource_id = resource._id
+    var trigger = input.event_name
+
+    MonitorModel.findOne({
+      resource_id: resource_id
+    }, function (err,monitor) {
+      if (!monitor) {
+        logger.error('resource monitor not found %s', resource_id);
+        return;
+      }
+
+      logger.log('searching monitor %s event %s ', monitor.name, trigger);
+
+      MonitorEvent.findOne({
+        emitter_id: monitor._id,
+        enable: true,
+        name: trigger
+      },function(err, event){
+        if (err) return logger.error(err);
+        else if (!event) return;
+
+        App.eventDispatcher.dispatch({
+          topic: TopicsConstants.monitor.state,
+          resource,
+          event,
+          data: input.data
+        })
+      })
+    })
   }
 
   const sendResourceEmailAlert = (resource,input) => {
@@ -121,40 +158,6 @@ function Service (resource) {
 
     // else try to determine the severity
     return (resource.type == MonitorConstants.RESOURCE_TYPE_DSTAT) ? 'LOW' : 'HIGH'
-  }
-
-  /**
-   *
-   * @param {String} resource_id
-   * @param {String} trigger triggered event name
-   *
-   */
-  const dispatchWorkflowEvent = (resource_id, trigger, data) => {
-    MonitorModel.findOne({
-      resource_id: resource_id
-    }, function (err,monitor) {
-      if (!monitor) {
-        logger.error('resource monitor not found %s', resource_id);
-        return;
-      }
-
-      logger.log('searching monitor %s event %s ', monitor.name, trigger);
-
-      MonitorEvent.findOne({
-        emitter_id: monitor._id,
-        enable: true,
-        name: trigger
-      },function(err, event){
-        if (err) return logger.error(err);
-        else if (!event) return;
-
-        App.eventDispatcher.dispatch({
-          topic: TopicsConstants.task.execution,
-          event,
-          data
-        })
-      })
-    })
   }
 
   /**
@@ -222,7 +225,7 @@ function Service (resource) {
         resource.state = newState
 
         logStateChange(resource, input)
-        dispatchWorkflowEvent(resource._id, input.event_name, input.data)
+        dispatchStateChangeEvent(resource, input)
         sendStateChangeEventNotification(resource, input)
         sendResourceEmailAlert(resource, input)
       }
@@ -260,7 +263,7 @@ function Service (resource) {
         }
 
         logStateChange(resource, input)
-        dispatchWorkflowEvent(resource._id, input.event_name, input.data)
+        dispatchStateChangeEvent(resource, input)
         sendStateChangeEventNotification(resource, input)
       }
 
@@ -292,7 +295,7 @@ function Service (resource) {
       }
 
       logStateChange(resource, input)
-      dispatchWorkflowEvent(resource._id, input.event_name, input.data)
+      dispatchStateChangeEvent(resource, input)
       sendStateChangeEventNotification(resource, input)
     }
 
@@ -334,7 +337,7 @@ function Service (resource) {
 
     input.failure_severity = getEventSeverity(resource)
     logStateChange(resource, input)
-    dispatchWorkflowEvent(resource._id, input.event_name, input.data)
+    dispatchStateChangeEvent(resource, input)
     sendStateChangeEventNotification(resource, input)
     sendResourceEmailAlert(resource, input)
   }

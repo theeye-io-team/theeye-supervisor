@@ -48,13 +48,6 @@ function FileSchema (props) {
     return data
   }
 
-  //this.methods.update = function(updates,next){
-  //  for (var prop in updates) {
-  //    this[prop] = updates[prop]
-  //  }
-  //  this.save(err => next(err,this))
-  //}
-
   this.statics.fetchBy = function(filter,next){
     var publishedScripts = []
     FetchBy.call(this,filter,function(err,scripts){
