@@ -218,12 +218,13 @@ const replaceWorkflow = (req, next) => {
       return next(err)
     }
 
-    workflow.update(body, (err) => {
+    workflow.set(body)
+    workflow.save(err => {
       if (err) {
         logger.error(err)
       }
 
-      updateWorkflowGraphDiferences(oldgraph, newgraph, workflow)
+      updateWorkflowGraphTasksDiferences(oldgraph, newgraph, workflow)
       createTags(body.tags, req.customer)
 
       next(err, workflow)
@@ -244,7 +245,7 @@ const validateGraph = (graph, next) => {
   return next()
 }
 
-const updateWorkflowGraphDiferences = (oldgraph, newgraph, workflow) => {
+const updateWorkflowGraphTasksDiferences = (oldgraph, newgraph, workflow) => {
   newgraph.nodes().forEach(id => {
     let node = oldgraph.node(id)
     if (!node) { // is new
