@@ -34,8 +34,8 @@ module.exports = function (server, passport) {
     '/workflow/:workflow',
     middlewares.concat([
       router.requireCredential('viewer'),
-      router.resolve.idToEntity({param: 'workflow', required: true}),
-      router.ensureAllowed({entity: {name: 'workflow'}})
+      router.resolve.idToEntity({ param: 'workflow', required: true }),
+      router.ensureAllowed({ entity: { name: 'workflow' } })
     ]),
     controller.get
   )
