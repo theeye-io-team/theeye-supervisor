@@ -23,8 +23,8 @@ function WorkflowSchema (props) {
     current_task: { type: ObjectId, ref: 'Task' },
     start_task_id: { type: ObjectId },
     start_task: { type: ObjectId, ref: 'Task' },
-    end_task_id: { type: ObjectId },
-    end_task: { type: ObjectId, ref: 'Task' },
+    end_task_id: { type: ObjectId, required: false },
+    end_task: { type: ObjectId, ref: 'Task', required: false },
     _type: {
       type: String,
       default: 'Workflow'

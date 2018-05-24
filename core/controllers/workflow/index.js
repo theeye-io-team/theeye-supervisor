@@ -221,7 +221,11 @@ const replaceWorkflow = (req, next) => {
     workflow.set(body)
     workflow.save(err => {
       if (err) {
-        logger.error(err)
+        logger.error('%s, %s, errors: %o',err.name, err.message, err.errors)
+        if (err.name === 'ValidationError') {
+          err.statusCode = 400
+        }
+        return next(err)
       }
 
       updateWorkflowGraphTasksDiferences(oldgraph, newgraph, workflow)
