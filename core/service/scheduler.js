@@ -18,11 +18,9 @@ var Task = require('../entity/task').Entity;
 var Script = require('../entity/file').Script;
 var Customer = require('../entity/customer').Entity;
 var User = require('../entity/user').Entity;
-var Workflow = require('../entity/workflow').Workflow;
 
 const JobConstants = require('../constants/jobs')
 const LifecycleConstants = require('../constants/lifecycle')
-
 const JobDispatcher = require('../service/job')
 
 function Scheduler() {
@@ -90,12 +88,10 @@ Scheduler.prototype = {
    * @param {Object} input data
    * @property {String} input.origin job schedule creator
    * @property {Task} input.task the task definition
-   * @property {Workflow} input.workflow to which workflow this job belongs, or undefined
    * @property {String[]} input.script_arguments
    */
   scheduleTask (input, done) {
     const task = input.task
-    const workflow = input.workflow
     const customer = input.customer
     const user = input.user
     const schedule = input.schedule
@@ -107,7 +103,6 @@ Scheduler.prototype = {
       task_id: task._id,
       host_id: task.host_id,
       script_id: task.script_id,
-      workflow_id: workflow._id,
       name: task.name,
       user_id: App.user._id,
       customer_id: customer._id,
@@ -261,14 +256,12 @@ Scheduler.prototype = {
       customer: callback => Customer.findById(jobData.customer_id, callback),
       task: callback => Task.findById(jobData.task_id, callback),
       host: callback => Host.findById(jobData.host_id, callback),
-      user: callback => User.findById(jobData.user_id, callback),
-      workflow: callback => Workflow.findById(jobData.workflow_id, callback),
+      user: callback => User.findById(jobData.user_id, callback)
     }, function (err, data) {
       const task = data.task
 
       if (err) return new JobError(err)
       if (!data.customer) return new JobError( new Error('customer %s is no longer available', jobData.customer_id) )
-      if (!data.workflow) return new JobError( new Error('workflow %s is no longer available', jobData.workflow_id) )
       if (!data.task) return new JobError( new Error('task %s is no longer available', jobData.task_id) )
       if (!data.host) return new JobError( new Error('host %s is no longer available', jobData.host_id) )
       if (!data.user) return new JobError( new Error('user %s is no longer available', jobData.user_id) )
@@ -277,7 +270,6 @@ Scheduler.prototype = {
         event: jobData.event,
         event_data: jobData.event_data,
         task: data.task,
-        workflow: data.workflow,
         user: data.user,
         customer: data.customer,
         notify: true,
