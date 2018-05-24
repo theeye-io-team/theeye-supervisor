@@ -37,6 +37,7 @@ const Service = module.exports = {
    */
   remove (input, done) {
     const group = input.group
+    const keepInstances = !input.deleteInstances
 
     group.populateAll((err) => {
       if (err) {
@@ -48,13 +49,14 @@ const Service = module.exports = {
       const resources = group.resources.map(r => r._id)
       const monitors = group.resources.map(r => r.monitor_template_id)
       const hosts = group.hosts
+
       // remove in series
       logger.log('removing templated tasks')
-      removeTemplateEntities(tasks, TaskTemplate, Task, false, () => {
+      removeTemplateEntities(tasks, TaskTemplate, Task, keepInstances, () => {
         logger.log('removing templated resources')
-        removeTemplateEntities(resources, ResourceTemplate, Resource, false, () => {
+        removeTemplateEntities(resources, ResourceTemplate, Resource, keepInstances, () => {
           logger.log('removing templated monitors')
-          removeTemplateEntities(monitors, MonitorTemplate, Monitor, false, () => {
+          removeTemplateEntities(monitors, MonitorTemplate, Monitor, keepInstances, () => {
             logger.log('all removed')
             if (hosts.length>0) {
               hosts.forEach(host => {
@@ -85,6 +87,7 @@ const Service = module.exports = {
    * @property {String} input.name
    * @property {String} input.description
    * @property {String} input.hostname_regex, a valid regular expression
+   * @property {Boolean} input.applyToSourceHost
    */
   create (input, next) {
     const triggers = input.triggers
@@ -92,6 +95,8 @@ const Service = module.exports = {
     const resources = input.resources
     const customer = input.customer
     const user = input.user
+    const applyToSourceHost = input.applyToSourceHost
+
     var group
 
     /**
@@ -185,7 +190,7 @@ const Service = module.exports = {
                 }
               }
 
-              if (input.host_origin) {
+              if (input.host_origin && applyToSourceHost === true) {
                 addHostOriginToGroup(input.host_origin, group, customer, user, function (err) {
                   next(err, group)
                 })
@@ -211,12 +216,14 @@ const Service = module.exports = {
    * @property {String[]} input.hosts valid ObjectId string array
    * @property {Object[]} input.tasks valid ObjectId string array
    * @property {Object[]} input.resources valid ObjectId string array
+   * @property {Boolean} input.deleteInstances
    * @param {Function(Error,HostGroup)} done
    */
   replace (input, done) {
     const self = this
     const group = input.group
     const customer = input.customer
+    const keepInstances = !input.deleteInstances
 
     if (!Array.isArray(group.hosts)) {
       group.hosts = [] // it must be
@@ -269,7 +276,7 @@ const Service = module.exports = {
           for (var i=0; i < delHosts.length; i++) {
             findHost(delHosts[i], (err,host) => {
               if (err || !host) return
-              unlinkHostFromTemplate(host, group, (err) => {
+              unlinkHostFromTemplate(host, group, keepInstances, (err) => {
                 AgentUpdateJob.create({ host_id: host._id })
               })
             })
@@ -678,9 +685,10 @@ const findHost = (id, next) => {
  * @author Facugon
  * @param {Host} host
  * @param {HostGroup} template
+ * @param {Boolean} keepInstances
  * @param {Function} next
  */
-const unlinkHostFromTemplate = (host, template, next) => {
+const unlinkHostFromTemplate = (host, template, keepInstances, next) => {
   next || (next = () => {})
 
   const removeEntity = (entity, done) => {
@@ -707,6 +715,21 @@ const unlinkHostFromTemplate = (host, template, next) => {
     })
   }
 
+  const updateEntity = (entity, done) => {
+    entity.template = null
+    entity.template_id = null
+    entity.last_update = new Date()
+    entity.save(function (err, entity) {
+      if (err) {
+        logger.error('Error upadting entity')
+        return done(err)
+      }
+
+      logger.log('entity %s updated', entity._type)
+      return done()
+    })
+  }
+
   /**
    * In all cases :
    * host_id (old property) is a mongo db string id.
@@ -715,6 +738,7 @@ const unlinkHostFromTemplate = (host, template, next) => {
    * @summary Remove all Schema intances cloned from the template
    * @param {Mongoose.Schema} Schema
    * @param {Object} entityTemplate
+   * @param {Boolean} keepInstances
    * @param {Function} done
    */
   const removeSchemaTemplatedInstances = (Schema, template_id, done) => {
@@ -729,7 +753,11 @@ const unlinkHostFromTemplate = (host, template, next) => {
       const removed = after(entities.length, done)
 
       for (var i=0; i<entities.length; i++) {
-        removeEntity(entities[i], removed)
+        if(keepInstances === true) {
+          updateEntity(entities[i], removed)
+        } else {
+          removeEntity(entities[i], removed)
+        }
       }
     })
   }

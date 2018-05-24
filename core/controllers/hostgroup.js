@@ -129,10 +129,23 @@ const controller = {
    */
   remove (req,res,next) {
     const group = req.group
+    var deleteInstances = req.query.deleteInstances
+
+    if (typeof deleteInstances === 'string') {
+      if(deleteInstances === 'true') {
+        deleteInstances = true
+      } else {
+        deleteInstances = false
+      }
+    } else {
+      return res.send(400, 'Invalid parameter value')
+    }
+
     HostGroupService.remove({
       group: group,
-      user: req.user
-    },(err) => {
+      user: req.user,
+      deleteInstances: deleteInstances
+    }, (err) => {
       if (err) {
         logger.error(err)
         res.send(500)
@@ -154,12 +167,19 @@ const controller = {
    * @todo req.body.triggers[] need validation here !
    * @param {String} req.body.triggers[].task_id , the id of the task for this trigger
    * @param {String[]} req.body.triggers[].events , array of event ids which belongs to the same host as the tasks host (can be triggered by tasks and monitors)
+   * @param {Boolean} req.body.applyToSourceHost , determines if template should be applied to source host.
+
    *
    */
   create (req, res, next) {
     const body = req.body
     const hostname_regex = body.hostname_regex
     const host_origin = req.body.copy_host
+    const applyToSourceHost = req.body.applyToSourceHost
+
+    if (typeof applyToSourceHost !== 'boolean') {
+      return res.send(400, 'Invalid parameter value')
+    }
 
     if (typeof hostname_regex === 'string') {
       try {
@@ -182,7 +202,8 @@ const controller = {
       hosts: body.hosts || [], // Array of valid Host ids
       tasks: body.tasks || [], // Array of Objects with task definition
       triggers: body.triggers || [], // Array of Objects with a task id and related triggers ids
-      resources: body.resources || [] // Array of Objects with resources and monitors definition, all mixed
+      resources: body.resources || [], // Array of Objects with resources and monitors definition, all mixed
+      applyToSourceHost: applyToSourceHost
     }), (err, group) => {
       if (err) {
         err.statusCode || (err.statusCode = 500)
@@ -204,6 +225,12 @@ const controller = {
     const body = req.body
 
     const hostname_regex = body.hostname_regex
+    const deleteInstances = req.body.deleteInstances
+
+    if (typeof deleteInstances !== 'boolean') {
+      return res.send(400, 'Invalid parameter value')
+    }
+
     if (typeof hostname_regex === 'string') {
       try {
         new RegExp(hostname_regex)
@@ -220,7 +247,8 @@ const controller = {
       hostname_regex: hostname_regex,
       hosts: body.hosts || [], // Array of valid Host ids
       tasks: body.tasks || [], // Array of Objects with task definition
-      resources: body.resources || [] // Array of Objects with resources and monitors definition, all mixed
+      resources: body.resources || [], // Array of Objects with resources and monitors definition, all mixed
+      deleteInstances: deleteInstances
     }, (err, group) => {
       if (err) {
         logger.error(err)
