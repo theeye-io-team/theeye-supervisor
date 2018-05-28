@@ -528,39 +528,65 @@ Service.create = function (input, next) {
 
 Service.createDefaultEvents = function (monitor,customer,done) {
   done || (done=function(){})
-  // CREATE DEFAULT EVENT
-  const base = {
-    customer_id: customer._id,
-    customer: customer,
-    emitter: monitor, 
-    emitter_id: monitor._id
+
+  const createBaseMonitorEvents = (next) => {
+    // CREATE DEFAULT EVENT
+    const base = {
+      customer_id: customer._id,
+      customer: customer,
+      emitter: monitor, 
+      emitter_id: monitor._id
+    }
+
+    MonitorEvent.create(
+      // NORMAL state does not trigger EVENT
+      //{ customer: customer, emitter: monitor, name: MonitorConstants.RESOURCE_NORMAL } ,
+      Object.assign({}, base, { name: MonitorConstants.RESOURCE_RECOVERED }) ,
+      Object.assign({}, base, { name: MonitorConstants.RESOURCE_STOPPED }) ,
+      Object.assign({}, base, { name: MonitorConstants.RESOURCE_FAILURE }) ,
+      (err) => {
+        if (err) { logger.error(err) }
+        next(err)
+      }
+    )
   }
 
-  MonitorEvent.create(
-    // NORMAL state does not trigger EVENT
-    //{ customer: customer, emitter: monitor, name: MonitorConstants.RESOURCE_NORMAL } ,
-    Object.assign({}, base, { name: MonitorConstants.RESOURCE_RECOVERED }) ,
-    Object.assign({}, base, { name: MonitorConstants.RESOURCE_STOPPED }) ,
-    Object.assign({}, base, { name: MonitorConstants.RESOURCE_FAILURE }) ,
-    (err) => {
-      if (err) {
-        logger.error(err)
-        return done(err)
-      }
+  const createFileMonitorEvents = (next) => {
+    MonitorEvent.create({
+      customer: customer,
+      emitter: monitor,
+      emitter_id: monitor._id,
+      name: MonitorConstants.RESOURCE_CHANGED
+    }, err => {
+      if (err) { logger.error(err) }
+      next(err)
+    })
+  }
 
-      if (monitor.type === MonitorConstants.RESOURCE_TYPE_FILE) {
-        MonitorEvent.create({
-          customer: customer,
-          emitter: monitor,
-          emitter_id: monitor._id,
-          name: MonitorConstants.RESOURCE_CHANGED
-        }, err => {
-          if (err) logger.error(err)
-          done(err)
-        })
-      } else { done() }
+  const createHostMonitorEvents = (next) => {
+    MonitorEvent.create({
+      customer: customer,
+      emitter: monitor,
+      emitter_id: monitor._id,
+      name: MonitorConstants.RESOURCE_STARTED
+    }, err => {
+      if (err) { logger.error(err) }
+      next(err)
+    })
+  }
+
+  createBaseMonitorEvents(err => {
+    if (err) {
+      logger.error(err)
+      return done(err)
     }
-  )
+
+    if (monitor.type === MonitorConstants.RESOURCE_TYPE_FILE) {
+      createFileMonitorEvents(done)
+    } else if (monitor.type === MonitorConstants.RESOURCE_TYPE_HOST) {
+      createHostMonitorEvents(done)
+    }
+  })
 }
 
 /**
