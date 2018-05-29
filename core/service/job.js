@@ -51,6 +51,7 @@ module.exports = {
    */
   getNextPendingJob (input, next) {
     var topic
+    if (!input.host) return next(new Error('host is required'))
     const query = {
       lifecycle: LifecycleConstants.READY,
       host_id: input.host._id
