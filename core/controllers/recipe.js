@@ -1,21 +1,21 @@
 'use strict'
 
-const extend = require('lodash/assign')
+const merge = require('lodash/merge')
 const Recipe = require('../entity/recipe').Recipe
 const router = require('../router')
 const dbFilter = require('../lib/db-filter')
 
 module.exports = (server, passport) => {
   var middlewares = [
-    passport.authenticate('bearer', { session:false }),
-    router.resolve.customerNameToEntity({ required:true }),
+    passport.authenticate('bearer', { session: false }),
+    router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer
   ]
 
   server.get(
     '/recipe/:recipe',
     middlewares.concat(
-      router.resolve.idToEntity({ param:'recipe', required:true })
+      router.resolve.idToEntity({ param: 'recipe', required: true })
     ),
     controller.get
   )
@@ -32,9 +32,13 @@ const controller = {
    * @method GET
    */
   fetch (req, res, next) {
+    var query = {
+      where: req.query
+    }
+
     var filter = dbFilter(
-      extend( (req.query||{}) , {
-        where:{
+      merge({}, (query || {}), {
+        where: {
           customer: req.customer._id
         }
       })
@@ -54,5 +58,5 @@ const controller = {
   get (req, res, next) {
     var recipe = req.recipe
     return res.send(200, recipe)
-  },
+  }
 }

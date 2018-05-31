@@ -16,5 +16,7 @@ module.exports = {
   public: { type: Boolean, default: false },
   tags: { type: Array },
   user: { type: ObjectId, ref: 'User'},
-  instructions: { type: Instructions }
+  instructions: { type: Instructions },
+  hostgroup_id: { type: ObjectId },
+  hostgroup: { type: ObjectId, ref: 'HostGroup'},
 }

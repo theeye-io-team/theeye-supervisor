@@ -160,7 +160,9 @@ const Service = module.exports = {
               resources: resources,
               tasks: tasks,
               triggers: triggers
-            }
+            },
+            hostgroup: group._id,
+            hostgroup_id: group._id
           })
 
           logger.log('all templates created. attaching to group')
