@@ -56,12 +56,16 @@ module.exports = {
 
       elastic = config.elasticsearch
 
-      data.topic = topic 
-      data.timestamp = (new Date()).getTime()
-      data.date = (new Date()).toISOString()
+      let payload = Object.assign({}, data)
+      // force required properties by elasticsearch in payload
+      payload.organization = data.organization || customerName
+      payload.topic = topic 
+      payload.type = topic 
+      payload.timestamp = (new Date()).getTime()
+      payload.date = (new Date()).toISOString()
       specs = {
-        url: elastic.url + '/' + path.join(customerName, topic),
-        body: data
+        url: elastic.url + '/' + topic,
+        body: payload
       }
 
       if (elastic.enabled===true) {
@@ -90,14 +94,14 @@ module.exports = {
   }
 }
 
-const dump = (filename, data) => {
+const dump = (filename, payload) => {
   if (!filename) {
     return logger.error('no filename provided')
   }
 
   fs.appendFile(
     filename,
-    JSON.stringify(data) + "\n",
+    JSON.stringify(payload) + "\n",
     (err) => {
       if (err) {
         logger.error(err)

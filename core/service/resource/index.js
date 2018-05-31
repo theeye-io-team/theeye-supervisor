@@ -28,24 +28,28 @@ function Service (resource) {
   const _resource = resource
 
   const needToSendUpdatesStoppedEmail = (resource) => {
-    return resource.type === MonitorConstants.RESOURCE_TYPE_HOST ||
-      resource.failure_severity === MonitorConstants.MONITOR_SEVERITY_CRITICAL;
+    let res = (
+      resource.type === MonitorConstants.RESOURCE_TYPE_HOST ||
+      resource.failure_severity === MonitorConstants.MONITOR_SEVERITY_CRITICAL
+    )
+
+    return res
   }
 
   const logStateChange = (resource,input) => {
-    const data = {
+    const payload = {
       hostname: resource.hostname,
       monitor_event: input.event_name,
       custom_event: input.custom_event,
       state: input.state,
       organization: resource.customer_name,
-      id: resource._id,
-      name: resource.name,
-      type: resource.type,
+      model_id: resource._id,
+      model_name: resource.name,
+      model_type: resource.type,
       operation: Constants.UPDATE
     }
     const topic = TopicsConstants.monitor.state
-    elastic.submit(resource.customer_name, topic, data) // topic = topics.monitor.state
+    elastic.submit(resource.customer_name, topic, payload) // topic = topics.monitor.state
   }
 
   const sendStateChangeEventNotification = (resource, input) => {
@@ -1026,8 +1030,8 @@ const updateMonitorsWithDeletedScript = (script,done) => {
   done=done||function(){};
 
   logger.log('searching script "%s" resource-monitor', script._id);
-  var query = { 'type': 'script', 'script': script._id };
-  var options = { 'populate': true };
+  var query = { type: 'script', script: script._id };
+  var options = { populate: true };
 
   ResourceMonitorService.findBy(
     query,
