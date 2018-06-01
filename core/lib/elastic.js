@@ -63,42 +63,45 @@ module.exports = {
       payload.type = topic 
       payload.timestamp = (new Date()).getTime()
       payload.date = (new Date()).toISOString()
+
+      let indexDate = new Date().toISOString().split('T')[0].replace(/-/g,'.')
+      let index = `theeye-${topic}-${indexDate}`
+      let _type = '_doc'
+
       specs = {
-        url: elastic.url + '/' + topic,
+        url: `${elastic.url}/${index}/${_type}`,
         body: payload
       }
 
       if (elastic.enabled===true) {
         if (isURL(elastic.url)) {
-          request.post(specs,(err,respose,body) => {
+          request.post(specs,(err,response,body) => {
             if (err) {
               logger.error('Request Error %s', err.message)
               logger.data('Error data sent %j', specs)
               return;
             }
-            logger.log('submit done to %s', specs.url);
+
+            dump(elastic.dump, elastic.dump_file, { specs, response: body })
           })
         } else {
           logger.error('customer elasticsearch configuration url is not valid')
         }
       } else {
         logger.log('customer elasticsearch integration is not enabled')
+        dump(elastic.dump, elastic.dump_file, { specs })
       }
 
-      // dump audit data to file
-      if (elastic.dump === true && elastic.dump_file) {
-        logger.log('elk data dump enabled')
-        dump(elastic.dump_file, specs)
-      }
     })
   }
 }
 
-const dump = (filename, payload) => {
-  if (!filename) {
-    return logger.error('no filename provided')
-  }
+const dump = (dump, filename, payload) => {
+  if (!dump) return
+  logger.log('elk data dump enabled')
+  logger.data('payload %o', payload)
 
+  if (!filename) return
   fs.appendFile(
     filename,
     JSON.stringify(payload) + "\n",
