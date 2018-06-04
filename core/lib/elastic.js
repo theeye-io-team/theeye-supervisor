@@ -59,8 +59,6 @@ module.exports = {
       let payload = Object.assign({}, data)
       // force required properties by elasticsearch in payload
       payload.organization = data.organization || customerName
-      payload.topic = topic 
-      payload.type = topic 
       payload.timestamp = (new Date()).getTime()
       payload.date = (new Date()).toISOString()
 
@@ -99,7 +97,7 @@ module.exports = {
 const dump = (dump, filename, payload) => {
   if (!dump) return
   logger.log('elk data dump enabled')
-  logger.data('payload %o', payload)
+  logger.data('payload %j', payload)
 
   if (!filename) return
   fs.appendFile(
