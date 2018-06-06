@@ -7,6 +7,7 @@
  **/
 const READY = 'ready'
 const ASSIGNED = 'assigned'
+const ONHOLD = 'onhold'
 const FINISHED = 'finished'
 const TERMINATED = 'terminated'
 const CANCELED = 'canceled'
@@ -15,6 +16,7 @@ const COMPLETED = 'completed'
 
 exports.READY = READY
 exports.ASSIGNED = ASSIGNED
+exports.ONHOLD = ONHOLD
 exports.FINISHED = FINISHED
 exports.TERMINATED = TERMINATED
 exports.CANCELED = CANCELED

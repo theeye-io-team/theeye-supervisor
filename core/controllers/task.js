@@ -10,6 +10,7 @@ const ACL = require('../lib/acl');
 const ErrorHandler = require('../lib/error-handler');
 const audit = require('../lib/audit')
 const TaskConstants = require('../constants/task')
+const isMongoId = require('validator/lib/isMongoId')
 
 module.exports = (server, passport) => {
   server.get('/:customer/task', [
@@ -60,6 +61,7 @@ module.exports = (server, passport) => {
   server.put(
     '/:customer/task/:task',
     mws,
+    router.resolve.idToEntity({ param: 'script', entity: 'file' }),
     controller.update,
     audit.afterReplace('task',{ display: 'name' })
   )
@@ -72,44 +74,6 @@ module.exports = (server, passport) => {
 }
 
 const controller = {
-  /**
-   *
-   * @summary create many tasks at once
-   * @method POST
-   * @author Facugon
-   *
-   */
-  //bulkCreate (req, res, next) {
-  //  var errors = new ErrorHandler()
-  //  var input = extend({},req.body,{
-  //    customer: req.customer,
-  //    user: req.user,
-  //    script: req.script
-  //  })
-
-  //  input.hosts || (input.hosts=req.body.host)
-
-  //  if (!input.type) return res.send(400, errors.required('type', input.type))
-  //  if (!input.hosts) return res.send(400, errors.required('hosts', input.hosts))
-  //  if (Array.isArray(input.hosts)) {
-  //    if (input.hosts.length===0) {
-  //      return res.send(400, errors.required('hosts', input.hosts));
-  //    }
-  //  } else {
-  //    input.hosts = [ input.hosts ];
-  //  }
-
-  //  if (!input.name) return res.send(400, errors.required('name', input.name));
-
-  //  TaskService.createManyTasks(input, function(err, tasks){
-  //    if (err) {
-  //      logger.error('%o',err)
-  //      return res.sendError(err)
-  //    }
-  //    res.send(200, tasks)
-  //    next()
-  //  })
-  //},
   create (req, res, next) {
     const errors = new ErrorHandler()
     const input = extend({},req.body,{
@@ -121,11 +85,20 @@ const controller = {
 
     if (!input.name) errors.required('name', input.name)
     if (!input.type) errors.required('type', input.type)
-    if (!req.host) {
-      errors[!req.body.host?'required':'invalid']('host', req.host)
+
+    if (input.type!==TaskConstants.TYPE_APPROVAL) {
+      if (!req.host) {
+        errors[!req.body.host?'required':'invalid']('host', req.host)
+      }
+      input.host = req.host._id
+      input.host_id = req.host._id
+    } else {
+      if (!input.approver_id) {
+        errors.required('approver_id', req.approver_id)
+      } else if (!isMongoId(input.approver_id)) {
+        errors.invalid('approver_id', req.approver_id)
+      }
     }
-    input.host = req.host._id
-    input.host_id = req.host._id
 
     if (input.type===TaskConstants.TYPE_SCRIPT) {
       if (!req.script) {
@@ -226,8 +199,31 @@ const controller = {
     var input = extend({},req.body)
 
     if (!req.task) return res.send(400, errors.required('task'))
-    if (!req.host) return res.send(400, errors.required('host'))
     if (!input.name) return res.send(400, errors.required('name'))
+
+    if (req.task.type!==TaskConstants.TYPE_APPROVAL) {
+      if (!req.host) {
+        errors[!req.body.host?'required':'invalid']('host', req.host)
+      }
+    } else {
+      if (!input.approver_id) {
+        errors.required('approver_id', req.approver_id)
+      } else if (!isMongoId(input.approver_id)) {
+        errors.invalid('approver_id', req.approver_id)
+      }
+    }
+
+    if (req.task.type===TaskConstants.TYPE_SCRIPT) {
+      if (!req.script) {
+        errors[!req.body.script?'required':'invalid']('script', req.script)
+      }
+      input.script = req.script
+    }
+    if (input.type===TaskConstants.TYPE_SCRAPER) { }
+
+    if (errors.hasErrors()){
+      return res.send(400,errors)
+    }
 
     logger.log('updating task %j', input)
     TaskService.update({

@@ -31,13 +31,14 @@ exports.task = {
   sent: 'task-sent', // sent to agent
   result: 'task-result', // update/finalize job
   cancelation: 'task-cancelation', // cancel job
-  terminate: 'task-terminate' // terminate a job
+  terminate: 'task-terminate', // terminate a job
 }
 exports.workflow = {
   execution: 'workflow-execution'
 }
 exports.job = {
-  crud: 'job-crud'
+  crud: 'job-crud',
+  //onhold: 'job-onhold'
 }
 exports.webhook = {
   crud: 'webhook-crud',

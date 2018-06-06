@@ -1,6 +1,8 @@
 
 exports.TYPE_SCRIPT = 'script'
 exports.TYPE_SCRAPER = 'scraper'
+exports.TYPE_APPROVAL = 'approval'
+exports.TYPE_NOTIFICATION = 'notification'
 
 const ARGUMENT_TYPE_FIXED = 'fixed'
 const ARGUMENT_TYPE_INPUT = 'input'

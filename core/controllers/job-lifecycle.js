@@ -12,8 +12,8 @@ const LifecycleConstants = require('../constants/lifecycle')
  */
 module.exports = (server, passport) => {
   const middlewares = [
-    passport.authenticate('bearer',{session:false}),
-    router.resolve.customerNameToEntity({required:true}),
+    passport.authenticate('bearer', {session: false}),
+    router.resolve.customerNameToEntity({required: true}),
     router.ensureCustomer
   ]
 
@@ -22,27 +22,36 @@ module.exports = (server, passport) => {
     '/:customer/job/:job/lifecycle',
     middlewares.concat(
       router.requireCredential('user'),
-      router.resolve.idToEntity({param:'job',required:true})
+      router.resolve.idToEntity({param: 'job', required: true})
     ),
     controller.get
   )
-
-  //server.put(
-  //  '/:customer/job/:job/lifecycle/:lifecycle', 
-  //  middlewares.concat(
-  //    router.requireCredential('user'),
-  //    router.resolve.idToEntity({param:'job',required:true})
-  //  ),
-  //  controller.update
-  //)
 
   server.put(
     '/:customer/job/:job/cancel',
     middlewares.concat(
       router.requireCredential('user'),
-      router.resolve.idToEntity({param:'job',required:true})
+      router.resolve.idToEntity({param: 'job', required: true})
     ),
     controller.cancel
+  )
+
+  server.put(
+    '/job/:job/approve',
+    middlewares.concat(
+      router.requireCredential('user'),
+      router.resolve.idToEntity({param: 'job', required: true})
+    ),
+    controller.approve
+  )
+
+  server.put(
+    '/job/:job/reject',
+    middlewares.concat(
+      router.requireCredential('user'),
+      router.resolve.idToEntity({param: 'job', required: true})
+    ),
+    controller.reject
   )
 }
 
@@ -50,30 +59,6 @@ const controller = {
   get (req, res, next) {
     res.send(200, req.job.lifecycle)
   },
-  //update (req, res, next) {
-  //  const job = req.job
-  //  const user = req.user
-  //  const customer = req.customer
-  //  const lifecycle = req.params.lifecycle
-
-  //  if (!lifecycle) {
-  //    return res.send(400, 'lifecycle value is required')
-  //  }
-  //  if (LifecycleConstants.VALUES.indexOf(lifecycle)===-1) {
-  //    return res.send(400, 'invalid lifecycle value')
-  //  }
-
-  //  let data = { job, user, customer, lifecycle, state: 'unknown' }
-  //  App.jobDispatcher.update(data, err => {
-  //    if (err) {
-  //      logger.error('Failed to update job lifecycle')
-  //      logger.error(err)
-  //      return res.send(500)
-  //    }
-
-  //    return res.send(200, job.lifecycle)
-  //  })
-  //},
   cancel (req, res, next) {
     const job = req.job
     App.jobDispatcher.cancel({ job, user: req.user, customer: req.customer }, err => {
@@ -84,6 +69,32 @@ const controller = {
       }
 
       return res.send(200, job.lifecycle)
+    })
+  },
+  approve (req, res, next) {
+    var result = req.params.result || {}
+    App.jobDispatcher.finish({
+      result,
+      job: req.job,
+      user: req.user,
+      customer: req.customer
+    }, err => {
+      if (err) { return res.send(500) }
+      res.send(200, req.job)
+      next()
+    })
+  },
+  reject (req, res, next) {
+    var result = req.params.result || {}
+    App.jobDispatcher.finish({
+      result,
+      job: req.job,
+      user: req.user,
+      customer: req.customer
+    }, err => {
+      if (err) { return res.send(500) }
+      res.send(200, req.job)
+      next()
     })
   }
 }

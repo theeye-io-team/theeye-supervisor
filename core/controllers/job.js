@@ -77,6 +77,10 @@ const controller = {
     const customer = req.customer
     const user = req.user
 
+    if (!host) {
+      return res.send(400, 'valid host is required')
+    }
+
     logger.log('querying jobs')
 
     if (req.params.process_next) {

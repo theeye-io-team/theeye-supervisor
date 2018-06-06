@@ -26,7 +26,7 @@ module.exports = ({ task, origin, user, event, event_data }) => {
       logger.error('FATAL. Task %s does not has a customer', task._id)
       return
     }
-    if (!task.host) {
+    if (task._type != 'ApprovalTask' && !task.host) {
       logger.error('WARNING. Task %s does not has a host. Cannot execute', task._id)
       return
     }

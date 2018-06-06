@@ -9,7 +9,7 @@ const elastic = require('../lib/elastic')
 
 const Constants = require('../constants')
 const LifecycleConstants = require('../constants/lifecycle')
-const JobsConstants = require('../constants/jobs')
+const JobConstants = require('../constants/jobs')
 const TaskConstants = require('../constants/task')
 const TopicsConstants = require('../constants/topics')
 const StateConstants = require('../constants/states')
@@ -82,8 +82,8 @@ module.exports = {
         }
 
         registerJobOperation(Constants.UPDATE, topic, {
+          job,
           task: job.task,
-          job: job,
           user: input.user,
           customer: input.customer
         })
@@ -119,14 +119,14 @@ module.exports = {
       removeOldTaskJobs(task, (err) => {
         if (err) { return done(err) }
 
-        jobFactory(task, input, (err, job) => {
+        JobFactory.create(task, input, (err, job) => {
           if (err) { return done(err) }
 
           logger.log('job created.')
           let topic = TopicsConstants.task.execution
           registerJobOperation(Constants.CREATE, topic, {
-            task: task,
-            job: job,
+            task,
+            job,
             user: input.user,
             customer: input.customer
           })
@@ -293,6 +293,14 @@ module.exports = {
   }
 }
 
+const taskRequireHost = (task) => {
+  var res = (
+    task.type === TaskConstants.TYPE_SCRIPT ||
+    task.type === TaskConstants.TYPE_SCRAPER
+  )
+  return res
+}
+
 const verifyTaskBeforeExecution = (task, next) => {
   App.taskManager.populate(task, (err, taskData) => {
     if (err) return next(err);
@@ -303,7 +311,7 @@ const verifyTaskBeforeExecution = (task, next) => {
       return next(err)
     }
 
-    if (!task.host) {
+    if (taskRequireHost(task) && !task.host) {
       err = new Error('invalid task ' + task._id  + ' does not has a host assigned')
       logger.error('%o',err)
       return next(err)
@@ -351,7 +359,12 @@ const removeOldJobs = (job, next) => {
 }
 
 const jobMustHaveATask = (job) => {
-  return job._type === 'ScraperJob' || job._type === 'ScriptJob'
+  var result = (
+    job._type === JobConstants.SCRAPER_TYPE ||
+    job._type === JobConstants.SCRIPT_TYPE ||
+    job._type === JobConstants.APPROVAL_TYPE
+  )
+  return result
 }
 
 const jobInProgress = (job) => {
@@ -410,7 +423,6 @@ const registerJobOperation = (operation, topic, input) => {
     { path: 'user' }
   ], (err) => {
     const payload = {
-      hostname: job.host.hostname,
       state: job.state || 'undefined',
       lifecycle: job.lifecycle,
       task_name: task.name,
@@ -423,17 +435,21 @@ const registerJobOperation = (operation, topic, input) => {
       job_type: job._type
     }
 
+    if (job._type !== JobConstants.APPROVAL_TYPE) {
+      payload.hostname = job.host.hostname
+    }
+
     if (jobMustHaveATask(job) && !task) {
       const msg = `job ${job._id}/${job._type} task is not valid or undefined`
       logger.error(new Error(msg))
     }
 
-    if (job._type == 'ScraperJob') {
+    if (job._type === JobConstants.SCRAPER_TYPE) {
       payload.url = task.url
       payload.method = task.method
       payload.statuscode = task.status_code 
       payload.pattern = task.pattern
-    } else if (job._type == 'ScriptJob') {
+    } else if (job._type == JobConstants.SCRIPT_TYPE) {
       if (!job.script) {
         const msg = `job ${job._id}/${job._type} script is not valid or undefined`
         logger.error(new Error(msg))
@@ -444,7 +460,9 @@ const registerJobOperation = (operation, topic, input) => {
       payload.md5 = script.md5
       payload.mtime = script.last_update
       payload.mimetype = script.mimetype
-    } else if (job._type == 'AgentUpdateJob') {
+    } else if (job._type == JobConstants.APPROVAL_TYPE) {
+      // nothing yet
+    } else if (job._type == JobConstants.AGENT_UPDATE_TYPE) {
       // nothing yet
     } else {
       // unhandled job type
@@ -452,7 +470,7 @@ const registerJobOperation = (operation, topic, input) => {
 
     if (job.result) {
       payload.result = job.result
-      if (job._type == 'ScraperJob') {
+      if (job._type == JobConstants.SCRAPER_TYPE) {
         if (payload.result.response && payload.result.response.body) {
           delete payload.result.response.body
         }
@@ -497,149 +515,18 @@ const prepareScript = (script_id, next) =>  {
 
 /**
  *
- * @param {Task} task
- * @param {Object} input
- * @param {Function} next
- *
- */
-const jobFactory = (task, input, next) => {
-  if (task.type === TaskConstants.TYPE_SCRIPT) {
-    prepareTaskArguments(task, input.script_arguments, (err, args) => {
-      if (err) {
-        return next(err)
-      }
-      input.script_arguments = args
-      createScriptJob(input, next)
-    })
-  } else if (task.type === TaskConstants.TYPE_SCRAPER) {
-    createScraperJob(input, next)
-  } else {
-    err = new Error(`invalid or undefined task type ${task.type}`)
-    return next(err)
-  }
-}
-
-/**
- *
- * @param {Task} task
- * @param {String[]} args
- * @param {Function} next
- *
- */
-const prepareTaskArguments = (task, args, next) => {
-  if (!args) {
-    App.taskManager.prepareTaskArgumentsValues(
-      task.script_arguments,
-      [], // use only fixed-arguments if not specified
-      next
-    )
-  } else {
-    next(null,args)
-  }
-}
-
-/**
- * @param {Object} input
- * @property {String} input.script_id
- * @property {String[]} input.script_arguments ordered script arguments values
- */
-const createScriptJob = (input, done) => {
-  const task = input.task
-  prepareScript(task.script_id, (err,script) => {
-    if (err) return done(err)
-
-    const job = new JobModels.Script()
-    job.script = script.toObject() // >>> add .id  / embedded
-    job.script_id = script._id
-    job.script_arguments = input.script_arguments
-    job.script_runas = task.script_runas
-
-    // copy embedded task object
-    job.task = task.toObject() // >>> add .id  / embedded
-    job.task_id = task._id
-    /**
-     * @todo should remove hereunder line in the future.
-     * only keep for backward compatibility with agent versions number equal or older than version 0.11.3.
-     * this is overwriting saved job.task.script_arguments definition.
-     */
-    job.task.script_arguments = input.script_arguments
-
-    if (task.workflow_id) {
-      job.workflow = task.workflow_id
-      job.workflow_id = task.workflow_id
-    }
-
-    job.user = input.user
-    job.user_id = input.user._id
-    job.host_id = task.host_id
-    job.host = task.host_id
-    job.name = task.name
-    job.customer_id = input.customer._id
-    job.customer_name = input.customer.name
-    job.notify = input.notify
-    job.lifecycle = LifecycleConstants.READY
-    job.event = input.event || null
-    //job.event_id = (input.event_id) || null
-    job.event_data = input.event_data || {}
-    job.origin = input.origin
-    job.save(err => {
-      if (err) {
-        logger.error('%o',err)
-        return done(err)
-      }
-      done(null, job)
-    })
-  })
-}
-
-/**
- *
- *
- */
-const createScraperJob = (input, done) => {
-  const task = input.task
-  const job = new JobModels.Scraper()
-  job.task = task.toObject(); // >>> add .id / embedded
-  job.task_id = task._id;
-
-  if (task.workflow_id) {
-    job.workflow = task.workflow_id
-    job.workflow_id = task.workflow_id
-  }
-
-  job.user = input.user;
-  job.user_id = input.user._id;
-  job.host_id = task.host_id;
-  job.host = task.host_id;
-  job.name = task.name;
-  job.customer_id = input.customer._id;
-  job.customer_name = input.customer.name;
-  job.notify = input.notify;
-  job.lifecycle = LifecycleConstants.READY
-  job.event = input.event || null
-  //job.event_id = input.event_id || null
-  job.event_data = input.event_data || {}
-  job.origin = input.origin
-  job.save(err => {
-    if (err) {
-      logger.error('%o',err)
-      return done(err)
-    }
-    done(null, job)
-  })
-}
-
-/**
- *
  * @summary obtain next valid lifecycle state if apply for current job.lifecycle
  * @param {Job} job
  * @return {String} lifecycle string
  *
  */
 const cancelJobNextLifecycle = (job) => {
-  if (job.lifecycle===LifecycleConstants.READY) {
+  if (
+    job.lifecycle === LifecycleConstants.READY ||
+    job.lifecycle === LifecycleConstants.ONHOLD
+  ) {
     return LifecycleConstants.CANCELED
-  } else if (job.lifecycle===LifecycleConstants.ASSIGNED) {
+  } else if (job.lifecycle === LifecycleConstants.ASSIGNED) {
     return LifecycleConstants.TERMINATED
   } else {
     // current state cannot be canceled or terminated
@@ -690,100 +577,126 @@ const dispatchFinishedTaskExecutionEvent = (job, trigger, data) => {
   })
 }
 
-//function ResultMail ( job ) {
-//  /**
-//   *
-//   * parse result log and return html to send via email
-//   *
-//   */
-//  const scriptExecutionLog = (job) => {
-//    var html
-//    var stdout
-//    var stderr
-//    var code
-//    var result = (job.result && job.result.script_result) || null
-//
-//    if (!result) {
-//      html = `<span>script execution is not available</span>`
-//    } else {
-//      stdout = result.stdout ? result.stdout.trim() : 'no stdout'
-//      stderr = result.stderr ? result.stderr.trim() : 'no stderr'
-//      code = result.code || 'no code'
-//      html = `<pre><ul>
-//        <li>stdout : ${stdout}</li>
-//        <li>stderr : ${stderr}</li>
-//        <li>code : ${code}</li>
-//        </ul></pre>`
-//    }
-//    return html
-//  }
-//
-//  const scriptExecutionMail = (job,emails) => {
-//    var state
-//    var html
-//    var log = scriptExecutionLog(job)
-//    var result = job.result
-//
-//    if (result && result.script_result) {
-//      if (result.event=='killed' || result.script_result.killed) {
-//        state = 'interrupted'
-//        html = `
-//          <h3>Task ${job.task.name} execution on host ${job.host.hostname} has been interrupted.</h3>
-//          <p>The script ${job.script.filename} execution takes more than 10 minutos to finish and was interrupted.</p>
-//          <p>If you need more information, please contact the administrator</p>
-//          `
-//      } else {
-//        state = 'completed'
-//        html = `<h3>Task ${job.task.name} execution on ${job.host.hostname} has been completed.</h3>`
-//      }
-//    }
-//
-//    html += `<span>Script execution log </span><br/>` + log;
-//
-//    App.notifications.sendEmailNotification({
-//      customer_name: job.customer_name,
-//      subject: `[TASK] ${job.task.name} executed on ${job.host.hostname} ${state}`,
-//      content: html,
-//      to: emails
-//    });
-//
-//    return;
-//  }
-//
-//  this.ScriptJob = function (job,emails) {
-//    return scriptExecutionMail(job,emails);
-//  }
-//
-//  this.ScraperJob = function (job,emails) {
-//    var html = `<h3>Task ${job.task.name} execution completed on ${job.host.hostname}.</h3>`;
-//
-//    App.notifications.sendEmailNotification({
-//      customer_name: job.customer_name,
-//      subject: `[TASK] ${job.task.name} executed on ${job.host.hostname}`,
-//      content: html,
-//      to: emails
-//    });
-//  }
-//
-//  App.customer.getAlertEmails(
-//    job.customer_name,
-//    (err, emails) => {
-//      var mailTo
-//      var extraEmail = []
-//      var acls = job.task.acl
-//
-//      if (Array.isArray(acls) && acls.length>0) {
-//        extraEmail = acls.filter(email => emails.indexOf(email) === -1);
-//      }
-//
-//      mailTo = extraEmail.length>0 ? emails.concat(extraEmail) : emails;
-//
-//      job.populate([
-//        { path: 'user' },
-//        { path: 'host' }
-//      ], error => {
-//        this[ job._type ]( job, mailTo );
-//      });
-//    }
-//  )
-//}
+const JobFactory = {
+  /**
+   *
+   * @param {Task} task
+   * @param {Object} input
+   * @param {Function} next
+   *
+   */
+  create (task, input, next) {
+    /**
+     *
+     * @param {Task} task
+     * @param {String[]} args
+     * @param {Function} next
+     *
+     */
+    const prepareTaskArguments = (args, done) => {
+      if (!args) {
+        App.taskManager.prepareTaskArgumentsValues(
+          task.script_arguments,
+          [], // use only fixed-arguments if not specified
+          done
+        )
+      } else {
+        done(null, args)
+      }
+    }
+
+    const setupJobBasicProperties = (job) => {
+      if (task.workflow_id) {
+        job.workflow = task.workflow_id
+        job.workflow_id = task.workflow_id
+      }
+      // copy embedded task object
+      job.task = task.toObject() // >>> add .id  / embedded
+      job.task_id = task._id
+      job.user = input.user;
+      job.user_id = input.user._id;
+      job.host_id = task.host_id;
+      job.host = task.host_id;
+      job.name = task.name;
+      job.customer_id = input.customer._id;
+      job.customer_name = input.customer.name;
+      job.notify = input.notify;
+      job.lifecycle = LifecycleConstants.READY
+      job.event = input.event || null
+      //job.event_id = input.event_id || null
+      job.event_data = input.event_data || {}
+      job.origin = input.origin
+      return job
+    }
+
+    const saveJob = (job, done) => {
+      job.save(err => {
+        if (err) {
+          logger.error('%o',err)
+          return done(err)
+        }
+        done(null, job)
+      })
+    }
+
+    const createScraperJob = (done) => {
+      const job = new JobModels.Scraper()
+      setupJobBasicProperties(job)
+      return saveJob(job, done)
+    }
+
+    /**
+     * @param {Object} input
+     * @property {String} input.script_id
+     * @property {String[]} input.script_arguments ordered script arguments values
+     */
+    const createScriptJob = (done) => {
+      prepareScript(task.script_id, (err,script) => {
+        if (err) { return next (err) }
+        const job = new JobModels.Script()
+        setupJobBasicProperties(job)
+        job.script = script.toObject() // >>> add .id  / embedded
+        job.script_id = script._id
+        job.script_arguments = input.script_arguments
+        job.script_runas = task.script_runas
+        /**
+         * @todo should remove hereunder line in the future.
+         * only keep for backward compatibility with agent versions number equal or older than version 0.11.3.
+         * this is overwriting saved job.task.script_arguments definition.
+         */
+        job.task.script_arguments = input.script_arguments
+        return saveJob(job, done)
+      })
+    }
+
+    /**
+     * approval job is created onhold , waiting approver decision
+     */
+    const createApprovalJob = (done) => {
+      const job = new JobModels.Approval()
+      setupJobBasicProperties(job)
+      job.lifecycle = LifecycleConstants.ONHOLD
+      return saveJob(job, done)
+    }
+
+    switch (task.type) {
+      case TaskConstants.TYPE_SCRIPT:
+        prepareTaskArguments(input.script_arguments, (err, args) => {
+          if (err) { return next(err) }
+          input.script_arguments = args
+          createScriptJob(next)
+        })
+        break;
+      case TaskConstants.TYPE_SCRAPER:
+        createScraperJob(next)
+        break;
+      case TaskConstants.TYPE_APPROVAL:
+        createApprovalJob(next)
+        break;
+      default:
+        const err = new Error(`invalid or undefined task type ${task.type}`)
+        return next(err)
+        break;
+    }
+  }
+}

@@ -9,6 +9,9 @@ var Schema = BaseSchema.extend({
   host_id: { type: String },
   template_id: { type: ObjectId },
   type: { type: String, default: 'scraper' },
+  // relations
+  host: { type: ObjectId, ref: 'Host' },
+  template: { type: ObjectId, ref: 'TaskTemplate' },
   // scraper properties
   url: { type: String, required: true },
   method: { type: String, required: true },
@@ -19,9 +22,6 @@ var Schema = BaseSchema.extend({
   status_code: { type: Number },
   gzip: { type: Boolean },
   json: { type: Boolean },
-  // relations
-  host: { type: ObjectId, ref: 'Host' },
-  template: { type: ObjectId, ref: 'TaskTemplate' },
 })
 
 Schema.methods.publish = function(next) {

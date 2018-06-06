@@ -6,6 +6,7 @@ const BaseSchema = require('./schema')
 const Template = require('./template').Entity
 const TaskConstants = require('../../constants/task')
 const ScraperTask = require('./scraper').Entity
+const ApprovalTask = require('./approval').Entity
 
 /**
  * Extended Schema. Includes non template attributes
@@ -15,7 +16,7 @@ const TaskSchema = BaseSchema.extend({
   host_id: { type: String },
   script_id: { type: String },
   script_runas: { type: String },
-  script_arguments: { type: Array },
+  script_arguments: { type: Array }, // will be replaced with task_arguments
   type: { type: String, default: 'script' },
   // relations
   host: { type: ObjectId, ref: 'Host' },
@@ -86,11 +87,15 @@ Task.on('afterRemove',function(model){ });
 exports.Entity = Task;
 exports.ScriptTask = Task
 exports.ScraperTask = ScraperTask
+exports.ApprovalTask = ApprovalTask
 
 exports.Factory = {
   create (input) {
     if (input.type == TaskConstants.TYPE_SCRAPER) {
       return new ScraperTask(input)
+    }
+    if (input.type == TaskConstants.TYPE_APPROVAL) {
+      return new ApprovalTask(input)
     }
     if (input.type == TaskConstants.TYPE_SCRIPT) {
       return new Task(input)

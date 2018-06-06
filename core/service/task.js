@@ -10,7 +10,6 @@ const lodashAssign = require('lodash/assign')
 const lodashAfter = require('lodash/after')
 const lodashExtend = require('lodash/extend')
 
-const NotificationService = require('./notification')
 const Tag = require('../entity/tag').Entity
 const Host = require('../entity/host').Entity
 const Task = require('../entity/task').Entity
@@ -176,6 +175,7 @@ module.exports = {
       logger.data('%j', task)
       return done(null,task)
     }
+
     const createTags = (tags) => {
       if (tags && Array.isArray(tags)) {
         Tag.create(tags, customer)
@@ -490,18 +490,20 @@ module.exports = {
   }
 }
 
+// not yet
 const sendTaskUpdatedEventNotification = (task) => {
-  const topic = TopicsConstants.task.crud
-  NotificationService.generateSystemNotification({
-    topic: topic,
-    data: {
-      model_type: task._type,
-      model: task,
-      hostname: task.hostname,
-      organization: task.customer_name,
-      operation: Constants.UPDATE
-    }
-  })
+  return
+  //const topic = TopicsConstants.task.crud
+  //App.notifications.generateSystemNotification({
+  //  topic: topic,
+  //  data: {
+  //    model_type: task._type,
+  //    model: task,
+  //    hostname: task.hostname,
+  //    organization: task.customer_name,
+  //    operation: Constants.UPDATE
+  //  }
+  //})
 }
 
 /**
