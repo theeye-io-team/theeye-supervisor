@@ -20,6 +20,7 @@ const properties = {
   tags: { type: Array, default: [] },
   customer_id: { type: ObjectId },
   customer_name: { type: String },
+  description: { type: String },
   // RELATIONS
   customer: { type: ObjectId, ref: 'Customer' }, // belongs to
 }
@@ -117,7 +118,7 @@ EntitySchema.methods.setUpdates = function(input, next) {
   }
   if (input.tags) monitor.tags = input.tags;
   if (input.name) monitor.name = input.name;
-  if (input.description) monitor.description = input.description;
+  if (typeof input.description === 'string') monitor.description = input.description;
 
   monitor.template = null
   monitor.template_id = null
@@ -186,10 +187,10 @@ EntitySchema.methods.setUpdates = function(input, next) {
     case 'psaux':
       // no custom configuration
       break;
-    default: 
+    default:
       var error = new Error('monitor type "' + type + '" unsupported')
       debug(error.message);
-      return next(error); 
+      return next(error);
       break;
   }
 
