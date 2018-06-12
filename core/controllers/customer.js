@@ -195,15 +195,17 @@ var controller = {
    */
   updateconfig (req, res, next) {
     const customer = req.customer
-    const config = req.body.config
+    let config = req.body.config;
+
     const integration = req.body.integration
     if (!integration) {
       return res.send(400, json.error('Missing config values.'))
     }
 
-    if (!config && (integration !== 'kibana')) {
-      return res.send(400, json.error('Missing config values.'))
-    }
+    // NOTE: gone to kibana case
+    // if (!config && (integration !== 'kibana')) {
+    //   return res.send(400, json.error('Missing config values.'))
+    // }
 
     switch (integration) {
       case 'elasticsearch':
@@ -219,15 +221,31 @@ var controller = {
         }
         break;
       case 'kibana':
-        if (
-          config &&
-          ! isURL(config,{
-            protocols: ['http','https'],
-            require_protocol: true
-          })
-        ) {
-          return res.send(400, json.error('kibana iframe url must be a valid URL'));
+        // error if empty config
+        if (!config) {
+          return res.send(400, json.error('Missing config values.'));
         }
+
+        // convert old school kibana config
+        // NOTE: MUTATES `config`
+        if (typeof (config) === 'string') {
+          config = {
+            url: config,
+            enabled: true
+          };
+        }
+
+        if (config.enabled === true) {
+          if (
+            !isURL(config.url, {
+              protocols: ['http','https'],
+              require_protocol: true
+            })
+          ) {
+            return res.send(400, json.error('kibana url must be a valid URL'));
+          }
+        }
+
         break;
       case 'ngrok':
         break;
