@@ -168,7 +168,7 @@ module.exports = {
       if (err) logger.log('%o',err)
 
       done(err, job) // continue process in paralell
-      
+
       let topic = TopicsConstants.task.result
       registerJobOperation(Constants.UPDATE, topic, {
         job, user, customer, task
@@ -371,7 +371,7 @@ const jobInProgress = (job) => {
   if (!job) return false
   let inProgress = (
     job.lifecycle === LifecycleConstants.READY ||
-    job.lifecycle === LifecycleConstants.ASSIGNED 
+    job.lifecycle === LifecycleConstants.ASSIGNED
   )
   return inProgress
 }
@@ -447,7 +447,7 @@ const registerJobOperation = (operation, topic, input) => {
     if (job._type === JobConstants.SCRAPER_TYPE) {
       payload.url = task.url
       payload.method = task.method
-      payload.statuscode = task.status_code 
+      payload.statuscode = task.status_code
       payload.pattern = task.pattern
     } else if (job._type == JobConstants.SCRIPT_TYPE) {
       if (!job.script) {
@@ -486,7 +486,8 @@ const registerJobOperation = (operation, topic, input) => {
         organization: customer.name,
         operation: operation,
         model_type: job._type,
-        model: job
+        model: job,
+        approver_id: (job.task && job.task.approver_id) || undefined
       }
     })
   })
@@ -539,7 +540,7 @@ const cancelJobNextLifecycle = (job) => {
  * @summary The task execution is finished.
  * @param {Job} job
  * @param {String} trigger triggered event name
- * @param {Object} data 
+ * @param {Object} data
  *
  */
 const dispatchFinishedTaskExecutionEvent = (job, trigger, data) => {
