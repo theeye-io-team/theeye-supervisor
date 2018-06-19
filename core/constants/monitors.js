@@ -5,6 +5,7 @@ module.exports = Object.freeze({
   DEFAULT_HEALTH_THRESHOLD_MEM: 85,
   DEFAULT_HEALTH_THRESHOLD_CACHE: 85,
   DEFAULT_HEALTH_THRESHOLD_DISK: 90,
+  DEFAULT_LOOPTIME: 60000, // 1 minute
   SUCCESS_STATES: ['success', 'ok', 'normal'],
   FAILURE_STATES: ['error', 'fail', 'failure'],
   // MONITOR STATES

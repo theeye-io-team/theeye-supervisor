@@ -444,7 +444,7 @@ const setMonitorForHost = (input) => {
 		host_id: input.host_id,
 		name: (input.name || MonitorConstants.RESOURCE_TYPE_HOST),
 		type: MonitorConstants.RESOURCE_TYPE_HOST,
-		looptime: (input.looptime || 10000),
+		looptime: (input.looptime || MonitorConstants.DEFAULT_LOOPTIME),
 		config: { }
 	};
 }
@@ -454,7 +454,7 @@ const setMonitorForDstat = (input) => {
 		host: input.host_id,
 		name: (input.name || MonitorConstants.RESOURCE_TYPE_DSTAT),
 		type: MonitorConstants.RESOURCE_TYPE_DSTAT,
-		looptime: (input.looptime || 10000),
+		looptime: (input.looptime || MonitorConstants.DEFAULT_LOOPTIME),
 		config: {
 			limit: {
 				cpu: input.cpu || MonitorConstants.DEFAULT_HEALTH_THRESHOLD_CPU,
@@ -471,7 +471,7 @@ const setMonitorForPsaux = (input) => {
 		host: input.host_id,
 		name: (input.name || MonitorConstants.RESOURCE_TYPE_PSAUX),
 		type: MonitorConstants.RESOURCE_TYPE_PSAUX,
-		looptime: (input.looptime || 15000),
+		looptime: (input.looptime || MonitorConstants.DEFAULT_LOOPTIME),
 		config: {}
 	})
 }
