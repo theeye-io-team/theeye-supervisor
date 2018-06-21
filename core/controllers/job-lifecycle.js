@@ -4,6 +4,7 @@ const App = require('../app')
 const logger = require('../lib/logger')('controller:job-lifecycle')
 const router = require('../router')
 const LifecycleConstants = require('../constants/lifecycle')
+const StateConstants = require('../constants/states')
 
 /**
  * @summary Job.lifecycle property CRUD
@@ -61,6 +62,8 @@ const controller = {
   },
   cancel (req, res, next) {
     const job = req.job
+    const web_user_id = req.params.web_user_id
+
     App.jobDispatcher.cancel({ job, user: req.user, customer: req.customer }, err => {
       if (err) {
         logger.error('Failed to cancel job')
@@ -72,7 +75,16 @@ const controller = {
     })
   },
   approve (req, res, next) {
-    var result = req.params.result || {}
+    const result = req.params.result || {}
+    const job = req.job
+    const web_user_id = req.params.web_user_id
+
+    result.state = StateConstants.SUCCESS
+
+    if (web_user_id !== job.task.approver_id.toString()) {
+      return res.send(403, 'you are not allowed to approve this job')
+    }
+
     App.jobDispatcher.finish({
       result,
       job: req.job,
@@ -85,7 +97,16 @@ const controller = {
     })
   },
   reject (req, res, next) {
-    var result = req.params.result || {}
+    const result = req.params.result || {}
+    const job = req.job
+    const web_user_id = req.params.web_user_id
+
+    result.state = StateConstants.FAILURE
+
+    if (web_user_id !== job.task.approver_id.toString()) {
+      return res.send(403, 'you are not allowed to reject this job')
+    }
+
     App.jobDispatcher.finish({
       result,
       job: req.job,
