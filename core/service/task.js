@@ -39,23 +39,27 @@ module.exports = {
    */
   remove (options) {
     const task = options.task
-    Task
-      .find({ _id: task._id })
-      .remove()
-      .exec(err => {
-        if (err) return options.fail(err)
+    if (task.workflow_id) {
+      return options.fail(new Error('Cannot delete a task that belongs to a workflow.'))
+    } else {
+      Task
+        .find({ _id: task._id })
+        .remove()
+        .exec(err => {
+          if (err) return options.fail(err)
 
-        App.scheduler.unscheduleTask(task)
+          App.scheduler.unscheduleTask(task)
 
-        TaskEvent
-          .find({ emitter_id: task._id })
-          .remove()
-          .exec(err => {
-            if (err) return options.fail(err)
-          })
+          TaskEvent
+            .find({ emitter_id: task._id })
+            .remove()
+            .exec(err => {
+              if (err) return options.fail(err)
+            })
 
-        options.done()
-      })
+          options.done()
+        })
+    }
   },
   /**
    *
