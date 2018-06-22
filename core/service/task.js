@@ -75,6 +75,12 @@ module.exports = {
     delete updates._id // if set
 
     task.set(updates)
+
+    // keep backward compatibility with script_arguments
+    if (task.type===TaskConstants.TYPE_SCRIPT) {
+      task.script_arguments = updates.task_arguments
+    }
+
     task.save(function (err, task) {
       if (err) {
         if (err.name=='ValidationError') {
@@ -185,6 +191,11 @@ module.exports = {
     logger.log('creating task with data %o', input)
 
     var task = TaskFactory.create(input)
+
+    // keep backward compatibility with script_arguments
+    if (task.type===TaskConstants.TYPE_SCRIPT) {
+      task.script_arguments = input.task_arguments
+    }
 
     task.save(err => {
       if (err) {

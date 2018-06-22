@@ -88,7 +88,6 @@ Scheduler.prototype = {
    * @param {Object} input data
    * @property {String} input.origin job schedule creator
    * @property {Task} input.task the task definition
-   * @property {String[]} input.script_arguments
    */
   scheduleTask (input, done) {
     const task = input.task
