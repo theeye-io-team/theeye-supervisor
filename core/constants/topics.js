@@ -42,7 +42,7 @@ exports.job = {
 }
 exports.webhook = {
   crud: 'webhook-crud',
-  triggered: 'triggered-webhook'
+  triggered: 'webhook-triggered'
 }
 exports.scheduler = {
   crud: 'scheduler-crud'

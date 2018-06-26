@@ -9,6 +9,7 @@ const router = require('../router');
 const App = require('../app');
 const WebhookEvent = require('../entity/event').WebhookEvent;
 const Webhook = require('../entity/webhook').Webhook;
+const Constants = require('../constants')
 const TopicsConstants = require('../constants/topics')
 
 module.exports = function (server, passport) {
@@ -101,13 +102,16 @@ var controller = {
       })
     );
 
-    Webhook.find(filter.where, (err, webhooks) => {
-      if(err) {
-        logger.error(err);
-        return res.send(500);
-      }
-      res.send(200, webhooks);
-    });
+    Webhook
+      .find(filter.where)
+      .populate('customer')
+      .exec((err, webhooks) => {
+        if(err) {
+          logger.error(err);
+          return res.send(500);
+        }
+        res.send(200, webhooks)
+      })
   },
   /**
    * @method POST
@@ -170,7 +174,17 @@ var controller = {
    * @method POST
    */
   trigger (req, res, next) {
-    var webhook = req.webhook;
+    const webhook = req.webhook
+
+    App.notifications.generateSystemNotification({
+      topic: TopicsConstants.webhook.triggered,
+      data: {
+        model_type: 'Webhook',
+        model: webhook,
+        organization: req.customer.name,
+        operation: Constants.TRIGGER
+      }
+    })
 
     WebhookEvent.findOne({
       emitter_id: webhook._id,
