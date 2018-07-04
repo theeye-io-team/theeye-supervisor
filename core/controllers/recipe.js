@@ -32,12 +32,10 @@ const controller = {
    * @method GET
    */
   fetch (req, res, next) {
-    var query = {
-      where: req.query
-    }
+    var input = req.query
 
     var filter = dbFilter(
-      merge({}, (query || {}), {
+      merge({}, (input || {}), {
         where: {
           customer: req.customer._id
         }
