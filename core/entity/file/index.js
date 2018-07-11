@@ -2,9 +2,10 @@
 
 const mongodb = require('../../lib/mongodb').db
 const FileSchema = require('./schema')
+const Template = require('./template')
 
 var ScriptSchema = new FileSchema()
-ScriptSchema.statics.create = function(data,next) {
+ScriptSchema.statics.create = function (data,next) {
   var options = {
     customer: data.customer_id,
     customer_id: data.customer_id,
@@ -47,3 +48,21 @@ File.on('afterSave', function(model) {
 
 exports.File = File
 exports.Script = Script
+exports.Template = Template
+
+exports.FactoryCreate = function (data) {
+  let _type = data._type
+
+  delete data._type
+  delete data._id
+  delete data.id
+  delete data._v
+
+  if (_type === 'Script' || _type === 'ScriptTemplate') {
+    return new Script(data)
+  } else if (_type === 'File' || _type === 'FileTemplate' || !_type) {
+    return new File(data)
+  }
+
+  throw new Error('FATAL ERROR. file _type [' + _type + '] is not valid')
+}

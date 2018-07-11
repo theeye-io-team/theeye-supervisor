@@ -17,6 +17,7 @@ const TaskTemplate = require('../../../entity/task/template').Template
 const Recipe = require('../../../entity/recipe').Recipe
 
 /** NON TEMPLATES **/
+const FileModel = require('../../../entity/file')
 const Monitor = require('../../../entity/monitor').Entity
 const Resource = require('../../../entity/resource').Entity
 const Task = require('../../../entity/task').Entity
@@ -45,24 +46,28 @@ const Service = module.exports = {
         return done(err)
       }
 
+      const files = group.files.map(f => f._id)
       const tasks = group.tasks.map(t => t._id)
       const resources = group.resources.map(r => r._id)
       const monitors = group.resources.map(r => r.monitor_template_id)
       const hosts = group.hosts
 
       // remove in series
-      logger.log('removing templated tasks')
-      removeTemplateEntities(tasks, TaskTemplate, Task, keepInstances, () => {
-        logger.log('removing templated resources')
-        removeTemplateEntities(resources, ResourceTemplate, Resource, keepInstances, () => {
-          logger.log('removing templated monitors')
-          removeTemplateEntities(monitors, MonitorTemplate, Monitor, keepInstances, () => {
-            logger.log('all removed')
-            if (hosts.length>0) {
-              hosts.forEach(host => {
-                AgentUpdateJob.create({ host_id: host._id })
-              })
-            }
+      logger.log('removing templated files')
+      removeTemplateEntities(files, FileModel.Template.File, FileModel.File, keepInstances, () => {
+        logger.log('removing templated tasks')
+        removeTemplateEntities(tasks, TaskTemplate, Task, keepInstances, () => {
+          logger.log('removing templated resources')
+          removeTemplateEntities(resources, ResourceTemplate, Resource, keepInstances, () => {
+            logger.log('removing templated monitors')
+            removeTemplateEntities(monitors, MonitorTemplate, Monitor, keepInstances, () => {
+              logger.log('all removed')
+              if (hosts.length>0) {
+                hosts.forEach(host => {
+                  AgentUpdateJob.create({ host_id: host._id })
+                })
+              }
+            })
           })
         })
       })
@@ -80,6 +85,7 @@ const Service = module.exports = {
    * @param {Object} input group data properties. freezed object
    * @property {Object[]} input.triggers plain objects array
    * @property {Object[]} input.tasks plain objects array
+   * @property {Object[]} input.files plain objects array
    * @property {Object[]} input.resources plain objects array
    * @property {String[]} input.hosts array of hosts string ids
    * @property {Customer} input.customer
@@ -92,6 +98,7 @@ const Service = module.exports = {
   create (input, next) {
     const triggers = input.triggers
     const tasks = input.tasks
+    const files = input.files
     const resources = input.resources
     const customer = input.customer
     const user = input.user
@@ -100,6 +107,7 @@ const Service = module.exports = {
     var group
 
     /**
+     * @summary check if input.hosts contains the same id as host_origin.  * remove it if present. will be added at the end of the process
      * @param {String} host
      * @param {String[]} hosts
      * @return {String[]}
@@ -112,14 +120,13 @@ const Service = module.exports = {
       return hosts
     }
 
-    const values = assign({},input,{
+    const values = assign({}, input, {
+      files: [],
       tasks: [],
       resources: [],
       user_id: user._id,
       customer_id: customer._id,
       customer_name: customer.name,
-      // check if input.hosts contains the same id as host_origin.
-      // remove it if present. will be added at the end of the process
       hosts: findAndRemove(input.host_origin, input.hosts.slice())
     })
 
@@ -132,77 +139,78 @@ const Service = module.exports = {
         return next(err)
       }
 
-      logger.log('creating group templates')
-      generateHostGroupTemplates(
+      generateTemplates({
         group,
         tasks,
         resources,
         triggers,
         customer,
         user,
-        (err, templates) => {
-          if (err) {
-            logger.error('%o', err)
-            return next(err)
-          }
+        files
+      }, (err, templates) => {
+        if (err) {
+          logger.error('%o', err)
+          return next(err)
+        }
 
-          logger.log('creating recipe')
-          createRecipe({
-            tags: [],
-            public: false,
-            customer: customer._id,
-            customer_id: customer._id,
-            user: user._id,
-            user_id: user._id,
-            name: group.name,
-            description: group.description,
-            instructions: {
-              resources: resources,
-              tasks: tasks,
-              triggers: triggers
-            },
-            hostgroup: group._id,
-            hostgroup_id: group._id
-          })
+        logger.log('creating recipe')
+        createRecipe({
+          tags: [],
+          public: false,
+          customer: customer._id,
+          customer_id: customer._id,
+          user: user._id,
+          user_id: user._id,
+          name: group.name,
+          description: group.description,
+          instructions: { resources, tasks, triggers, files },
+          hostgroup: group._id,
+          hostgroup_id: group._id
+        })
 
-          logger.log('all templates created. attaching to group')
-          // attach ids to template and save relations
-          group.triggers = templates.triggers
-          group.resources = templates.resources.map(r => r._id)
-          group.tasks = templates.tasks.map(t => t._id)
-          group.save(err => {
-            if (err) return next(err)
+        logger.log('all templates created. attaching to group')
+        // attach ids to template and save relations
+        group.files = templates.files.map(f => f._id)
+        group.triggers = templates.triggers
+        group.resources = templates.resources.map(r => r._id)
+        group.tasks = templates.tasks.map(t => t._id)
+        group.save(err => {
+          if (err) return next(err)
 
-            // host template has been created ! populate all the data
-            Service.populate(group,(err) => {
-              if (err) return next(err)
+          // host template has been created ! populate all the data
+          Service.populate(group,(err) => {
+            if (err) { return next(err) }
 
-              if (group.hosts.length > 0) {
-                /**
-                 * copy template configs to the attached hosts.
-                 * group.hosts should be already populated,
-                 * it is Host object Array
-                 **/
-                logger.log('copying template to hosts')
-                for (let i=0; i<group.hosts.length; i++) {
-                  let host = group.hosts[i]
-                  if (host._id.toString() !== input.host_origin) {
-                    copyTemplateToHost(group.hosts[i], group, customer, (err) => { })
-                  }
+            if (group.hosts.length > 0) {
+              /**
+               * copy template configs to the attached hosts.
+               * group.hosts should be already populated,
+               * it is Host object Array
+               **/
+              logger.log('copying template to hosts')
+              for (let i=0; i<group.hosts.length; i++) {
+                let host = group.hosts[i]
+                if (host._id.toString() !== input.host_origin) {
+                  copyTemplateToHost(
+                    group.hosts[i],
+                    group,
+                    customer,
+                    (err) => {}
+                  )
                 }
               }
+            }
 
-              if (input.host_origin && applyToSourceHost === true) {
-                addHostOriginToGroup(input.host_origin, group, customer, user, function (err) {
-                  next(err, group)
-                })
-              } else {
+            if (input.host_origin && applyToSourceHost === true) {
+              addHostOriginToGroup(input.host_origin, group, customer, user, function (err) {
                 next(err, group)
-              }
-            })
+              })
+            } else {
+              next(err, group)
+            }
           })
-        } // end generate templates callback
-      )
+        })
+      }) // end generate templates callback
     })
   },
 
@@ -537,51 +545,102 @@ const addHostOriginToGroup = (host_id, group, customer, user, next) => {
 
 /**
  *
- * @param {HostGroup} group
- * @param {Object[]} tasks, tasks definitions/properties
- * @param {Object[]} resources, resources & monitors definitions/properties
- * @param {Object[]} triggers, task event triggers. each object contains a task id and events from tasks and monitors on the same host
- * @param {Customer} customer
- * @param {User} user
+ * @param {Object} input
+ * @property {HostGroup} input.group
+ * @property {Object[]} input.tasks tasks definitions/properties
+ * @property {Object[]} input.files files definitions. each object contains a file content and metadata, and the linked model to the file
+ * @property {Object[]} input.resources resources & monitors definitions/properties
+ * @property {Object[]} input.triggers task event triggers. each object contains a task id and events from tasks and monitors on the same host
+ * @property {Customer} input.customer
+ * @property {User} input.user
  * @param {Function} done, callback
  *
  */
-const generateHostGroupTemplates = (group,tasks,resources,triggers,customer,user,done) => {
-  // create tasks and monitors templates
-  async.series({
-    tasks: (done) => App.task.createTemplates(
-      group, tasks, customer, user, done
-    ),
-    resources: (done) => ResourceTemplateService.createTemplates(
-      group, resources, customer, user, done
-    )
-  }, (err, templates) => {
-    if (err) {
-      return done(err)
-    }
+const generateTemplates = (input, done) => {
+  logger.log('creating host templates')
 
-    logger.log('binding triggers to task templates')
-    //return done(err, templates)
-    generateTasksTriggersTemplates(
-      templates,
-      triggers,
-      (err, triggersTemplates) => {
-        if (triggersTemplates.length===0) logger.log('no triggers to bind.')
-        templates.triggers = triggersTemplates
-        logger.log('triggers binding completed')
-        return done(err, templates)
+  let { group, customer, user, files } = input
+ let templates = {}
+
+  App.file.createTemplates({
+    group, 
+    files
+  }, (err, fileTpls) => {
+
+    templates.files = fileTpls;
+
+    (function updateFileTemplatesLinkedModels () {
+      let tasks = input.tasks
+      let resources = input.resources
+      for (let fdx = 0; fdx < templates.files.length; fdx++) {
+        let file = templates.files[fdx]
+        if (!file.source_model_id) { continue }
+        for (let rdx = 0; rdx < resources.length; rdx++) {
+          let resource = resources[rdx]
+          if (resource.type === 'file') {
+            if (resource.monitor.config.file === file.source_model_id.toString()) {
+              resource.monitor.config.file = file._id.toString()
+              //resources.splice(rdx, 1)
+              //break
+            }
+          } else if (resource.type === 'script') {
+            if (resource.monitor.config.script_id === file.source_model_id.toString()) {
+              resource.monitor.config.script_id = file._id.toString()
+              //resources.splice(rdx, 1)
+              //break
+            }
+          }
+        }
+        for (let tdx = 0; tdx < tasks.length; tdx++) {
+          let task = tasks[tdx]
+          if (task.type === 'script') {
+            if (task.script_id.toString() === file.source_model_id.toString()) {
+              task.script = file._id.toString()
+              task.script_id = file._id.toString()
+              //tasks.splice(tdx, 1)
+              //break
+            }
+          }
+        }
       }
-    )
+    })()
+
+    async.series({
+      // create tasks templates
+      tasks: (next) => App.task.createTemplates(
+        group, input.tasks, customer, user, next
+      ),
+      // create monitors templates
+      resources: (next) => ResourceTemplateService.createTemplates(
+        group, input.resources, customer, user, next
+      )
+    }, (err, result) => {
+      if (err) { return done(err) }
+
+      templates.resources = result.resources
+      templates.tasks = result.tasks
+
+      generateTasksTriggersTemplates(
+        templates,
+        input.triggers,
+        (err, triggerTpls) => {
+          if (err) { return done(err) }
+
+          templates.triggers = triggerTpls
+
+          return done(err, templates)
+        }
+      )
+    })
   })
 }
 
 /**
  *
- * WTF is this...? the templates were linked to its source model, when available.
- *
+ * the templates are linked to its source model, when available.
  * (source_model_id is available when the template was generated from another model)
  *
- * Here source_model_id is used to match the trigger of the original task to
+ * source_model_id is used to match the trigger of the original task to
  * the task template and register triggers relations within the host template.
  * This enables the template to recreate tasks and monitors relations at the
  * moment of host registration.
@@ -594,6 +653,7 @@ const generateHostGroupTemplates = (group,tasks,resources,triggers,customer,user
  *
  */
 const generateTasksTriggersTemplates = (templates, triggers, next) => {
+  logger.log('binding triggers to task templates')
   const resources = templates.resources
   const tasks = templates.tasks
   const eventTemplates = []
@@ -619,7 +679,7 @@ const generateTasksTriggersTemplates = (templates, triggers, next) => {
       )
     })
 
-    if (!taskTemplate) break
+    if (!taskTemplate) { break }
 
     // for each event trigger of the taskTemplate
     for (var j=0; j<events.length; j++) {
@@ -662,7 +722,12 @@ const generateTasksTriggersTemplates = (templates, triggers, next) => {
     }
   }
 
-  return next(null,eventTemplates)
+  if (eventTemplates.length===0) {
+    logger.log('no triggers to bind.')
+  } else {
+    logger.log('triggers binding completed')
+  }
+  return next(null, eventTemplates)
 }
 
 const findHost = (id, next) => {
@@ -805,7 +870,7 @@ const unlinkHostFromTemplate = (host, template, keepInstances, next) => {
 
 /**
  * @author Facugon
- * @summary Given a host, copy task and monitor templates to it
+ * @summary copy all template properties to the given host
  * @param {Host} host
  * @param {HostGroup} template
  * @param {Customer} customer
@@ -818,19 +883,76 @@ const copyTemplateToHost = (host, template, customer, next) => {
   copyTasksToHost(host, template.tasks, customer, (err,tasks) => {
     copyResourcesToHost(host, template.resources, customer, (err, resources) => {
       copyTriggersToHostTasks(host, tasks, resources, template.triggers, (err) => {
-        if (err) {
-          logger.error(err)
-          return next(err)
-        }
-        logger.log('all entities processed')
-        logger.log(tasks)
+        createRequiredFiles({
+          customer,
+          tasks,
+          resources,
+          files: template.files
+        }, () => {
+          if (err) {
+            logger.error(err)
+            return next(err)
+          }
+          logger.log('all entities processed')
+          logger.log(tasks)
 
-        AgentUpdateJob.create({ host_id: host._id })
+          AgentUpdateJob.create({ host_id: host._id })
 
-        next()
+          next()
+        })
       })
     })
   })
+}
+
+const createRequiredFiles = (input, done) => {
+  let { tasks, resources } = input
+
+  // seach files attached to newly created script tasks.
+  // the assigned task.script_id belongs to a file template _id.
+  async.eachSeries(
+    tasks,
+    (task, next) => {
+      if (task.type!=='script') { return next() } // skip
+
+      // try to get the file if is already created
+      let query = FileModel
+        .File
+        .findOne({ template_id: task.script_id })
+
+      query.exec((err, file) => {
+        if (err) { return next(err) }
+        if (!file) {
+          // search the file template
+          let fileTpl = input.files.find(f => {
+            return f._id.toString() === task.script_id.toString()
+          })
+
+          if (fileTpl) {
+            logger.log('creating new file from template')
+            // create a new file instance
+            App.file.createFromTemplate({
+              template: fileTpl,
+              customer: input.customer
+            }, (err, file) => {
+              task.script_id = file._id
+              task.script = file._id
+              task.save(next)
+            })
+          } else {
+            throw new Error('FATAL ERROR file template not found')
+          }
+        } else {
+          // use the already created file
+          logger.log('using already existent file')
+          task.script_id = file._id
+          task.script = file._id
+          task.save(next)
+        }
+      })
+    },
+    (err) => { done() }
+  )
 }
 
 /**
@@ -1008,7 +1130,6 @@ const supplyHostWithTemplateInstructions = (host, group, customer, done) => {
  * @param {Function} next callback
  */
 const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
-
   if (triggers.length===0) return next()
 
   const searchTriggerEmitter = (trigger) => {
@@ -1116,7 +1237,7 @@ const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
   // async operations part
   async.map(
     procesableTriggers,
-    function(proc,done){
+    (proc,done) => {
       addEventToTaskTriggers(
         proc.task,
         proc.trigger.event_name,
@@ -1130,8 +1251,7 @@ const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
           done(null, taskToSave)
         }
       )
-    },
-    (err, tasksToSave) => {
+    }, (err, tasksToSave) => {
       if (tasksToSave.length===0) return next()
 
       logger.log('saving tasks')

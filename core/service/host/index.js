@@ -1,25 +1,27 @@
 'use strict'
 
+const App = require('../../app')
 const after = require('lodash/after')
 const async = require('async')
-const NotificationService = require('../notification')
-const CustomerService = require('../customer')
 const Handlebars = require('../../lib/handlebars')
-const ResourceService = require('../resource')
-const HostGroupService = require('./group')
 const logger = require('../../lib/logger')('service:host')
-const Job = require('../../entity/job').Job;
+const FileHandler = require('../../lib/file')
+const HostGroupService = require('./group')
+const Constants = require('../../constants')
+const MonitorsConstants = require('../../constants/monitors')
+const TaskConstants = require('../../constants/task')
+const TopicsConstants = require('../../constants/topics')
+
+const File = require('../../entity/file').File
 const Monitor = require('../../entity/monitor').Entity
 const Event = require('../../entity/event').Event
 const Host = require('../../entity/host').Entity
-const HostGroup = require('../../entity/host/group').Entity;
-const HostStats = require('../../entity/host/stats').Entity;
+const HostGroup = require('../../entity/host/group').Entity
+const HostStats = require('../../entity/host/stats').Entity
 const Task = require('../../entity/task').Entity
 const Resource = require('../../entity/resource').Entity
+const JobModel = require('../../entity/job').Job
 const AgentUpdateJob = require('../../entity/job').AgentUpdate
-const createMonitor = ResourceService.createResourceOnHosts
-const Constants = require('../../constants')
-const TopicsConstants = require('../../constants/topics')
 
 function HostService (host) {
   this.host = host
@@ -37,7 +39,7 @@ HostService.prototype = {
     const vent = 'agent_unreachable'
     const host = this.host
 
-    CustomerService.getCustomerConfig(
+    App.customer.getCustomerConfig(
       host.customer_id,
       function (error,config) {
         host.fails_count += 1;
@@ -144,7 +146,7 @@ HostService.removeHostResource = function (input, done) {
 
   // find and remove resources
   const removeResource = (resource, done) => {
-    ResourceService.remove({
+    App.resource.remove({
       resource: resource,
       notifyAgents: false,
       user: user
@@ -178,7 +180,7 @@ HostService.removeHostResource = function (input, done) {
 
   // find and remove host jobs
   logger.log('removing host jobs')
-  Job
+  JobModel
     .find({ host_id: host_id })
     .exec(function(err, items){
       if (err) {
@@ -236,7 +238,8 @@ HostService.removeHostResource = function (input, done) {
  * @param {Function} next
  */
 HostService.config = (host, customer, next) => {
-  const data = { resources: [], tasks: [], triggers: [] }
+  const data = { resources: [], tasks: [], triggers: [], files: [] }
+  const filesToConfigure = []
 
   const resourcesConfig = (done) => {
     Resource.find({
@@ -257,6 +260,13 @@ HostService.config = (host, customer, next) => {
         }).exec(function(err,monitor){
           resource.monitor = monitor
           data.resources.push(resource)
+
+          if (monitor.type===MonitorsConstants.RESOURCE_TYPE_SCRIPT) {
+            filesToConfigure.push(monitor.config.script_id.toString())
+          } else if (monitor.type===MonitorsConstants.RESOURCE_TYPE_FILE) {
+            filesToConfigure.push(monitor.config.file.toString())
+          }
+
           completed()
         })
       })
@@ -271,11 +281,14 @@ HostService.config = (host, customer, next) => {
     }).exec(function(err,tasks){
       if (err) return done()
       if (!tasks||tasks.length===0) return done()
-      //data.tasks = tasks
 
       const completed = after(tasks.length, done)
 
       tasks.forEach(task => {
+        if (task.type===TaskConstants.TYPE_SCRIPT) {
+          filesToConfigure.push(task.script_id.toString())
+        }
+
         task.populateTriggers(() => {
           logger.log('processing triggers')
           logger.data('triggers %j', task.triggers)
@@ -328,12 +341,48 @@ HostService.config = (host, customer, next) => {
     })
   }
 
+  const filesConfig = (done) => {
+    if (filesToConfigure.length===0) { return done() }
+
+    // this function alters `filesToConfigure` (array) content
+    const unique = (() => {
+      return filesToConfigure.sort().filter((item, pos, ary) => {
+        return !pos || item != ary[pos - 1];
+      })
+    })()
+
+    async.map(
+      unique,
+      (file_id, next) => {
+        File.findById(file_id, (err, file) => {
+          if (err) return next(err)
+          if (!file) return next(null,file_id)
+
+          FileHandler.getBuffer(file, (error, buff) => {
+            if (error) {
+              logger.error(error)
+              next(error)
+            } else {
+              let props = file.toObject() // convert to plain object ...
+              props.data = buff.toString('base64') // ... assign data to file plain object only
+              data.files.push(props)
+              next(null, file)
+            }
+          })
+        })
+      }, done
+    )
+  }
+
   logger.log('getting resources config')
   resourcesConfig(()=>{
     logger.log('getting tasks config')
     tasksConfig(()=>{
-      logger.log('data fetched')
-      next(null,data)
+      logger.log('getting files config')
+      filesConfig(()=>{
+        logger.log('data fetched')
+        next(null,data)
+      })
     })
   })
 }
@@ -460,7 +509,7 @@ HostService.disableHostsByCustomer = (customer, doneFn) => {
 const createHostResources = (host, data, next) => {
   const customer = data.customer
 
-  ResourceService.create(data, (err, result) => {
+  App.resource.create(data, (err, result) => {
     if (err) {
       logger.error(err)
       return next(err)
@@ -509,9 +558,9 @@ const sendEventNotification = (host,vent) => {
   var params = { 'hostname': host.hostname }
 
   Handlebars.render(template, params, function(content){
-    CustomerService.getAlertEmails(host.customer_name,
+    App.customer.getAlertEmails(host.customer_name,
     function(error,emails){
-      NotificationService.sendEmailNotification({
+      App.notification.sendEmailNotification({
         to: emails.join(','),
         customer_name: host.customer_name,
         subject: subject,
@@ -521,7 +570,7 @@ const sendEventNotification = (host,vent) => {
   })
 
   const topic = TopicsConstants.host.state
-  NotificationService.generateSystemNotification({
+  App.notification.generateSystemNotification({
     topic: topic,
     data: {
       model_type: 'Host',
@@ -544,9 +593,9 @@ const createBaseMonitors = (input, next) => {
   next||(next = ()=>{})
   const dstat = Object.assign({},input,{type:'dstat'})
   const psaux = Object.assign({},input,{type:'psaux'})
-  createMonitor([input.host._id], dstat, (err) => {
+  App.resource.createResourceOnHosts([input.host._id], dstat, (err) => {
     if (err) logger.error(err)
-    createMonitor([input.host._id], psaux, (err) => {
+    App.resource.createResourceOnHosts([input.host._id], psaux, (err) => {
       if (err) logger.error(err)
       next()
     })
@@ -602,7 +651,7 @@ const detectTaskTriggersOfSameHost = (triggers, host, next) => {
           _type: trigger._type,
           name: trigger.name,
           emitter_id: trigger.emitter._id,
-          emitter: {
+          emitter: { // required by mongoose to populate schema
             _id: trigger.emitter._id,
             _type: trigger.emitter._type,
             name: trigger.emitter.name,

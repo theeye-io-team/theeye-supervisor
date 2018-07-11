@@ -3,30 +3,25 @@
 const util = require('util')
 const async = require('async')
 const path = require('path')
-const BaseSchema = require('../base-schema')
-const FetchBy = require('../../lib/fetch-by')
 const config = require('config')
+const ObjectId = require('mongoose').Schema.Types.ObjectId
+const BaseSchema = require('../base-schema')
+const SchemaProperties = require('./schema-properties')
+const FetchBy = require('../../lib/fetch-by')
 
 function FileSchema (props) {
   props||(props={})
 
   var specs = { collection: 'files' }
-  var properties = {
-    customer_id: { type: String },
-    customer_name: { type: String },
-    user_id: { type: String },
-    filename: { type: String },
-    keyname: { type: String },
-    mimetype: { type: String },
-    extension: { type: String },
-    size: { type: Number },
-    description: { type: String, default:'' },
-    md5: { type: String, default: null },
-    public : { type: Boolean, default: false },
-    tags: { type: Array, default:[] }
-  }
 
-  BaseSchema.call(this, util._extend({}, properties, props), specs)
+  BaseSchema.call(
+    this,
+    util._extend({
+      template_id: { type: ObjectId },
+      template: { type: ObjectId, ref: 'FileTemplate' },
+    }, SchemaProperties, props),
+    specs
+  )
 
   this.methods.getFullPath = function() {
     const uploadPath = config.get('system').file_upload_folder

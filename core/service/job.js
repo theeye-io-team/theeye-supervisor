@@ -614,7 +614,7 @@ const JobFactory = {
       // copy embedded task object
       job.task = task.toObject() // >>> add .id  / embedded
       job.task_id = task._id
-      job.user = input.user;
+      job.user = input.user_id;
       job.user_id = input.user._id;
       job.host_id = task.host_id;
       job.host = task.host_id;

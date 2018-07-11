@@ -18,7 +18,7 @@ const BaseSchema = require('./schema') // template schema
 //})
 
 const Schema = new BaseSchema({
-  script: { type: ObjectId, ref: 'Script' }, // has one
+  script: { type: ObjectId }, // has one
   script_id: { type: ObjectId }, //has one
   //script_arguments: [ Argument ],
   script_arguments: { type: Array },

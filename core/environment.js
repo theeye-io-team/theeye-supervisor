@@ -1,18 +1,20 @@
-var fs = require('fs');
+const fs = require('fs')
 require('./lib/error-extend');
+const logger = require('./lib/logger')('app')
 
-function setenv(next) {
+exports.setenv = function (next) {
 
   if (!process.env.NODE_ENV) {
-    console.error('NODE_ENV is required');
+    logger.error('NODE_ENV is required');
     return process.exit(-1);
   }
 
-  var config = require('config');
+  var aws = require('config').integrations.aws
 
-  if (!config.get("is_dev")) { // then configure AWS SDK
-    var AWS = require('aws-sdk'); 
-    AWS.config.update( config.get('aws') );
+  if (aws.enabled===true) { // then configure AWS SDK
+    logger.log('configuring aws integration')
+    var AWS = require('aws-sdk')
+    AWS.config.update( aws.config )
   }
 
   /**
@@ -25,7 +27,5 @@ function setenv(next) {
   );
   */
 
-  next();
+  next()
 }
-
-exports.setenv = setenv ;

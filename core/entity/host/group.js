@@ -26,6 +26,7 @@ const properties = {
   hosts: [{ type: ObjectId, ref: 'Host' }], // has many
   tasks: [{ type: ObjectId, ref: 'TaskTemplate' }], // has many
   resources: [{ type: ObjectId, ref: 'ResourceTemplate' }], // has many
+  files: [{ type: ObjectId, ref: 'FileTemplate' }], // has many
   triggers: [ TriggerTemplate ], // has many
   _type: { type: String, default: 'HostGroup' }
 }
@@ -42,6 +43,7 @@ EntitySchema.methods.populateAll = function(next) {
     { path: 'customer' },
     { path: 'hosts' },
     { path: 'tasks' },
+    { path: 'files' },
     { path: 'resources' },
     {
       path: 'triggers',

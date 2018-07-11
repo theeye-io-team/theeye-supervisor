@@ -1,49 +1,72 @@
-'use strict';
+const AWS = require('aws-sdk')
+const path = require('path')
+const fs = require('fs')
+const zlib = require('zlib')
+const debug = require('debug')('lib:store')
+const config = require('config')
+const systemConfig = config.get('system')
+const Stream = require('stream')
 
-const AWS = require('aws-sdk');
-const path = require('path');
-const fs = require('fs');
-const zlib = require('zlib');
-const debug = require('debug')('lib:store');
-const config = require('config');
-const systemConfig = config.get('system');
+module.exports = {
+  get () {
+    var driver = config.storage.driver
+    return driver === 'local' ? LocalStorage : S3Storage
+  }
+}
 
-var S3Storage = {
-  save : function(input,next) {
-    var file = input.script;
-    var params = {
-      Bucket: config.get('s3').bucket,
-      Key: file.keyname
-    };
+const S3Storage = {
+  /**
+   *
+   * @param {Object} input
+   * @property {String} input.filename
+   * @property {String} input.storename
+   * @property {String} input.sourceOrigin source origin can be 'text' or 'file'
+   * @property {String} input.sourcePath if source is 'file', this is the original file
+   * @property {String} input.sourceContent if source is 'text', this is the content
+   *
+   */
+  save (input, next) {
+    //var file = input.script
+    const s3 = new AWS.S3({
+      params: {
+        Bucket: config.integrations.aws.s3.bucket,
+        Key: input.filename
+      }
+    })
 
-    var s3 = new AWS.S3({ params : params });
+    let body
+    if (input.sourceOrigin === 'file') {
+      body = fs.createReadStream(input.sourcePath).pipe(zlib.createGzip())
+    } else if (input.sourceOrigin === 'text') {
+      var str = new Stream.PassThrough()
+      str.write(input.sourceContent)
+      str.end()
+      body = str.pipe(zlib.createGzip())
+    }
 
-    var body = fs
-      .createReadStream( file.path )
-      .pipe( zlib.createGzip() );
-
-    s3.upload({ Body : body })
-      .on('httpUploadProgress', function(evt) {
-        debug('upload progress %j', evt);
+    s3.upload({ Body: body })
+      .on('httpUploadProgress', function (evt) {
+        debug('upload progress %j', evt)
       })
-      .send(function(error, data) {
-        if(error) {
-          debug('failed to create file in s3');
+      .send(function (error, data) {
+        if (error) {
+          debug('failed to create file in s3')
           debug(error.message);
-          if(next) next(error,null);
+          if (next) { next(error, null) }
         } else {
-          if(next) next(null,data);
+          if (next) { next(null, data) }
         }
-      });
+      })
   },
-  remove : function(file,next) {
-    if(!next) next = function(){};
-    var params = {
-      'Bucket': config.get('s3').bucket,
-      'Key': file.name
-    };
+  remove (file, next) {
+    next || (next = () =>{})
 
-    var s3 = new AWS.S3({ params : params });
+    let params = {
+      Bucket: config.integrations.aws.s3.bucket,
+      Key: file.name
+    }
+
+    var s3 = new AWS.S3({ params })
     s3.deleteObject(params, function(error, data) {
       if(error){
         debug('failed to remove file from s3 ');
@@ -54,55 +77,30 @@ var S3Storage = {
       }
     });
   },
-  getStream: function(key,customer_name,next) {
-    var params = {
-      'Bucket': config.get('s3').bucket,
-      'Key': key
-    };
+  getStream (key, customer_name, next) {
+    let params = {
+      Bucket: config.integrations.aws.s3.bucket,
+      Key: key
+    }
 
-    var s3 = new AWS.S3({ params: params });
+    var s3 = new AWS.S3({ params })
 
     s3.getObject(params)
-    .on('error',function(error){
-      next(error);
+    .on('error', (error) => {
+      next(error)
     })
     .createReadStream()
     .pipe( zlib.createGunzip() )
-    .on('error',function(error){
-      next(error);
+    .on('error', (error) => {
+      next(error)
     })
-    .on('finish',function(){
-      next(null,this);
-    });
-  }
-};
-
-
-function copyFile(source, target, cb) {
-  var cbCalled = false;
-
-  var rd = fs.createReadStream(source);
-  rd.on("error", function(err) {
-    done(err);
-  });
-  var wr = fs.createWriteStream(target);
-  wr.on("error", function(err) {
-    done(err);
-  });
-  wr.on("close", function(ex) {
-    done();
-  });
-  rd.pipe(wr);
-
-  function done(err) {
-    if (!cbCalled) {
-      cb(err);
-      cbCalled = true;
-    }
+    .on('finish', () => {
+      next(null, this)
+    })
   }
 }
 
-var LocalStorage = {
+const LocalStorage = {
   createLocalStorage : function(name, next) {
     debug('creating local storage');
 
@@ -136,31 +134,44 @@ var LocalStorage = {
       }
     });
   },
-  save : function(input,next) {
-    var self = this, targetPath,
-      file = input.script,
-      filename = file.keyname,
-      currentPath = file.path,
-      storeName = input.customer_name;
+  /**
+   * @param {Object} input
+   * @property {String} input.filename
+   * @property {String} input.storename
+   * @property {String} input.sourceOrigin source origin can be 'text' or 'file'
+   * @property {String} input.sourcePath if source is 'file', this is the original file
+   * @property {String} input.sourceContent if source is 'text', this is the content
+   */
+  save (input, next) {
+    const self = this
+    const filename = input.filename
+    const storename = input.storename
+    //let file = input.script
 
-    this.createLocalStorage(
-      storeName,
-      function(storagePath) {
-        targetPath = path.join(storagePath, filename);
-
-        copyFile(currentPath,targetPath,function(error){
+    this.createLocalStorage(storename, function (storagePath) {
+      let targetPath = path.join(storagePath, filename)
+      if (input.sourceOrigin === 'file') {
+        copyFile(input.sourcePath, targetPath, function (error) {
           if (error) {
-            debug(error);
-            next(error,null);
+            debug(error)
+            next(error)
           } else {
-            next(null,{
-              path: targetPath,
-              filename: filename
-            });
+            next(null, { path: targetPath, filename })
           }
-        });
+        })
+      } else if (input.sourceOrigin === 'text') {
+        createFile(input.sourceContent, targetPath, function (error) {
+          if (error) {
+            debug(error)
+            next(error)
+          } else {
+            next(null, { path: targetPath, filename })
+          }
+        })
+      } else {
+        // errr ?
       }
-    );
+    })
   },
   getStream : function(key,customer_name,next) {
     debug('creating file stream');
@@ -191,11 +202,32 @@ var LocalStorage = {
     debug('REMOVE NOT IMPLEMENTED');
     if(next) next();
   }
-};
+}
 
-module.exports = {
-  get () {
-    var driver = config.get('storage').driver;
-    return driver === 'local' ? LocalStorage : S3Storage ;
+const createFile = (content, target, cb) => {
+  fs.writeFile(target, content, cb)
+}
+
+const copyFile = (source, target, cb) => {
+  var cbCalled = false;
+
+  var rd = fs.createReadStream(source);
+  rd.on("error", function(err) {
+    done(err);
+  });
+  var wr = fs.createWriteStream(target);
+  wr.on("error", function(err) {
+    done(err);
+  });
+  wr.on("close", function(ex) {
+    done();
+  });
+  rd.pipe(wr);
+
+  function done(err) {
+    if (!cbCalled) {
+      cb(err);
+      cbCalled = true;
+    }
   }
 }

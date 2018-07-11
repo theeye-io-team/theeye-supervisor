@@ -1,5 +1,4 @@
 module.exports = {
-  "is_dev": false,
   "server": {
     "name": "TheEye",
     "version": process.env.VERSION || undefined,
@@ -20,12 +19,6 @@ module.exports = {
       "client_secret": null,
       "token": null
     }
-  },
-  "storage": {
-    "driver": "s3" // local or s3
-  },
-  "s3": {
-    "bucket":"theeye.scripts"
   },
   "mongo":{
   /**
@@ -56,13 +49,6 @@ module.exports = {
         "looptime":30000
       }
     }
-  },
-  /** aws sns, s3, ses **/
-  "aws": {
-    "username":"",
-    "accessKeyId": "",
-    "secretAccessKey": "",
-    "region": ""
   },
   "mailer": {
     "from": "The Eye %customer% <%customer%@theeye.io>",
@@ -128,5 +114,23 @@ module.exports = {
     }
   },
   "events": {
+  },
+  "storage": {
+    "driver": "s3" // local or s3
+  },
+  "integrations": {
+    /** aws sns, s3, ses **/
+    "aws": {
+      "enabled": true,
+      "config": {
+        "username":"",
+        "accessKeyId": "",
+        "secretAccessKey": "",
+        "region": ""
+      },
+      "s3": {
+        "bucket":"theeye.scripts"
+      }
+    }
   }
 }

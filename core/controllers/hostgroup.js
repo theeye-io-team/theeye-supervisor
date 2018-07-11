@@ -1,11 +1,11 @@
 'use strict'
 
+const App = require('../app')
 const lodash = require('lodash')
 const async = require('async')
 const router = require('../router')
 const logger = require('../lib/logger')('eye:controller:hostgroup')
 const HostGroup = require('../entity/host/group').Entity
-const HostGroupService = require('../service/host/group')
 const audit = require('../lib/audit')
 const TopicsConstants = require('../constants/topics')
 
@@ -83,7 +83,7 @@ const controller = {
    */
   get (req,res,next) {
     const group = req.group
-    HostGroupService.populate(group,(error,data) => {
+    App.hostTemplate.populate(group,(error,data) => {
       res.send(200,data)
     })
   },
@@ -111,7 +111,7 @@ const controller = {
       )
 
       for (var i=0; i<groups.length; i++) {
-        HostGroupService.populate(
+        App.hostTemplate.populate(
           groups[i],
           function (err,data) {
             result.push(data)
@@ -132,7 +132,7 @@ const controller = {
     var deleteInstances = req.query.deleteInstances
 
     if (typeof deleteInstances === 'string') {
-      if(deleteInstances === 'true') {
+      if (deleteInstances === 'true') {
         deleteInstances = true
       } else {
         deleteInstances = false
@@ -141,7 +141,7 @@ const controller = {
       return res.send(400, 'Invalid parameter value')
     }
 
-    HostGroupService.remove({
+    App.hostTemplate.remove({
       group: group,
       user: req.user,
       deleteInstances: deleteInstances
@@ -189,31 +189,31 @@ const controller = {
       }
     }
 
-    HostGroupService.create( Object.freeze({
-      //user_id: req.user._id,
-      //customer_id: req.customer._id,
-      //customer_name: req.customer.name,
-      host_origin: host_origin,
-      user: req.user,
-      customer: req.customer,
-      name: body.name,
-      description: body.description,
-      hostname_regex: hostname_regex,
-      hosts: body.hosts || [], // Array of valid Host ids
-      tasks: body.tasks || [], // Array of Objects with task definition
-      triggers: body.triggers || [], // Array of Objects with a task id and related triggers ids
-      resources: body.resources || [], // Array of Objects with resources and monitors definition, all mixed
-      applyToSourceHost: applyToSourceHost
-    }), (err, group) => {
-      if (err) {
-        err.statusCode || (err.statusCode = 500)
-        responseError(err, res)
-      } else {
-        res.send(200, group)
-        req.group = group
-        next()
+    App.hostTemplate.create(
+      Object.freeze({
+        host_origin: host_origin,
+        user: req.user,
+        customer: req.customer,
+        name: body.name,
+        description: body.description,
+        hostname_regex: hostname_regex,
+        hosts: body.hosts || [], // Array of valid Host ids
+        tasks: body.tasks || [], // Array of Objects with task definitions
+        triggers: body.triggers || [], // Array of Objects with task ids related to the trigger id
+        resources: body.resources || [], // Array of Objects with resources and monitors definition, all mixed
+        files: body.files || [], // Array of Objects with file definitions
+        applyToSourceHost: applyToSourceHost
+      }), (err, group) => {
+        if (err) {
+          err.statusCode || (err.statusCode = 500)
+          responseError(err, res)
+        } else {
+          res.send(200, group)
+          req.group = group
+          next()
+        }
       }
-    })
+    )
   },
   /**
    *
@@ -239,7 +239,7 @@ const controller = {
       }
     }
 
-    HostGroupService.replace({
+    App.hostTemplate.replace({
       customer: req.customer,
       group: req.group,
       name: body.name,

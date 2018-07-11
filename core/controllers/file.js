@@ -183,30 +183,31 @@ const controller = {
    *
    */
   create (req, res, next) {
-    var user = req.user
-    var customer = req.customer
-    var source = req.files.file
-    var description = req.body.description
-    var isPublic = (req.body.public||false)
+    const user = req.user
+    const customer = req.customer
+    const file = req.files.file
+    const description = req.body.description
+    const isPublic = (req.body.public||false)
 
     logger.log('creating file');
 
-    FileHandler.store({
-      source: source,
-      pathname: req.customer.name
-    }, function(err,storeData){
+    FileHandler.storeFile({
+      filepath: file.path,
+      filename: file.name,
+      storename: req.customer.name
+    }, function (err, storeData) {
       if (err) {
         logger.error(err);
         return next(err);
       } else {
 
-        var buf = fs.readFileSync(source.path);
+        let buf = fs.readFileSync(file.path);
 
-        var data = {
-          filename: source.name,
-          mimetype: source.mimetype,
-          extension: source.extension,
-          size: source.size,
+        let data = {
+          filename: file.name,
+          mimetype: file.mimetype,
+          extension: file.extension,
+          size: file.size,
           description: description,
           customer: customer,
           customer_id: customer._id,
@@ -240,18 +241,20 @@ const controller = {
    *
    */
   download (req, res, next) {
-    var file = req.file;
-    FileHandler.getStream(file,(error,stream) => {
+    let file = req.file
+    FileHandler.getStream(file, (error, stream) => {
       if (error) {
-        logger.error(error);
-        next(error);
+        logger.error(error)
+        next(error)
       } else {
-        logger.log('streaming file to client');
-        var headers = { 'Content-Disposition':'attachment; filename=' + file.filename };
-        res.writeHead(200,headers);
-        stream.pipe(res);
+        logger.log('streaming file to client')
+        var headers = {
+          'Content-Disposition': 'attachment; filename=' + file.filename
+        }
+        res.writeHead(200,headers)
+        stream.pipe(res)
       }
-    });
+    })
   },
   /**
    *
