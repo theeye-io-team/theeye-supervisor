@@ -138,7 +138,7 @@ module.exports = {
    *
    *
    */
-  getStream (file,next) {
+  getStream (file, next) {
     return storage.getStream(
       file.keyname,
       file.customer_name,
@@ -146,6 +146,7 @@ module.exports = {
     )
   },
   getBuffer (file, next) {
+    logger.log('obtaining file from storage')
     this.getStream(file, (err, readstream) => {
       if (err) { return next(err) }
 

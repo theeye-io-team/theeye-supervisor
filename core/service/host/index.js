@@ -359,15 +359,15 @@ HostService.config = (host, customer, next) => {
           if (!file) return next(null,file_id)
 
           FileHandler.getBuffer(file, (error, buff) => {
+            let props = file.toObject() // convert to plain object ...
             if (error) {
-              logger.error(error)
-              next(error)
+              logger.error('error getting file buffer. %s', error)
+              props.data = '' // cannot obtain file content
             } else {
-              let props = file.toObject() // convert to plain object ...
               props.data = buff.toString('base64') // ... assign data to file plain object only
-              data.files.push(props)
-              next(null, file)
             }
+            data.files.push(props)
+            next(null, file)
           })
         })
       }, done

@@ -78,23 +78,25 @@ const S3Storage = {
     });
   },
   getStream (key, customer_name, next) {
-    let params = {
+    const params = {
       Bucket: config.integrations.aws.s3.bucket,
       Key: key
     }
 
-    var s3 = new AWS.S3({ params })
+    const s3 = new AWS.S3({ params })
 
     s3.getObject(params)
-    .on('error', (error) => {
-      next(error)
+    .on('error', function (err) {
+      debug('s3 get error. %s', err)
+      next(err)
     })
     .createReadStream()
     .pipe( zlib.createGunzip() )
-    .on('error', (error) => {
-      next(error)
+    .on('error', function (err) {
+      debug('gzip error. %s', err)
+      next(err)
     })
-    .on('finish', () => {
+    .on('finish', function () {
       next(null, this)
     })
   }
@@ -173,7 +175,7 @@ const LocalStorage = {
       }
     })
   },
-  getStream : function(key,customer_name,next) {
+  getStream (key, customer_name, next) {
     debug('creating file stream');
     var self = this;
     var storagePath = systemConfig.file_upload_folder;
