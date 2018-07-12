@@ -40,7 +40,7 @@ Schema.methods.publish = function(next) {
 }
 
 Schema.methods.templateProperties = function () {
-  var values = BaseSchema.methods.templateProperties.apply(this,arguments)
+  let values = BaseSchema.methods.templateProperties.apply(this,arguments)
   values.url = this.url 
   values.method = this.method 
   values.timeout = this.timeout 

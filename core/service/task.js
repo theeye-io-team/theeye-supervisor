@@ -471,7 +471,7 @@ module.exports = {
           return next(err)
         }
 
-        let data = Object.assign({},task)
+        let data = Object.assign({}, task)
         data.hostgroup_id = hostgroup._id
         data.hostgroup = hostgroup
         data.customer_id = customer._id

@@ -30,7 +30,7 @@ const TaskSchema = BaseSchema.extend({
  * @author Facundo
  *
  */
-TaskSchema.methods.toTemplate = function(doneFn) {
+TaskSchema.methods.toTemplate = function (doneFn) {
   var values = this.toObject()
   var template = new Template(values)
   template.save(function(error){
@@ -40,7 +40,7 @@ TaskSchema.methods.toTemplate = function(doneFn) {
 
 TaskSchema.methods.templateProperties = function () {
   var values = BaseSchema.methods.templateProperties.apply(this,arguments)
-  values.script_arguments = this.script_arguments 
+  values.script_arguments = this.script_arguments
   values.script_runas = this.script_runas
   values.script_id = this.script_id
   return values

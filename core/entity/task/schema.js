@@ -10,9 +10,7 @@ require('mongoose-schema-extend')
 const BaseSchema = require('../base-schema')
 const properties = require('./base-properties')
 
-//exports.properties = properties
-
-var EntitySchema = new BaseSchema(properties,{
+var EntitySchema = new BaseSchema(properties, {
   collection: 'tasks',
   discriminatorKey: '_type'
 })
@@ -33,13 +31,17 @@ EntitySchema.set('toJSON', def)
 EntitySchema.set('toObject', def)
 
 EntitySchema.methods.templateProperties = function () {
-  const values = {}
-  var key
-  for (key in properties) {
-    values[key] = this[key]
-  }
-  values.secret = undefined
-  values.user_id = undefined
+  let values = {}
+  for (let key in properties) { values[key] = this[key] }
+  values.source_model_id = this._id
+
+  delete values.secret
+  delete values.user
+  delete values.user_id
+  delete values.acl
+  delete values.customer
+  delete values.customer_id
+
   return values
 }
 

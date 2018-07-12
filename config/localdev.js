@@ -9,9 +9,6 @@ module.exports = {
     "web_url": "http://127.0.0.1:6080",
     "file_upload_folder" : join(__dirname , '..', 'uploads')
   },
-  //"storage": {
-  //  "driver": "local"
-  //},
   "monitor": {
     "disabled": false, // this is enabled if not specified or by default
     "fails_count_alert": 1,
@@ -43,9 +40,12 @@ module.exports = {
       "url": "http://127.0.0.1:6080/notification" // the same web server
     }
   },
+  "storage": {
+    "driver": "local"
+  },
   "integrations": {
     "aws": {
-      "enabled": true,
+      "enabled": false,
       "config": {
         "username": "theeye-demo",
         "accessKeyId": "AKIAIB2EEVLIB423QSXQ",

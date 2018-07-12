@@ -26,36 +26,37 @@ exports.properties = properties
  *
  * Schema Definition 
  * 
- **/
-var EntitySchema = Schema(properties,{ discriminatorKey : '_type' });
-exports.EntitySchema = EntitySchema;
-
+ */
+var EntitySchema = Schema(properties, { discriminatorKey: '_type' })
+exports.EntitySchema = EntitySchema
 EntitySchema.plugin(lifecicle)
 
 // Duplicate the ID field.
 EntitySchema.virtual('id').get(function(){
-  return this._id.toHexString();
-});
+  return this._id.toHexString()
+})
+
 const specs = {
 	getters: true,
 	virtuals: true,
 	transform: function (doc, ret, options) {
 		// remove the _id of every document before returning the result
-		ret.id = ret._id;
-		delete ret._id;
-		delete ret.__v;
+		ret.id = ret._id
+		delete ret._id
+		delete ret.__v
 	}
 }
-EntitySchema.set('toJSON', specs);
-EntitySchema.set('toObject', specs);
-EntitySchema.statics.DEFAULT_TYPE = Constants.RESOURCE_TYPE_DEFAULT ;
+
+EntitySchema.set('toJSON', specs)
+EntitySchema.set('toObject', specs)
+EntitySchema.statics.DEFAULT_TYPE = Constants.RESOURCE_TYPE_DEFAULT
 
 EntitySchema.statics.fetchBy = function (filter, next) {
   FetchBy.call(this,filter,next)
 }
 
 EntitySchema.methods.publish = function (next) {
-  var data = this.toObject();
-  if(next) next(null,data);
-  return data;
+  var data = this.toObject()
+  if (next) { next(null,data) }
+  return data
 }

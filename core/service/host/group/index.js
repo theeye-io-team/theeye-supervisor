@@ -139,78 +139,81 @@ const Service = module.exports = {
         return next(err)
       }
 
-      generateTemplates({
-        group,
-        tasks,
-        resources,
-        triggers,
-        customer,
-        user,
-        files
-      }, (err, templates) => {
-        if (err) {
-          logger.error('%o', err)
-          return next(err)
-        }
 
-        logger.log('creating recipe')
-        createRecipe({
-          tags: [],
-          public: false,
-          customer: customer._id,
-          customer_id: customer._id,
-          user: user._id,
-          user_id: user._id,
-          name: group.name,
-          description: group.description,
-          instructions: { resources, tasks, triggers, files },
-          hostgroup: group._id,
-          hostgroup_id: group._id
-        })
+      logger.log('creating recipe with provided data')
+      createRecipe({
+        tags: [],
+        public: false,
+        customer: customer._id,
+        customer_id: customer._id,
+        user: user._id,
+        user_id: user._id,
+        name: group.name,
+        description: group.description,
+        instructions: { resources, tasks, triggers, files },
+        hostgroup: group._id,
+        hostgroup_id: group._id
+      }, (err) => {
 
-        logger.log('all templates created. attaching to group')
-        // attach ids to template and save relations
-        group.files = templates.files.map(f => f._id)
-        group.triggers = templates.triggers
-        group.resources = templates.resources.map(r => r._id)
-        group.tasks = templates.tasks.map(t => t._id)
-        group.save(err => {
-          if (err) return next(err)
+        generateTemplates({
+          group,
+          tasks,
+          resources,
+          triggers,
+          customer,
+          user,
+          files
+        }, (err, templates) => {
+          if (err) {
+            logger.error('%o', err)
+            return next(err)
+          }
 
-          // host template has been created ! populate all the data
-          Service.populate(group,(err) => {
-            if (err) { return next(err) }
+          logger.log('all templates created. attaching to group')
+          // attach ids to template and save relations
+          group.files = templates.files.map(f => f._id)
+          group.triggers = templates.triggers
+          group.resources = templates.resources.map(r => r._id)
+          group.tasks = templates.tasks.map(t => t._id)
+          group.save(err => {
+            if (err) return next(err)
 
-            if (group.hosts.length > 0) {
-              /**
-               * copy template configs to the attached hosts.
-               * group.hosts should be already populated,
-               * it is Host object Array
-               **/
-              logger.log('copying template to hosts')
-              for (let i=0; i<group.hosts.length; i++) {
-                let host = group.hosts[i]
-                if (host._id.toString() !== input.host_origin) {
-                  copyTemplateToHost(
-                    group.hosts[i],
-                    group,
-                    customer,
-                    (err) => {}
-                  )
+            // host template has been created ! populate all the data
+            Service.populate(group,(err) => {
+              if (err) { return next(err) }
+
+              if (group.hosts.length > 0) {
+                /**
+                 * copy template configs to the attached hosts.
+                 * group.hosts should be already populated,
+                 * it is Host object Array
+                 **/
+                logger.log('copying template to hosts')
+                for (let i=0; i<group.hosts.length; i++) {
+                  let host = group.hosts[i]
+                  if (host._id.toString() !== input.host_origin) {
+                    copyTemplateToHost(
+                      group.hosts[i],
+                      group,
+                      customer,
+                      (err) => {}
+                    )
+                  }
                 }
               }
-            }
 
-            if (input.host_origin && applyToSourceHost === true) {
-              addHostOriginToGroup(input.host_origin, group, customer, user, function (err) {
+              if (input.host_origin && applyToSourceHost === true) {
+                addHostOriginToGroup(input.host_origin, group, customer, user, function (err) {
+                  next(err, group)
+                })
+              } else {
                 next(err, group)
-              })
-            } else {
-              next(err, group)
-            }
+              }
+            })
           })
-        })
-      }) // end generate templates callback
+        }) // end generate templates callback
+
+      }) // end of create recipe
     })
   },
 
@@ -377,7 +380,7 @@ const Service = module.exports = {
 
       const customer = groups[0].customer // @todo all the same customer. populate.customer may not be necessary. improve somehow
 
-      const provisioningCompleted = after(groups.length,() => {
+      const provisioningCompleted = after(groups.length, () => {
         next(null, groups)
       })
 
@@ -406,13 +409,15 @@ const Service = module.exports = {
  *
  *
  */
-const createRecipe = (options) => {
-  var recipe = new Recipe(options)
-  recipe.save((err) => {
+const createRecipe = (props, next) => {
+  var recipe = new Recipe(props)
+  recipe.save(err => {
     if (err) {
       logger.error('fail to create the template recipe')
       logger.error('%o', err)
     }
+
+    next(err)
   })
 }
 
@@ -560,7 +565,7 @@ const generateTemplates = (input, done) => {
   logger.log('creating host templates')
 
   let { group, customer, user, files } = input
- let templates = {}
+  let templates = {}
 
   App.file.createTemplates({
     group, 
@@ -940,7 +945,8 @@ const createRequiredFiles = (input, done) => {
               task.save(next)
             })
           } else {
-            throw new Error('FATAL ERROR file template not found')
+            let _id = task.script_id.toString()
+            throw new Error('FATAL ERROR. file template not found. ' + _id)
           }
         } else {
           // use the already created file

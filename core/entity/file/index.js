@@ -4,7 +4,7 @@ const mongodb = require('../../lib/mongodb').db
 const FileSchema = require('./schema')
 const Template = require('./template')
 
-var ScriptSchema = new FileSchema()
+const ScriptSchema = new FileSchema()
 ScriptSchema.statics.create = function (data,next) {
   var options = {
     customer: data.customer_id,
@@ -29,10 +29,10 @@ ScriptSchema.statics.create = function (data,next) {
   })
 }
 
-var File = mongodb.model('File', new FileSchema({
+const File = mongodb.model('File', new FileSchema({
   _type: { type: String, default: 'File' }
 }))
-var Script = File.discriminator('Script', ScriptSchema)
+const Script = File.discriminator('Script', ScriptSchema)
 File.ensureIndexes()
 
 // called for both inserts and updates

@@ -23,7 +23,7 @@ function FileSchema (props) {
     specs
   )
 
-  this.methods.getFullPath = function() {
+  this.methods.getFullPath = function () {
     const uploadPath = config.get('system').file_upload_folder
     return path.join(
       uploadPath,
@@ -33,17 +33,28 @@ function FileSchema (props) {
     )
   }
 
-  this.methods.getCleanFilename = function(next) {
+  this.methods.getCleanFilename = function (next) {
     return this.keyname.replace(/\[ts:.*\]/,'')
   }
 
-  this.methods.publish = function(next) {
+  this.methods.publish = function (next) {
     var data = this.toObject()
     next(null, data)
     return data
   }
 
-  this.statics.fetchBy = function(filter,next){
+  this.methods.templateProperties = function () {
+    let values = {}
+    for (let key in SchemaProperties) { values[key] = this[key] }
+    values.source_model_id = this._id
+    delete values.customer
+    delete values.customer_id
+    delete values.customer_name
+    delete values.user_id
+    return values
+  }
+
+  this.statics.fetchBy = function (filter, next) {
     var publishedScripts = []
     FetchBy.call(this,filter,function(err,scripts){
       var notFound = (scripts===null||scripts instanceof Array && scripts.length===0)

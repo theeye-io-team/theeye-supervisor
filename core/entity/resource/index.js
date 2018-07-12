@@ -53,10 +53,10 @@ ResourceSchema.statics.create = function(input, next){
  *
  */
 ResourceSchema.methods.patch = function(input, next){
-  next||(next=function(){});
+  next||(next=function(){})
   this.update(input, function(error,result){
-    next(error,result);
-  });
+    next(error,result)
+  })
 }
 
 /**
@@ -65,20 +65,26 @@ ResourceSchema.methods.patch = function(input, next){
  * @author Facundo
  *
  */
-ResourceSchema.methods.toTemplate = function(doneFn) {
+ResourceSchema.methods.toTemplate = function (doneFn) {
   const values = this.templateProperties()
   const template = new Template(values)
-  template.save(function(error){
+  template.save(function (error) {
     doneFn(error, template)
-  });
+  })
 }
 
-ResourceSchema.methods.templateProperties = function() {
+ResourceSchema.methods.templateProperties = function () {
   const values = {}
-  var key
-  for (key in BaseSchema.properties) {
-    values[key] = this[key]
-  }
+  for (let key in BaseSchema.properties) { values[key] = this[key] }
+
+  values.source_model_id = this._id
+  delete values.acl
+  delete values.user
+  delete values.user_id
+  delete values.customer
+  delete values.customer_id
+  delete values.customer_name
+
   return values
 }
 

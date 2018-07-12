@@ -254,16 +254,18 @@ HostService.config = (host, customer, next) => {
       const completed = after(resources.length, done)
 
       resources.forEach(resource => {
-        resource.last_event = null
+        let resourceData = resource.templateProperties()
+        resourceData.last_event = null
+
         Monitor.findOne({
           resource_id: resource._id
         }).exec(function(err,monitor){
-          resource.monitor = monitor
-          data.resources.push(resource)
+          resourceData.monitor = monitor.templateProperties()
+          data.resources.push(resourceData)
 
-          if (monitor.type===MonitorsConstants.RESOURCE_TYPE_SCRIPT) {
+          if (monitor.type === MonitorsConstants.RESOURCE_TYPE_SCRIPT) {
             filesToConfigure.push(monitor.config.script_id.toString())
-          } else if (monitor.type===MonitorsConstants.RESOURCE_TYPE_FILE) {
+          } else if (monitor.type === MonitorsConstants.RESOURCE_TYPE_FILE) {
             filesToConfigure.push(monitor.config.file.toString())
           }
 
@@ -293,7 +295,7 @@ HostService.config = (host, customer, next) => {
           logger.log('processing triggers')
           logger.data('triggers %j', task.triggers)
 
-          data.tasks.push(task)
+          data.tasks.push(task.templateProperties())
 
           if (
             ! task.triggers ||
@@ -359,7 +361,7 @@ HostService.config = (host, customer, next) => {
           if (!file) return next(null,file_id)
 
           FileHandler.getBuffer(file, (error, buff) => {
-            let props = file.toObject() // convert to plain object ...
+            let props = file.templateProperties() // convert to plain object ...
             if (error) {
               logger.error('error getting file buffer. %s', error)
               props.data = '' // cannot obtain file content

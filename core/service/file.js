@@ -84,7 +84,7 @@ module.exports = {
     let { group, files } = input
 
     asyncMap(files, (file, next) => {
-      file.source_model_id = file.id
+      file.source_model_id || (file.source_model_id = file._id)
       file.hostgroup_id = group._id
       file.hostgroup = group._id
       delete file.keyname // keyname must be generated during file template provisioning

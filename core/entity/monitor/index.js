@@ -60,11 +60,14 @@ MonitorSchema.methods.toTemplate = function(doneFn) {
 }
 
 MonitorSchema.methods.templateProperties = function() {
-  var values = {}
-  var key
-  for (key in BaseSchema.properties) {
-    values[key] = this[key]
-  }
+  let values = {}
+  for (let key in BaseSchema.properties) { values[key] = this[key] }
+
+  values.source_model_id = this._id
+  delete values.customer
+  delete values.customer_id
+  delete values.customer_name
+
   return values
 }
 
