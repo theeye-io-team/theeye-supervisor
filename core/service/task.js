@@ -160,6 +160,8 @@ module.exports = {
     delete data._id
     delete data.id
     delete data.user_id
+    delete data.workflow_id
+    delete data.workflow
 
     self.create(data,(err,task) => {
       done(err, task)
