@@ -967,10 +967,11 @@ const createRequiredFiles = (input, done) => {
 
   const createMonitorsFiles = (cb) => {
     const setMonitorFile = (monitor, file, done) => {
+      let _id = file._id.toString()
       if (monitor.type==='script') {
-        monitor.config.script_id = file._id
+        monitor.config.script_id = _id
       } else if (monitor.type==='file') {
-        monitor.config.file = file._id
+        monitor.config.file = _id
       }
       monitor.save(done)
     }
@@ -982,10 +983,10 @@ const createRequiredFiles = (input, done) => {
         let file_id, query
 
         if (resource.type==='script') {
-          file_id = monitor.config.file
+          file_id = monitor.config.script_id
         }
         else if (resource.type==='file') {
-          file_id = monitor.config.script_id
+          file_id = monitor.config.file
         }
         else return next()
 
@@ -1023,8 +1024,8 @@ const createRequiredFiles = (input, done) => {
             setMonitorFile(monitor, file, next)
           }
         })
-
-      }
+      },
+      (err) => { cb() }
     )
   }
 
