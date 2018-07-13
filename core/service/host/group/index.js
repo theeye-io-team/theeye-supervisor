@@ -935,22 +935,22 @@ const createRequiredFiles = (input, done) => {
               return f._id.toString() === task.script_id.toString()
             })
 
-            if (fileTpl) {
-              logger.log('creating new file from template')
-              // create a new file instance
-              App.file.createFromTemplate({
-                template: fileTpl,
-                customer: input.customer
-              }, (err, file) => {
-                fetchedFiles.push(file)
-                task.script_id = file._id
-                task.script = file._id
-                task.save(next)
-              })
-            } else {
-              let _id = task.script_id.toString()
-              throw new Error('FATAL ERROR. file template not found. ' + _id)
+            if (!fileTpl) {
+              logger.error('file template not found. perhaps this is an old template? skiping')
+              return next()
             }
+
+            logger.log('creating new file from template')
+            // create a new file instance
+            App.file.createFromTemplate({
+              template: fileTpl,
+              customer: input.customer
+            }, (err, file) => {
+              fetchedFiles.push(file)
+              task.script_id = file._id
+              task.script = file._id
+              task.save(next)
+            })
           } else {
             fetchedFiles.push(file)
             // use the already created file
@@ -1004,8 +1004,9 @@ const createRequiredFiles = (input, done) => {
             })
 
             if (!fileTpl) {
-              let _id = file_id
-              throw new Error('FATAL ERROR. file template not found. ' + _id)
+              logger.error('file template not found. perhaps this is an old template? skiping')
+              monitor.enable = false
+              return setMonitorFile(monitor, { _id: null }, next)
             }
 
             logger.log('creating new file from template')
