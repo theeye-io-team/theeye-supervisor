@@ -377,11 +377,11 @@ HostService.config = (host, customer, next) => {
   }
 
   logger.log('getting resources config')
-  resourcesConfig(()=>{
+  resourcesConfig(() => {
     logger.log('getting tasks config')
-    tasksConfig(()=>{
+    tasksConfig(() => {
       logger.log('getting files config')
-      filesConfig(()=>{
+      filesConfig(() => {
         logger.log('data fetched')
         next(null,data)
       })

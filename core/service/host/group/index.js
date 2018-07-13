@@ -912,53 +912,123 @@ const copyTemplateToHost = (host, template, customer, next) => {
 
 const createRequiredFiles = (input, done) => {
   let { tasks, resources } = input
+  let fetchedFiles = []
 
-  // seach files attached to newly created script tasks.
-  // the assigned task.script_id belongs to a file template _id.
-  async.eachSeries(
-    tasks,
-    (task, next) => {
-      if (task.type!=='script') { return next() } // skip
+  const createTasksFiles = (cb) => {
+    // seach files attached to newly created script tasks.
+    // the assigned task.script_id belongs to a file template _id.
+    async.eachSeries(
+      tasks,
+      (task, next) => {
+        if (task.type!=='script') { return next() } // skip
 
-      // try to get the file if is already created
-      let query = FileModel
-        .File
-        .findOne({ template_id: task.script_id })
+        // try to get the file already created
+        let query = FileModel
+          .File
+          .findOne({ template_id: task.script_id })
 
-      query.exec((err, file) => {
-        if (err) { return next(err) }
-        if (!file) {
-          // search the file template
-          let fileTpl = input.files.find(f => {
-            return f._id.toString() === task.script_id.toString()
-          })
+        query.exec((err, file) => {
+          if (err) { return next(err) }
+          if (!file) {
+            // search the file template
+            let fileTpl = input.files.find(f => {
+              return f._id.toString() === task.script_id.toString()
+            })
 
-          if (fileTpl) {
+            if (fileTpl) {
+              logger.log('creating new file from template')
+              // create a new file instance
+              App.file.createFromTemplate({
+                template: fileTpl,
+                customer: input.customer
+              }, (err, file) => {
+                fetchedFiles.push(file)
+                task.script_id = file._id
+                task.script = file._id
+                task.save(next)
+              })
+            } else {
+              let _id = task.script_id.toString()
+              throw new Error('FATAL ERROR. file template not found. ' + _id)
+            }
+          } else {
+            fetchedFiles.push(file)
+            // use the already created file
+            logger.log('using already existent file')
+            task.script_id = file._id
+            task.script = file._id
+            task.save(next)
+          }
+        })
+      },
+      (err) => { cb() }
+    )
+  }
+
+  const createMonitorsFiles = (cb) => {
+    const setMonitorFile = (monitor, file, done) => {
+      if (monitor.type==='script') {
+        monitor.config.script_id = file._id
+      } else if (monitor.type==='file') {
+        monitor.config.file = file._id
+      }
+      monitor.save(done)
+    }
+
+    async.eachSeries(
+      resources,
+      (resource, next) => {
+        let monitor = resource.monitor
+        let file_id, query
+
+        if (resource.type==='script') {
+          file_id = monitor.config.file
+        }
+        else if (resource.type==='file') {
+          file_id = monitor.config.script_id
+        }
+        else return next()
+
+        // try to get the file already created
+        query = FileModel
+          .File
+          .findOne({ template_id: file_id })
+
+        query.exec((err, file) => {
+          if (err) { return next(err) }
+          if (!file) {
+            // search the file template
+            let fileTpl = input.files.find(f => {
+              return f._id.toString() === file_id.toString()
+            })
+
+            if (!fileTpl) {
+              let _id = file_id
+              throw new Error('FATAL ERROR. file template not found. ' + _id)
+            }
+
             logger.log('creating new file from template')
             // create a new file instance
             App.file.createFromTemplate({
               template: fileTpl,
               customer: input.customer
             }, (err, file) => {
-              task.script_id = file._id
-              task.script = file._id
-              task.save(next)
+              fetchedFiles.push(file)
+              setMonitorFile(monitor, file, next)
             })
           } else {
-            let _id = task.script_id.toString()
-            throw new Error('FATAL ERROR. file template not found. ' + _id)
+            // use the already created file
+            logger.log('using already existent file')
+            fetchedFiles.push(file)
+            setMonitorFile(monitor, file, next)
           }
-        } else {
-          // use the already created file
-          logger.log('using already existent file')
-          task.script_id = file._id
-          task.script = file._id
-          task.save(next)
-        }
-      })
-    },
-    (err) => { done() }
-  )
+        })
+
+      }
+    )
+  }
+
+  createTasksFiles(() => createMonitorsFiles(done))
 }
 
 /**

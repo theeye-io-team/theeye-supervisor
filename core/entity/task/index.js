@@ -92,12 +92,15 @@ exports.ApprovalTask = ApprovalTask
 exports.Factory = {
   create (input) {
     if (input.type == TaskConstants.TYPE_SCRAPER) {
+      input._type = 'ScraperTask'
       return new ScraperTask(input)
     }
     if (input.type == TaskConstants.TYPE_APPROVAL) {
+      input._type = 'ApprovalTask'
       return new ApprovalTask(input)
     }
     if (input.type == TaskConstants.TYPE_SCRIPT) {
+      input._type = 'Task'
       return new Task(input)
     }
     throw new Error('invalid error type ' + input.type)
