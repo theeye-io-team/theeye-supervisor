@@ -30,7 +30,8 @@ module.exports = function (server) {
         } else {
           user.update({
             token: data.token,
-            timestamp: data.timestamp
+            timestamp: data.timestamp,
+            last_update: new Date()
           }, function (error) {
             if (error) {
               throw new Error('user token update fails');
