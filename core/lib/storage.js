@@ -103,7 +103,7 @@ const S3Storage = {
 }
 
 const LocalStorage = {
-  createLocalStorage : function(name, next) {
+  createLocalStorage (name, next) {
     debug('creating local storage');
 
     var basePath = systemConfig.file_upload_folder ;

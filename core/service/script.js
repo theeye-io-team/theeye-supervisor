@@ -52,52 +52,52 @@ function getScriptKeyname (filename) {
 }
 
 module.exports = {
-  create: function (input,next) {
-    var self = this;
-    var buf = fs.readFileSync(input.script.path);
+  //create: function (input,next) {
+  //  var self = this;
+  //  var buf = fs.readFileSync(input.script.path);
 
-    input.script.keyname = getScriptKeyname(input.script.name);
-    input.script.md5 = md5(buf);
-    input.customer_name = input.customer.name;
+  //  input.script.keyname = getScriptKeyname(input.script.name);
+  //  input.script.md5 = md5(buf);
+  //  input.customer_name = input.customer.name;
 
-    logger.log('saving file to storage');
-    storage.save(input,function(error,data){
-      if(error) {
-        logger.error('unable to storage files.');
-        logger.error(error.message);
-        logger.error(error);
-        next(error);
-      } else {
-        logger.log('creating file entity');
-        self.createEntity(input, function(error, entity){
-          if(next) next(error, entity);
-        });
-      }
-    });
-  },
-  createEntity : function(input,next) {
-    next||(next=function(){});
-    logger.log('creating script');
-    var options = {
-      customer_id : input.customer._id,
-      customer_name: input.customer.name,
-      user_id     : input.user._id,
-      description : (input.description||''),
-      filename    : input.script.name,
-      keyname     : input.script.keyname,
-      mimetype    : input.script.mimetype,
-      extension   : input.script.extension,
-      size        : input.script.size,
-      md5         : input.script.md5,
-      public      : input.public
-    };
+  //  logger.log('saving file to storage');
+  //  storage.save(input,function(error,data){
+  //    if(error) {
+  //      logger.error('unable to storage files.');
+  //      logger.error(error.message);
+  //      logger.error(error);
+  //      next(error);
+  //    } else {
+  //      logger.log('creating file entity');
+  //      self.createEntity(input, function(error, entity){
+  //        if(next) next(error, entity);
+  //      });
+  //    }
+  //  });
+  //},
+  //createEntity : function(input,next) {
+  //  next||(next=function(){});
+  //  logger.log('creating script');
+  //  var options = {
+  //    customer_id : input.customer._id,
+  //    customer_name: input.customer.name,
+  //    user_id     : input.user._id,
+  //    description : (input.description||''),
+  //    filename    : input.script.name,
+  //    keyname     : input.script.keyname,
+  //    mimetype    : input.script.mimetype,
+  //    extension   : input.script.extension,
+  //    size        : input.script.size,
+  //    md5         : input.script.md5,
+  //    public      : input.public
+  //  };
 
-    Script.create(options,function(error,script){
-      var customer_name = input.customer.name;
-      if(error) return next(error,null);
-      return next(null,script);
-    });
-  },
+  //  Script.create(options,function(error,script){
+  //    var customer_name = input.customer.name;
+  //    if(error) return next(error,null);
+  //    return next(null,script);
+  //  });
+  //},
   /**
    * Update a script.
    * @author Facundo

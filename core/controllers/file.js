@@ -2,6 +2,7 @@
 
 const fs = require('fs')
 const md5 = require('md5')
+const AgentUpdateJob = require('../entity/job').AgentUpdate
 
 var router = require('../router')
 var logger = require('../lib/logger')('eye:controller:file')
@@ -9,9 +10,8 @@ var audit = require('../lib/audit')
 var dbFilter = require('../lib/db-filter')
 var File = require('../entity/file').File
 var Script = require('../entity/file').Script
-var FileHandler = require('../lib/file')
+const FileHandler = require('../lib/file')
 var FileService = require('../service/file')
-const AgentUpdateJob = require('../entity/job').AgentUpdate
 
 module.exports = function(server, passport){
   var middlewares = [
@@ -37,8 +37,15 @@ module.exports = function(server, passport){
     '/:customer/file',
     middlewares.concat( router.requireCredential('admin') ),
     controller.create,
-    audit.afterCreate('file',{display:'filename'})
-  );
+    audit.afterCreate('file', { display: 'filename' })
+  )
+  // KEEP COMPATIBILITY WITH OLDER MONITORS PAGE CREATION
+  server.post(
+    '/:customer/script',
+    middlewares.concat( router.requireCredential('admin') ),
+    controller.create,
+    audit.afterCreate('file', { display: 'filename' })
+  )
 
   // UPDATE
   server.put(
@@ -48,8 +55,18 @@ module.exports = function(server, passport){
       router.resolve.idToEntity({ param:'file', required:true })
     ),
     controller.update,
-    audit.afterUpdate('file',{display:'filename'})
+    audit.afterUpdate('file', { display: 'filename' })
   );
+  // KEEP COMPATIBILITY WITH OLDER MONITORS PAGE UPDATE
+  server.patch(
+    '/:customer/script/:script',
+    middlewares.concat(
+      router.requireCredential('admin'),
+      router.resolve.idToEntity({ param: 'script', required: true, entity: 'file' })
+    ),
+    controller.update,
+    audit.afterUpdate('script', { display: 'filename' })
+  )
 
   // DELETE
   server.del(
@@ -121,61 +138,65 @@ const controller = {
   },
   /**
    *
-   * @method PUT
+   * @method PUT/PATCH
    *
    */
   update (req, res, next) {
-    var source = req.files.file,
-      user = req.user,
-      //name = req.body.name,
-      file = req.file,
-      customer = req.customer,
-      description = req.body.description,
-      isPublic = (req.body.public||false);
+    const user = req.user
+    const customer = req.customer
+    const fileModel = req.file || req.script
+    const fileUploaded = req.files.file || req.files.script
+    const description = req.body.description
+    const isPublic = (req.body.public || false)
 
-    if (!source) return res.send(400,'file is required')
+    if (!fileUploaded) {
+      return res.send(400, 'file is required')
+    }
 
     FileHandler.replace({
-      file: file,
-      source: source,
-      pathname: customer.name
-    },function(err,storeData){
+      model: fileModel,
+      filepath: fileUploaded.path,
+      filename: fileUploaded.name,
+      storename: req.customer.name
+    }, function (err, storeData) {
       if (err) {
         logger.error(err)
         return next(err)
-      } else {
-
-        var buf = fs.readFileSync(source.path)
-
-        var data = {
-          filename: source.name,
-          mimetype: source.mimetype,
-          extension: source.extension,
-          size: source.size,
-          description: description,
-          user_id: user._id,
-          keyname: storeData.keyname,
-          md5: md5(buf),
-          public: isPublic
-        }
-
-        file.set(data)
-        file.save(err => {
-          if (err) {
-            logger.error(err);
-            next(err);
-          } else {
-            checkLinkedMonitors(file)
-
-            file.publish((err,pub) => {
-              if (err) return next(err)
-              res.send(200,pub)
-              next()
-            })
-          }
-        })
       }
-    });
+
+      let buf = fs.readFileSync(fileUploaded.path)
+
+      let data = {
+        filename: fileUploaded.name,
+        mimetype: fileUploaded.mimetype,
+        extension: fileUploaded.extension,
+        size: fileUploaded.size,
+        description: description,
+        user_id: user._id,
+        keyname: storeData.keyname,
+        md5: md5(buf),
+        public: isPublic
+      }
+
+      fileModel.set(data)
+      fileModel.save(err => {
+        if (err) {
+          logger.error(err)
+          next(err)
+        } else {
+          checkLinkedMonitors(fileModel)
+
+          fileModel.publish((err, pub) => {
+            if (err) {
+              return next(err)
+            }
+
+            res.send(200,pub)
+            next()
+          })
+        }
+      })
+    })
   },
   /**
    *
@@ -185,9 +206,9 @@ const controller = {
   create (req, res, next) {
     const user = req.user
     const customer = req.customer
-    const file = req.files.file
+    const file = req.files.file || req.files.script
     const description = req.body.description
-    const isPublic = (req.body.public||false)
+    const isPublic = (req.body.public || false)
 
     logger.log('creating file');
 

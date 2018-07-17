@@ -16,49 +16,44 @@ function keynamegen (filename) {
 module.exports = {
   /**
    *
-   * replace a file already created in the current active store
+   * @summary replace a file already created in the current active store
+   * @param {Object} input
+   * @property {File} input.model mongoose file
+   * @property {String} input.filename uploaded file name
+   * @property {String} input.filepath uploaded file current location
+   * @property {String} input.storename file target store
    *
    */
-  replace (input,next) {
-    var specs
-    var pathname = input.pathname
-    var file = input.file // mongoose model file
-    var source = input.source // multer file
-    var keyname = keynamegen(source.name)
+  replace (input, next) {
+    let { filename } = input
+    let keyname = keynamegen(filename)
 
-    if (!file||!source) {
-      var error = new Error('file required');
-      error.statusCode = 400;
-      return next(error);
-    }
-
-    if (!isValidFilename(source.name)) {
-      var error = new Error('invalid filename');
-      error.statusCode = 400;
-      return next(error);
+    if (!isValidFilename(filename)) {
+      var error = new Error('invalid filename')
+      error.statusCode = 400
+      return next(error)
     }
 
     // filename has changed
-    if (file.filename!=source.name) {
-      logger.log('new file uploaded. removing old one');
-      storage.remove(file);
+    if (input.model.filename !== filename) {
+      logger.log('new file uploaded. removing old one')
+      storage.remove(input.model)
     }
 
-    source.keyname = keyname;
-    specs = {
-      script: source,
-      customer_name: pathname
-    }
-
-    storage.save(specs,function(err,data){
-      data.keyname = keyname;
-
+    storage.save({
+      filename: keyname,
+      storename: input.storename,
+      sourceOrigin: 'file',
+      sourcePath: input.filepath
+    }, function (err, data) {
       if (err) {
-        logger.error('cannot save script into storage');
-        logger.error(err);
-        return next(err);
+        logger.error('unable to store files')
+        logger.error(err.message)
+        return next(err)
       } else {
-        return next(null, data);
+        logger.log('file stored')
+        data.keyname = keyname
+        if (next) { next(null, data) }
       }
     })
   },
@@ -71,14 +66,13 @@ module.exports = {
    */
   storeText (input, next) {
     let filename = input.filename
+    let keyname = keynamegen(filename)
 
     if (!isValidFilename(filename)) {
       var error = new Error('invalid filename')
       error.statusCode = 400
       return next(error)
     }
-
-    let keyname = keynamegen(filename)
 
     storage.save({
       filename: keyname,
@@ -92,14 +86,13 @@ module.exports = {
         if (next) { next(err) }
       } else {
         logger.log('file stored')
-
         data.keyname = keyname
         if (next) { next(null, data) }
       }
     })
   },
   /**
-   * create a new file in the storage from an existent file. copy file
+   * create a new file in the storage from an existent file (filecopy)
    * @param {} input
    * @property {} input.storename
    * @property {} input.filename
@@ -107,6 +100,7 @@ module.exports = {
    */
   storeFile (input, next) {
     let filename = input.filename
+    let keyname = keynamegen(filename)
 
     if (!isValidFilename(filename)) {
       var error = new Error('invalid filename')
@@ -114,22 +108,19 @@ module.exports = {
       return next(error)
     }
 
-    let keyname = keynamegen(filename)
-
     storage.save({
       filename: keyname,
       storename: input.storename,
       sourceOrigin: 'file',
       sourcePath: input.filepath
     }, function (error, data) {
-      data.keyname = keyname
-
       if (error) {
         logger.error('unable to store files')
         logger.error(error.message)
         if (next) { next(error) }
       } else {
         logger.log('file stored')
+        data.keyname = keyname
         if (next) { next(null, data) }
       }
     })

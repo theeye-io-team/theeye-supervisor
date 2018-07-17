@@ -4,20 +4,22 @@ const mime = require('mime');
 const fs = require('fs');
 const extend = require('util')._extend;
 const audit = require('../lib/audit')
+const logger = require('../lib/logger')('controller:script')
 
 var json = require('../lib/jsonresponse')
-const logger = require('../lib/logger')('controller:script')
 var router = require('../router')
 var ScriptService = require('../service/script')
 var ResourceService = require('../service/resource')
 var Script = require('../entity/file').Script
 var dbFilter = require('../lib/db-filter')
 
-const filenameRegexp = /^[0-9a-zA-Z-_.]*$/
-function isValidFilename (filename) {
-  if (!filename) return false
-  return filenameRegexp.test(filename)
-}
+//const filenameRegexp = /^[0-9a-zA-Z-_.]*$/
+//function isValidFilename (filename) {
+//  if (!filename) {
+//    return false
+//  }
+//  return filenameRegexp.test(filename)
+//}
 
 module.exports = function(server, passport){
   var middlewares = [
@@ -34,12 +36,12 @@ module.exports = function(server, passport){
     router.ensureCustomer,
   ] , controller.fetch)
 
-  server.post(
-    '/:customer/script',
-    middlewares,
-    controller.create,
-    audit.afterCreate('script',{ display: 'filename' })
-  )
+  //server.post(
+  //  '/:customer/script',
+  //  middlewares,
+  //  controller.create,
+  //  audit.afterCreate('script',{ display: 'filename' })
+  //)
 
   var mws = middlewares.concat(
     router.resolve.idToEntity({param:'script',required:true,entity:'file'})
@@ -53,12 +55,12 @@ module.exports = function(server, passport){
     router.resolve.idToEntity({param:'script',required:true,entity:'file'})
   ] , controller.get)
 
-  server.patch(
-    '/:customer/script/:script',
-    mws,
-    controller.patch,
-    audit.afterUpdate('script',{ display: 'filename' })
-  )
+  //server.patch(
+  //  '/:customer/script/:script',
+  //  mws,
+  //  controller.patch,
+  //  audit.afterUpdate('script',{ display: 'filename' })
+  //)
 
   server.del(
     '/:customer/script/:script',
@@ -112,36 +114,36 @@ const controller = {
    *
    *
    */
-  create (req, res, next) {
-    var script = req.files.script;
-    if (!isValidFilename(script.name)) {
-      return res.send(400,json.error('invalid filename', script.name));
-    }
+  //create (req, res, next) {
+  //  var script = req.files.script;
+  //  if (!isValidFilename(script.name)) {
+  //    return res.send(400,json.error('invalid filename', script.name));
+  //  }
 
-    var description = req.body.description;
-    var name = req.body.name;
-    logger.log('creating script');
+  //  var description = req.body.description;
+  //  var name = req.body.name;
+  //  logger.log('creating script');
 
-    ScriptService.create({
-      customer: req.customer,
-      user: req.user,
-      description: description,
-      name: name,
-      public: (req.body.public||false),
-      script: script,
-    },function(err,script){
-      if (err) {
-        logger.error(err)
-        res.send(500)
-      } else {
-        script.publish((error, data) => {
-          res.send(200, data)
-          req.script = data
-          next()
-        })
-      }
-    })
-  },
+  //  ScriptService.create({
+  //    customer: req.customer,
+  //    user: req.user,
+  //    description: description,
+  //    name: name,
+  //    public: (req.body.public||false),
+  //    script: script,
+  //  },function(err,script){
+  //    if (err) {
+  //      logger.error(err)
+  //      res.send(500)
+  //    } else {
+  //      script.publish((error, data) => {
+  //        res.send(200, data)
+  //        req.script = data
+  //        next()
+  //      })
+  //    }
+  //  })
+  //},
   /**
    *
    *
@@ -169,45 +171,45 @@ const controller = {
    * @method PATCH
    *
    */
-  patch (req, res, next) {
-    const script = req.script
-    const file = req.files.script
-    const params = req.body
+  //patch (req, res, next) {
+  //  const script = req.script
+  //  const file = req.files.script
+  //  const params = req.body
 
-    if (!file) {
-      return res.send(400,'script file is required')
-    }
+  //  if (!file) {
+  //    return res.send(400,'script file is required')
+  //  }
 
-    delete params.customer
-    delete params.customer_id
-    delete params.user
-    delete params.user_id
+  //  delete params.customer
+  //  delete params.customer_id
+  //  delete params.user
+  //  delete params.user_id
 
-    var input = extend(params,{
-      //customer_id: req.customer._id,
-      //customer: req.customer,
-      //user: req.user,
-      script: script,
-      file: file
-    })
+  //  var input = extend(params,{
+  //    //customer_id: req.customer._id,
+  //    //customer: req.customer,
+  //    //user: req.user,
+  //    script: script,
+  //    file: file
+  //  })
 
-    ScriptService.update(input,(err, script) => {
-      if (err) {
-        logger.error(err)
-        return res.send(500)
-      }
-      ResourceService.onScriptUpdated(script)
-      script.publish((err, data) => {
-        if (err) {
-          logger.error(err)
-          return res.send(500)
-        }
+  //  ScriptService.update(input,(err, script) => {
+  //    if (err) {
+  //      logger.error(err)
+  //      return res.send(500)
+  //    }
+  //    ResourceService.onScriptUpdated(script)
+  //    script.publish((err, data) => {
+  //      if (err) {
+  //        logger.error(err)
+  //        return res.send(500)
+  //      }
 
-        res.send(200, data)
-        next()
-      })
-    })
-  },
+  //      res.send(200, data)
+  //      next()
+  //    })
+  //  })
+  //},
   download (req, res, next) {
     var script = req.script;
 
