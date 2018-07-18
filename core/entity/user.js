@@ -1,11 +1,10 @@
 'use strict';
 
-var mongodb = require("../lib/mongodb");
-var Schema  = require('mongoose').Schema;
+const mongodb = require("../lib/mongodb")
+const Schema  = require('mongoose').Schema
+const FetchBy = require('../lib/fetch-by')
 
-var FetchBy = require('../lib/fetch-by');
-
-var EntitySchema = Schema({
+const EntitySchema = Schema({
   token: { type:String, index:true },
   client_id: { type:String, index:true },
   client_secret: { type:String },
@@ -39,22 +38,24 @@ const def = {
   }
 }
 
-EntitySchema.set('toJSON'  , def);
-EntitySchema.set('toObject', def);
+EntitySchema.set('toJSON'  , def)
+EntitySchema.set('toObject', def)
 
 
 EntitySchema.methods.publish = function (options, nextFn) {
-  var user = this;
-  options = (options||{});
-  nextFn = (nextFn||function(){});
+  var user = this
+  options = (options||{})
+  nextFn = (nextFn||function(){})
 
-  var pub = this.toObject();
+  var pub = this.toObject()
 
-  if (options.include_secret!==true) {
-    delete pub.client_secret;
+  if (options.include_secret !== true) {
+    delete pub.client_secret
+    delete pub.client_id
   }
-  if (options.include_token!==true) {
-    delete pub.token;
+
+  if (options.include_token !== true) {
+    delete pub.token
   }
 
   if (options.include_customers) {

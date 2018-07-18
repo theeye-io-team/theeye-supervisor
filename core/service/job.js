@@ -410,10 +410,6 @@ const removeOldTaskJobs = (task, next) => {
  *
  */
 const registerJobOperation = (operation, topic, input) => {
-  //const job = input.job
-  //const task = input.task || job.task || {}
-  //const user = input.user
-  //const customer = input.customer
   let { job, user, customer } = input
   const task = (input.task || job.task || {})
 
@@ -422,73 +418,78 @@ const registerJobOperation = (operation, topic, input) => {
     { path: 'host' },
     { path: 'user' }
   ], (err) => {
-    const payload = {
-      state: job.state || 'undefined',
-      lifecycle: job.lifecycle,
-      task_name: task.name,
-      task_type: task.type,
-      organization: customer.name,
-      user_id: user._id,
-      user_name: user.email,
-      user_email: user.username,
-      operation: operation,
-      job_type: job._type
-    }
 
-    if (job._type !== JobConstants.APPROVAL_TYPE) {
-      payload.hostname = job.host.hostname
-    }
+    job.user.publish({}, (err, jobUser) => {
+      job.user = jobUser
 
-    if (jobMustHaveATask(job) && !task) {
-      const msg = `job ${job._id}/${job._type} task is not valid or undefined`
-      logger.error(new Error(msg))
-    }
+      const payload = {
+        state: job.state || 'undefined',
+        lifecycle: job.lifecycle,
+        task_name: task.name,
+        task_type: task.type,
+        organization: customer.name,
+        user_id: user._id,
+        user_name: user.email,
+        user_email: user.username,
+        operation: operation,
+        job_type: job._type
+      }
 
-    if (job._type === JobConstants.SCRAPER_TYPE) {
-      payload.url = task.url
-      payload.method = task.method
-      payload.statuscode = task.status_code
-      payload.pattern = task.pattern
-    } else if (job._type == JobConstants.SCRIPT_TYPE) {
-      if (!job.script) {
-        const msg = `job ${job._id}/${job._type} script is not valid or undefined`
+      if (job._type !== JobConstants.APPROVAL_TYPE) {
+        payload.hostname = job.host.hostname
+      }
+
+      if (jobMustHaveATask(job) && !task) {
+        const msg = `job ${job._id}/${job._type} task is not valid or undefined`
         logger.error(new Error(msg))
       }
 
-      const script = job.script || {}
-      payload.filename = script.filename
-      payload.md5 = script.md5
-      payload.mtime = script.last_update
-      payload.mimetype = script.mimetype
-    } else if (job._type == JobConstants.APPROVAL_TYPE) {
-      // nothing yet
-    } else if (job._type == JobConstants.AGENT_UPDATE_TYPE) {
-      // nothing yet
-    } else {
-      // unhandled job type
-    }
+      if (job._type === JobConstants.SCRAPER_TYPE) {
+        payload.url = task.url
+        payload.method = task.method
+        payload.statuscode = task.status_code
+        payload.pattern = task.pattern
+      } else if (job._type == JobConstants.SCRIPT_TYPE) {
+        if (!job.script) {
+          const msg = `job ${job._id}/${job._type} script is not valid or undefined`
+          logger.error(new Error(msg))
+        }
 
-    if (job.result) {
-      payload.result = job.result
-      if (job._type == JobConstants.SCRAPER_TYPE) {
-        if (payload.result.response && payload.result.response.body) {
-          delete payload.result.response.body
+        const script = job.script || {}
+        payload.filename = script.filename
+        payload.md5 = script.md5
+        payload.mtime = script.last_update
+        payload.mimetype = script.mimetype
+      } else if (job._type == JobConstants.APPROVAL_TYPE) {
+        // nothing yet
+      } else if (job._type == JobConstants.AGENT_UPDATE_TYPE) {
+        // nothing yet
+      } else {
+        // unhandled job type
+      }
+
+      if (job.result) {
+        payload.result = job.result
+        if (job._type == JobConstants.SCRAPER_TYPE) {
+          if (payload.result.response && payload.result.response.body) {
+            delete payload.result.response.body
+          }
         }
       }
-    }
 
-    elastic.submit(customer.name, topic, payload) // topic = topics.task.[execution||result] , CREATE/UPDATE
+      elastic.submit(customer.name, topic, payload) // topic = topics.task.[execution||result] , CREATE/UPDATE
 
-    App.notifications.generateSystemNotification({
-      topic: TopicsConstants.job.crud,
-      data: {
-        hostname: job.hostname,
-        organization: customer.name,
-        operation: operation,
-        model_type: job._type,
-        model: job,
-        approver_id: (job.task && job.task.approver_id) || undefined
-      }
+      App.notifications.generateSystemNotification({
+        topic: TopicsConstants.job.crud,
+        data: {
+          hostname: job.hostname,
+          organization: customer.name,
+          operation: operation,
+          model_type: job._type,
+          model: job,
+          approver_id: (job.task && job.task.approver_id) || undefined
+        }
+      })
     })
   })
 }
@@ -583,6 +584,8 @@ const JobFactory = {
    *
    * @param {Task} task
    * @param {Object} input
+   * @property {User} input.user
+   * @property {Customer} input.customer
    * @param {Function} next
    *
    */
@@ -612,10 +615,10 @@ const JobFactory = {
         job.workflow_id = task.workflow_id
       }
       // copy embedded task object
-      job.task = task.toObject() // >>> add .id  / embedded
+      job.task = Object.assign({}, task.toObject(), { customer: null, host: null }) // >>> add .id  / embedded
       job.task_id = task._id
-      job.user = input.user_id;
-      job.user_id = input.user._id;
+      job.user_id = input.user._id
+      job.user = input.user._id
       job.host_id = task.host_id;
       job.host = task.host_id;
       job.name = task.name;
