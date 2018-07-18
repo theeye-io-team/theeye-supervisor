@@ -12,16 +12,16 @@ const Monitor = require('../entity/monitor').Entity
 
 module.exports = {
   remove (input,next) {
-    next||(next=function(){});
+    next || (next = () => {})
     var file = input.file;
-    var filter = {_id:file._id};
-    FileModel.File.remove(filter,function(error) {
-      if(error) return next(error);
-      storage.remove(file, function(error,data){
-        if(error) return next(error);
-        next();
-      });
-    });
+    var filter = { _id: file._id }
+    FileModel.File.remove(filter, function (error) {
+      if (error) { return next(error) }
+      storage.remove({ key: file.keyname }, function (error, data) {
+        if (error) { return next(error) }
+        next()
+      })
+    })
   },
   getLinkedModels (input,next) {
     next||(next=function(){})

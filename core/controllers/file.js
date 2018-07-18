@@ -30,19 +30,19 @@ module.exports = function(server, passport){
       router.resolve.idToEntity({ param:'file', required:true })
     ),
     controller.get
-  );
+  )
 
   // CREATE
   server.post(
     '/:customer/file',
-    middlewares.concat( router.requireCredential('admin') ),
+    middlewares.concat(router.requireCredential('admin')),
     controller.create,
     audit.afterCreate('file', { display: 'filename' })
   )
   // KEEP COMPATIBILITY WITH OLDER MONITORS PAGE CREATION
   server.post(
     '/:customer/script',
-    middlewares.concat( router.requireCredential('admin') ),
+    middlewares.concat(router.requireCredential('admin')),
     controller.create,
     audit.afterCreate('file', { display: 'filename' })
   )
@@ -56,7 +56,7 @@ module.exports = function(server, passport){
     ),
     controller.update,
     audit.afterUpdate('file', { display: 'filename' })
-  );
+  )
   // KEEP COMPATIBILITY WITH OLDER MONITORS PAGE UPDATE
   server.patch(
     '/:customer/script/:script',
@@ -73,11 +73,21 @@ module.exports = function(server, passport){
     '/:customer/file/:file',
     middlewares.concat(
       router.requireCredential('admin'),
-      router.resolve.idToEntity({ param:'file', required:true })
+      router.resolve.idToEntity({ param: 'file', required: true })
     ),
     controller.remove,
-    audit.afterRemove('file',{display:'filename'})
-  );
+    audit.afterRemove('file', { display: 'filename' })
+  )
+  // KEEP COMPATIBILITY WITH OLDER MONITORS PAGE UPDATE
+  server.del(
+    '/:customer/script/:script',
+    middlewares.concat(
+      router.requireCredential('admin'),
+      router.resolve.idToEntity({ param: 'script', required: true, entity: 'file' })
+    ),
+    controller.remove,
+    audit.afterRemove('script', { display: 'filename' })
+  )
 
   // users can download scripts
   server.get(
@@ -283,15 +293,14 @@ const controller = {
    *
    */
   remove (req, res, next) {
-    if (!req.file) {
+    let file = req.file || req.script
+    if (!file) {
       return res.send(400,'file is required.');
     }
 
-    var file = req.file;
-
     FileService.getLinkedModels({
-      file: file,
-    },function (err,models) {
+      file,
+    }, function (err, models) {
       if (err) {
         logger.error(err)
         return res.send(500)
@@ -300,21 +309,21 @@ const controller = {
       if (models.length > 0) {
         res.send(400, 'Cannot delete this file. It is being used by tasks or monitors')
         return next()
-      } else {
-        FileService.remove({
-          file: file,
-          user: req.user,
-          customer: req.customer
-        }, function (err,data) {
-          if (err) {
-            logger.error(err)
-            return res.send(500)
-          }
+      } 
 
-          res.send(204)
-          return next()
-        })
-      }
+      FileService.remove({
+        file,
+        user: req.user,
+        customer: req.customer
+      }, function (err,data) {
+        if (err) {
+          logger.error(err)
+          return res.send(500)
+        }
+
+        res.send(204)
+        return next()
+      })
     })
   },
   /**

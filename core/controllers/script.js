@@ -62,12 +62,12 @@ module.exports = function(server, passport){
   //  audit.afterUpdate('script',{ display: 'filename' })
   //)
 
-  server.del(
-    '/:customer/script/:script',
-    mws,
-    controller.remove,
-    audit.afterRemove('script',{ display: 'filename' })
-  )
+  //server.del(
+  //  '/:customer/script/:script',
+  //  mws,
+  //  controller.remove,
+  //  audit.afterRemove('script',{ display: 'filename' })
+  //)
 
   // clients can download scripts
 	server.get(
@@ -148,24 +148,24 @@ const controller = {
    *
    *
    */
-  remove (req, res, next) {
-    const script = req.script
+  //remove (req, res, next) {
+  //  const script = req.script
 
-    ScriptService.remove({
-      script: script,
-      user: req.user,
-      customer: req.customer
-    },function(err,data){
-      if (err) {
-        logger.error(err)
-        return res.send(500)
-      }
+  //  ScriptService.remove({
+  //    script: script,
+  //    user: req.user,
+  //    customer: req.customer
+  //  },function(err,data){
+  //    if (err) {
+  //      logger.error(err)
+  //      return res.send(500)
+  //    }
 
-      ResourceService.onScriptRemoved(script)
-      res.send(204)
-      next()
-    })
-  },
+  //    ResourceService.onScriptRemoved(script)
+  //    res.send(204)
+  //    next()
+  //  })
+  //},
   /**
    *
    * @method PATCH

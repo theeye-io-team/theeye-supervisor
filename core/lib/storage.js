@@ -30,7 +30,7 @@ const S3Storage = {
     const s3 = new AWS.S3({
       params: {
         Bucket: config.integrations.aws.s3.bucket,
-        Key: input.filename
+        Key: input.filename // keyname ?
       }
     })
 
@@ -58,22 +58,28 @@ const S3Storage = {
         }
       })
   },
-  remove (file, next) {
+  /**
+   * @param {Object} input
+   * @property {String} input.key
+   */
+  remove (input, next) {
     next || (next = () =>{})
 
     let params = {
       Bucket: config.integrations.aws.s3.bucket,
-      Key: file.name
+      Key: input.key
     }
 
     var s3 = new AWS.S3({ params })
     s3.deleteObject(params, function(error, data) {
-      if(error){
+      if (error) {
         debug('failed to remove file from s3 ');
         debug(error.message);
-        next(error);
+        next(error)
       } else {
-        next(null,data);
+        debug('file removed')
+        debug(data)
+        next(null, data)
       }
     });
   },
@@ -199,7 +205,7 @@ const LocalStorage = {
       else return next(null,fs.createReadStream(filepath));
     });
   },
-  remove : function(file,next) {
+  remove (file, next) {
     // not implemented
     debug('REMOVE NOT IMPLEMENTED');
     if(next) next();
