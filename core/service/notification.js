@@ -26,7 +26,11 @@ module.exports = {
    * @property {String} payload.topic
    */
   generateSystemNotification (payload) {
-    const url = config.notifications.api.url
+    let url = config.notifications.api.url
+    if (config.notifications.api.secret) {
+      url += '?secret=' + config.notifications.api.secret
+    }
+
     //if (!url || !isURL(url)) return debug.error('notification event aborted. invalid url %o', url)
     if (!url) return debug.error('notification event aborted. invalid url %o', url)
     if (!payload) return debug.error('notification event aborted. invalid payload %o', payload)

@@ -107,10 +107,12 @@ module.exports = {
     "enabled": true,
     "url": "",
   },
-  "notifications": {
-    "api": {
-      "timeout": 5000,
-      "url": process.env.CONFIG_NOTIFICATIONS_API_URL || "" // e.g. "url": "http://127.0.0.1:6080/notification" // the same web server
+  notifications: {
+    api: {
+      timeout: 5000,
+      // outgoing requests secret passphrase
+      secret: '77E0EAF3B83DD7A7A4004602626446EADED31BF794956FC9BBAD051FA5A25038',
+      url: process.env.CONFIG_NOTIFICATIONS_API_URL || "" // e.g. "url": "http://127.0.0.1:6080/notification" // the same web server
     }
   },
   "events": {
