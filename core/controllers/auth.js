@@ -120,7 +120,8 @@ const responseError = (e,res) => {
   //logger.error('%o',e)
   const errorRes = {
     error: e.message,
-    info: []
+    info: [],
+    errorCode: e.errorCode || undefined
   }
   if (e.info) {
     errorRes.info.push( e.info.toString() )
@@ -141,7 +142,8 @@ const controller = {
       if (customer) {
         return responseError({
           statusCode: 400,
-          message: 'Organization name already in use.'
+          message: 'Organization name already in use.',
+          errorCode: 'organizationInUse'
         }, res)
       }
 
@@ -152,7 +154,8 @@ const controller = {
         if (user) {
           return responseError({
             statusCode: 400,
-            message: 'Username already in use.'
+            message: 'Username already in use.',
+            errorCode: 'usernameInUse'
           }, res)
         }
 
