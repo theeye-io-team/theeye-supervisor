@@ -20,43 +20,48 @@ module.exports = function (server, passport) {
     router.requireCredential('root'),
     router.resolve.idToEntity({param:'customer',required:true}),
     router.ensureCustomer,
-  ];
+  ]
 
   // users can fetch its own current customer information
-  server.get('/:customer/customer',[
-    passport.authenticate('bearer', {session:false}),
-    router.resolve.customerNameToEntity({required:true}),
+  server.get('/:customer/customer', [
+    passport.authenticate('bearer', { session: false }),
+    router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer
-  ],controller.get);
+  ], controller.get)
 
-  server.get('/customer/:customer',middlewares,controller.get);
-  //server.put('/customer/:customer',middlewares,controller.replace);
-  server.del('/customer/:customer',middlewares,controller.remove);
+  server.get('/customer/:customer', [
+    passport.authenticate('bearer', { session: false }),
+    router.resolve.idToEntity({ param: 'customer', required: true }),
+    //router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer
+  ], controller.get)
+
+  server.del('/customer/:customer', middlewares,controller.remove);
   server.patch('/customer/:customer',middlewares,controller.patch);
   server.patch('/customer/:customer/config',[
     passport.authenticate('bearer',{session:false}),
     router.requireCredential('admin'),
     router.resolve.idToEntity({param:'customer',required:true}),
     router.ensureCustomer,
-  ],controller.updateconfig);
+  ], controller.updateconfig)
 
   server.get('/customer',[
     passport.authenticate('bearer',{session:false}),
     router.requireCredential('root'),
-  ],controller.fetch);
+  ], controller.fetch)
 
   server.post('/customer',[
     passport.authenticate('bearer',{session:false}),
     router.requireCredential('root'),
-  ],controller.create);
+  ], controller.create)
 }
 
 var controller = {
   /**
    *
    */
-  get (req,res,next) {
-    res.send(200, req.customer.publish());
+  get (req, res, next) {
+    res.send(200, req.customer.publish())
   },
   /**
    *
