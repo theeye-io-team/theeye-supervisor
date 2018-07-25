@@ -1,5 +1,6 @@
 "use strict";
 
+const App = require('../app')
 const extend = require('lodash/assign');
 const logger = require('../lib/logger')('controller:task');
 const json = require('../lib/jsonresponse');
@@ -70,6 +71,19 @@ module.exports = (server, passport) => {
     mws,
     controller.remove,
     audit.afterRemove('task',{ display: 'name' })
+  )
+
+  server.get(
+    '/task/:task/recipe',
+    [
+      passport.authenticate('bearer', { session: false }),
+      router.resolve.customerNameToEntity({ required: true }),
+      router.ensureCustomer,
+      router.requireCredential('user'),
+      router.resolve.idToEntity({ param: 'task', required: true }),
+      router.ensureAllowed({ entity: { name: 'task' } })
+    ],
+    controller.recipe
   )
 }
 
@@ -239,6 +253,30 @@ const controller = {
         logger.error('%o',err)
         res.sendError(err)
       }
+    })
+  },
+  /**
+   *
+   * @summary get the recipe of a task
+   * @method GET
+   * @route /task/:task/recipe
+   * @param {WebRequest} req
+   * @property {Task} req.task
+   * @property {Customer} req.customer
+   * @property {User} req.user
+   * @authenticate
+   *
+   */
+  recipe (req, res, next) {
+    let task = req.task
+
+    App.task.getRecipe(task, (err, recipe) => {
+      if (err) {
+        return res.send(err.statusCode || 500, err)
+      }
+
+      res.send(200, recipe)
+      next()
     })
   }
 }

@@ -311,7 +311,7 @@ module.exports = {
    * @param {Function} next callback
    *
    */
-  prepareTaskArgumentsValues (argumentsDefinition,argumentsValues,next) {
+  prepareTaskArgumentsValues (argumentsDefinition, argumentsValues, next) {
     let errors = new ErrorHandler()
     let filteredArguments = []
 
@@ -323,7 +323,7 @@ module.exports = {
 
           const order = (def.order || index) // if is not defined, it is the order the argument is being processed
 
-          if (def.type===TaskConstants.ARGUMENT_TYPE_FIXED) {
+          if (def.type === TaskConstants.ARGUMENT_TYPE_FIXED) {
             filteredArguments[order] = def.value
           } else if (
             def.type === TaskConstants.ARGUMENT_TYPE_INPUT ||
@@ -334,7 +334,8 @@ module.exports = {
           ) {
             // require user input
             const found = argumentsValues.find(reqArg => {
-              return (reqArg.order === order && reqArg.label === def.label)
+              //return (reqArg.order === order && reqArg.label === def.label)
+              return reqArg.order === order
             })
 
             // the argument is not present within the provided request arguments
@@ -504,6 +505,27 @@ module.exports = {
         return done(null, templates)
       }
     )
+  },
+  /**
+   * @summary get task recipe
+   * @param {Mixed} task instance or id
+   * @param {Function} next
+   */
+  getRecipe (task, next) {
+    let data = { tasks: [] }
+
+    data.tasks.push(task.templateProperties())
+
+    // only script task
+    if (task._type === 'Task') {
+      data.files = [] // add files
+      App.file.getRecipe(task.script_id, (err, fprops) => {
+        data.files.push(fprops)
+        next(null, data)
+      })
+    } else {
+      next(null, data)
+    }
   }
 }
 

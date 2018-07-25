@@ -27,14 +27,40 @@ const App = {
     const server = restify.createServer();
     const passport = auth.initialize();
 
-    server.pre( (req,res,next) => {
+    server.pre((req, res, next) => {
       logger.log('REQUEST %s %s', req.method, req.url)
       next()
     })
 
+    server.pre((req, res, next) => { // CORS
+      res.header('Access-Control-Allow-Origin' , '*')
+      res.header('Access-Control-Allow-Methods', 'GET,PUT,PATCH,POST,DELETE,OPTIONS')
+      let headers = [
+        'Origin',
+        'Accept',
+        'User-Agent',
+        'Accept-Charset',
+        'Cache-Control',
+        'Accept-Encoding',
+        'Content-Type',
+        'Authorization',
+        'Content-Length',
+        'X-Requested-With'
+      ]
+      res.header("Access-Control-Allow-Headers", headers.join(', '))
+      //intercepts OPTIONS method
+      if ('options' === req.method.toLowerCase()) {
+        //respond with 200
+        res.send(200)
+      } else {
+        //move on
+        next()
+      }
+    })
+
     // respond with error middleware
-    server.use((req,res,next) => {
-      res.sendError = (err,next) => {
+    server.use((req, res, next) => {
+      res.sendError = (err, next) => {
         const status = err.statusCode || 500
         res.send(status, {
           statusCode: status,
@@ -54,28 +80,22 @@ const App = {
     server.use(multer({
       dest: config.system.file_upload_folder ,
       rename: (fieldname, filename) => {
-        return filename;
+        return filename
       }
-    }));
+    }))
 
-    server.use((req,res,next) => { // CORS
-      res.header('Access-Control-Allow-Origin' , '*');
-      res.header('Access-Control-Allow-Methods', '*');
-      return next();
-    });
-
-    server.on('uncaughtException', (req,res,route,error) => {
-      logger.error('Message Error: %s', error.message);
-      logger.error('Stack %s', error.stack);
-      res.send(500,'internal error');
-    });
+    server.on('uncaughtException', (req, res, route, error) => {
+      logger.error('Message Error: %s', error.message)
+      logger.error('Stack %s', error.stack)
+      res.send(500, 'internal error')
+    })
 
     // Routing the controllers
-    router.loadControllers(server, passport);
+    router.loadControllers(server, passport)
 
     server.listen( config.server.port || 60080, () => {
-      logger.log('TheEye server started. listening at "%s"', server.url);
-    });
+      logger.log('TheEye server started. listening at "%s"', server.url)
+    })
   }
 }
 

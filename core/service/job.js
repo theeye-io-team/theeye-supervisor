@@ -478,17 +478,6 @@ const registerJobOperation = (operation, topic, input) => {
       // unhandled job type
     }
 
-    if (job.result) {
-      payload.result = job.result
-      if (job._type == JobConstants.SCRAPER_TYPE) {
-        if (payload.result.response && payload.result.response.body) {
-          delete payload.result.response.body
-        }
-      }
-    }
-
-    elastic.submit(customer.name, topic, payload) // topic = topics.task.[execution||result] , CREATE/UPDATE
-
     App.notifications.generateSystemNotification({
       topic: TopicsConstants.job.crud,
       data: {
@@ -500,6 +489,17 @@ const registerJobOperation = (operation, topic, input) => {
         approver_id: (job.task && job.task.approver_id) || undefined
       }
     })
+
+    if (job.result) {
+      payload.result = job.result
+      if (job._type == JobConstants.SCRAPER_TYPE) {
+        if (payload.result.response && payload.result.response.body) {
+          delete payload.result.response.body
+        }
+      }
+    }
+
+    elastic.submit(customer.name, topic, payload) // topic = topics.task.[execution||result] , CREATE/UPDATE
   })
 }
 

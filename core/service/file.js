@@ -153,5 +153,43 @@ module.exports = {
         })
       }
     })
+  },
+  /**
+   * @summary get file recipe
+   * @param {Mixed} file model instance or id
+   * @param {Function} next
+   */
+  getRecipe (file, next) {
+    const getFileContent = (fileModel) => {
+      FileHandler.getBuffer(fileModel, (error, buff) => {
+        let props = fileModel.templateProperties() // convert to plain object ...
+        if (error) {
+          logger.error('error getting file buffer. %s', error)
+          props.data = '' // cannot obtain file content
+        } else {
+          props.data = buff.toString('base64') // ... assign data to file plain object only
+        }
+        next(null, props)
+      })
+    }
+
+    if (isFileModel(file)) {
+      getFileContent(file)
+    } else {
+      FileModel.File.findById(file, (err, model) => {
+        if (err) { return next(err) }
+        if (!model) { return next(null) }
+
+        getFileContent(model)
+      })
+    }
   }
+}
+
+const isFileModel = (file) => {
+  let isModel = (
+    file instanceof FileModel.Script ||
+    file instanceof FileModel.File
+  )
+  return isModel
 }

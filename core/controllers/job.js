@@ -65,6 +65,35 @@ module.exports = (server, passport) => {
     controller.create
     //audit.afterCreate('job',{ display: 'name' })
   )
+  server.post(
+    '/job',
+    middlewares.concat(
+      router.requireCredential('user'),
+      router.resolve.idToEntity({param:'task',required:true}),
+      router.ensureAllowed({entity:{name:'task'}})
+    ),
+    controller.create
+    //audit.afterCreate('job',{ display: 'name' })
+  )
+
+  // create job using task secret key
+  server.post(
+    '/job/secret/:secret', [
+      (req, res, next) =>  {
+        return next()
+      },
+      router.resolve.customerNameToEntity({ required: true }),
+      router.resolve.idToEntity({ param: 'task', required: true }),
+      //router.ensureBelongsToCustomer({ documentName: 'task' }),
+      router.requireSecret('task')
+    ],
+    (req, res, next) => {
+      req.user = App.user
+      req.origin = JobConstants.ORIGIN_SECRET
+      next()
+    },
+    controller.create
+  )
 }
 
 const controller = {
@@ -132,7 +161,7 @@ const controller = {
       user,
       customer,
       notify: true,
-      origin: JobConstants.ORIGIN_USER
+      origin: req.origin || JobConstants.ORIGIN_USER
     }
 
     const createJob = () => {
