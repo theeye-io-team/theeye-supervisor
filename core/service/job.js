@@ -163,6 +163,12 @@ module.exports = {
     job.state = state
     job.trigger_name = trigger_name
     job.lifecycle = LifecycleConstants.FINISHED
+
+    // data output, can be anything. stringify for security
+    if (result.data.output) {
+      result.data.output = JSON.stringify(result.data.output)
+    }
+
     job.result = result.data
     job.save(err => {
       if (err) logger.log('%o',err)
