@@ -41,6 +41,8 @@ EntitySchema.methods.templateProperties = function () {
   delete values.acl
   delete values.customer
   delete values.customer_id
+  delete values.workflow
+  delete values.workflow_id
 
   return values
 }
