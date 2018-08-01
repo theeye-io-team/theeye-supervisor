@@ -20,9 +20,9 @@ module.exports = function (payload) {
 
 /**
  * @param {Event} event entity to process
- * @param {Object} data event extra data generated
+ * @param {Object} output event output
  */
-const runTriggeredTaskByEvent = ({ event, data }) => {
+const runTriggeredTaskByEvent = ({ event, output }) => {
   // search all task triggered by the event
   let query = Task.find({
     triggers: event._id,
@@ -43,9 +43,10 @@ const runTriggeredTaskByEvent = ({ event, data }) => {
     for (var i=0; i<tasks.length; i++) {
       createJob({
         user: App.user,
-        event,
-        event_data: data,
+        //event,
+        //event_data: data,
         task: tasks[i],
+        task_arguments_values: output,
         origin: JobConstants.ORIGIN_TRIGGER_BY
       })
     }

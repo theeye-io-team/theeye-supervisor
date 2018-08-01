@@ -7,6 +7,7 @@ const Template = require('./template').Entity
 const TaskConstants = require('../../constants/task')
 const ScraperTask = require('./scraper').Entity
 const ApprovalTask = require('./approval').Entity
+const DummyTask = require('./dummy').Entity
 
 /**
  * Extended Schema. Includes non template attributes
@@ -16,7 +17,7 @@ const TaskSchema = BaseSchema.extend({
   host_id: { type: String },
   script_id: { type: String },
   script_runas: { type: String },
-  script_arguments: { type: Array }, // will be replaced with task_arguments
+  script_arguments: { type: Array }, // will be replaced with task_arguments in the future
   type: { type: String, default: 'script' },
   // relations
   host: { type: ObjectId, ref: 'Host' },
@@ -41,6 +42,7 @@ TaskSchema.methods.toTemplate = function (doneFn) {
 TaskSchema.methods.templateProperties = function () {
   var values = BaseSchema.methods.templateProperties.apply(this,arguments)
   values.script_arguments = this.script_arguments
+  values.task_arguments = this.task_arguments
   values.script_runas = this.script_runas
   values.script_id = this.script_id
   return values
@@ -61,6 +63,7 @@ TaskSchema.statics.create = function(input,next) {
   instance.customer_id = input.customer._id
   instance.script_id = input.script._id
   instance.script_arguments = input.script_arguments
+  instance.task_arguments = input.task_arguments
   instance.script_runas = input.script_runas
   instance.user_id = input.user._id
   instance.tags = input.tags
@@ -88,6 +91,7 @@ exports.Entity = Task;
 exports.ScriptTask = Task
 exports.ScraperTask = ScraperTask
 exports.ApprovalTask = ApprovalTask
+exports.DummyTask = DummyTask
 
 exports.Factory = {
   create (input) {
@@ -98,6 +102,10 @@ exports.Factory = {
     if (input.type == TaskConstants.TYPE_APPROVAL) {
       input._type = 'ApprovalTask'
       return new ApprovalTask(input)
+    }
+    if (input.type == TaskConstants.TYPE_DUMMY) {
+      input._type = 'DummyTask'
+      return new DummyTask(input)
     }
     if (input.type == TaskConstants.TYPE_SCRIPT) {
       input._type = 'Task'

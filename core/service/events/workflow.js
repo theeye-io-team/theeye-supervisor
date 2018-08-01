@@ -14,8 +14,8 @@ module.exports = function (payload) {
   } else if (
     payload.topic === TopicConstants.task.execution ||
     payload.topic === TopicConstants.monitor.state ||
-    payload.topic === TopicConstants.webhook.triggered ||
-    payload.topic === TopicConstants.workflow.execution
+    payload.topic === TopicConstants.webhook.triggered
+    //payload.topic === TopicConstants.workflow.execution // not yet
   ) {
     // workflow trigger has occur
     triggerWorkflowByEvent(payload)
@@ -24,9 +24,10 @@ module.exports = function (payload) {
 
 /**
  * @param {Event} event entity to process
- * @param {Object} data event extra data generated
+ * @param {String} workflow_id
+ * @param {Mixed} output event output
  */
-const handleWorkflowEvent = ({ event, workflow_id, data }) => {
+const handleWorkflowEvent = ({ event, workflow_id, output }) => {
   // search workflow step by generated event
   let query = Workflow.findById(workflow_id)
   query.exec((err, workflow) => {
@@ -37,11 +38,11 @@ const handleWorkflowEvent = ({ event, workflow_id, data }) => {
 
     if (!workflow) { return }
 
-    executeWorkflowStep(workflow, event, data)
+    executeWorkflowStep(workflow, event, output)
   })
 }
 
-const executeWorkflowStep = (workflow, event, data) => {
+const executeWorkflowStep = (workflow, event, argsValues) => {
   var graph = new graphlib.json.read(workflow.graph)
   var nodes = graph.successors(event._id.toString()) // should return tasks nodes
   if (!nodes) return
@@ -60,16 +61,19 @@ const executeWorkflowStep = (workflow, event, data) => {
       for (var i=0; i<tasks.length; i++) {
         createJob({
           user: App.user,
-          event,
-          event_data: data,
           task: tasks[i],
+          task_arguments_values: argsValues,
           origin: JobConstants.ORIGIN_WORKFLOW
         })
       }
     })
 }
 
-const triggerWorkflowByEvent = ({ event, data }) => {
+/**
+ * @param {Event} event entity to process
+ * @param {Mixed} output event output
+ */
+const triggerWorkflowByEvent = ({ event, output }) => {
   let query = Workflow.find({ triggers: event._id })
   query.exec((err, workflows) => {
     if (err) {
@@ -78,12 +82,12 @@ const triggerWorkflowByEvent = ({ event, data }) => {
     }
     if (workflows.length===0) return
     for (var i=0; i<workflows.length; i++) {
-      executeFirstWorkflowTask(workflows[i], event, data)
+      executeFirstWorkflowTask(workflows[i], event, output)
     }
   })
 }
 
-const executeFirstWorkflowTask = (workflow, event, data) => {
+const executeFirstWorkflowTask = (workflow, event, argsValues) => {
   workflow.start_task = workflow.start_task_id
   workflow.populate([
     { path: 'start_task' }
@@ -99,10 +103,9 @@ const executeFirstWorkflowTask = (workflow, event, data) => {
     }
 
     createJob({
-      task: workflow.start_task,
       user: App.user,
-      event,
-      event_data: data,
+      task: workflow.start_task,
+      task_arguments_values: argsValues,
       origin: JobConstants.ORIGIN_TRIGGER_BY
     })
   })

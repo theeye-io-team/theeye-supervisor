@@ -3,23 +3,21 @@
 const async = require('async')
 const merge = require('lodash/merge')
 const globalconfig = require('config')
-const App = require('../app')
-const logger = require('../lib/logger')('service:jobs')
-const elastic = require('../lib/elastic')
+const App = require('../../app')
+const logger = require('../../lib/logger')('service:jobs')
+const elastic = require('../../lib/elastic')
 
-const Constants = require('../constants')
-const LifecycleConstants = require('../constants/lifecycle')
-const JobConstants = require('../constants/jobs')
-const TaskConstants = require('../constants/task')
-const TopicsConstants = require('../constants/topics')
-const StateConstants = require('../constants/states')
-
-const JobModels = require('../entity/job')
-const Script = require('../entity/file').Script
+const Constants = require('../../constants')
+const LifecycleConstants = require('../../constants/lifecycle')
+const JobConstants = require('../../constants/jobs')
+const TaskConstants = require('../../constants/task')
+const TopicsConstants = require('../../constants/topics')
+const StateConstants = require('../../constants/states')
+const JobModels = require('../../entity/job')
 //const AgentUpdateJob = require('../entity/job').AgentUpdate
-
-const TaskEvent = require('../entity/event').TaskEvent
+const TaskEvent = require('../../entity/event').TaskEvent
 //const NotificationService = require('./notification')
+const JobFactory = require('./factory')
 
 module.exports = {
   ///**
@@ -95,13 +93,12 @@ module.exports = {
   /**
    * @author Facugon
    * @param {Object} input
-   * @property {Event} input.event
-   * @property {Event} input.event_data
    * @property {Task} input.task
    * @property {User} input.user
    * @property {Customer} input.customer
    * @property {Boolean} input.notify
-   * @property {String[]} input.script_arguments only required if it is a script-type job
+   * @property {String[]} input.script_arguments (will be deprecated)
+   * @property {String[]} input.task_arguments_values 
    * @param {Function(Error,Job)} done
    */
   create (input, done) {
@@ -131,7 +128,21 @@ module.exports = {
             customer: input.customer
           })
 
-          done(null, job)
+          // finish the task at once
+          if (TaskConstants.TYPE_DUMMY === task.type) {
+            this.finish(
+              Object.assign({}, input, {
+                result: {
+                  state: StateConstants.SUCCESS,
+                  data: {
+                    output: input.task_arguments_values
+                  }
+                }, job
+              }), done
+            )
+          } else {
+            done(null, job)
+          }
         })
       })
     })
@@ -156,20 +167,21 @@ module.exports = {
     const task = job.task
 
     // if it is not a declared failure, assume success
-    let state = (input.state||result.state||StateConstants.SUCCESS)
+    let state = (input.state || result.state || StateConstants.SUCCESS)
     var trigger_name = (state === StateConstants.FAILURE) ?
       StateConstants.FAILURE : StateConstants.SUCCESS
 
+    // data output, can be anything. stringify for security
     job.state = state
     job.trigger_name = trigger_name
     job.lifecycle = LifecycleConstants.FINISHED
+    job.result = result.data
 
-    // data output, can be anything. stringify for security
-    if (result.data.output) {
-      result.data.output = JSON.stringify(result.data.output)
+    if (result.data && result.data.output) {
+      job.output = result.data.output
+      job.result.output = JSON.stringify(result.data.output) // stringify for security
     }
 
-    job.result = result.data
     job.save(err => {
       if (err) logger.log('%o',err)
 
@@ -181,7 +193,7 @@ module.exports = {
       })
 
       //new ResultMail(job) // job completed mail
-      dispatchFinishedTaskExecutionEvent (job, trigger_name, result.data)
+      dispatchFinishedTaskExecutionEvent (job, trigger_name)
     })
   },
   /**
@@ -273,7 +285,7 @@ module.exports = {
 
     let props = merge({
       lifecycle: LifecycleConstants.READY,
-      origin: 'user',
+      origin: JobConstants.ORIGIN_USER,
       operation,
       host,
       host_id: host._id,
@@ -368,7 +380,8 @@ const jobMustHaveATask = (job) => {
   var result = (
     job._type === JobConstants.SCRAPER_TYPE ||
     job._type === JobConstants.SCRIPT_TYPE ||
-    job._type === JobConstants.APPROVAL_TYPE
+    job._type === JobConstants.APPROVAL_TYPE ||
+    job._type === JobConstants.DUMMY_TYPE
   )
   return result
 }
@@ -392,7 +405,7 @@ const jobInProgress = (job) => {
 const removeOldTaskJobs = (task, next) => {
   logger.log('removing old jobs of task %s', task._id)
 
-  let filters = {task_id: task._id}
+  let filters = { task_id: task._id }
 
   JobModels.Job.remove(filters, function (err) {
     if (err) {
@@ -451,7 +464,10 @@ const registerJobOperation = (operation, topic, input) => {
       job_type: job._type
     }
 
-    if (job._type !== JobConstants.APPROVAL_TYPE) {
+    if (
+      job._type !== JobConstants.APPROVAL_TYPE &&
+      job._type !== JobConstants.DUMMY_TYPE
+    ) {
       payload.hostname = job.host.hostname
     }
 
@@ -477,6 +493,8 @@ const registerJobOperation = (operation, topic, input) => {
       payload.mtime = script.last_update
       payload.mimetype = script.mimetype
     } else if (job._type == JobConstants.APPROVAL_TYPE) {
+      // nothing yet
+    } else if (job._type == JobConstants.DUMMY_TYPE) {
       // nothing yet
     } else if (job._type == JobConstants.AGENT_UPDATE_TYPE) {
       // nothing yet
@@ -509,26 +527,6 @@ const registerJobOperation = (operation, topic, input) => {
   })
 }
 
-const prepareScript = (script_id, next) =>  {
-  const query = Script.findById(script_id)
-  query.exec((err, script) => {
-    if (err) {
-      logger.error('%o',err)
-      err.statusCode = 500
-      return next(err)
-    }
-
-    if (!script) {
-      let msg = 'cannot create job. script is no longer available'
-      logger.error(msg)
-      let err = new Error(msg)
-      err.statusCode = 404
-      return next(err)
-    }
-
-    next(null,script)
-  })
-}
 
 /**
  *
@@ -559,8 +557,8 @@ const cancelJobNextLifecycle = (job) => {
  * @param {Object} data
  *
  */
-const dispatchFinishedTaskExecutionEvent = (job, trigger, data) => {
-  let { task_id, workflow_id } = job
+const dispatchFinishedTaskExecutionEvent = (job, trigger) => {
+  let { task_id, workflow_id, output } = job
   let topic
 
   // cannot trigger a workflow event without a task
@@ -589,133 +587,7 @@ const dispatchFinishedTaskExecutionEvent = (job, trigger, data) => {
       topic,
       event,
       workflow_id,
-      data
+      output
     })
   })
-}
-
-const JobFactory = {
-  /**
-   *
-   * @param {Task} task
-   * @param {Object} input
-   * @property {User} input.user
-   * @property {Customer} input.customer
-   * @param {Function} next
-   *
-   */
-  create (task, input, next) {
-    /**
-     *
-     * @param {Task} task
-     * @param {String[]} args
-     * @param {Function} next
-     *
-     */
-    const prepareTaskArguments = (args, done) => {
-      if (!args) {
-        App.taskManager.prepareTaskArgumentsValues(
-          task.script_arguments,
-          [], // use only fixed-arguments if not specified
-          done
-        )
-      } else {
-        done(null, args)
-      }
-    }
-
-    const setupJobBasicProperties = (job) => {
-      if (task.workflow_id) {
-        job.workflow = task.workflow_id
-        job.workflow_id = task.workflow_id
-      }
-      // copy embedded task object
-      job.task = Object.assign({}, task.toObject(), { customer: null, host: null }) // >>> add .id  / embedded
-      job.task_id = task._id
-      job.user_id = input.user._id
-      job.user = input.user._id
-      job.host_id = task.host_id;
-      job.host = task.host_id;
-      job.name = task.name;
-      job.customer_id = input.customer._id;
-      job.customer_name = input.customer.name;
-      job.notify = input.notify;
-      job.lifecycle = LifecycleConstants.READY
-      job.event = input.event || null
-      //job.event_id = input.event_id || null
-      job.event_data = input.event_data || {}
-      job.origin = input.origin
-      return job
-    }
-
-    const saveJob = (job, done) => {
-      job.save(err => {
-        if (err) {
-          logger.error('%o',err)
-          return done(err)
-        }
-        done(null, job)
-      })
-    }
-
-    const createScraperJob = (done) => {
-      const job = new JobModels.Scraper()
-      setupJobBasicProperties(job)
-      return saveJob(job, done)
-    }
-
-    /**
-     * @param {Object} input
-     * @property {String} input.script_id
-     * @property {String[]} input.script_arguments ordered script arguments values
-     */
-    const createScriptJob = (done) => {
-      prepareScript(task.script_id, (err,script) => {
-        if (err) { return next (err) }
-        const job = new JobModels.Script()
-        setupJobBasicProperties(job)
-        job.script = script.toObject() // >>> add .id  / embedded
-        job.script_id = script._id
-        job.script_arguments = input.script_arguments
-        job.script_runas = task.script_runas
-        /**
-         * @todo should remove hereunder line in the future.
-         * only keep for backward compatibility with agent versions number equal or older than version 0.11.3.
-         * this is overwriting saved job.task.script_arguments definition.
-         */
-        job.task.script_arguments = input.script_arguments
-        return saveJob(job, done)
-      })
-    }
-
-    /**
-     * approval job is created onhold , waiting approver decision
-     */
-    const createApprovalJob = (done) => {
-      const job = new JobModels.Approval()
-      setupJobBasicProperties(job)
-      job.lifecycle = LifecycleConstants.ONHOLD
-      return saveJob(job, done)
-    }
-
-    switch (task.type) {
-      case TaskConstants.TYPE_SCRIPT:
-        prepareTaskArguments(input.script_arguments, (err, args) => {
-          if (err) { return next(err) }
-          input.script_arguments = args
-          createScriptJob(next)
-        })
-        break;
-      case TaskConstants.TYPE_SCRAPER:
-        createScraperJob(next)
-        break;
-      case TaskConstants.TYPE_APPROVAL:
-        createApprovalJob(next)
-        break;
-      default:
-        const err = new Error(`invalid or undefined task type ${task.type}`)
-        return next(err)
-        break;
-    }
-  }
 }

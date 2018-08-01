@@ -21,15 +21,39 @@ function BaseSchema (props) {
     customer_name: { type: String },
     name: { type: String },
     notify: { type: Boolean },
-    state: { type: String, default: 'unknown' },
+    state: { type: String, default: 'unknown' }, // job reported state
     lifecycle: { type: String },
-    result: { type: Object, default: {} },
+    result: {
+      type: Object,
+      default: () => { return {} }
+    },
+    output: {
+      type: String,
+      get: function (data) {
+        if (!data) { return null }
+        try { 
+          return JSON.parse(data)
+        } catch (e) { 
+          return [ e.message ]
+        }
+      },
+      set: function (data) {
+        try {
+          return JSON.stringify(data)
+        } catch (e) {
+          let err = [ e.message ]
+          return JSON.stringify(err)
+        }
+      },
+      default: () => { return [] }
+    },
     creation_date: { type: Date, default: Date.now },
     last_update: { type: Date, default: Date.now },
+    trigger_name: { type: String }, // final state success or failure. always success by default
     event: { type: ObjectId, ref: 'Event' }, // last workflow event
-    trigger_name: { type: String },
     event_id: { type: ObjectId },
     event_data: { type: Object, default: () => { return {} } },
+    task_arguments_values: [ String ], // array of task arguments
     origin: { type: String }
   }, props), {
     collection: 'jobs',

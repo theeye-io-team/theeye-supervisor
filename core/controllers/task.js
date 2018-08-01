@@ -100,13 +100,15 @@ const controller = {
     if (!input.name) errors.required('name', input.name)
     if (!input.type) errors.required('type', input.type)
 
-    if (input.type!==TaskConstants.TYPE_APPROVAL) {
+    if (input.type!==TaskConstants.TYPE_APPROVAL && input.type!==TaskConstants.TYPE_DUMMY) {
       if (!req.host) {
         errors[!req.body.host?'required':'invalid']('host', req.host)
       }
       input.host = req.host._id
       input.host_id = req.host._id
-    } else {
+    }
+
+    if (input.type===TaskConstants.TYPE_APPROVAL) {
       if (!input.approver_id) {
         errors.required('approver_id', req.approver_id)
       } else if (!isMongoId(input.approver_id)) {
@@ -120,7 +122,11 @@ const controller = {
       }
       input.script = req.script
     }
+
     if (input.type===TaskConstants.TYPE_SCRAPER) { }
+
+    if (input.type===TaskConstants.TYPE_DUMMY) { }
+
 
     if (errors.hasErrors()){
       return res.send(400,errors)
@@ -215,11 +221,13 @@ const controller = {
     if (!req.task) return res.send(400, errors.required('task'))
     if (!input.name) return res.send(400, errors.required('name'))
 
-    if (req.task.type!==TaskConstants.TYPE_APPROVAL) {
+    if (req.task.type!==TaskConstants.TYPE_APPROVAL && input.type!==TaskConstants.TYPE_DUMMY) {
       if (!req.host) {
         errors[!req.body.host?'required':'invalid']('host', req.host)
       }
-    } else {
+    }
+
+    if (input.type===TaskConstants.TYPE_APPROVAL) {
       if (!input.approver_id) {
         errors.required('approver_id', req.approver_id)
       } else if (!isMongoId(input.approver_id)) {
@@ -234,6 +242,8 @@ const controller = {
       input.script = req.script
     }
     if (input.type===TaskConstants.TYPE_SCRAPER) { }
+
+    if (input.type===TaskConstants.TYPE_DUMMY) { }
 
     if (errors.hasErrors()){
       return res.send(400,errors)

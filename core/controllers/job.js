@@ -161,15 +161,16 @@ const controller = {
       user,
       customer,
       notify: true,
-      origin: req.origin || JobConstants.ORIGIN_USER
+      origin: (req.origin || JobConstants.ORIGIN_USER)
     }
 
     const createJob = () => {
       logger.log('creating new job')
-      App.jobDispatcher.create(jobData, (error,job) => {
+
+      const done = (error, job) => {
         if (error) {
           if (error.statusCode) {
-            if (error.statusCode===423) {
+            if (error.statusCode === 423) {
               return res.send(error.statusCode, job)
             } else {
               logger.error(error)
@@ -180,28 +181,27 @@ const controller = {
             return res.send(500)
           }
         }
-        res.send(200,job)
+        res.send(200, job)
         req.job = job
         next()
-      })
+      }
+
+      App.jobDispatcher.create(jobData, done)
     }
 
     const prepareTaskArguments = (next) => {
-      if (task.type === TaskConstants.TYPE_SCRIPT) {
-        App.taskManager.prepareTaskArgumentsValues(
-          task.script_arguments,
-          req.params.task_arguments || [],
-          (err,args) => {
-            if (err) {
-              return res.sendError(err)
-            }
-            jobData.script_arguments = args
-            next()
+      App.taskManager.prepareTaskArgumentsValues(
+        task.task_arguments || task.script_arguments, // script_arguments (for backward compatibility)
+        req.params.task_arguments || [], // task arguments values
+        (err, args) => {
+          if (err) {
+            return res.sendError(err)
           }
-        )
-      } else {
-        next()
-      }
+          jobData.task_arguments_values = args
+          jobData.script_arguments = args
+          next()
+        }
+      )
     }
 
     prepareTaskArguments(() => { createJob() })

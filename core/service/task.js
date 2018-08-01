@@ -46,7 +46,7 @@ module.exports = {
         .find({ _id: task._id })
         .remove()
         .exec(err => {
-          if (err) return options.fail(err)
+          if (err) { return options.fail(err) }
 
           App.scheduler.unscheduleTask(task)
 
@@ -54,10 +54,16 @@ module.exports = {
             .find({ emitter_id: task._id })
             .remove()
             .exec(err => {
-              if (err) return options.fail(err)
-            })
+              if (err) { return options.fail(err) }
 
-          options.done()
+              Job
+                .find({ task_id: task._id.toString() })
+                .remove()
+                .exec(err => {
+                  if (err) { return options.fail(err) }
+                  options.done()
+                })
+            })
         })
     }
   },
