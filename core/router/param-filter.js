@@ -30,7 +30,6 @@ module.exports = {
       else return []; // invalid or undefined
     }
   },
-
   /**
    *
    * remove duplicated elements from input array
@@ -39,12 +38,12 @@ module.exports = {
    * @return {Array} filtered value
    *
    */
-  uniq: function uniq(value) {
+  uniq (value) {
     var isArray = Object.prototype.toString.call(value) === '[object Array]';
     if (isArray) return lodash.uniq(value);
     else return [value]; // unique value into an array
   },
-  toBoolean: function toBoolean(value) {
+  toBoolean (value) {
     if (value === true || value === 'true') return true;
     if (value === false || value === 'false') return false;
     return null;
@@ -60,7 +59,7 @@ module.exports = {
    * @return {Function} middleware interface function
    *
    */
-  spawn: function spawn(options) {
+  spawn (options) {
     var self = this;
 
     var name = options.param;

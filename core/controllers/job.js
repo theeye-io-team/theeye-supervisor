@@ -1,5 +1,3 @@
-'use strict'
-
 const App = require('../app')
 const json = require('../lib/jsonresponse')
 const logger = require('../lib/logger')('controller:job')
@@ -14,6 +12,9 @@ const TopicsConstants = require('../constants/topics')
 const IntegrationConstants = require('../constants/integrations')
 const audit = require('../lib/audit')
 const merge = require('lodash/merge')
+
+const dbFilter = require('../lib/db-filter');
+const fetchBy = require('../lib/fetch-by')
 
 module.exports = (server, passport) => {
   var middlewares = [
@@ -40,7 +41,7 @@ module.exports = (server, passport) => {
     '/:customer/job',
     middlewares.concat(
       router.requireCredential('user'),
-      router.resolve.hostnameToHost({ required: true })
+      router.resolve.hostnameToHost()
     ),
     controller.fetch
   )
@@ -53,6 +54,15 @@ module.exports = (server, passport) => {
     ),
     controller.finish,
     afterFinishJobHook
+  )
+
+  server.put(
+    '/job/:job/redo',
+    middlewares.concat(
+      router.requireCredential('user'),
+      router.resolve.idToEntity({ param: 'job', required: true })
+    ),
+    controller.redo
   )
 
   server.post(
@@ -79,9 +89,6 @@ module.exports = (server, passport) => {
   // create job using task secret key
   server.post(
     '/job/secret/:secret', [
-      (req, res, next) =>  {
-        return next()
-      },
       router.resolve.customerNameToEntity({ required: true }),
       router.resolve.idToEntity({ param: 'task', required: true }),
       //router.ensureBelongsToCustomer({ documentName: 'task' }),
@@ -101,42 +108,56 @@ const controller = {
     var job = req.job
     res.send(200, job)
   },
-  fetch (req,res,next) {
-    const host = req.host
+  /**
+   * @method GET
+   * @route /:customer/job
+   */
+  fetch (req, res, next) {
     const customer = req.customer
     const user = req.user
-
-    if (!host) {
-      return res.send(400, 'valid host is required')
-    }
+    const query = req.query
 
     logger.log('querying jobs')
 
-    if (req.params.process_next) {
+    if (query.process_next) {
+      if (!req.host) {
+        return res.send(400, 'host is required')
+      }
+
       App.jobDispatcher.getNextPendingJob(
-        { customer, host, user },
+        { customer, user, host: req.host },
         (err,job) => {
-          if (err) {
-            return res.send(500, err.message)
-          }
+          if (err) { return res.send(500, err.message) }
 
           var jobs = []
-          if (job != null) jobs.push(job)
+          if (job != null) {
+            jobs.push(job)
+          }
+
           res.send(200, { jobs })
+          next()
         }
       )
     } else {
-      // find all
-      Job.find({
-        host_id: host.id,
-        customer_name: customer.name
-      }).exec(function(err,jobs){
-        res.send(200, { jobs })
+      const filter = dbFilter(query, { /** default **/ })
+      filter.where.customer_id = customer._id.toString()
+      filter.populate = 'user'
+
+      fetchBy.call(Job, filter, (err, jobs) => {
+        if (err) { return res.send(500, err) }
+        res.send(200, jobs)
+        next()
       })
     }
   },
+  /**
+   *
+   * @method PUT
+   * @summary finish a job. change its lifecycle
+   *
+   */
   finish (req, res, next) {
-    var result = req.params.result || {}
+    var result = req.body.result || {}
     App.jobDispatcher.finish({
       job: req.job,
       result: result,
@@ -150,61 +171,37 @@ const controller = {
   },
   /**
    *
-   * @param {Object[]} req.params.task_arguments an array of objects with { order, label, value } arguments definition
+   * @param {Object[]} req.body.task_arguments an array of objects with { order, label, value } arguments definition
    *
    */
   create (req, res, next) {
     let { task, user, customer } = req
+    let args = req.body.task_arguments || []
 
-    const jobData = {
+    logger.log('creating new job')
+
+    App.jobDispatcher.create({
       task,
       user,
       customer,
       notify: true,
-      origin: (req.origin || JobConstants.ORIGIN_USER)
-    }
-
-    const createJob = () => {
-      logger.log('creating new job')
-
-      const done = (error, job) => {
-        if (error) {
-          if (error.statusCode) {
-            if (error.statusCode === 423) {
-              return res.send(error.statusCode, job)
-            } else {
-              logger.error(error)
-              return res.send(error.statusCode, error.message)
-            }
-          } else {
-            logger.error(error)
-            return res.send(500)
-          }
-        }
-        res.send(200, job)
-        req.job = job
-        next()
+      origin: (req.origin || JobConstants.ORIGIN_USER),
+      task_arguments_values: args,
+      script_arguments: args
+    }, (err, job) => {
+      if (err) {
+        logger.error(err)
+        return res.send(err.statusCode || 500, err.message)
       }
 
-      App.jobDispatcher.create(jobData, done)
-    }
-
-    const prepareTaskArguments = (next) => {
-      App.taskManager.prepareTaskArgumentsValues(
-        task.task_arguments || task.script_arguments, // script_arguments (for backward compatibility)
-        req.params.task_arguments || [], // task arguments values
-        (err, args) => {
-          if (err) {
-            return res.sendError(err)
-          }
-          jobData.task_arguments_values = args
-          jobData.script_arguments = args
-          next()
-        }
-      )
-    }
-
-    prepareTaskArguments(() => { createJob() })
+      res.send(200, job)
+      req.job = job
+      next()
+    })
+  },
+  redo (req, res, next) {
+    let job = req.job
+    res.send(200)
   }
 }
 

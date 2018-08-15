@@ -36,6 +36,14 @@ function Service (resource) {
     return res
   }
 
+  const updateResourceLastEvent = (resource, lastEvent) => {
+    if (!lastEvent) { return }
+    resource.last_event = lastEvent || {}
+    if (lastEvent.data && lastEvent.data.output) {
+      resource.last_event.output = lastEvent.data.output
+    }
+  }
+
   const logStateChange = (resource,input) => {
     const payload = {
       hostname: resource.hostname,
@@ -93,15 +101,15 @@ function Service (resource) {
         emitter_id: monitor._id,
         enable: true,
         name: trigger
-      },function(err, event){
+      }, function (err, event) {
         if (err) return logger.error(err);
         else if (!event) return;
 
         App.eventDispatcher.dispatch({
           topic: TopicsConstants.monitor.state,
-          resource,
           event,
-          data: input.data
+          resource,
+          output: resource.last_event.output
         })
       })
     })
@@ -206,7 +214,7 @@ function Service (resource) {
     const failure_threshold = config.fails_count_alert;
     logger.log('resource "%s" check fails.', resource.name);
 
-    resource.last_event = input;
+    updateResourceLastEvent(resource, input)
 
     resource.fails_count++;
     logger.log(
@@ -243,7 +251,7 @@ function Service (resource) {
     const failure_threshold = config.fails_count_alert;
     const isRecoveredFromFailure = Boolean(resource.state===MonitorConstants.RESOURCE_FAILURE);
 
-    resource.last_event = input;
+    updateResourceLastEvent(resource, input)
 
     // failed at least once
     if (resource.fails_count!==0||resource.state!==newState) {
@@ -333,7 +341,9 @@ function Service (resource) {
    */
   const handleChangedStateEvent = (resource,input,config) => {
     const newState = MonitorConstants.RESOURCE_NORMAL
-    resource.last_event = input
+
+    updateResourceLastEvent(resource, input)
+
     resource.state = newState
 
     input.event_name = MonitorConstants.RESOURCE_CHANGED

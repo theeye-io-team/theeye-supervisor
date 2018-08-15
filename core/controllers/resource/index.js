@@ -336,7 +336,7 @@ const controller = {
    */
   update_alerts (req, res, next) {
     const resource = req.resource
-    resource.alerts = req.params.alerts
+    resource.alerts = req.body.alerts
     resource.save(err => {
       if (err) {
         res.send(500)
@@ -355,7 +355,7 @@ const controller = {
    */
   update_state (req,res,next) {
     const resource = req.resource
-    const input = req.params
+    const input = req.body
     const manager = new ResourceManager(resource)
     manager.handleState(input, err => {
       if (err) {

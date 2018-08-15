@@ -149,7 +149,7 @@ var controller = {
    */
   patch (req, res, next) {
     const customer = req.customer
-    const updates = req.params
+    const updates = req.body
 
     if (updates.config) {
       const elasticsearch = updates.config.elasticsearch
@@ -271,32 +271,6 @@ var controller = {
       next();
     });
   },
-  /**
-   *
-   * mantein the same customer ,
-   * but replace the customer properties values with the data provided.
-   *
-   * @author Facundo
-   * @method PUT
-   * @route /customer/:customer
-   */
-  //replace (req, res, next) {
-  //  var customer = req.customer;
-  //  var updates = req.params;
-
-  //  // replace with default values if nothing specified
-  //  customer.description = (updates.description||'');
-  //  customer.emails = (updates.emails||[]);
-  //  customer.config = (updates.config||{
-  //    monitor:{},
-  //    elasticsearch:{enabled:false}
-  //  });
-
-  //  customer.save( err => {
-  //    if (err) return res.send(500,err);
-  //    res.send(200, customer);
-  //  });
-  //},
   /**
    *
    *

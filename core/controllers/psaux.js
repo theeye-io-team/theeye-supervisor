@@ -32,7 +32,7 @@ module.exports = function(server, passport) {
 const controller = {
   create (req, res, next) {
     var host = req.host
-    var stats = req.params.psaux
+    var stats = req.body.psaux
 
     if (!host) {
       var errmsg = 'host is not valid or was removed'

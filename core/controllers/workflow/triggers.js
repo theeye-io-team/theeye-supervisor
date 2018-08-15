@@ -26,7 +26,7 @@ var controller = {
    */
   get (req, res, next) {
     var customer = req.customer
-    var node = req.params.node
+    var node = req.query.node
 
     Event.fetch({ customer: req.customer._id }, (err, events) => {
       if (err) {

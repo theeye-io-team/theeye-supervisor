@@ -7,6 +7,7 @@ const IntegrationConstants = require('../../constants/integrations')
 const BaseSchema = require('./schema')
 const AgentUpdateJobSchema = require('./agent-update')
 const ScriptJobSchema = require('./script')
+const WorkflowSchema = require('./workflow')
 
 const JobSchema = new BaseSchema({
   _type: { type: String, default: 'Job' }
@@ -22,12 +23,15 @@ const ScraperJob = Job.discriminator('ScraperJob', ScraperSchema)
 const ApprovalJob = Job.discriminator('ApprovalJob', ApprovalSchema)
 const DummyJob = Job.discriminator('DummyJob', DummySchema)
 
+const WorkflowJob = Job.discriminator('WorkflowJob', WorkflowSchema)
+
 Job.ensureIndexes()
 AgentUpdateJob.ensureIndexes()
 ScriptJob.ensureIndexes()
 ScraperJob.ensureIndexes()
 ApprovalJob.ensureIndexes()
 DummyJob.ensureIndexes()
+WorkflowJob.ensureIndexes()
 
 exports.Job = Job
 exports.AgentUpdate = AgentUpdateJob
@@ -35,6 +39,7 @@ exports.Script = ScriptJob
 exports.Scraper = ScraperJob
 exports.Approval = ApprovalJob
 exports.Dummy = DummyJob
+exports.Workflow = WorkflowJob
 
 /**
  *

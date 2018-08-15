@@ -1,5 +1,3 @@
-"use strict"
-
 const BaseSchema = require('./schema')
 
 const ScriptSchema = new BaseSchema({

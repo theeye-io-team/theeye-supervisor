@@ -62,7 +62,7 @@ const controller = {
   },
   cancel (req, res, next) {
     const job = req.job
-    const web_user_id = req.params.web_user_id
+    const web_user_id = req.body.web_user_id
 
     App.jobDispatcher.cancel({ job, user: req.user, customer: req.customer }, err => {
       if (err) {
@@ -75,9 +75,9 @@ const controller = {
     })
   },
   approve (req, res, next) {
-    const result = req.params.result || {}
+    const result = req.body.result || {}
+    const web_user_id = req.body.web_user_id
     const job = req.job
-    const web_user_id = req.params.web_user_id
 
     result.state = StateConstants.SUCCESS
 
@@ -97,9 +97,9 @@ const controller = {
     })
   },
   reject (req, res, next) {
-    const result = req.params.result || {}
+    const result = req.body.result || {}
+    const web_user_id = req.body.web_user_id
     const job = req.job
-    const web_user_id = req.params.web_user_id
 
     result.state = StateConstants.FAILURE
 

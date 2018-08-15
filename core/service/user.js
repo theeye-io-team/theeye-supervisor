@@ -85,32 +85,22 @@ module.exports = {
    *
    */
   update (id, updates, next) {
-    var customerNames = updates.customers;
-    debug.log('updating user %s data', id);
+    debug.log('updating user %s data', id)
 
-    customerNamesToUserCustomers(
-      customerNames,
-      function(error, customers) {
-        if(error) return next(error);
+    User.findOne({ _id: id }, (err, user) => {
+      if (err) { return next(err) }
+      if (!user) { return next() }
 
-        User.findOne({ _id : id }, function (error, user) {
-          if(error) return next(error);
+      customerNamesToUserCustomers(
+        updates.customers,
+        (err, customers) => {
+          if (err) { return next(err) }
 
-          for (var attr in updates) {
-            if(attr != 'customers'){
-              user[attr] = updates[attr];
-            } else {
-              user['customers'] = customers;
-            }
-          }
-
-          user.save(function(error){
-            if(error) return next(error);
-            next(null,user);
-          });
-        });
-      }
-    );
+          user.set(Object.assign({}, updates, { customers }))
+          user.save(err => next(err, user))
+        }
+      )
+    })
   },
   /**
    * creates a random hash

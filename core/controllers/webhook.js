@@ -14,8 +14,8 @@ const TopicsConstants = require('../constants/topics')
 
 module.exports = function (server, passport) {
   var middlewares = [
-    passport.authenticate('bearer', { session:false }),
-    router.resolve.customerNameToEntity({ required:true }),
+    passport.authenticate('bearer', { session: false }),
+    router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer
   ];
 
@@ -86,7 +86,7 @@ module.exports = function (server, passport) {
       router.requireSecret('webhook')
     ],
     controller.trigger
-  );
+  )
 }
 
 var controller = {
@@ -175,6 +175,7 @@ var controller = {
    */
   trigger (req, res, next) {
     const webhook = req.webhook
+    const body = req.body
 
     App.notifications.generateSystemNotification({
       topic: TopicsConstants.webhook.triggered,
@@ -195,8 +196,9 @@ var controller = {
       if (!event) return res.send(500)
 
       App.eventDispatcher.dispatch({
-        topic: TopicsConstants.workflow.execution,
-        event
+        topic: TopicsConstants.webhook.triggered,
+        event,
+        output: body
       })
 
       res.send(200,{ message: 'success' })

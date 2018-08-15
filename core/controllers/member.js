@@ -1,15 +1,7 @@
-'use strict';
 
-var isEmail = require('validator/lib/isEmail')
-var logger = require('../lib/logger')('controller:member');
-var json = require('../lib/jsonresponse');
-var UserService = require('../service/user');
-var User = require("../entity/user").Entity;
-
-var router = require('../router');
-var dbFilter = require('../lib/db-filter');
-var ACL = require('../lib/acl');
-var lodash = require('lodash');
+const logger = require('../lib/logger')('controller:member')
+const UserService = require('../service/user')
+const router = require('../router')
 
 module.exports = function (server, passport) {
   /**
@@ -17,117 +9,105 @@ module.exports = function (server, passport) {
    * crud operations
    *
    */
-  server.patch('/:customer/member/:user/credential',[
-    passport.authenticate('bearer', {session:false}),
-    router.requireCredential('manager'),
-    router.resolve.idToEntity({param:'user'}),
-    router.filter.spawn({param:'customers', filter:'toArray'}),
-    router.filter.spawn({param:'customers', filter:'uniq'}),
-  ], controller.updateCrendential);
+  server.patch(
+    '/:customer/member/:member/credential',
+    [
+      passport.authenticate('bearer', { session: false }),
+      router.requireCredential('manager'),
+      router.resolve.idToEntity({
+        param: 'member',
+        entity: 'user',
+        required: true
+      }),
+      router.filter.spawn({ param: 'customers', filter: 'toArray' }),
+      router.filter.spawn({ param: 'customers', filter: 'uniq' }),
+    ],
+    controller.updateCrendential
+  )
 
-  server.patch('/:customer/member/:user/customers',[
-    passport.authenticate('bearer', {session:false}),
-    router.requireCredential('manager'),
-    router.resolve.idToEntity({param:'user'}),
-    router.filter.spawn({param:'customers', filter:'toArray'}),
-    router.filter.spawn({param:'customers', filter:'uniq'}),
-  ], controller.updateCustomers);
+  server.patch(
+    '/:customer/member/:member/customers',
+    [
+      passport.authenticate('bearer', { session: false }),
+      router.requireCredential('manager'),
+      router.resolve.idToEntity({
+        param: 'member',
+        entity: 'user',
+        required: true
+      }),
+      router.filter.spawn({ param: 'customers', filter: 'toArray' }),
+      router.filter.spawn({ param: 'customers', filter: 'uniq' }),
+    ],
+    controller.updateCustomers
+  )
 
-  server.del('/:customer/member/:user',[
-    passport.authenticate('bearer', {session:false}),
-    router.requireCredential('manager'),
-    router.resolve.idToEntity({ param:'user' }),
-  ], controller.removeFromCustomer);
-};
+  server.del(
+    '/:customer/member/:member',
+    [
+      passport.authenticate('bearer', { session: false }),
+      router.requireCredential('manager'),
+      router.resolve.idToEntity({
+        param: 'member',
+        entity: 'user',
+        required: true
+      })
+    ],
+    controller.removeFromCustomer
+  )
+}
 
-
-var controller = {
+const controller = {
   updateCrendential (req, res, next) {
-    var user = req.user;
-    if (!user) return res.send(404, json.error('User not found'));
+    var member = req.member
+    var credential = req.body.credential
 
-    var params = req.params;
-
-    if (!params.credential) {
-      return res.send(400, json.error('Missing credential.'));
+    if (!credential) {
+      return res.send(400, 'credential required')
     }
 
-    UserService.update(user._id, {credential: params.credential}, function(error, user){
-      if (error) {
-        if (error.statusCode) {
-          return res.send(error.statusCode, error.message);
-        } else {
-          logger.error(error);
-          return res.send(500,'internal error');
-        }
-      } else {
-        user.publish({
-          include_customers : true
-        }, function(error, data){
-          if(error)
-            return res.send(500,'internal error');
-          res.send(200, data);
-        });
-      }
-    });
+    updateMember(member, { credential }, res, next)
   },
   updateCustomers (req, res, next) {
-    var user = req.user;
-    if (!user) return res.send(404, json.error('User not found'));
+    var member = req.member
+    var customers = req.customers
 
-    var params = req.params;
-
-    if (!params.customers || params.customers.length == 0) {
-      return res.send(400, json.error('Missing customers.'));
+    if (!customers || customers.length === 0) {
+      return res.send(400, 'customers required')
     }
 
-    UserService.update(user._id, {customers: params.customers}, function(error, user){
-      if (error) {
-        if (error.statusCode) {
-          return res.send(error.statusCode, error.message);
-        } else {
-          logger.error(error);
-          return res.send(500,'internal error');
-        }
-      } else {
-        user.publish({
-          include_customers : true
-        }, function(error, data){
-          if(error)
-            return res.send(500,'internal error');
-          res.send(200, data);
-        });
-      }
-    });
+    updateMember(member, { customers }, res, next)
   },
   removeFromCustomer (req, res, next) {
-    var user = req.user;
-    if (!user) return res.send(404, json.error('User not found'));
+    const customerToRemove = req.customer
+    const member = req.member
 
-    var customerToRemove = req.params.customer;
-    if (!customerToRemove) return res.send(404, json.error('Customer not found'));
+    let customers = member.customers
+      .map(customer => customer.name)
+      .filter(customerName => customerName !== customerToRemove.name)
 
-    var customers = user.customers.map(customer => {
-      return customer.name
-    }).filter(customer => {
-      return customer !== customerToRemove
-    })
-
-    UserService.update(user._id, {customers: customers}, function(error, user){
-      if (error) {
-        if (error.statusCode) {
-          return res.send(error.statusCode, error.message);
-        } else {
-          logger.error(error);
-          return res.send(500,'internal error');
-        }
-      } else {
-        user.publish({
-          include_customers : true
-        }, function(error, data){
-          res.send(200, data);
-        });
-      }
-    });
+    updateMember(member, { customers }, res, next)
   }
-};
+}
+
+const updateMember = (member, updates, res, next) => {
+  UserService.update(
+    member._id,
+    updates,
+    (err, user) => {
+      if (err) {
+        logger.error(err)
+        res.send(err.statusCode || 500, err.message)
+        return next()
+      }
+
+      user.publish(
+        { include_customers: true },
+        (err, data) => {
+          if (err) { return res.send(500, 'internal error') }
+          res.send(200, data)
+          return next()
+        }
+      )
+    }
+  )
+}

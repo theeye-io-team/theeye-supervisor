@@ -110,7 +110,8 @@ const startNgrok = ({ host, config }, next) => {
   let orders = {
     integration: IntegrationConstants.NGROK,
     operation: IntegrationConstants.OPERATION_START,
-    host, config
+    host,
+    config
   }
   App.jobDispatcher.createIntegrationJob(orders, next)
 }
@@ -119,7 +120,8 @@ const stopNgrok = ({ host, config }, next) => {
   let orders = {
     integration: IntegrationConstants.NGROK,
     operation: IntegrationConstants.OPERATION_STOP,
-    host, config
+    host,
+    config
   }
   App.jobDispatcher.createIntegrationJob(orders, next)
 }

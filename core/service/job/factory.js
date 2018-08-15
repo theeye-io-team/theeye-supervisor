@@ -18,17 +18,17 @@ module.exports = {
   create (task, input, next) {
     next || (next = () => {})
 
-    let inputArgsValues = (
-      input.task_arguments_values ||
-      input.script_arguments
-    )
-
     let argsDefinition = (
       task.task_arguments ||
       task.script_arguments
     )
 
-    prepareTaskArguments(
+    let inputArgsValues = (
+      input.task_arguments_values ||
+      input.script_arguments
+    )
+
+    App.taskManager.prepareTaskArgumentsValues(
       argsDefinition,
       inputArgsValues,
       (err, argsValues) => {
@@ -115,6 +115,8 @@ const createJob = (input, next) => {
     if (task.workflow_id) {
       job.workflow = task.workflow_id
       job.workflow_id = task.workflow_id
+      job.workflow_job = vars.workflow_job_id
+      job.workflow_job_id = vars.workflow_job_id
     }
 
     // copy embedded task object
@@ -211,27 +213,6 @@ const createJob = (input, next) => {
       const err = new Error(`invalid or undefined task type ${task.type}`)
       return next(err)
       break;
-  }
-}
-
-/**
- *
- * @param {Task} task
- * @param {Object} argsDefinition
- * @param {String[]} argsValues
- * @param {Function} next
- *
- */
-const prepareTaskArguments = (argsDefinition, argsValues, done) => {
-  if (!argsValues) {
-    // use only fixed-arguments if not specified 
-    App.taskManager.prepareTaskArgumentsValues(
-      argsDefinition,
-      [],
-      done
-    )
-  } else {
-    done(null, argsValues)
   }
 }
 

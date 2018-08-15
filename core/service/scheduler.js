@@ -96,8 +96,8 @@ Scheduler.prototype = {
     const schedule = input.schedule
 
     const data = {
-      event: input.event,
-      event_data: input.event_data,
+      //event: input.event,
+      //event_data: input.event_data,
       task_id: task._id,
       task_id: task._id,
       host_id: task.host_id,
@@ -266,8 +266,8 @@ Scheduler.prototype = {
       if (!data.user) return new JobError( new Error('user %s is no longer available', jobData.user_id) )
 
       JobDispatcher.create({
-        event: jobData.event,
-        event_data: jobData.event_data,
+        //event: jobData.event,
+        //event_data: jobData.event_data,
         task: data.task,
         user: data.user,
         customer: data.customer,

@@ -5,6 +5,14 @@ const TopicConstants = require('../../constants/topics')
 const JobConstants = require('../../constants/jobs')
 const createJob = require('./create-job')
 
+/**
+ *
+ * @param {Object} payload
+ * @property {String} payload.topic
+ * @property {Event} payload.event entity to process
+ * @property {Object} payload.output event output
+ *
+ */
 module.exports = function (payload) {
   // a task completed its execution and triggered an event
   // or a monitor has changed its state
@@ -14,7 +22,7 @@ module.exports = function (payload) {
     payload.topic === TopicConstants.webhook.triggered ||
     payload.topic === TopicConstants.workflow.execution
   ) {
-    runTriggeredTaskByEvent(payload)
+    triggeredTaskByEvent(payload)
   }
 }
 
@@ -22,8 +30,8 @@ module.exports = function (payload) {
  * @param {Event} event entity to process
  * @param {Object} output event output
  */
-const runTriggeredTaskByEvent = ({ event, output }) => {
-  // search all task triggered by the event
+const triggeredTaskByEvent = ({ event, output }) => {
+  // search all task triggered by the event, not included in workflows
   let query = Task.find({
     triggers: event._id,
     $or: [
@@ -43,8 +51,6 @@ const runTriggeredTaskByEvent = ({ event, output }) => {
     for (var i=0; i<tasks.length; i++) {
       createJob({
         user: App.user,
-        //event,
-        //event_data: data,
         task: tasks[i],
         task_arguments_values: output,
         origin: JobConstants.ORIGIN_TRIGGER_BY

@@ -88,11 +88,10 @@ Task.on('afterInsert',function(model){ });
 Task.on('afterRemove',function(model){ });
 
 exports.Entity = Task;
-exports.ScriptTask = Task
+exports.ScriptTask = Task // this is not only script task, but the base task model
 exports.ScraperTask = ScraperTask
 exports.ApprovalTask = ApprovalTask
 exports.DummyTask = DummyTask
-
 exports.Factory = {
   create (input) {
     if (input.type == TaskConstants.TYPE_SCRAPER) {

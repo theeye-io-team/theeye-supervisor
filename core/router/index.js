@@ -46,6 +46,7 @@ module.exports = {
     require('../controllers/webhook')(server,passport);
     require('../controllers/workflow/triggers')(server,passport);
     require('../controllers/workflow/graph')(server,passport);
+    require('../controllers/workflow/job')(server,passport);
     require('../controllers/workflow')(server,passport);
     require('../controllers/member')(server,passport);
     require('../controllers/integrations')(server,passport);

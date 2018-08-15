@@ -109,7 +109,7 @@ const controller = {
    *
    */
   create (req, res, next) {
-    var hostname = req.params.hostname;
+    var hostname = req.params.hostname
 
     if (!hostname) {
       return res.send(400,'hostname required');
@@ -117,8 +117,8 @@ const controller = {
 
     logger.log('processing hostname "%s" registration request', hostname);
 
-    var input = req.params.info || {}
-    input.agent_version = req.params.version || null
+    var input = req.body.info || {}
+    input.agent_version = req.body.version || null
 
     registerHostname({
       user: req.user,

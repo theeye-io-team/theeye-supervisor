@@ -18,24 +18,21 @@ module.exports = function (server, passport) {
    *
    */
   server.get('/user/:user',[
-    passport.authenticate('bearer', {session:false}),
+    passport.authenticate('bearer', { session: false }),
     router.requireCredential('root'),
     router.resolve.idToEntity({param:'user'})
   ], controller.get);
 
   server.get('/user',[
-    passport.authenticate('bearer', {session:false}),
+    passport.authenticate('bearer', { session: false }),
     router.requireCredential('root'),
-    router.resolve.customerNameToEntity({param:'customer'})
+    router.resolve.customerNameToEntity({ param: 'customer'})
   ], controller.fetch);
 
   server.get('/:customer/user',[
-    passport.authenticate('bearer', {session:false}),
+    passport.authenticate('bearer', {session: false}),
     router.requireCredential('admin'),
-    router.resolve.customerNameToEntity({
-      param:'customer',
-      required:true
-    }),
+    router.resolve.customerNameToEntity({ param: 'customer', required: true }),
     router.ensureCustomer,
   ], controller.fetch);
 
@@ -71,23 +68,25 @@ function UserInterface (req, next) {
   var errors = [];
   var values = [];
 
+  let input = req.body
+
   /** email **/
-  if(!req.params.email)
+  if(!input.email)
     errors.push({'param':'email','message':'required'});
-  else if(!isEmail(req.params.email))
+  else if(!isEmail(input.email))
     errors.push({'param':'email','message':'invalid'});
   else
-   values.push({'param':'email','value':req.params.email});
+   values.push({'param':'email','value':input.email});
 
   /** username **/
-  if(req.params.username)
-    values.push({'param':'username','value':req.params.username});
+  if(input.username)
+    values.push({'param':'username','value':input.username});
 
   /** credential **/
-  if(!req.params.credential)
+  if(!input.credential)
     errors.push({'param':'credential','message':'required'});
   else
-    values.push({'param':'credential','value':req.params.credential});
+    values.push({'param':'credential','value':input.credential});
 
   /** customers **/
   var customers = req.customers;
@@ -99,15 +98,15 @@ function UserInterface (req, next) {
     values.push({'param':'customers','value':customers});
 
   /** enabled **/
-  if(typeof req.params.enabled != 'undefined')
-    values.push({'param':'enabled','value':req.params.enabled});
+  if(typeof input.enabled != 'undefined')
+    values.push({'param':'enabled','value':input.enabled});
   /** client_id **/
-  if(req.params.client_id)
-    values.push({'param':'client_id','value':req.params.client_id});
+  if(input.client_id)
+    values.push({'param':'client_id','value':input.client_id});
 
   /** client_secret **/
-  if(req.params.client_secret)
-    values.push({'param':'client_secret','value':req.params.client_secret});
+  if(input.client_secret)
+    values.push({'param':'client_secret','value':input.client_secret});
 
 
   return {
@@ -145,14 +144,14 @@ var controller = {
     var user = req.user; // user parameter to patch
     if (!user) return res.send(404, json.error('user not found'));
 
-    var params = new UserInterface(req,next);
-    var updates = params.valueObject();
+    var input = new UserInterface(req,next);
+    var updates = input.valueObject();
 
-    if (req.params.email!=user.email) {
+    if (input.email !== user.email) {
       return res.send(403,'user email can\'t be changed');
     }
 
-    if (params.values.length === 0) {
+    if (input.values.length === 0) {
       return res.send(400, json.error('no changes'));
     }
 
@@ -186,12 +185,12 @@ var controller = {
    *
    */
   create (req,res,next) {
-    var params = new UserInterface(req,next);
+    var input = new UserInterface(req,next);
 
-    if(params.errors.length != 0)
-      return res.send(400, json.error('invalid request',params.errors));
+    if(input.errors.length != 0)
+      return res.send(400, json.error('invalid request',input.errors));
 
-    var values = params.valueObject();
+    var values = input.valueObject();
     UserService.create(values, function(error,user){
       if(error) {
         logger.log('Error creating user');

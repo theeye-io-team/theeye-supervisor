@@ -58,10 +58,9 @@ const controller = {
    *
    */
   remove (req, res, next) {
-    var task = req.task;
-
-    var scheduleId = req.params.schedule;
-    if (!scheduleId) res.send(400,'schedule id required');
+    const task = req.task
+    const scheduleId = req.params.schedule
+    if (!scheduleId) { res.send(400,'schedule id required') }
 
     App.scheduler.cancelTaskSchedule(task, scheduleId, function (err, qtyRemoved) {
       if (err) {

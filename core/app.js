@@ -24,7 +24,7 @@ const App = {
     })
   },
   start () {
-    const server = restify.createServer();
+    const server = restify.createServer({ strictNext: true })
     const passport = auth.initialize();
 
     server.pre((req, res, next) => {
@@ -72,10 +72,11 @@ const App = {
       next()
     })
 
-    server.use(restify.acceptParser(server.acceptable))
-    server.use(restify.gzipResponse())
-    server.use(restify.queryParser())
-    server.use(restify.jsonBodyParser())
+    let plugins = restify.plugins
+    server.use(plugins.acceptParser(server.acceptable))
+    server.use(plugins.gzipResponse())
+    server.use(plugins.queryParser())
+    server.use(plugins.jsonBodyParser())
     server.use(passport.initialize())
     server.use(multer({
       dest: config.system.file_upload_folder ,

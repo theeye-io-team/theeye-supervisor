@@ -2,60 +2,13 @@
 
 const util = require('util');
 const Schema = require('mongoose').Schema;
-const ObjectId = Schema.Types.ObjectId;
 const FetchBy = require('../../lib/fetch-by');
+const baseProperties = require('./schema-properties.js')
 
 function BaseSchema (props) {
 
   // Schema constructor
-  Schema.call(this, util._extend({
-    task_id: { type: String },
-    task: { type: Object }, // embedded
-    workflow_id: { type: String },
-    workflow: { type: ObjectId, ref:'Workflow' },
-    host_id: { type: String },
-    host: { type: ObjectId, ref:'Host' },
-    user_id: { type: String },
-    user: { type: ObjectId, ref:'User' },
-    customer_id: { type: String },
-    customer_name: { type: String },
-    name: { type: String },
-    notify: { type: Boolean },
-    state: { type: String, default: 'unknown' }, // job reported state
-    lifecycle: { type: String },
-    result: {
-      type: Object,
-      default: () => { return {} }
-    },
-    output: {
-      type: String,
-      get: function (data) {
-        if (!data) { return null }
-        try { 
-          return JSON.parse(data)
-        } catch (e) { 
-          return [ e.message ]
-        }
-      },
-      set: function (data) {
-        try {
-          return JSON.stringify(data)
-        } catch (e) {
-          let err = [ e.message ]
-          return JSON.stringify(err)
-        }
-      },
-      default: () => { return [] }
-    },
-    creation_date: { type: Date, default: Date.now },
-    last_update: { type: Date, default: Date.now },
-    trigger_name: { type: String }, // final state success or failure. always success by default
-    event: { type: ObjectId, ref: 'Event' }, // last workflow event
-    event_id: { type: ObjectId },
-    event_data: { type: Object, default: () => { return {} } },
-    task_arguments_values: [ String ], // array of task arguments
-    origin: { type: String }
-  }, props), {
+  Schema.call(this, Object.assign({}, baseProperties, props), {
     collection: 'jobs',
     discriminatorKey: '_type'
   });

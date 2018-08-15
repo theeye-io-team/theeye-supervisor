@@ -30,7 +30,7 @@
     "passport-http-bearer": "~1.0.1",
     "readable-stream": "~1.0.34",
     "request": "~2.72.0",
-    "restify": "2.8.5",
+    "restify": "7.2.1",
     "stream-buffers": "~2.2.0",
     "underscore": "~1.8.3",
     "uuid": "3.1.0",

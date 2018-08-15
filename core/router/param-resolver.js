@@ -24,7 +24,7 @@ module.exports = {
     var targetName = (options.into||paramName);
 
     return function (req, res, next) {
-      var _id = req.params[paramName]||req.body[paramName]||req.query[paramName];
+      var _id = req.params[paramName] || req.body[paramName] || req.query[paramName]
 
       if (isObject(_id)) {
         _id = ( _id._id || _id.id || undefined )
@@ -92,7 +92,7 @@ module.exports = {
     options||(options={});
 
     return function (req,res,next) {
-      var hostname = req.params.hostname||req.body.hostname||req.query.hostname;
+      var hostname = req.params.hostname || req.body.hostname || req.query.hostname
       var customer = req.customer;
 
       if (!customer) {
@@ -136,7 +136,7 @@ module.exports = {
     options||(options={});
 
     return function (req,res,next) {
-      var name = req.params.customer||req.body.customer||req.query.customer;
+      var name = req.params.customer || req.body.customer || req.query.customer
 
       if (!name) {
         if (options.required) {

@@ -31,7 +31,7 @@ function WorkflowSchema (props) {
     }
   }
 
-  BaseSchema.call(this, util._extend({}, properties, props), specs)
+  BaseSchema.call(this, Object.assign({}, properties, props), specs)
 
   this.methods.populateTriggers = _populateTriggers
 

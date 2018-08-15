@@ -7,6 +7,16 @@ const JobConstants = require('../../constants/jobs')
 const createJob = require('./create-job')
 const graphlib = require('graphlib')
 
+/**
+ *
+ * @param {Object} payload
+ * @property {String} payload.topic
+ * @property {Event} payload.event entity to process
+ * @property {Object} payload.output event output
+ * @property {String} payload.workflow_id
+ * @property {String} payload.workflow_job_id
+ *
+ */
 module.exports = function (payload) {
   if (payload.topic === TopicConstants.workflow.execution) {
     // a task belonging to a workflow has finished
@@ -25,9 +35,10 @@ module.exports = function (payload) {
 /**
  * @param {Event} event entity to process
  * @param {String} workflow_id
+ * @param {String} workflow_job_id
  * @param {Mixed} output event output
  */
-const handleWorkflowEvent = ({ event, workflow_id, output }) => {
+const handleWorkflowEvent = ({ event, workflow_id, workflow_job_id, output }) => {
   // search workflow step by generated event
   let query = Workflow.findById(workflow_id)
   query.exec((err, workflow) => {
@@ -38,11 +49,11 @@ const handleWorkflowEvent = ({ event, workflow_id, output }) => {
 
     if (!workflow) { return }
 
-    executeWorkflowStep(workflow, event, output)
+    executeWorkflowStep(workflow, workflow_job_id, event, output)
   })
 }
 
-const executeWorkflowStep = (workflow, event, argsValues) => {
+const executeWorkflowStep = (workflow, workflow_job_id, event, argsValues) => {
   var graph = new graphlib.json.read(workflow.graph)
   var nodes = graph.successors(event._id.toString()) // should return tasks nodes
   if (!nodes) return
@@ -63,6 +74,7 @@ const executeWorkflowStep = (workflow, event, argsValues) => {
           user: App.user,
           task: tasks[i],
           task_arguments_values: argsValues,
+          workflow_job_id,
           origin: JobConstants.ORIGIN_WORKFLOW
         })
       }
@@ -80,32 +92,30 @@ const triggerWorkflowByEvent = ({ event, output }) => {
       logger.error(err)
       return
     }
-    if (workflows.length===0) return
+    if (workflows.length===0) { return }
+
     for (var i=0; i<workflows.length; i++) {
-      executeFirstWorkflowTask(workflows[i], event, output)
+      executeWorkflow(workflows[i], output)
     }
   })
 }
 
-const executeFirstWorkflowTask = (workflow, event, argsValues) => {
-  workflow.start_task = workflow.start_task_id
-  workflow.populate([
-    { path: 'start_task' }
-  ], err => {
+const executeWorkflow = (workflow, argsValues) => {
+  workflow.populate([{ path: 'customer' }], (err) => {
     if (err) {
-      logger.error(err)
-      return
+      return logger.error(err)
     }
 
-    if (!workflow.start_task) {
-      logger.error('could not populate workflow start_task %s', workflow.start_task_id)
-      return
+    if (!workflow.customer) {
+      return logger.error('FATAL. Workflow %s does not has a customer', workflow._id)
     }
 
-    createJob({
-      user: App.user,
-      task: workflow.start_task,
+    App.jobDispatcher.createByWorkflow({
+      workflow,
+      customer: workflow.customer,
       task_arguments_values: argsValues,
+      user: App.user,
+      notify: true,
       origin: JobConstants.ORIGIN_TRIGGER_BY
     })
   })

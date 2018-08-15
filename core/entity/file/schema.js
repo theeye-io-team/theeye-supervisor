@@ -16,10 +16,14 @@ function FileSchema (props) {
 
   BaseSchema.call(
     this,
-    util._extend({
-      template_id: { type: ObjectId },
-      template: { type: ObjectId, ref: 'FileTemplate' },
-    }, SchemaProperties, props),
+    Object.assign(
+      {
+        template_id: { type: ObjectId },
+        template: { type: ObjectId, ref: 'FileTemplate' },
+      },
+      SchemaProperties,
+      props
+    ),
     specs
   )
 

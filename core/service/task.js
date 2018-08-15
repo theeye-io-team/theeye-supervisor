@@ -265,28 +265,26 @@ module.exports = {
       })
     }
 
-    const populateLastJob = (next) => {
-      Job
-        .findOne({
-          task_id: task._id,
-          host_id: task.host_id
-        })
-        .sort({ creation_date: -1 })
-        .populate('user')
-        .exec((err,last) => {
-          if (err) return next(err)
-
-          if (!last) {
-            data.lastjob_id = null
-            data.lastjob = null
-          } else {
-            data.lastjob_id = last._id
-            data.lastjob = last
-          }
-
-          return next()
-        })
-    }
+    //const populateLastJob = (next) => {
+    //  Job
+    //    .findOne({
+    //      task_id: task._id,
+    //      host_id: task.host_id
+    //    })
+    //    .sort({ creation_date: -1 })
+    //    .populate('user')
+    //    .exec((err,last) => {
+    //      if (err) return next(err)
+    //      if (!last) {
+    //        data.lastjob_id = null
+    //        data.lastjob = null
+    //      } else {
+    //        data.lastjob_id = last._id
+    //        data.lastjob = last
+    //      }
+    //      return next()
+    //    })
+    //}
 
     const populateSchedules = (next) => {
       App.scheduler.getTaskSchedule(task._id, (err, schedules) => {
@@ -302,7 +300,7 @@ module.exports = {
     asyncMap([
       populateHost,
       populateScript,
-      populateLastJob,
+      //populateLastJob,
       populateSchedules
     ], (populate,callback) => {
       populate(callback)
@@ -321,16 +319,21 @@ module.exports = {
     let errors = new ErrorHandler()
     let filteredArguments = []
 
-    argumentsDefinition.forEach( (def,index) => {
+    if (
+      argumentsDefinition.length > 0 &&
+      (!Array.isArray(argumentsValues) || argumentsValues.length===0)
+    ) {
+      return next( new Error('argument values not defined') )
+    }
+
+    argumentsDefinition.forEach((def,index) => {
       if (Boolean(def)) { // is defined
         if (typeof def === 'string') { // fixed value old version compatibility
           filteredArguments[index] = def
         } else if (def.type) {
 
-          const order = (def.order || index) // if is not defined, it is the order the argument is being processed
-
           if (def.type === TaskConstants.ARGUMENT_TYPE_FIXED) {
-            filteredArguments[order] = def.value
+            filteredArguments[def.order] = def.value
           } else if (
             def.type === TaskConstants.ARGUMENT_TYPE_INPUT ||
             def.type === TaskConstants.ARGUMENT_TYPE_SELECT ||
@@ -339,20 +342,18 @@ module.exports = {
             def.type === TaskConstants.ARGUMENT_TYPE_REMOTE_OPTIONS
           ) {
             // require user input
-            const found = argumentsValues.find(reqArg => {
-              //return (reqArg.order === order && reqArg.label === def.label)
-              return reqArg.order === order
+            const found = argumentsValues.find((reqArg, idx) => {
+              let order
+              if (reqArg.order) { order = reqArg.order }
+              else { order = idx }
+              return (order === def.order)
             })
 
             // the argument is not present within the provided request arguments
-            if (!found) {
+            if (found === undefined) {
               errors.required(def.label, null, 'task argument ' + def.label + ' is required. provide the argument order and label')
             } else {
-              if (!found.value) {
-                errors.invalid(def.label, def.value, 'task argument value required')
-              } else {
-                filteredArguments[order] = found.value
-              }
+              filteredArguments[def.order] = (found.value || found)
             }
           } else { // bad argument definition
             errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')

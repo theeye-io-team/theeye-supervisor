@@ -11,12 +11,8 @@ const logger = require('../../lib/logger')(':events:create-job')
  * @access private
  */
 module.exports = (input) => {
-  let { task, task_arguments_values } = input
+  let { task } = input
   logger.log('preparing to run task %s', task._id)
-
-  if (!Array.isArray(task_arguments_values)) {
-    task_arguments_values = [ task_arguments_values ]
-  }
 
   task.populate([
     { path: 'customer' },

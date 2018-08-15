@@ -143,7 +143,6 @@ const controller = {
     })
   },
   /**
-   * @author Facundo
    * @method GET
    * @route /task
    */
@@ -152,7 +151,7 @@ const controller = {
     const customer = req.customer
     const input = req.query
 
-    if (host) input.host_id = host._id
+    if (host) { input.host_id = host._id }
 
     const filter = dbFilter(input,{ /** default **/ })
     filter.where.customer_id = customer.id

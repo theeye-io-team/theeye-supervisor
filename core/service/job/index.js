@@ -1,12 +1,9 @@
-"use strict"
-
 const async = require('async')
 const merge = require('lodash/merge')
 const globalconfig = require('config')
 const App = require('../../app')
 const logger = require('../../lib/logger')('service:jobs')
 const elastic = require('../../lib/elastic')
-
 const Constants = require('../../constants')
 const LifecycleConstants = require('../../constants/lifecycle')
 const JobConstants = require('../../constants/jobs')
@@ -14,9 +11,8 @@ const TaskConstants = require('../../constants/task')
 const TopicsConstants = require('../../constants/topics')
 const StateConstants = require('../../constants/states')
 const JobModels = require('../../entity/job')
-//const AgentUpdateJob = require('../entity/job').AgentUpdate
+const TaskModel = require('../../entity/task').Entity
 const TaskEvent = require('../../entity/event').TaskEvent
-//const NotificationService = require('./notification')
 const JobFactory = require('./factory')
 
 module.exports = {
@@ -99,6 +95,8 @@ module.exports = {
    * @property {Boolean} input.notify
    * @property {String[]} input.script_arguments (will be deprecated)
    * @property {String[]} input.task_arguments_values 
+   * @property {ObjectId} input.workflow_job_id current workflow ejecution
+   * @property {ObjectId} input.workflow_job
    * @param {Function(Error,Job)} done
    */
   create (input, done) {
@@ -112,10 +110,7 @@ module.exports = {
 
     verifyTaskBeforeExecution(task, (err) => {
       if (err) { return done(err) }
-
-      removeOldTaskJobs(task, (err) => {
-        if (err) { return done(err) }
-
+      removeExceededJobsCount(task, () => {
         JobFactory.create(task, input, (err, job) => {
           if (err) { return done(err) }
 
@@ -144,6 +139,37 @@ module.exports = {
             done(null, job)
           }
         })
+      })
+    })
+  },
+  createByWorkflow (input, next) {
+    let { workflow, user } = input
+    let wProps = Object.assign({}, input, {
+      customer_id: input.customer._id.toString(),
+      workflow_id: workflow._id,
+      workflow: workflow._id,
+      user: user._id,
+      user_id: user._id
+    })
+
+    getFirstTask(workflow, (err, task) => {
+      if (err) { return next(err) }
+
+      let wJob = new JobModels.Workflow(wProps)
+      wJob.save( (err, wJob) => {
+        if (err) { return next(err) } // break
+
+        this.create(
+          Object.assign({}, input, {
+            task,
+            workflow_job_id: wJob._id,
+            workflow_job: wJob._id
+          }),
+          (err, tJob) => {
+            if (err) { return next(err) }
+            next(null, wJob)
+          }
+        )
       })
     })
   },
@@ -277,20 +303,23 @@ module.exports = {
    * @property {String} integration
    * @property {String} operation
    * @property {Host} host
-   * @property {Object} options integration options and configuration
+   * @property {Object} config integration options and configuration
    *
    */
   createIntegrationJob ({ integration, operation, host, config }, next) {
     const factoryCreate = JobModels.IntegrationsFactory.create
 
-    let props = merge({
-      lifecycle: LifecycleConstants.READY,
-      origin: JobConstants.ORIGIN_USER,
-      operation,
-      host,
-      host_id: host._id,
-      notify: true
-    }, config)
+    let props = merge(
+      {
+        lifecycle: LifecycleConstants.READY,
+        origin: JobConstants.ORIGIN_USER,
+        operation,
+        host,
+        host_id: host._id,
+        notify: true
+      },
+      config
+    )
 
     const job = factoryCreate({ integration, props })
     currentIntegrationJob(job, (err, currentJob) => {
@@ -301,12 +330,26 @@ module.exports = {
         logger.error('%o',err)
         return next(err, currentJob)
       }
-      removeOldJobs(job, () => {
-        job.save(err => {
-          if (err) logger.error('%o', err)
-          next(err, job)
+
+      // remove old/finished integration job of the same type.
+      // cannot be more than one integration job, in the same host at the same time.
+      JobModels.Job
+        .remove({
+          _type: job._type,
+          host_id: job.host_id
         })
-      })
+        .exec(err => {
+          if (err) {
+            logger.error('Failed to remove old jobs')
+            logger.error('%o',err)
+            return next(err)
+          }
+
+          job.save(err => {
+            if (err) logger.error('%o', err)
+            next(err, job)
+          })
+        })
     })
   }
 }
@@ -335,13 +378,6 @@ const verifyTaskBeforeExecution = (task, next) => {
       return next(err)
     }
 
-    if (jobInProgress(taskData.lastjob) === true) {
-      err = new Error('job in progress')
-      err.statusCode = 423
-      logger.error('%o',err)
-      return next(err, taskData.lastjob)
-    }
-
     next()
   })
 }
@@ -361,19 +397,42 @@ const currentIntegrationJob = (job, next) => {
     })
 }
 
-const removeOldJobs = (job, next) => {
-  JobModels.Job
-    .remove({
-      _type: job._type,
-      host_id: job.host_id
-    })
-    .exec(err => {
-      if (err) {
-        logger.error('Failed to remove old jobs')
-        logger.error('%o',err)
-      }
-      next(err)
-    })
+/**
+ *
+ *
+ */
+const removeExceededJobsCount = (task, next) => {
+  const LIMIT = JobConstants.JOBS_LOG_COUNT_LIMIT - 1 // docs limit minus 1, because why are going to create the new one after removing older documents
+  const Job = JobModels.Job
+
+  Job.count(
+    { task_id: task._id.toString() },
+    (err, count) => {
+      if (err) { return next(err) }
+
+      // if count > limit allowed, then search top 6, and destroy the 6th and the others
+      if (count > LIMIT) {
+        Job
+          .find({ task_id: task._id.toString() })
+          .sort({ _id: -1 })
+          .limit(LIMIT)
+          .exec((err, docs) => {
+            let lastDoc = docs[LIMIT - 1]
+
+            // only remove finished jobs
+            Job.remove({
+              task_id: task._id.toString(),
+              _id: { $lt: lastDoc._id.toString() }, // remove older documents than last
+              $and: [
+                { lifecycle: { $ne: LifecycleConstants.READY } },
+                { lifecycle: { $ne: LifecycleConstants.ASSIGNED } },
+                { lifecycle: { $ne: LifecycleConstants.ONHOLD } }
+              ]
+            }, next)
+          })
+      } else { return next() }
+    }
+  )
 }
 
 const jobMustHaveATask = (job) => {
@@ -390,7 +449,8 @@ const jobInProgress = (job) => {
   if (!job) return false
   let inProgress = (
     job.lifecycle === LifecycleConstants.READY ||
-    job.lifecycle === LifecycleConstants.ASSIGNED
+    job.lifecycle === LifecycleConstants.ASSIGNED ||
+    job.lifecycle === LifecycleConstants.ONHOLD
   )
   return inProgress
 }
@@ -527,7 +587,6 @@ const registerJobOperation = (operation, topic, input) => {
   })
 }
 
-
 /**
  *
  * @summary obtain next valid lifecycle state if apply for current job.lifecycle
@@ -586,8 +645,23 @@ const dispatchFinishedTaskExecutionEvent = (job, trigger) => {
     App.eventDispatcher.dispatch({
       topic,
       event,
+      workflow_job_id: job.workflow_job_id, // current workflow execution
       workflow_id,
       output
     })
+  })
+}
+
+const getFirstTask = (workflow, next) => {
+  let taskId = workflow.start_task_id
+  TaskModel.findById(taskId, (err, task) => {
+    if (err) {
+      return next(err)
+    }
+    if (!task) {
+      return next(new Error('workflow first task not found'))
+    }
+
+    return next(null, task)
   })
 }
