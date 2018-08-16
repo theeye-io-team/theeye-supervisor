@@ -52,7 +52,7 @@ const controller = {
       origin: (req.origin || JobConstants.ORIGIN_USER)
     }, (err, job) => {
       if (err) {
-        logger.error(err)
+        logger.error('%o', err)
         return res.send(err.statusCode || 500, err.message)
       }
 
