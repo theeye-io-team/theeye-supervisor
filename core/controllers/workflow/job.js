@@ -1,5 +1,6 @@
 const App = require('../../app')
 const router = require('../../router')
+const logger = require('../../lib/logger')('controller:workflow:job')
 const JobConstants = require('../../constants/jobs')
 
 module.exports = (server, passport) => {
@@ -55,7 +56,14 @@ const controller = {
         return res.send(err.statusCode || 500, err.message)
       }
 
-      res.send(200, job)
+      let data = job.toObject()
+      data.user = {
+        id: user._id.toString(),
+        username: user.username,
+        email: user.email
+      }
+
+      res.send(200, data)
       req.job = job
       next()
     })
