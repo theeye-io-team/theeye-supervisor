@@ -149,7 +149,8 @@ module.exports = {
       workflow_id: workflow._id,
       workflow: workflow._id,
       user: user._id,
-      user_id: user._id
+      user_id: user._id,
+      task_arguments_values: null
     })
 
     getFirstTask(workflow, (err, task) => {
