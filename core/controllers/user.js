@@ -45,7 +45,7 @@ module.exports = function (server, passport) {
   server.patch('/user/:user',[
     passport.authenticate('bearer', {session:false}),
     router.requireCredential('root'),
-    router.resolve.idToEntity({param:'user'}),
+    router.resolve.idToEntity({param:'user', required: true }),
     router.filter.spawn({param:'customers', filter:'toArray'}),
     router.filter.spawn({param:'customers', filter:'uniq'}),
   ], controller.patch);
@@ -71,48 +71,54 @@ function UserInterface (req, next) {
   let input = req.body
 
   /** email **/
-  if(!input.email)
+  if (!input.email) {
     errors.push({'param':'email','message':'required'});
-  else if(!isEmail(input.email))
+  } else if (!isEmail(input.email)) {
     errors.push({'param':'email','message':'invalid'});
-  else
+  } else {
    values.push({'param':'email','value':input.email});
+  }
 
   /** username **/
-  if(input.username)
+  if (input.username) {
     values.push({'param':'username','value':input.username});
+  }
 
   /** credential **/
-  if(!input.credential)
+  if (!input.credential) {
     errors.push({'param':'credential','message':'required'});
-  else
+  } else {
     values.push({'param':'credential','value':input.credential});
+  }
 
   /** customers **/
   var customers = req.customers;
-  if(!customers || customers.length == 0)
+  if (!customers || customers.length == 0) {
     errors.push({param:'customers', message:'at least one required'});
   //else if(!isValidCustomersArray(customers))
   //  errors.push({param:'customers', message:'invalid'});
-  else
+  } else {
     values.push({'param':'customers','value':customers});
+  }
 
   /** enabled **/
-  if(typeof input.enabled != 'undefined')
+  if (typeof input.enabled != 'undefined') {
     values.push({'param':'enabled','value':input.enabled});
+  }
   /** client_id **/
-  if(input.client_id)
+  if (input.client_id) {
     values.push({'param':'client_id','value':input.client_id});
+  }
 
   /** client_secret **/
-  if(input.client_secret)
+  if (input.client_secret) {
     values.push({'param':'client_secret','value':input.client_secret});
-
+  }
 
   return {
-    'errors': errors,
-    'values': values,
-    'valueObject': function() {
+    errors: errors,
+    values: values,
+    valueObject: function () {
       var output = {};
       for(var i=0; i<values.length; i++)
         output[ values[i].param ] = values[i].value;
@@ -141,36 +147,32 @@ var controller = {
    *
    */
   patch (req, res, next) {
-    var user = req.user; // user parameter to patch
-    if (!user) return res.send(404, json.error('user not found'));
-
-    var input = new UserInterface(req,next);
-    var updates = input.valueObject();
-
-    if (input.email !== user.email) {
-      return res.send(403,'user email can\'t be changed');
+    const user = req.user; // user parameter to patch
+    if (!user) {
+      return res.send(404, json.error('user not found'))
     }
+
+    var input = new UserInterface(req, next)
+    var updates = input.valueObject()
+
+    //if (updates.email !== user.email) {
+    //  return res.send(403,'user email can\'t be changed');
+    //}
 
     if (input.values.length === 0) {
-      return res.send(400, json.error('no changes'));
+      return res.send(400, json.error('no changes'))
     }
 
-    UserService.update(user._id, updates, function(error, user){
-      if (error) {
-        if (error.statusCode) {
-          return res.send(error.statusCode, error.message);
-        } else {
-          logger.error(error);
-          return res.send(500,'internal error');
-        }
-      } else {
-        user.publish({
-          include_customers : true
-        }, function(error, data){
-          res.send(200, { 'user' : data });
-        });
+    UserService.update(user._id, updates, (err, user) => {
+      if (err) {
+        logger.error('%o', err)
+        return res.send(err.statusCode || 500, err.message)
       }
-    });
+
+      user.publish({ include_customers: true }, (error, data) => {
+        res.send(200, { user: data })
+      })
+    })
   },
   /**
    * Register a new user.
@@ -185,12 +187,13 @@ var controller = {
    *
    */
   create (req,res,next) {
-    var input = new UserInterface(req,next);
+    var input = new UserInterface(req, next)
 
-    if(input.errors.length != 0)
-      return res.send(400, json.error('invalid request',input.errors));
+    if (input.errors.length != 0) {
+      return res.send(400, json.error('invalid request',input.errors))
+    }
 
-    var values = input.valueObject();
+    var values = input.valueObject()
     UserService.create(values, function(error,user){
       if(error) {
         logger.log('Error creating user');
