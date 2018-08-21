@@ -23,7 +23,6 @@ const TopicsConstants = require('../constants/topics')
 
 const ScriptTaskTemplate = require('../entity/task/template').ScriptTemplate
 const ScraperTaskTemplate = require('../entity/task/template').ScraperTemplate
-const ErrorHandler = require('../lib/error-handler');
 
 // var filter = require('../router/param-filter');
 //const elastic = require('../lib/elastic')
@@ -307,72 +306,6 @@ module.exports = {
     }, err => {
       return done(err, data)
     })
-  },
-  /**
-   *
-   * @param {Object[]} argumentsDefinition stored definition
-   * @param {Object{}} argumentsValues user provided values
-   * @param {Function} next callback
-   *
-   */
-  prepareTaskArgumentsValues (argumentsDefinition, argumentsValues, next) {
-    let errors = new ErrorHandler()
-    let filteredArguments = []
-
-    if (
-      argumentsDefinition.length > 0 &&
-      (!Array.isArray(argumentsValues) || argumentsValues.length===0)
-    ) {
-      return next( new Error('argument values not defined') )
-    }
-
-    argumentsDefinition.forEach((def,index) => {
-      if (Boolean(def)) { // is defined
-        if (typeof def === 'string') { // fixed value old version compatibility
-          filteredArguments[index] = def
-        } else if (def.type) {
-
-          if (def.type === TaskConstants.ARGUMENT_TYPE_FIXED) {
-            filteredArguments[def.order] = def.value
-          } else if (
-            def.type === TaskConstants.ARGUMENT_TYPE_INPUT ||
-            def.type === TaskConstants.ARGUMENT_TYPE_SELECT ||
-            def.type === TaskConstants.ARGUMENT_TYPE_DATE ||
-            def.type === TaskConstants.ARGUMENT_TYPE_FILE ||
-            def.type === TaskConstants.ARGUMENT_TYPE_REMOTE_OPTIONS
-          ) {
-            // require user input
-            const found = argumentsValues.find((reqArg, idx) => {
-              let order
-              if (reqArg.order) { order = reqArg.order }
-              else { order = idx }
-              return (order === def.order)
-            })
-
-            // the argument is not present within the provided request arguments
-            if (found === undefined) {
-              errors.required(def.label, null, 'task argument ' + def.label + ' is required. provide the argument order and label')
-            } else {
-              filteredArguments[def.order] = (found.value || found)
-            }
-          } else { // bad argument definition
-            errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
-            // error ??
-          }
-        } else { // argument is not a string and does not has a type
-          errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
-          // task definition error
-        }
-      }
-    })
-
-    if (errors.hasErrors()) {
-      const err = new Error('invalid task arguments')
-      err.statusCode = 400
-      err.errors = errors
-      return next(err)
-    }
-    next(null,filteredArguments)
   },
   /**
    *

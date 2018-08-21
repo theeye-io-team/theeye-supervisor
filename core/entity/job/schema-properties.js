@@ -17,7 +17,7 @@ module.exports = {
   customer_name: { type: String },
   name: { type: String },
   notify: { type: Boolean },
-  state: { type: String, default: 'unknown' }, // job reported state
+  state: { type: String }, // job state
   lifecycle: { type: String },
   task_arguments_values: [ String ], // array of task arguments
   result: {

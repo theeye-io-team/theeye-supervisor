@@ -4,8 +4,10 @@ const Script = require('../../entity/file').Script
 const LifecycleConstants = require('../../constants/lifecycle')
 const JobConstants = require('../../constants/jobs')
 const TaskConstants = require('../../constants/task')
+const StateConstants = require('../../constants/states')
+const ErrorHandler = require('../../lib/error-handler')
 
-module.exports = {
+const JobsFactory = {
   /**
    *
    * @param {Task} task
@@ -28,37 +30,55 @@ module.exports = {
       input.script_arguments
     )
 
-    App.taskManager.prepareTaskArgumentsValues(
+    prepareTaskArgumentsValues(
       argsDefinition,
       inputArgsValues,
       (err, argsValues) => {
-        if (err) { return next(err) }
-
-        // delayed execution with grace time
-        if (
-          task.grace_time > 0 &&
-          ( // automatic origin
-            jobOrigin === JobConstants.ORIGIN_WORKFLOW ||
-            jobOrigin === JobConstants.ORIGIN_TRIGGER_BY
-          )
-        ) {
-          const runDate =  Date.now() + task.grace_time * 1000
-          createScheduledJob({
-            task,
-            runDate,
-            vars: input,
-          }, next)
-        } else {
+        if (err) {
+          // err on arguments. cannot continue.
+          // create a terminated-with-errors job.
           createJob({
             task,
             vars: input,
-            argsValues
+            argsValues,
+            beforeSave: (job, saveCb) => {
+              job.lifecycle = LifecycleConstants.TERMINATED
+              job.state = StateConstants.ERROR
+              job.result = {
+                log: 'invalid task arguments. cannot execute'
+              }
+              saveCb()
+            }
           }, next)
+        } else {
+          if (
+            task.grace_time > 0 &&
+            ( // automatic origin
+              jobOrigin === JobConstants.ORIGIN_WORKFLOW ||
+              jobOrigin === JobConstants.ORIGIN_TRIGGER_BY
+            )
+          ) {
+            // use delayed execution with grace time
+            const runDate =  Date.now() + task.grace_time * 1000
+            createScheduledJob({
+              task,
+              runDate,
+              vars: input,
+            }, next)
+          } else {
+            createJob({
+              task,
+              vars: input,
+              argsValues
+            }, next)
+          }
         }
       }
     )
   }
 }
+
+module.exports = JobsFactory
 
 const createScheduledJob = (input, next) => {
   let { task, vars, runDate } = input
@@ -102,14 +122,15 @@ const createScheduledJob = (input, next) => {
 
 /**
  *
- * @param {Object} input
- * @property {Object} input.vars
+ * @param {Object} input controlled internal input 
+ * @property {Object} input.vars request/process provided arguments
  * @property {Task} input.task
  * @property {Array} input.argsValues task arguments values
  *
  */
-const createJob = (input, next) => {
+function createJob (input, next) {
   let { task, vars, argsValues } = input
+  let beforeSave = input.beforeSave
 
   const setupJobBasicProperties = (job) => {
     if (task.workflow_id) {
@@ -127,15 +148,16 @@ const createJob = (input, next) => {
 
     job.task_id = task._id
     job.task_arguments_values = argsValues
-    job.host_id = task.host_id;
-    job.host = task.host_id;
-    job.name = task.name;
+    job.host_id = task.host_id
+    job.host = task.host_id
+    job.name = task.name
     job.lifecycle = LifecycleConstants.READY
-    job.customer_id = vars.customer._id;
-    job.customer_name = vars.customer.name;
+    job.state = StateConstants.IN_PROGRESS
+    job.customer_id = vars.customer._id
+    job.customer_name = vars.customer.name
     job.user_id = vars.user._id
     job.user = vars.user._id
-    job.notify = vars.notify;
+    job.notify = vars.notify
     job.origin = vars.origin
     //job.event = vars.event || null
     //job.event_data = vars.event_data || {}
@@ -149,8 +171,6 @@ const createJob = (input, next) => {
     return saveJob(job, done)
   }
 
-  /**
-   */
   const createScriptJob = (done) => {
     prepareScript(task.script_id, (err,script) => {
       if (err) { return done (err) }
@@ -170,10 +190,8 @@ const createJob = (input, next) => {
     })
   }
 
-  /**
-   * approval job is created onhold , waiting approver decision
-   */
   const createApprovalJob = (done) => {
+    /** approval job is created onhold , waiting approver decision **/
     const job = new JobModels.Approval()
     setupJobBasicProperties(job)
     job.lifecycle = LifecycleConstants.ONHOLD
@@ -187,13 +205,21 @@ const createJob = (input, next) => {
   }
 
   const saveJob = (job, done) => {
-    job.save(err => {
-      if (err) {
-        logger.error('%o',err)
-        return done(err)
-      }
-      done(null, job)
-    })
+    const saveDb = () => {
+      job.save(err => {
+        if (err) {
+          logger.error('%o',err)
+          return done(err)
+        }
+        done(null, job)
+      })
+    }
+
+    if (beforeSave && typeof beforeSave === 'function') {
+      beforeSave.call(beforeSave, job, saveDb)
+    } else {
+      saveDb()
+    }
   }
 
   switch (task.type) {
@@ -235,4 +261,77 @@ const prepareScript = (script_id, next) =>  {
 
     next(null,script)
   })
+}
+
+/**
+ *
+ * @param {Object[]} argumentsDefinition stored definition
+ * @param {Object{}} argumentsValues user provided values
+ * @param {Function} next callback
+ *
+ */
+const prepareTaskArgumentsValues = (
+  argumentsDefinition,
+  argumentsValues,
+  next
+) => {
+  let errors = new ErrorHandler()
+  let filteredArguments = []
+
+  if (!Array.isArray(argumentsDefinition) || argumentsDefinition.length === 0) {
+    return next(null, [])
+  }
+
+  if (!Array.isArray(argumentsValues) || argumentsValues.length === 0) {
+    return next( new Error('argument values not provided') )
+  }
+
+  argumentsDefinition.forEach((def,index) => {
+    if (Boolean(def)) { // is defined
+      if (typeof def === 'string') { // fixed value old version compatibility
+        filteredArguments[index] = def
+      } else if (def.type) {
+
+        if (def.type === TaskConstants.ARGUMENT_TYPE_FIXED) {
+          filteredArguments[def.order] = def.value
+        } else if (
+          def.type === TaskConstants.ARGUMENT_TYPE_INPUT ||
+          def.type === TaskConstants.ARGUMENT_TYPE_SELECT ||
+          def.type === TaskConstants.ARGUMENT_TYPE_DATE ||
+          def.type === TaskConstants.ARGUMENT_TYPE_FILE ||
+          def.type === TaskConstants.ARGUMENT_TYPE_REMOTE_OPTIONS
+        ) {
+          // require user input
+          const found = argumentsValues.find((reqArg, idx) => {
+            let order
+            if (reqArg.order) { order = reqArg.order }
+            else { order = idx }
+            return (order === def.order)
+          })
+
+          // the argument is not present within the provided request arguments
+          if (found === undefined) {
+            errors.required(def.label, null, 'task argument ' + def.label + ' is required.')
+          } else {
+            filteredArguments[def.order] = (found.value || found)
+          }
+        } else { // bad argument definition
+          errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
+          // error ??
+        }
+      } else { // argument is not a string and does not has a type
+        errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
+        // task definition error
+      }
+    }
+  })
+
+  if (errors.hasErrors()) {
+    const err = new Error('invalid task arguments')
+    err.statusCode = 400
+    err.errors = errors
+    return next(err)
+  }
+
+  next(null, filteredArguments)
 }

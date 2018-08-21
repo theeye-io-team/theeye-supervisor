@@ -159,8 +159,8 @@ const controller = {
   finish (req, res, next) {
     var result = req.body.result || {}
     App.jobDispatcher.finish({
+      result,
       job: req.job,
-      result: result,
       user: req.user,
       customer: req.customer
     }, (err, job) => {
@@ -194,7 +194,14 @@ const controller = {
         return res.send(err.statusCode || 500, err.message)
       }
 
-      res.send(200, job)
+      let data = job.toObject()
+      data.user = {
+        id: user._id.toString(),
+        username: user.username,
+        email: user.email
+      }
+
+      res.send(200, data)
       req.job = job
       next()
     })

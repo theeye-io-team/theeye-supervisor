@@ -144,21 +144,49 @@ module.exports = {
   },
   createByWorkflow (input, next) {
     let { workflow, user } = input
-    let wProps = Object.assign({}, input, {
-      customer_id: input.customer._id.toString(),
-      workflow_id: workflow._id,
-      workflow: workflow._id,
-      user: user._id,
-      user_id: user._id,
-      task_arguments_values: null
-    })
+
+    const createWorkflowJob = (props, next) => {
+      let wJob = new JobModels.Workflow(props)
+      wJob.save( (err, wJob) => {
+        if (err) { return next(err) } // break
+
+        let data = wJob.toObject()
+        data.user = {
+          id: user._id.toString(),
+          username: user.username,
+          email: user.email
+        }
+
+        App.notifications.generateSystemNotification({
+          topic: TopicsConstants.job.crud,
+          data: {
+            organization: props.customer_name,
+            operation: Constants.CREATE,
+            model_type: data._type,
+            model: data
+          }
+        })
+
+        next(null, wJob)
+      })
+    }
 
     getFirstTask(workflow, (err, task) => {
       if (err) { return next(err) }
 
-      let wJob = new JobModels.Workflow(wProps)
-      wJob.save( (err, wJob) => {
-        if (err) { return next(err) } // break
+      let wProps = Object.assign({}, input, {
+        customer: input.customer,
+        customer_id: input.customer._id.toString(),
+        customer_name: input.customer.name,
+        workflow_id: workflow._id,
+        workflow: workflow._id,
+        user: user._id,
+        user_id: user._id,
+        task_arguments_values: null
+      })
+
+      createWorkflowJob(wProps, (err, wJob) => {
+        if (err) { return next(err) }
 
         this.create(
           Object.assign({}, input, {
@@ -205,8 +233,21 @@ module.exports = {
     job.result = result.data
 
     if (result.data && result.data.output) {
-      job.output = result.data.output
-      job.result.output = JSON.stringify(result.data.output) // stringify for security
+      if (Array.isArray(result.data.output)) {
+        job.output = result.data.output
+        job.result.output = JSON.stringify(result.data.output) // stringify for security
+      } else {
+        try {
+          let output = JSON.parse(result.data.output)
+          if (Array.isArray(output)) {
+            job.output = output
+            job.result.output = result.data.output
+          }
+        } catch (jsonError) {
+          logger.error('job result output is invalid json array. %s', result.data.output)
+          logger.error(jsonError)
+        }
+      }
     }
 
     job.save(err => {
@@ -666,3 +707,4 @@ const getFirstTask = (workflow, next) => {
     return next(null, task)
   })
 }
+

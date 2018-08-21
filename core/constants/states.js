@@ -9,6 +9,7 @@ const ERROR = 'error'
 const CANCELED = 'canceled'
 const INTEGRATION_STARTED = 'started'
 const INTEGRATION_STOPPED = 'stopped'
+const IN_PROGRESS = 'in_progress'
 
 exports.INTEGRATION_STARTED = INTEGRATION_STARTED
 exports.INTEGRATION_STOPPED = INTEGRATION_STOPPED
@@ -20,3 +21,4 @@ exports.STOPPED = MONITOR_STOPPED
 exports.STARTED = MONITOR_STARTED
 exports.CHANGED = CHANGED
 exports.ERROR = ERROR
+exports.IN_PROGRESS = IN_PROGRESS
