@@ -560,8 +560,8 @@ const registerJobOperation = (operation, topic, input) => {
       task_type: task.type,
       organization: customer.name,
       user_id: user._id,
-      user_name: user.email,
-      user_email: user.username,
+      user_name: user.username,
+      user_email: user.email,
       operation: operation,
       job_type: job._type
     }
