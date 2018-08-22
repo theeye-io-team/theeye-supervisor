@@ -4,6 +4,17 @@ const UserService = require('../service/user')
 const router = require('../router')
 
 module.exports = function (server, passport) {
+  const middleware = [
+    passport.authenticate('bearer', { session: false }),
+    router.requireCredential('manager'),
+    router.resolve.customerNameToEntity({}),
+    router.ensureCustomer,
+    router.resolve.idToEntity({
+      param: 'member',
+      entity: 'user',
+      required: true
+    })
+  ]
   /**
    *
    * crud operations
@@ -11,47 +22,25 @@ module.exports = function (server, passport) {
    */
   server.patch(
     '/:customer/member/:member/credential',
-    [
-      passport.authenticate('bearer', { session: false }),
-      router.requireCredential('manager'),
-      router.resolve.idToEntity({
-        param: 'member',
-        entity: 'user',
-        required: true
-      }),
+    middleware.concat([
       router.filter.spawn({ param: 'customers', filter: 'toArray' }),
       router.filter.spawn({ param: 'customers', filter: 'uniq' }),
-    ],
+    ]),
     controller.updateCrendential
   )
 
   server.patch(
     '/:customer/member/:member/customers',
-    [
-      passport.authenticate('bearer', { session: false }),
-      router.requireCredential('manager'),
-      router.resolve.idToEntity({
-        param: 'member',
-        entity: 'user',
-        required: true
-      }),
+    middleware.concat([
       router.filter.spawn({ param: 'customers', filter: 'toArray' }),
       router.filter.spawn({ param: 'customers', filter: 'uniq' }),
-    ],
+    ]),
     controller.updateCustomers
   )
 
   server.del(
     '/:customer/member/:member',
-    [
-      passport.authenticate('bearer', { session: false }),
-      router.requireCredential('manager'),
-      router.resolve.idToEntity({
-        param: 'member',
-        entity: 'user',
-        required: true
-      })
-    ],
+    middleware,
     controller.removeFromCustomer
   )
 }
