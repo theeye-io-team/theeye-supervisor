@@ -143,6 +143,7 @@ module.exports = {
     })
   },
   createByWorkflow (input, next) {
+    next || (next=()=>{})
     let { workflow, user } = input
 
     const createWorkflowJob = (props, next) => {
