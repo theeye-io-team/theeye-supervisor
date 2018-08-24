@@ -31,7 +31,7 @@ module.exports = (server, passport) => {
   server.get(
     '/:customer/job/:job',
     middlewares.concat(
-      router.requireCredential('user'),
+      router.requireCredential('viewer'),
       router.resolve.idToEntity({param:'job',required:true})
     ),
     controller.get
@@ -40,7 +40,7 @@ module.exports = (server, passport) => {
   server.get(
     '/:customer/job',
     middlewares.concat(
-      router.requireCredential('user'),
+      router.requireCredential('viewer'),
       router.resolve.hostnameToHost()
     ),
     controller.fetch
