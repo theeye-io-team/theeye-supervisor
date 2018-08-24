@@ -94,7 +94,7 @@ module.exports = {
    * @property {Customer} input.customer
    * @property {Boolean} input.notify
    * @property {String[]} input.script_arguments (will be deprecated)
-   * @property {String[]} input.task_arguments_values 
+   * @property {String[]} input.task_arguments_values
    * @property {ObjectId} input.workflow_job_id current workflow ejecution
    * @property {ObjectId} input.workflow_job
    * @param {Function(Error,Job)} done
@@ -183,7 +183,8 @@ module.exports = {
         workflow: workflow._id,
         user: user._id,
         user_id: user._id,
-        task_arguments_values: null
+        task_arguments_values: null,
+        name: workflow.name
       })
 
       createWorkflowJob(wProps, (err, wJob) => {
@@ -708,4 +709,3 @@ const getFirstTask = (workflow, next) => {
     return next(null, task)
   })
 }
-
