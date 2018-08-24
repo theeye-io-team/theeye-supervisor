@@ -8,24 +8,17 @@ const crypto = require('crypto')
 module.exports = (server, passport) => {
 
   server.get(
-    '/status/config',
+    '/status',
     [
-      passport.authenticate('bearer', { session:false }),
-      router.requireCredential('root')
     ],
-    controller.config
+    controller.status
   )
 
 }
 
 const controller = {
-  config (req, res, next) {
-    let secret = req.user.client_secret
-    let data = merge({}, config, {
-      mongo: `Encoded ${encodeObject(secret, config.mongo)}`,
-      aws: `Encoded ${encodeObject(secret, config.aws)}`
-    })
-    res.send(200, data)
+  status (req, res, next) {
+    res.send(200, { message: 'Hi, I am ok. Thanks for asking' })
     next()
   }
 }

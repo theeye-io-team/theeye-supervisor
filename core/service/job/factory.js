@@ -6,6 +6,7 @@ const JobConstants = require('../../constants/jobs')
 const TaskConstants = require('../../constants/task')
 const StateConstants = require('../../constants/states')
 const ErrorHandler = require('../../lib/error-handler')
+const logger = require('../../lib/logger')('service:jobs:factory')
 
 const JobsFactory = {
   /**
@@ -282,17 +283,23 @@ const prepareTaskArgumentsValues = (
     return next(null, [])
   }
 
-  if (!Array.isArray(argumentsValues) || argumentsValues.length === 0) {
-    return next( new Error('argument values not provided') )
-  }
+  if (!Array.isArray(argumentsValues)) { argumentsValues = [] }
 
   argumentsDefinition.forEach((def,index) => {
     if (Boolean(def)) { // is defined
       if (typeof def === 'string') { // fixed value old version compatibility
         filteredArguments[index] = def
       } else if (def.type) {
-
         if (def.type === TaskConstants.ARGUMENT_TYPE_FIXED) {
+          //
+          // do not replace fixed values !
+          //
+          //let found = searchInputArgumentValueByOrder(argumentsValues, def.order)
+          //if (found) { // use found value
+          //  filteredArguments[def.order] = (found.value || found)
+          //} else {
+          //  filteredArguments[def.order] = def.value
+          //}
           filteredArguments[def.order] = def.value
         } else if (
           def.type === TaskConstants.ARGUMENT_TYPE_INPUT ||
@@ -302,13 +309,7 @@ const prepareTaskArgumentsValues = (
           def.type === TaskConstants.ARGUMENT_TYPE_REMOTE_OPTIONS
         ) {
           // require user input
-          const found = argumentsValues.find((reqArg, idx) => {
-            let order
-            if (reqArg.order) { order = reqArg.order }
-            else { order = idx }
-            return (order === def.order)
-          })
-
+          let found = searchInputArgumentValueByOrder(argumentsValues, def.order)
           // the argument is not present within the provided request arguments
           if (found === undefined) {
             errors.required(def.label, null, 'task argument ' + def.label + ' is required.')
@@ -317,11 +318,9 @@ const prepareTaskArgumentsValues = (
           }
         } else { // bad argument definition
           errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
-          // error ??
         }
       } else { // argument is not a string and does not has a type
         errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
-        // task definition error
       }
     }
   })
@@ -334,4 +333,13 @@ const prepareTaskArgumentsValues = (
   }
 
   next(null, filteredArguments)
+}
+
+const searchInputArgumentValueByOrder = (values, searchOrder) => {
+  return values.find((arg, idx) => {
+    let order
+    if (arg.order) { order = arg.order }
+    else { order = idx }
+    return (order === searchOrder)
+  })
 }

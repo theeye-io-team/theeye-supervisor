@@ -235,20 +235,18 @@ module.exports = {
     job.result = result.data
 
     if (result.data && result.data.output) {
-      if (Array.isArray(result.data.output)) {
-        job.output = result.data.output
-        job.result.output = JSON.stringify(result.data.output) // stringify for security
+      // ok, task has output
+      let output = result.data.output
+      if (typeof output === 'string') {
+        job.output = parseOutputStringAsJSON(output)
+        job.result.output = output // result.output must be a string
       } else {
-        try {
-          let output = JSON.parse(result.data.output)
-          if (Array.isArray(output)) {
-            job.output = output
-            job.result.output = result.data.output
-          }
-        } catch (jsonError) {
-          logger.error('job result output is invalid json array. %s', result.data.output)
-          logger.error(jsonError)
+        if (Array.isArray(output)) {
+          job.output = filterOutputArray(output)
+        } else {
+          job.output = [ output ]
         }
+        job.result.output = JSON.stringify(output) // stringify for security
       }
     }
 
@@ -708,4 +706,33 @@ const getFirstTask = (workflow, next) => {
 
     return next(null, task)
   })
+}
+
+const parseOutputStringAsJSON = (output) => {
+  let result
+  try { // try to parse as json
+
+    let parsedOutput = JSON.parse(output)
+    if (Array.isArray(parsedOutput)) {
+      result = filterOutputArray(parsedOutput)
+    } else {
+      result = [ output ] // object, number, string..
+    }
+
+  } catch (e) { // not a valid json string
+    result = [ output ]
+  }
+  return result
+}
+
+const filterOutputArray = (outputs) => {
+  result = []
+  outputs.forEach(val => {
+    if (typeof val !== 'string') {
+      result.push( JSON.stringify(val) )
+    } else {
+      result.push(val)
+    }
+  })
+  return result
 }
