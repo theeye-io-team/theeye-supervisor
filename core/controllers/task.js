@@ -109,10 +109,8 @@ const controller = {
     }
 
     if (input.type===TaskConstants.TYPE_APPROVAL) {
-      if (!input.approver_id) {
-        errors.required('approver_id', req.approver_id)
-      } else if (!isMongoId(input.approver_id)) {
-        errors.invalid('approver_id', req.approver_id)
+      if (!validIdsArray(input.approvers)) {
+        errors.required('approvers', input.approvers)
       }
     }
 
@@ -227,10 +225,8 @@ const controller = {
     }
 
     if (input.type===TaskConstants.TYPE_APPROVAL) {
-      if (!input.approver_id) {
-        errors.required('approver_id', req.approver_id)
-      } else if (!isMongoId(input.approver_id)) {
-        errors.invalid('approver_id', req.approver_id)
+      if (!validIdsArray(input.approvers)) {
+        errors.required('approvers', input.approvers)
       }
     }
 
@@ -288,4 +284,20 @@ const controller = {
       next()
     })
   }
+}
+
+const validIdsArray = (value) => {
+  if (!value) {
+    return false
+  } else {
+    if (!Array.isArray(value)) {
+      return false
+    } else {
+      let invalid = value.find(_id => !isMongoId(_id))
+      if (invalid) {
+        return false
+      }
+    }
+  }
+  return true
 }

@@ -223,6 +223,13 @@ module.exports = {
     const result = input.result
     const task = job.task
 
+    //let lifecycle = finishJobNextLifecycle(job)
+    //if (!lifecycle) {
+    //  let err = new Error(`cannot finish job. current state lifecycle "${job.lifecycle}" does not allow the transition`)
+    //  err.statusCode = 400
+    //  return next(err)
+    //}
+
     // if it is not a declared failure, assume success
     let state = (input.state || result.state || StateConstants.SUCCESS)
     var trigger_name = (state === StateConstants.FAILURE) ?
@@ -612,7 +619,7 @@ const registerJobOperation = (operation, topic, input) => {
         operation: operation,
         model_type: job._type,
         model: job,
-        approver_id: (job.task && job.task.approver_id) || undefined
+        approvers: (job.task && job.task.approvers) || undefined
       }
     })
 
@@ -628,6 +635,20 @@ const registerJobOperation = (operation, topic, input) => {
     elastic.submit(customer.name, topic, payload) // topic = topics.task.[execution||result] , CREATE/UPDATE
   })
 }
+
+//const finishJobNextLifecycle = (job) => {
+//  if (
+//    job.lifecycle === LifecycleConstants.READY ||
+//    job.lifecycle === LifecycleConstants.ONHOLD
+//  ) {
+//    return LifecycleConstants.CANCELED
+//  } else if (job.lifecycle === LifecycleConstants.ASSIGNED) {
+//    return LifecycleConstants.TERMINATED
+//  } else {
+//    // current state cannot be canceled or terminated
+//    return null
+//  }
+//}
 
 /**
  *

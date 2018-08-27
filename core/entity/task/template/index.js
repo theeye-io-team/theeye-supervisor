@@ -20,7 +20,7 @@ Template.ensureIndexes()
 Template.on('beforeSave', function(model) {
   model.last_update = new Date()
   // do more stuff
-});
+})
 
 exports.Template = Template
 exports.ScriptTemplate = ScriptTemplate

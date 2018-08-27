@@ -6,9 +6,9 @@ const BaseSchema = require('./schema')
 const Host = require('../host').Entity
 
 var Schema = BaseSchema.extend({
-  approver_id: { type: ObjectId },
+  approvers: [{ type : ObjectId, ref: 'User' }],
   template_id: { type: ObjectId },
-  approver: { type: ObjectId, ref: 'User' },
+  //approver: { type: ObjectId, ref: 'User' },
   template: { type: ObjectId, ref: 'ApprovalTaskTemplate' },
   type: { type: String, default: 'approval' },
 })

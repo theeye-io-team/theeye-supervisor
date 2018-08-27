@@ -81,7 +81,7 @@ const controller = {
 
     result.state = StateConstants.SUCCESS
 
-    if (web_user_id !== job.task.approver_id.toString()) {
+    if (!isApprover(job.task.approvers, web_user_id)) {
       return res.send(403, 'you are not allowed to approve this job')
     }
 
@@ -103,8 +103,8 @@ const controller = {
 
     result.state = StateConstants.FAILURE
 
-    if (web_user_id !== job.task.approver_id.toString()) {
-      return res.send(403, 'you are not allowed to reject this job')
+    if (!isApprover(job.task.approvers, web_user_id)) {
+      return res.send(403, 'you are not allowed to approve this job')
     }
 
     App.jobDispatcher.finish({
@@ -118,4 +118,10 @@ const controller = {
       next()
     })
   }
+}
+
+const isApprover = (approvers, approver_id) => {
+  return approvers.find( _id => {
+    return _id.toString() === approver_id
+  })
 }
