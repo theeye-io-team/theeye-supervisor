@@ -195,10 +195,11 @@ var controller = {
       if (err) return res.send(500, err)
       if (!event) return res.send(500)
 
+      let output = App.jobDispatcher.parseJobParameters(body)
       App.eventDispatcher.dispatch({
         topic: TopicsConstants.webhook.triggered,
         event,
-        output: body
+        output
       })
 
       res.send(200,{ message: 'success' })

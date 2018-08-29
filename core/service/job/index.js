@@ -206,6 +206,23 @@ module.exports = {
   },
   /**
    *
+   * @summary parse incomming job input parameters.
+   * @return {[String]} array of strings (json encoded strings)
+   *
+   */
+  parseJobParameters (output) {
+    if (typeof output === 'string') {
+      return parseOutputStringAsJSON (output)
+    } else {
+      if (Array.isArray(output)) {
+        return filterOutputArray (output)
+      } else {
+        return [ JSON.stringify(output) ]
+      }
+    }
+  },
+  /**
+   *
    * @summary Finalize task execution. Save result and submit to elk
    *
    * @param {Object} input
@@ -244,17 +261,8 @@ module.exports = {
     if (result.data && result.data.output) {
       // ok, task has output
       let output = result.data.output
-      if (typeof output === 'string') {
-        job.output = parseOutputStringAsJSON(output)
-        job.result.output = output // result.output must be a string
-      } else {
-        if (Array.isArray(output)) {
-          job.output = filterOutputArray(output)
-        } else {
-          job.output = [ output ]
-        }
-        job.result.output = JSON.stringify(output) // stringify for security
-      }
+      job.output = this.parseJobParameters(output)
+      job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
     }
 
     job.save(err => {
