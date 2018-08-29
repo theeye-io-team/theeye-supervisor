@@ -128,6 +128,7 @@ function checkResourcesState (done) {
   Resource
     .find({
       enable: true,
+      state: { $ne: MonitorConstants.RESOURCE_STOPPED },
       type: {
         $ne: MonitorConstants.RESOURCE_TYPE_NESTED
       }
@@ -145,13 +146,15 @@ function checkResourcesState (done) {
         done()
       })
 
+      if (resources.length===0) { completed() }
+
       resources.forEach(resource => {
-        runChecks(resource, () => completed())
+        checkRunningMonitors(resource, () => completed())
       })
     })
 }
 
-function runChecks (resource, done) {
+function checkRunningMonitors (resource, done) {
   CustomerService.getCustomerConfig(
     resource.customer_id,
     function (error, cconfig) {

@@ -104,8 +104,7 @@ module.exports = {
           let result = (resource.last_event && resource.last_event.data) ? resource.last_event.data : {}
 
           const lastline = result.lastline ? result.lastline.trim() : ''
-          const stdout = result.stdout ? result.stdout.trim() : ''
-          const stderr = result.stderr ? result.stderr.trim() : ''
+          const log = result.log ? result.log.trim() : ''
           const code = result.code
 
           let html = `<p>${resource.name} on ${resource.hostname} checks failed.</p>`
@@ -116,9 +115,8 @@ module.exports = {
             <span>Monitor output</span>
             <pre>
               <ul>
+                <li>full log : ${log}</li>
                 <li>lastline : ${lastline}</li>
-                <li>stdout : ${stdout}</li>
-                <li>stderr : ${stderr}</li>
                 <li>code : ${code}</li>
               </ul>
             </pre>
