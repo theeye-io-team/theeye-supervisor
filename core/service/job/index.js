@@ -94,7 +94,7 @@ module.exports = {
    * @property {Customer} input.customer
    * @property {Boolean} input.notify
    * @property {String[]} input.script_arguments (will be deprecated)
-   * @property {String[]} input.task_arguments_values
+   * @property {String[]} input.task_arguments_values arguments definitions
    * @property {ObjectId} input.workflow_job_id current workflow ejecution
    * @property {ObjectId} input.workflow_job
    * @param {Function(Error,Job)} done
@@ -123,18 +123,11 @@ module.exports = {
             customer: input.customer
           })
 
-          // finish the task at once
           if (TaskConstants.TYPE_DUMMY === task.type) {
-            this.finish(
-              Object.assign({}, input, {
-                result: {
-                  state: StateConstants.SUCCESS,
-                  data: {
-                    output: input.task_arguments_values
-                  }
-                }, job
-              }), done
-            )
+            // only Dummy:
+            // finish the task at once.
+            // bypass inputs to outputs.
+            finishDummyTaskJob(job, input, done)
           } else {
             done(null, job)
           }
@@ -764,4 +757,35 @@ const filterOutputArray = (outputs) => {
     }
   })
   return result
+}
+
+const finishDummyTaskJob = (job, input, done) => {
+  let { task } = input
+
+  App.jobFactory.prepareTaskArgumentsValues(
+    task.output_parameters,
+    input.task_arguments_values,
+    (err, args) => {
+      let result
+
+      if (err) {
+        result = {
+          state: StateConstants.FAILURE,
+          data: {
+            output: args
+          }
+        }
+      } else {
+        result = {
+          state: StateConstants.SUCCESS,
+          data: {
+            output: args
+          }
+        }
+      }
+
+      let specs = Object.assign({}, input, { result, job })
+      App.jobDispatcher.finish(specs, done)
+    }
+  )
 }

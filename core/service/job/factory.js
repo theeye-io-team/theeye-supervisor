@@ -31,7 +31,7 @@ const JobsFactory = {
       input.script_arguments
     )
 
-    prepareTaskArgumentsValues(
+    this.prepareTaskArgumentsValues(
       argsDefinition,
       inputArgsValues,
       (err, argsValues) => {
@@ -76,6 +76,76 @@ const JobsFactory = {
         }
       }
     )
+  },
+  /**
+   *
+   * @param {Object[]} argumentsDefinition stored definition
+   * @param {Object{}} argumentsValues user provided values
+   * @param {Function} next callback
+   *
+   */
+  prepareTaskArgumentsValues (
+    argumentsDefinition,
+    argumentsValues,
+    next
+  ) {
+    let errors = new ErrorHandler()
+    let filteredArguments = []
+
+    if (!Array.isArray(argumentsDefinition) || argumentsDefinition.length === 0) {
+      return next(null, [])
+    }
+
+    if (!Array.isArray(argumentsValues)) { argumentsValues = [] }
+
+    argumentsDefinition.forEach((def,index) => {
+      if (Boolean(def)) { // is defined
+        if (typeof def === 'string') { // fixed value old version compatibility
+          filteredArguments[index] = def
+        } else if (def.type) {
+          if (def.type === TaskConstants.ARGUMENT_TYPE_FIXED) {
+            //
+            // do not replace fixed values !
+            //
+            //let found = searchInputArgumentValueByOrder(argumentsValues, def.order)
+            //if (found) { // use found value
+            //  filteredArguments[def.order] = (found.value || found)
+            //} else {
+            //  filteredArguments[def.order] = def.value
+            //}
+            filteredArguments[def.order] = def.value
+          } else if (
+            def.type === TaskConstants.ARGUMENT_TYPE_INPUT ||
+            def.type === TaskConstants.ARGUMENT_TYPE_SELECT ||
+            def.type === TaskConstants.ARGUMENT_TYPE_DATE ||
+            def.type === TaskConstants.ARGUMENT_TYPE_FILE ||
+            def.type === TaskConstants.ARGUMENT_TYPE_REMOTE_OPTIONS
+          ) {
+            // require user input
+            let found = searchInputArgumentValueByOrder(argumentsValues, def.order)
+            // the argument is not present within the provided request arguments
+            if (found === undefined) {
+              errors.required(def.label, null, 'task argument ' + def.label + ' is required.')
+            } else {
+              filteredArguments[def.order] = (found.value || found)
+            }
+          } else { // bad argument definition
+            errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
+          }
+        } else { // argument is not a string and does not has a type
+          errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
+        }
+      }
+    })
+
+    if (errors.hasErrors()) {
+      const err = new Error('invalid task arguments')
+      err.statusCode = 400
+      err.errors = errors
+      return next(err)
+    }
+
+    next(null, filteredArguments)
   }
 }
 
@@ -262,77 +332,6 @@ const prepareScript = (script_id, next) =>  {
 
     next(null,script)
   })
-}
-
-/**
- *
- * @param {Object[]} argumentsDefinition stored definition
- * @param {Object{}} argumentsValues user provided values
- * @param {Function} next callback
- *
- */
-const prepareTaskArgumentsValues = (
-  argumentsDefinition,
-  argumentsValues,
-  next
-) => {
-  let errors = new ErrorHandler()
-  let filteredArguments = []
-
-  if (!Array.isArray(argumentsDefinition) || argumentsDefinition.length === 0) {
-    return next(null, [])
-  }
-
-  if (!Array.isArray(argumentsValues)) { argumentsValues = [] }
-
-  argumentsDefinition.forEach((def,index) => {
-    if (Boolean(def)) { // is defined
-      if (typeof def === 'string') { // fixed value old version compatibility
-        filteredArguments[index] = def
-      } else if (def.type) {
-        if (def.type === TaskConstants.ARGUMENT_TYPE_FIXED) {
-          //
-          // do not replace fixed values !
-          //
-          //let found = searchInputArgumentValueByOrder(argumentsValues, def.order)
-          //if (found) { // use found value
-          //  filteredArguments[def.order] = (found.value || found)
-          //} else {
-          //  filteredArguments[def.order] = def.value
-          //}
-          filteredArguments[def.order] = def.value
-        } else if (
-          def.type === TaskConstants.ARGUMENT_TYPE_INPUT ||
-          def.type === TaskConstants.ARGUMENT_TYPE_SELECT ||
-          def.type === TaskConstants.ARGUMENT_TYPE_DATE ||
-          def.type === TaskConstants.ARGUMENT_TYPE_FILE ||
-          def.type === TaskConstants.ARGUMENT_TYPE_REMOTE_OPTIONS
-        ) {
-          // require user input
-          let found = searchInputArgumentValueByOrder(argumentsValues, def.order)
-          // the argument is not present within the provided request arguments
-          if (found === undefined) {
-            errors.required(def.label, null, 'task argument ' + def.label + ' is required.')
-          } else {
-            filteredArguments[def.order] = (found.value || found)
-          }
-        } else { // bad argument definition
-          errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
-        }
-      } else { // argument is not a string and does not has a type
-        errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
-      }
-    }
-  })
-
-  if (errors.hasErrors()) {
-    const err = new Error('invalid task arguments')
-    err.statusCode = 400
-    err.errors = errors
-    return next(err)
-  }
-
-  next(null, filteredArguments)
 }
 
 const searchInputArgumentValueByOrder = (values, searchOrder) => {
