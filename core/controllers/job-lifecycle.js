@@ -71,7 +71,7 @@ const controller = {
         return res.send(err.statusCode || 500, err.message)
       }
 
-      return res.send(200, job.lifecycle)
+      return res.send(204)
     })
   },
   approve (req, res, next) {
@@ -92,7 +92,7 @@ const controller = {
       customer: req.customer
     }, err => {
       if (err) { return res.send(500) }
-      res.send(200, req.job)
+      res.send(204)
       next()
     })
   },
@@ -114,7 +114,7 @@ const controller = {
       customer: req.customer
     }, err => {
       if (err) { return res.send(500) }
-      res.send(200, req.job)
+      res.send(204)
       next()
     })
   }

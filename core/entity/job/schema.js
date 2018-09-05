@@ -43,6 +43,40 @@ function BaseSchema (props) {
     return ( /IntegrationJob/.test(this._type) === true )
   }
 
+  this.methods.publish = function (scope) {
+    let data = this.toObject()
+
+    if (scope !== 'agent') {
+      delete data.script
+      delete data.script_arguments
+    }
+
+    if (typeof data.task === 'object') {
+      let dtask = {}
+      let id = data.task._id || data.task.id
+      dtask.id = id.toString()
+      dtask.approvers = data.task.approvers
+      dtask.task_arguments = data.task.task_arguments
+      dtask.output_parameters = data.task.output_parameters
+      data.task = dtask
+    }
+
+    if (typeof data.customer === 'object') {
+      delete data.customer
+    }
+
+    if (typeof data.user === 'object') {
+      let user = data.user
+      let id = data.user._id || data.user.id
+      data.user = {
+        id: id.toString(),
+        username: user.username,
+        email: user.email
+      }
+    }
+    return data
+  }
+
   return this;
 }
 

@@ -21,6 +21,12 @@ const JobsFactory = {
   create (task, input, next) {
     next || (next = () => {})
 
+    /**
+     *
+     * @todo remove script_arguments when all agents are version 0.14.1 or higher
+     * @todo upgrade templates on db. replace property script_arguments wuth task_arguments
+     *
+     */
     let argsDefinition = (
       task.task_arguments ||
       task.script_arguments
@@ -251,12 +257,6 @@ function createJob (input, next) {
       job.script_id = script._id
       job.script_arguments = argsValues
       job.script_runas = task.script_runas
-      /**
-       * @todo should remove hereunder line in the future.
-       * only keep for backward compatibility with agent versions number equal or older than version 0.11.3.
-       * this is overwriting saved job.task.script_arguments definition.
-       */
-      job.task.script_arguments = argsValues
       return saveJob(job, done)
     })
   }

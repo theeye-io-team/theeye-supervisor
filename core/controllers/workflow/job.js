@@ -56,7 +56,7 @@ const controller = {
         return res.send(err.statusCode || 500, err.message)
       }
 
-      let data = job.toObject()
+      let data = job.publish()
       data.user = {
         id: user._id.toString(),
         username: user.username,

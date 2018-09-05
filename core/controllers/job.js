@@ -126,14 +126,11 @@ const controller = {
 
       App.jobDispatcher.getNextPendingJob(
         { customer, user, host: req.host },
-        (err,job) => {
+        (err, job) => {
           if (err) { return res.send(500, err.message) }
 
           var jobs = []
-          if (job != null) {
-            jobs.push(job)
-          }
-
+          if (job != null) { jobs.push(job.publish('agent')) }
           res.send(200, { jobs })
           next()
         }
@@ -145,7 +142,9 @@ const controller = {
 
       fetchBy.call(Job, filter, (err, jobs) => {
         if (err) { return res.send(500, err) }
-        res.send(200, jobs)
+        let data = []
+        jobs.forEach(job => data.push(job.publish()))
+        res.send(200, data)
         next()
       })
     }
@@ -194,7 +193,7 @@ const controller = {
         return res.send(err.statusCode || 500, err.message)
       }
 
-      let data = job.toObject()
+      let data = job.publish()
       data.user = {
         id: user._id.toString(),
         username: user.username,
