@@ -11,7 +11,7 @@ function BaseSchema (props) {
   Schema.call(this, Object.assign({}, baseProperties, props), {
     collection: 'jobs',
     discriminatorKey: '_type'
-  });
+  })
 
   this.statics.fetchBy = function (filter, next) {
     FetchBy.call(this,filter,next)
@@ -19,22 +19,22 @@ function BaseSchema (props) {
 
   // Duplicate the ID field.
   this.virtual('id').get(function(){
-    return this._id.toHexString();
-  });
+    return this._id.toHexString()
+  })
 
   const def = {
     getters: true,
     virtuals: true,
     transform: function (doc, ret, options) {
       // remove the _id of every document before returning the result
-      ret.id = ret._id;
-      delete ret._id;
-      delete ret.__v;
+      ret.id = ret._id
+      delete ret._id
+      delete ret.__v
     }
   }
 
-  this.set('toJSON'  , def);
-  this.set('toObject', def);
+  this.set('toJSON', def)
+  this.set('toObject', def)
 
   /*
    * @return {Boolean}
@@ -49,16 +49,16 @@ function BaseSchema (props) {
     if (scope !== 'agent') {
       delete data.script
       delete data.script_arguments
-    }
 
-    if (typeof data.task === 'object') {
-      let dtask = {}
-      let id = data.task._id || data.task.id
-      dtask.id = id.toString()
-      dtask.approvers = data.task.approvers
-      dtask.task_arguments = data.task.task_arguments
-      dtask.output_parameters = data.task.output_parameters
-      data.task = dtask
+      if (typeof data.task === 'object') {
+        let dtask = {}
+        let id = data.task._id || data.task.id
+        dtask.id = id.toString()
+        dtask.approvers = data.task.approvers
+        dtask.task_arguments = data.task.task_arguments
+        dtask.output_parameters = data.task.output_parameters
+        data.task = dtask
+      }
     }
 
     if (typeof data.customer === 'object') {
@@ -74,6 +74,7 @@ function BaseSchema (props) {
         email: user.email
       }
     }
+
     return data
   }
 
