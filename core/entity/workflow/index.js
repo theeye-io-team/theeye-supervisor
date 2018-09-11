@@ -3,7 +3,7 @@
 const mongodb = require('../../lib/mongodb').db
 const WorkflowSchema = require('./schema')
 
-var Workflow = mongodb.model('Workflow', new WorkflowSchema({}))
+const Workflow = mongodb.model('Workflow', new WorkflowSchema({}))
 Workflow.ensureIndexes()
 
 // called for both inserts and updates

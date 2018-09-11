@@ -3,6 +3,10 @@ exports.monitor = {
   execution: 'monitor-execution',
   state: 'monitor-state'
 }
+exports.indicator = {
+  crud: 'indicator-crud',
+  state: 'indicator-state'
+}
 exports.script = {
   crud: 'script-crud'
 }

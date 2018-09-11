@@ -1,11 +1,8 @@
 "use strict"
 
-const debug = require('debug')('entity:task')
-const Schema = require('mongoose').Schema
 const after = require('lodash/after')
-const async = require('async')
 const logger = require('../../lib/logger')('entity:task:schema')
-require('mongoose-schema-extend')
+require('mongoose-schema-extend') /** @todo remove this **/
 
 const BaseSchema = require('../base-schema')
 const properties = require('./base-properties')

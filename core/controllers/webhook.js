@@ -1,11 +1,10 @@
 'use strict';
 
-var extend = require('lodash/assign');
-var dbFilter = require('../lib/db-filter');
-var logger = require('../lib/logger')('eye:controller:webhook');
+const extend = require('lodash/assign');
+const dbFilter = require('../lib/db-filter');
+const logger = require('../lib/logger')('eye:controller:webhook');
 const audit = require('../lib/audit');
 const router = require('../router');
-
 const App = require('../app');
 const WebhookEvent = require('../entity/event').WebhookEvent;
 const Webhook = require('../entity/webhook').Webhook;

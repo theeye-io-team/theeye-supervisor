@@ -1,9 +1,5 @@
-'use strict'
-
-const middleware = require('./middleware')
 const mongodb = require('../../lib/mongodb').db
 const IntegrationConstants = require('../../constants/integrations')
-
 const BaseSchema = require('./schema')
 const AgentUpdateJobSchema = require('./agent-update')
 const ScriptJobSchema = require('./script')
@@ -22,7 +18,6 @@ const ScriptJob = Job.discriminator('ScriptJob', ScriptJobSchema)
 const ScraperJob = Job.discriminator('ScraperJob', ScraperSchema)
 const ApprovalJob = Job.discriminator('ApprovalJob', ApprovalSchema)
 const DummyJob = Job.discriminator('DummyJob', DummySchema)
-
 const WorkflowJob = Job.discriminator('WorkflowJob', WorkflowSchema)
 
 Job.ensureIndexes()

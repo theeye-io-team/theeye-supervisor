@@ -282,6 +282,9 @@ function createJob (input, next) {
           logger.error('%o',err)
           return done(err)
         }
+        task.execution_count += 1
+        task.save(err => {})
+
         done(null, job)
       })
     }

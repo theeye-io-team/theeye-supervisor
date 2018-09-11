@@ -205,6 +205,10 @@ const controller = {
       next()
     })
   },
+  /**
+   *
+   *
+   */
   redo (req, res, next) {
     let job = req.job
     res.send(200)

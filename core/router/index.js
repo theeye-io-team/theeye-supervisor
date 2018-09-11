@@ -19,6 +19,7 @@ module.exports = {
   loadControllers (server, passport) {
     // avoiding dynamic linker
     logger.log('loading controllers');
+    require('../controllers/indicator')(server,passport);
     require('../controllers/index')(server,passport);
     require('../controllers/agent')(server,passport);
     require('../controllers/auth')(server);
