@@ -5,9 +5,11 @@
  * https://en.wikipedia.org/wiki/Task_management
  *
  **/
+// IN PROGRESS LIFECYCLE
 const READY = 'ready'
 const ASSIGNED = 'assigned'
 const ONHOLD = 'onhold'
+// FINISHED LIFECYCLE
 const FINISHED = 'finished'
 const TERMINATED = 'terminated'
 const CANCELED = 'canceled'

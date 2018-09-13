@@ -160,8 +160,8 @@ const controller = {
     }
 
     TaskService.fetchBy(filter, function(error, tasks) {
-      if (error) return res.send(500)
-      res.send(200, tasks);
+      if (error) { return res.send(500) }
+      res.send(200, tasks)
     });
   },
   /**

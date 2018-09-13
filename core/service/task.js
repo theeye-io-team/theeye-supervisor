@@ -18,6 +18,7 @@ const TaskEvent = require('../entity/event').TaskEvent
 const Script = require('../entity/file').Script
 const Job = require('../entity/job').Job
 const Constants = require('../constants')
+const LifecycleConstants = require('../constants/lifecycle')
 const TaskConstants = require('../constants/task')
 const TopicsConstants = require('../constants/topics')
 
@@ -264,26 +265,60 @@ module.exports = {
       })
     }
 
-    //const populateLastJob = (next) => {
-    //  Job
-    //    .findOne({
-    //      task_id: task._id,
-    //      host_id: task.host_id
-    //    })
-    //    .sort({ creation_date: -1 })
-    //    .populate('user')
-    //    .exec((err,last) => {
-    //      if (err) return next(err)
-    //      if (!last) {
-    //        data.lastjob_id = null
-    //        data.lastjob = null
-    //      } else {
-    //        data.lastjob_id = last._id
-    //        data.lastjob = last
-    //      }
-    //      return next()
-    //    })
-    //}
+    const populateRunningJob = (next) => {
+
+      const publish = (job) => {
+        return {
+          creation_date: job.creation_date,
+          id: job._id.toString(),
+          name: job.name,
+          type: job.type,
+          _type: job._type,
+          user: {
+            id: job.user._id.toString(),
+            username: job.user.username,
+            email: job.user.email
+          }
+        }
+      }
+
+      const populateLastJob = () => {
+        Job
+          .findOne({
+            task_id: task._id.toString()
+          })
+          .sort({ creation_date: -1 })
+          .populate('user')
+          .exec((err, job) => {
+            if (err) { return next(err) }
+            if (!job) { return next() }
+            data.jobs = [publish(job)]
+            return next()
+          })
+      }
+
+      data.jobs = []
+      Job
+        .find({
+          task_id: task._id.toString(),
+          $or: [
+            { lifecycle: LifecycleConstants.READY },
+            { lifecycle: LifecycleConstants.ASSIGNED },
+            { lifecycle: LifecycleConstants.ONHOLD }
+          ]
+        })
+        .sort({ creation_date: -1 })
+        .populate('user')
+        .exec((err, jobs) => {
+          if (err) { return next(err) }
+          if (jobs.length===0) {
+            return populateLastJob()
+          } else {
+            data.jobs = jobs.map(job => publish(job))
+            return next()
+          }
+        })
+    }
 
     const populateSchedules = (next) => {
       App.scheduler.getTaskSchedule(task._id, (err, schedules) => {
@@ -299,7 +334,7 @@ module.exports = {
     asyncMap([
       populateHost,
       populateScript,
-      //populateLastJob,
+      populateRunningJob,
       populateSchedules
     ], (populate,callback) => {
       populate(callback)
