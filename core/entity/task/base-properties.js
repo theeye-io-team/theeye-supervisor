@@ -19,5 +19,6 @@ module.exports = {
   workflow_id: { type: ObjectId },
   workflow: { type: ObjectId, ref: 'Workflow' },
   register_body: { type: Boolean, default: false },
-  execution_count: { type: Number, default: 0 }
+  execution_count: { type: Number, default: 0 },
+  multitasking: { type: Boolean, default: true }
 }

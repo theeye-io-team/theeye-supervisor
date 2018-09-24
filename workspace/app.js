@@ -36,15 +36,17 @@ module.exports = function (next) {
     App.ScraperTask = require(EntitiesPath + '/task/scraper').Entity
     App.TaskTemplate = require(EntitiesPath + '/task/template').Entity
     App.Webhook = require(EntitiesPath + '/webhook').Entity
-    App.Job = require(EntitiesPath + '/job').Job
-    App.AgentUpdateJob = require(EntitiesPath + '/job').AgentUpdate
-    App.ScriptJob = require(EntitiesPath + '/job').Script
-    App.ScraperJob = require(EntitiesPath + '/job').Scraper
     App.Event = require(EntitiesPath + '/event').Event
     App.TaskEvent = require(EntitiesPath + '/event').TaskEvent
     App.MonitorEvent = require(EntitiesPath + '/event').MonitorEvent
     App.WebhookEvent = require(EntitiesPath + '/event').WebhookEvent
     App.Models.Indicator = require(EntitiesPath + '/indicator')
+    App.Models.Job = {
+      Job: require(EntitiesPath + '/job').Job,
+      AgentUpdate: require(EntitiesPath + '/job').AgentUpdate,
+      Script: require(EntitiesPath + '/job').Script,
+      Scraper: require(EntitiesPath + '/job').Scraper
+    }
 
     debug('entities loaded')
 

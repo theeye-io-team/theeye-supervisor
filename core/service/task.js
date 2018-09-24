@@ -118,18 +118,14 @@ module.exports = {
    */
   fetchBy (filter,next) {
     const self = this
-    FetchBy.call(Task,filter,function(err,tasks){
-      if (err) return next(err);
-      if (tasks.length===0) return next(null,tasks);
+    FetchBy.call(Task, filter, function (err, tasks) {
+      if (err) { return next(err) }
+      if (tasks.length===0) { return next(null, tasks) }
 
       asyncMap(
         tasks,
-        (task, callback) => {
-          self.populate(task, callback)
-        },
-        (err, published) => {
-          next(err, published)
-        }
+        (task, callback) => { self.populate(task, callback) },
+        (err, published) => { next(err, published) }
       )
     })
   },
@@ -254,10 +250,10 @@ module.exports = {
     // only task type script, and if script_id is set
     const populateScript = (next) => {
       let id = task.script_id
-      if (!id) return next()
+      if (!id) { return next() }
       Script.findById(id, (err,script) => {
-        if (err) return next(err)
-        if (!script) return next()
+        if (err) { return next(err) }
+        if (!script) { return next() }
         data.script = script
         data.script_id = script._id
         data.script_name = script.filename
@@ -269,11 +265,13 @@ module.exports = {
 
       const publish = (job) => {
         return {
+          _type: job._type,
+          state: job.state,
+          lifecycle: job.lifecycle,
           creation_date: job.creation_date,
           id: job._id.toString(),
           name: job.name,
           type: job.type,
-          _type: job._type,
           user: {
             id: job.user._id.toString(),
             username: job.user.username,

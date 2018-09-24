@@ -43,7 +43,6 @@ require('./environment').setenv(function(){
       const App = require('./app')
       App.initialize(err => {
         App.jobDispatcher = require('./service/job')
-        App.jobFactory = require('./service/job/factory')
         App.taskManager = require('./service/task')
         App.customer = require('./service/customer')
         App.resource = require('./service/resource')

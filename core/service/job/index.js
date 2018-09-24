@@ -45,49 +45,92 @@ module.exports = {
    */
   getNextPendingJob (input, next) {
     var topic
-    if (!input.host) return next(new Error('host is required'))
-    const query = {
-      lifecycle: LifecycleConstants.READY,
-      host_id: input.host._id
+    if (!input.host) { return next(new Error('host is required')) }
+
+    /**
+     *
+     * NOTE: jobs is an array of job data, there are NOT job models
+     * cannot use job.save since jobs are not mongoose document
+     *
+     */
+    const dispatchJobExecutionRecursive = (
+      idx, jobs, terminateRecursion
+    ) => {
+      if (idx===jobs.length) { return terminateRecursion() }
+      let job = JobModels.Job.hydrate(jobs[idx])
+
+      // Cancel this job and process next
+      if (jobMustHaveATask(job) && !job.task) {
+        // cancel invalid job
+        job.lifecycle = LifecycleConstants.CANCELED
+        job.save(err => {
+          if (err) { logger.error('%o', err) }
+          dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
+        })
+
+        registerJobOperation(
+          Constants.UPDATE,
+          TopicsConstants.task.cancelation,
+          {
+            job,
+            task: job.task,
+            user: input.user,
+            customer: input.customer
+          }
+        )
+      } else {
+        allowedMultitasking(job, (err, allowed) => {
+          if (!allowed) {
+            // just ignore this one
+            dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
+          } else {
+            job.lifecycle = LifecycleConstants.ASSIGNED
+            job.save(err => {
+              if (err) { logger.error('%o', err) }
+               terminateRecursion(err, job)
+            })
+
+            registerJobOperation(
+              Constants.UPDATE,
+              TopicsConstants.task.sent,
+              {
+                job,
+                task: job.task,
+                user: input.user,
+                customer: input.customer
+              }
+            )
+          }
+        })
+      }
     }
 
-    JobModels.Job.findOne(query, (err,job) => {
+    let jobs = []
+    JobModels.Job.aggregate([
+      {
+        $match: {
+          host_id: input.host._id.toString(),
+          lifecycle: LifecycleConstants.READY 
+        }
+      },
+      { $sort: { 'task_id': 1, 'creation_date': 1 } },
+      { $group: { _id: '$task_id', next: { $first: '$$ROOT' } } },
+      { $replaceRoot: { newRoot: "$next" } }
+    ]).exec((err, jobs) => {
       if (err) {
         logger.error('%o',err)
-        next(err)
+        return next(err)
       }
 
-      if (job!==null) {
-        if (jobMustHaveATask(job) && !job.task) {
-          job.lifecycle = LifecycleConstants.CANCELED
-          job.save(err => next(err,null)) // job with error
-          topic = TopicsConstants.task.cancelation // cancel
-        } else {
-          job.lifecycle = LifecycleConstants.ASSIGNED
-          job.save(err => {
-            if (err) {
-              logger.error('%o',err)
-              return next(err)
-            }
-
-            next(null,job)
-          })
-          topic = TopicsConstants.task.sent // sent to agent
-        }
-
-        registerJobOperation(Constants.UPDATE, topic, {
-          job,
-          task: job.task,
-          user: input.user,
-          customer: input.customer
-        })
+      if (jobs.length>0) {
+        let idx = 0
+        dispatchJobExecutionRecursive(idx, jobs, next)
       } else {
-        next(null,null)
+        next()
       }
     })
   },
   /**
-   * @author Facugon
    * @param {Object} input
    * @property {Task} input.task
    * @property {User} input.user
@@ -373,7 +416,7 @@ module.exports = {
 
     const job = factoryCreate({ integration, props })
     currentIntegrationJob(job, (err, currentJob) => {
-      if (err) return next(err)
+      if (err) { return next(err) }
       if (jobInProgress(currentJob) === true) {
         err = new Error('integration job in progress')
         err.statusCode = 423
@@ -430,6 +473,28 @@ const verifyTaskBeforeExecution = (task, next) => {
 
     next()
   })
+}
+
+const allowedMultitasking = (job, next) => {
+  if (job.task.multitasking !== false) {
+    return next(null, true)
+  }
+
+  JobModels
+    .Job
+    .findOne({
+      task_id: job.task_id,
+      _id: { $ne: job._id },
+      lifecycle: LifecycleConstants.ASSIGNED
+    })
+    .exec( (err, inprogressjob) => {
+      if (err) {
+        logger.error('Failed to fetch inprogress job')
+        return next(err)
+      }
+
+      next(null, (inprogressjob === null))
+    })
 }
 
 const currentIntegrationJob = (job, next) => {
@@ -762,7 +827,7 @@ const filterOutputArray = (outputs) => {
 const finishDummyTaskJob = (job, input, done) => {
   let { task } = input
 
-  App.jobFactory.prepareTaskArgumentsValues(
+  JobFactory.prepareTaskArgumentsValues(
     task.output_parameters,
     input.task_arguments_values,
     (err, args) => {
