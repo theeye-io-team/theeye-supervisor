@@ -114,17 +114,17 @@ module.exports = {
         }
       },
       { $sort: { 'task_id': 1, 'creation_date': 1 } },
-      { $group: { _id: '$task_id', next: { $first: '$$ROOT' } } },
-      { $replaceRoot: { newRoot: "$next" } }
-    ]).exec((err, jobs) => {
+      { $group: { _id: '$task_id', next: { $first: '$$ROOT' } } }
+      //{ $replaceRoot: { newRoot: "$next" } }
+    ]).exec((err, groups) => {
       if (err) {
         logger.error('%o',err)
         return next(err)
       }
 
-      if (jobs.length>0) {
+      if (groups.length>0) {
         let idx = 0
-        dispatchJobExecutionRecursive(idx, jobs, next)
+        dispatchJobExecutionRecursive(idx, groups.map(grp => grp.next), next)
       } else {
         next()
       }
