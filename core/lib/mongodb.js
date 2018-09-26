@@ -2,7 +2,7 @@
 
 const mongoose = require('mongoose');
 const config = require("config" ).get("mongo");
-const debug = require('debug')('lib:mongodb');
+const debug = require('debug')('eye:lib:mongodb');
 const format = require('util').format;
 
 function connect () {
@@ -11,8 +11,8 @@ function connect () {
   if (config.user && config.password) {
     connection = format(
       'mongodb://%s:%s@%s/%s',
-      config.user,
-      config.password,
+      encodeURIComponent(config.user),
+      encodeURIComponent(config.password),
       config.hosts,
       config.database
     );
