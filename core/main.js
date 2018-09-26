@@ -5,6 +5,12 @@ const ErrorHandler = require('./lib/error-handler')
 const logger = require('./lib/logger')('main')
 logger.log('initializing supervisor');
 
+if (!RegExp.escape) {
+  RegExp.escape = function(s){
+    return String(s).replace(/[\\^$*+?.()|[\]{}]/g, '\\$&')
+  }
+}
+
 process.on('SIGINT', function(){
   logger.log('supervisor process ends on "SIGINT"');
   process.exit(0);

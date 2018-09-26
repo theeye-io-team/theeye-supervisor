@@ -1,11 +1,8 @@
-'use strict'
-
-const mongodb = require('../../lib/mongodb').db
 const ObjectId = require('mongoose').Schema.Types.ObjectId
 const BaseSchema = require('./schema')
 const Host = require('../host').Entity
 
-var Schema = BaseSchema.extend({
+const ScraperSchema = new BaseSchema({
   host_id: { type: String },
   template_id: { type: ObjectId },
   type: { type: String, default: 'scraper' },
@@ -24,7 +21,9 @@ var Schema = BaseSchema.extend({
   json: { type: Boolean },
 })
 
-Schema.methods.publish = function(next) {
+module.exports = ScraperSchema
+
+ScraperSchema.methods.publish = function(next) {
   var data = this.toObject();
   if (!this.host_id) {
     return next(data);
@@ -39,8 +38,9 @@ Schema.methods.publish = function(next) {
   }
 }
 
-Schema.methods.templateProperties = function () {
-  let values = BaseSchema.methods.templateProperties.apply(this,arguments)
+const templateProperties = ScraperSchema.methods.templateProperties
+ScraperSchema.methods.templateProperties = function () {
+  let values = templateProperties.apply(this, arguments)
   values.url = this.url 
   values.method = this.method 
   values.timeout = this.timeout 
@@ -52,8 +52,3 @@ Schema.methods.templateProperties = function () {
   values.pattern = this.pattern 
   return values
 }
-
-var Entity = mongodb.model('ScraperTask', Schema);
-Entity.ensureIndexes();
-
-exports.Entity = Entity;

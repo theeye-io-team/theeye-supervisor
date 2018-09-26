@@ -1,97 +1,37 @@
-'use strict';
-
 const mongodb = require('../../lib/mongodb').db
-const ObjectId = require('mongoose').Schema.Types.ObjectId
-const BaseSchema = require('./schema')
-const Template = require('./template').Entity
 const TaskConstants = require('../../constants/task')
-const ScraperTask = require('./scraper').Entity
-const ApprovalTask = require('./approval').Entity
-const DummyTask = require('./dummy').Entity
+const BaseSchema = require('./schema')
 
-/**
- * Extended Schema. Includes non template attributes
- */
-const TaskSchema = BaseSchema.extend({
-  template_id: { type: ObjectId },
-  host_id: { type: String },
-  script_id: { type: String },
-  script_runas: { type: String },
-  script_arguments: { type: Array }, // will be replaced with task_arguments in the future
-  type: { type: String, default: 'script' },
-  // relations
-  host: { type: ObjectId, ref: 'Host' },
-  script: { type: ObjectId, ref: 'Script' },
-  template: { type: ObjectId, ref: 'TaskTemplate' },
-})
+const TaskSchema = new BaseSchema()
+const ScraperSchema = require('./scraper')
+const ApprovalSchema = require('./approval')
+const DummySchema = require('./dummy')
+const ScriptSchema = require('./script')
 
-/**
- *
- * extract any non particular entity property.
- * @author Facundo
- *
- */
-TaskSchema.methods.toTemplate = function (doneFn) {
-  var values = this.toObject()
-  var template = new Template(values)
-  template.save(function(error){
-    doneFn(error, template)
-  })
-}
+const Task = mongodb.model('Task', TaskSchema)
+const ScriptTask = Task.discriminator('ScriptTask', ScriptSchema)
+//const ScriptTask = Task.discriminator('ScriptTask', ScriptSchema)
+const ScraperTask = Task.discriminator('ScraperTask', ScraperSchema)
+const ApprovalTask = Task.discriminator('ApprovalTask', ApprovalSchema)
+const DummyTask = Task.discriminator('DummyTask', DummySchema)
 
-TaskSchema.methods.templateProperties = function () {
-  var values = BaseSchema.methods.templateProperties.apply(this,arguments)
-  values.script_arguments = this.script_arguments
-  values.task_arguments = this.task_arguments
-  values.script_runas = this.script_runas
-  values.script_id = this.script_id
-  return values
-}
-
-/**
- *
- *
- *
- */
-TaskSchema.statics.create = function(input,next) {
-  var instance = new this()
-  const host_id = input.host ? input.host._id : null
-
-  instance.host = host_id
-  instance.host_id = host_id
-  instance.customer = input.customer._id
-  instance.customer_id = input.customer._id
-  instance.script_id = input.script._id
-  instance.script_arguments = input.script_arguments
-  instance.task_arguments = input.task_arguments
-  instance.script_runas = input.script_runas
-  instance.user_id = input.user._id
-  instance.tags = input.tags
-  instance.public = input.public || false
-  instance.name = input.name || null
-  instance.template = input.template_id || null
-  instance.template_id = input.template_id || null
-  instance.description = input.description || ''
-  instance.save(next)
-}
-
-var Task = mongodb.model('Task', TaskSchema);
-Task.ensureIndexes();
+Task.ensureIndexes()
+ApprovalTask.ensureIndexes()
+DummyTask.ensureIndexes()
+ScriptTask.ensureIndexes()
+ScraperTask.ensureIndexes()
 
 // called for both inserts and updates
 Task.on('afterSave', function(model) {
   model.last_update = new Date();
-  // do stuff
-});
-Task.on('afterUpdate',function(model){ });
-Task.on('afterInsert',function(model){ });
-Task.on('afterRemove',function(model){ });
+})
 
-exports.Entity = Task;
-exports.ScriptTask = Task // this is not only script task, but the base task model
+exports.Entity = Task
+exports.ScriptTask = ScriptTask
 exports.ScraperTask = ScraperTask
 exports.ApprovalTask = ApprovalTask
 exports.DummyTask = DummyTask
+
 exports.Factory = {
   create (input) {
     if (input.type == TaskConstants.TYPE_SCRAPER) {
@@ -107,8 +47,9 @@ exports.Factory = {
       return new DummyTask(input)
     }
     if (input.type == TaskConstants.TYPE_SCRIPT) {
+      //input._type = 'ScriptTask'
       input._type = 'Task'
-      return new Task(input)
+      return new ScriptTask(input)
     }
     throw new Error('invalid error type ' + input.type)
   }

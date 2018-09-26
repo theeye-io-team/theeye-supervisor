@@ -31,8 +31,6 @@ const properties = {
   _type: { type: String, default: 'HostGroup' }
 }
 
-exports.properties = properties
-
 const EntitySchema = new BaseSchema(properties,{
   collection: 'host_templates',
   discriminatorKey: '_type'

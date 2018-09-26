@@ -967,7 +967,7 @@ const createRequiredFiles = (input, done) => {
 
   const createMonitorsFiles = (cb) => {
     const setMonitorFile = (monitor, file, done) => {
-      let _id = file._id.toString()
+      let _id = file._id ? file._id.toString() : ''
       if (monitor.type==='script') {
         monitor.config.script_id = _id
       } else if (monitor.type==='file') {

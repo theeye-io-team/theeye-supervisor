@@ -1,8 +1,8 @@
 const mongodb = require('../../lib/mongodb').db
 const IntegrationConstants = require('../../constants/integrations')
 const BaseSchema = require('./schema')
-const AgentUpdateJobSchema = require('./agent-update')
-const ScriptJobSchema = require('./script')
+const AgentUpdateSchema = require('./agent-update')
+const ScriptSchema = require('./script')
 const WorkflowSchema = require('./workflow')
 
 const JobSchema = new BaseSchema({
@@ -12,9 +12,9 @@ const ScraperSchema = new BaseSchema()
 const ApprovalSchema = new BaseSchema()
 const DummySchema = new BaseSchema()
 
-const Job = mongodb.model('Job',JobSchema)
-const AgentUpdateJob = Job.discriminator('AgentUpdateJob', AgentUpdateJobSchema)
-const ScriptJob = Job.discriminator('ScriptJob', ScriptJobSchema)
+const Job = mongodb.model('Job', JobSchema)
+const AgentUpdateJob = Job.discriminator('AgentUpdateJob', AgentUpdateSchema)
+const ScriptJob = Job.discriminator('ScriptJob', ScriptSchema)
 const ScraperJob = Job.discriminator('ScraperJob', ScraperSchema)
 const ApprovalJob = Job.discriminator('ApprovalJob', ApprovalSchema)
 const DummyJob = Job.discriminator('DummyJob', DummySchema)

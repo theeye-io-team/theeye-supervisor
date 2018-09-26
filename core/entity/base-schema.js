@@ -9,7 +9,7 @@ const baseProperties = require('./base-schema-properties')
 
 function BaseSchema (props, specs) {
   // Schema constructor
-  Schema.call(this, Object.assign({}, baseProperties, props),{
+  Schema.call(this, Object.assign({}, baseProperties, props), {
     collection: specs.collection,
     discriminatorKey: '_type'
   })
@@ -23,9 +23,7 @@ function BaseSchema (props, specs) {
     getters: true,
     virtuals: true,
     transform: function (doc, ret, options) {
-      // remove the _id of every document before returning the result
       ret.id = ret._id
-      //delete ret._id
       delete ret.__v
     }
   }

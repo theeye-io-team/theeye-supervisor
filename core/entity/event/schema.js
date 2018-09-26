@@ -63,6 +63,6 @@ function BaseSchema (specs) {
   return this
 }
 
-util.inherits(BaseSchema, Schema);
+util.inherits(BaseSchema, Schema)
 
-module.exports = BaseSchema;
+module.exports = BaseSchema

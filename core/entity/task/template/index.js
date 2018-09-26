@@ -15,6 +15,11 @@ const ApprovalTemplate = Template.discriminator('ApprovalTaskTemplate', Approval
 const DummyTemplate = Template.discriminator('DummyTaskTemplate', DummySchema)
 
 Template.ensureIndexes()
+ScriptTemplate.ensureIndexes()
+ScraperTemplate.ensureIndexes()
+ApprovalTemplate.ensureIndexes()
+DummyTemplate.ensureIndexes()
+
 
 // called for both inserts and updates
 Template.on('beforeSave', function(model) {

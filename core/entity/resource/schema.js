@@ -1,5 +1,4 @@
-'use strict';
-
+const util = require('util')
 const Schema = require('mongoose').Schema
 const Constants = require('../../constants/monitors')
 const FetchBy = require('../../lib/fetch-by')
@@ -17,46 +16,52 @@ const properties = {
   alerts: { type: Boolean, default: true },
   // relation
   customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
-  user: { type: Schema.Types.ObjectId, ref: 'User' }
+  user: { type: Schema.Types.ObjectId, ref: 'User' },
+  creation_date: { type: Date, default: Date.now },
+  last_update: { type: Date, default: Date.now },
 }
 
-exports.properties = properties
+function BaseSchema (props, opts) {
+  props || (props={})
 
-/**
- *
- * Schema Definition 
- * 
- */
-var EntitySchema = Schema(properties, { discriminatorKey: '_type' })
-exports.EntitySchema = EntitySchema
-EntitySchema.plugin(lifecicle)
+  const specs = {
+    collection: opts.collection || 'resources',
+    discriminatorKey: '_type' 
+  }
 
-// Duplicate the ID field.
-EntitySchema.virtual('id').get(function(){
-  return this._id.toHexString()
-})
+  Schema.call(this, Object.assign({}, properties, props), specs)
 
-const specs = {
-	getters: true,
-	virtuals: true,
-	transform: function (doc, ret, options) {
-		// remove the _id of every document before returning the result
-		ret.id = ret._id
-		delete ret._id
-		delete ret.__v
-	}
+  this.plugin(lifecicle)
+
+  // Duplicate the ID field.
+  this.virtual('id').get(function(){
+    return this._id.toHexString()
+  })
+
+  const def = {
+    getters: true,
+    virtuals: true,
+    transform: function (doc, ret, options) {
+      ret.id = ret._id
+      delete ret.__v
+    }
+  }
+
+  this.set('toJSON'  , def)
+  this.set('toObject', def)
+
+
+  this.statics.fetchBy = function (filter, next) {
+    FetchBy.call(this, filter, next)
+  }
+
+  this.methods.publish = function (next) {
+    var data = this.toObject()
+    if (next) { next(null,data) }
+    return data
+  }
 }
 
-EntitySchema.set('toJSON', specs)
-EntitySchema.set('toObject', specs)
-EntitySchema.statics.DEFAULT_TYPE = Constants.RESOURCE_TYPE_DEFAULT
+util.inherits(BaseSchema, Schema)
 
-EntitySchema.statics.fetchBy = function (filter, next) {
-  FetchBy.call(this,filter,next)
-}
-
-EntitySchema.methods.publish = function (next) {
-  var data = this.toObject()
-  if (next) { next(null,data) }
-  return data
-}
+module.exports = BaseSchema

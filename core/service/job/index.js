@@ -58,51 +58,54 @@ module.exports = {
     ) => {
       if (idx===jobs.length) { return terminateRecursion() }
       let job = JobModels.Job.hydrate(jobs[idx])
+      //job.populate('task', err => {
+        //if (err) { return terminateRecursion(err) }
 
-      // Cancel this job and process next
-      if (jobMustHaveATask(job) && !job.task) {
-        // cancel invalid job
-        job.lifecycle = LifecycleConstants.CANCELED
-        job.save(err => {
-          if (err) { logger.error('%o', err) }
-          dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
-        })
-
-        registerJobOperation(
-          Constants.UPDATE,
-          TopicsConstants.task.cancelation,
-          {
-            job,
-            task: job.task,
-            user: input.user,
-            customer: input.customer
-          }
-        )
-      } else {
-        allowedMultitasking(job, (err, allowed) => {
-          if (!allowed) {
-            // just ignore this one
+        // Cancel this job and process next
+        if (jobMustHaveATask(job) && !job.task) {
+          // cancel invalid job
+          job.lifecycle = LifecycleConstants.CANCELED
+          job.save(err => {
+            if (err) { logger.error('%o', err) }
             dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
-          } else {
-            job.lifecycle = LifecycleConstants.ASSIGNED
-            job.save(err => {
-              if (err) { logger.error('%o', err) }
-               terminateRecursion(err, job)
-            })
+          })
 
-            registerJobOperation(
-              Constants.UPDATE,
-              TopicsConstants.task.sent,
-              {
-                job,
-                task: job.task,
-                user: input.user,
-                customer: input.customer
-              }
-            )
-          }
-        })
-      }
+          registerJobOperation(
+            Constants.UPDATE,
+            TopicsConstants.task.cancelation,
+            {
+              job,
+              task: job.task,
+              user: input.user,
+              customer: input.customer
+            }
+          )
+        } else {
+          allowedMultitasking(job, (err, allowed) => {
+            if (!allowed) {
+              // just ignore this one
+              dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
+            } else {
+              job.lifecycle = LifecycleConstants.ASSIGNED
+              job.save(err => {
+                if (err) { logger.error('%o', err) }
+                terminateRecursion(err, job)
+              })
+
+              registerJobOperation(
+                Constants.UPDATE,
+                TopicsConstants.task.sent,
+                {
+                  job,
+                  task: job.task,
+                  user: input.user,
+                  customer: input.customer
+                }
+              )
+            }
+          })
+        }
+      //})
     }
 
     let jobs = []
@@ -114,8 +117,7 @@ module.exports = {
         }
       },
       { $sort: { 'task_id': 1, 'creation_date': 1 } },
-      { $group: { _id: '$task_id', next: { $first: '$$ROOT' } } }
-      //{ $replaceRoot: { newRoot: "$next" } }
+      { $group: { _id: '$task_id', nextJob: { $first: '$$ROOT' } } }
     ]).exec((err, groups) => {
       if (err) {
         logger.error('%o',err)
@@ -124,7 +126,7 @@ module.exports = {
 
       if (groups.length>0) {
         let idx = 0
-        dispatchJobExecutionRecursive(idx, groups.map(grp => grp.next), next)
+        dispatchJobExecutionRecursive(idx, groups.map(grp => grp.nextJob), next)
       } else {
         next()
       }
@@ -476,9 +478,8 @@ const verifyTaskBeforeExecution = (task, next) => {
 }
 
 const allowedMultitasking = (job, next) => {
-  if (job.task.multitasking !== false) {
-    return next(null, true)
-  }
+  if (job.name==='agent:config:update') { return next(null, true) }
+  if (job.task.multitasking !== false) { return next(null, true) }
 
   JobModels
     .Job
