@@ -263,20 +263,23 @@ module.exports = {
     const populateRunningJob = (next) => {
 
       const publish = (job) => {
-        return {
-          _type: job._type,
-          state: job.state,
-          lifecycle: job.lifecycle,
+        let data = {
           creation_date: job.creation_date,
           id: job._id.toString(),
           name: job.name,
           type: job.type,
-          user: {
+          _type: job._type,
+        }
+
+        if (job.user) {
+          data.user = {
             id: job.user._id.toString(),
             username: job.user.username,
             email: job.user.email
           }
         }
+
+        return data
       }
 
       const populateLastJob = () => {
