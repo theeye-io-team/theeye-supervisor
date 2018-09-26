@@ -306,8 +306,7 @@ const Service = module.exports = {
     next || (next = function(){})
     logger.log('publishing group')
     group.populateAll(error => {
-      if (error) throw error
-
+      if (error) { throw error }
       App.resource.populateAll(group.resources, (err) => {
         App.task.populateAll(group.tasks, (err) => {
           var data = group.toObject()

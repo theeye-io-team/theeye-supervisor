@@ -9,10 +9,10 @@ const BaseSchema = require('../base-schema')
 const TriggerTemplate = new Schema({
   emitter_template_id: { type: Schema.Types.ObjectId },
   emitter_template_type: { type: 'String' },
+  task_template: { type: Schema.Types.ObjectId, ref: 'TaskTemplate' },
   task_template_id: { type: Schema.Types.ObjectId },
   event_type: { type: String },
   event_name: { type: String },
-  task_template: { type: Schema.Types.ObjectId, ref: 'TaskTemplate' },
 })
 
 const properties = {
@@ -37,24 +37,25 @@ const EntitySchema = new BaseSchema(properties,{
 })
 
 EntitySchema.methods.populateAll = function(next) {
-  Entity.populate(this,[
+  Entity.populate(this, [
     { path: 'customer' },
     { path: 'hosts' },
     { path: 'tasks' },
     { path: 'files' },
     { path: 'resources' },
     {
-      path: 'triggers',
-      populate: {
-        path: 'task_template',
-        select: 'name type' // only populate this fields
-      }
+      path: 'triggers.task_template',
+      select: 'name type' // only populate this fields
+      //populate: {
+      //  path: 'task_template',
+      //  select: 'name type' // only populate this fields
+      //}
     },
-  ],next)
+  ], (err, group) => {
+    return next(err, group)
+  })
 }
 
 var Entity = mongodb.db.model('HostGroup', EntitySchema)
-Entity.ensureIndexes();
-
-exports.EntitySchema = EntitySchema;
-exports.Entity = Entity;
+Entity.ensureIndexes()
+exports.Entity = Entity
