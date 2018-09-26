@@ -48,7 +48,7 @@ exports.Factory = {
     }
     if (input.type == TaskConstants.TYPE_SCRIPT) {
       //input._type = 'ScriptTask'
-      input._type = 'Task'
+      input._type = 'ScriptTask'
       return new ScriptTask(input)
     }
     throw new Error('invalid error type ' + input.type)

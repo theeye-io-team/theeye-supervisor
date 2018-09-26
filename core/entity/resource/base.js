@@ -15,30 +15,11 @@ const ResourceSchema = new BaseSchema({
   last_check: { type: Date },
   monitor: { type: ObjectId, ref: 'ResourceMonitor' }, // has one
   template: { type: ObjectId, ref: 'ResourceTemplate' }, // has one
-  host: { type: ObjectId, ref: 'Host' } // belongs to
+  host: { type: ObjectId, ref: 'Host' }, // belongs to
+  _type: { type: String, 'default': 'Resource' }
 }, { collection: 'resources' })
 
 module.exports = ResourceSchema
-
-//ResourceSchema.statics.create = function(input, next){
-//  var data = {}
-//  next||(next=function(){})
-//  var entity = new Entity(input)
-//  entity.host_id = input.host_id
-//  entity.hostname = input.hostname
-//  entity.template = input.template || null
-//  entity.save(function (err, instance) {
-//    if (err) return next (err)
-//    next(null, instance)
-//  })
-//}
-
-//ResourceSchema.methods.patch = function(input, next){
-//  next||(next=function(){})
-//  this.update(input, function(error,result){
-//    next(error,result)
-//  })
-//}
 
 ResourceSchema.methods.templateProperties = function () {
   const values = this.toObject()
@@ -59,4 +40,24 @@ ResourceSchema.methods.templateProperties = function () {
 //  return Entity.populate(this,[
 //    { path: '' },
 //  ],next)
+//}
+
+//ResourceSchema.statics.create = function(input, next){
+//  var data = {}
+//  next||(next=function(){})
+//  var entity = new Entity(input)
+//  entity.host_id = input.host_id
+//  entity.hostname = input.hostname
+//  entity.template = input.template || null
+//  entity.save(function (err, instance) {
+//    if (err) return next (err)
+//    next(null, instance)
+//  })
+//}
+
+//ResourceSchema.methods.patch = function(input, next){
+//  next||(next=function(){})
+//  this.update(input, function(error,result){
+//    next(error,result)
+//  })
 //}

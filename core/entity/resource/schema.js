@@ -18,7 +18,7 @@ const properties = {
   customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
   user: { type: Schema.Types.ObjectId, ref: 'User' },
   creation_date: { type: Date, default: Date.now },
-  last_update: { type: Date, default: Date.now },
+  last_update: { type: Date, default: Date.now }
 }
 
 function BaseSchema (props, opts) {
@@ -60,6 +60,12 @@ function BaseSchema (props, opts) {
     if (next) { next(null,data) }
     return data
   }
+
+  this.pre('save', function(next) {
+    this.last_update = new Date()
+    // do stuff
+    next()
+  })
 }
 
 util.inherits(BaseSchema, Schema)

@@ -497,8 +497,8 @@ Service.create = function (input, next) {
   logger.log('creating resource for host %j', input)
   var type = (input.type||input.monitor_type)
 
-  ResourceMonitorService.setMonitorData(type,input,function(error,monitor_data){
-    if (error) return next(error)
+  ResourceMonitorService.setMonitorData(type, input, function (error, monitor_data) {
+    if (error) { return next(error) }
     if (!monitor_data) {
       var e = new Error('invalid resource data')
       e.statusCode = 400
@@ -506,17 +506,16 @@ Service.create = function (input, next) {
     }
 
     createResourceAndMonitor({
-      resource_data: assign({},input,{
+      resource_data: assign({}, input, {
         name: input.name,
         type: type,
       }),
       monitor_data: monitor_data
     }, function (err,result) {
-      if (err) return next(err)
+      if (err) { return next(err) }
 
-      var monitor = result.monitor;
-      var resource = result.resource;
-      resource.monitor = monitor
+      var monitor = result.monitor
+      var resource = result.resource
       logger.log('resource & monitor created');
 
       const topic = TopicsConstants.monitor.crud
@@ -995,38 +994,38 @@ const handleHostIdAndData = (hostId, input, doneFn) => {
  *
  */
 const createResourceAndMonitor = (input, done) => {
-  var monitor_data = input.monitor_data;
-  var resource_data = input.resource_data;
+  var monitor_data = input.monitor_data
+  var resource_data = input.resource_data
 
-  logger.log('creating resource');
-  ResourceModel.create(resource_data, function(err,resource){
+  logger.log('creating monitor')
+
+  resource_data._type = 'Resource'
+  let resource = new ResourceModel(resource_data)
+
+  monitor_data._type = 'ResourceMonitor'
+  let monitor = new MonitorModel(monitor_data)
+
+  // referencing
+  resource.monitor = monitor._id
+  resource.monitor_id = monitor._id
+  monitor.resource = resource._id
+  monitor.resource_id = resource._id
+
+  resource.save((err, resource) => {
     if (err) {
       logger.error('%o',err)
       return done(err)
-    } else {
-      logger.log('creating resource %s monitor', resource._id);
-      logger.log(monitor_data);
-
-      // monitor.resource is used to populate the entity. need refactor
-      monitor_data.resource = resource._id;
-      monitor_data.resource_id = resource._id;
-
-      MonitorModel.create(
-        monitor_data,
-        function(error, monitor){
-          if (error) {
-            logger.error('%o',err)
-            return done(err)
-          }
-
-          return done(null,{
-            'resource': resource, 
-            'monitor': monitor 
-          });
-        }
-      );
     }
-  });
+
+    monitor.save((err, monitor) => {
+      if (err) {
+        logger.error('%o',err)
+        return done(err)
+      }
+
+      return done(null, { resource, monitor })
+    })
+  })
 }
 
 /**

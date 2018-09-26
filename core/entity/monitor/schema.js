@@ -17,7 +17,7 @@ const properties = {
   creation_date: { type: Date, default: Date.now },
   last_update: { type: Date, default: Date.now },
   // RELATIONS
-  customer: { type: ObjectId, ref: 'Customer' }, // belongs to
+  customer: { type: ObjectId, ref: 'Customer' } // belongs to
 }
 
 function BaseSchema (specs, opts) {
@@ -207,6 +207,12 @@ function BaseSchema (specs, opts) {
 
     next(null, updates)
   }
+
+  this.pre('save', function(next) {
+    this.last_update = new Date()
+    // do stuff
+    next()
+  })
 }
 
 util.inherits(BaseSchema, Schema)

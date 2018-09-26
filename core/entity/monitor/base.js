@@ -14,6 +14,7 @@ const MonitorSchema = new BaseSchema({
   template: { type: ObjectId, ref: 'MonitorTemplate' }, // has one
   host: { type: ObjectId, ref: 'Host' }, // belongs to
   resource: { type: ObjectId, ref: 'Resource' }, // belongs to
+  _type: { type: String, 'default': 'ResourceMonitor' }
 }, { collection: 'resourcemonitors' })
 
 module.exports = MonitorSchema
