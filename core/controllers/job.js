@@ -10,6 +10,7 @@ const JobConstants = require('../constants/jobs')
 const StateConstants = require('../constants/states')
 const TopicsConstants = require('../constants/topics')
 const IntegrationConstants = require('../constants/integrations')
+const LifecycleConstants = require('../constants/lifecycle')
 const audit = require('../lib/audit')
 const merge = require('lodash/merge')
 
@@ -101,6 +102,12 @@ module.exports = (server, passport) => {
     },
     controller.create
   )
+
+  server.del('/job/finished',
+    middlewares.concat(
+      router.requireCredential('admin')
+    ),
+    controller.removeFinished)
 }
 
 const controller = {
@@ -212,6 +219,80 @@ const controller = {
   redo (req, res, next) {
     let job = req.job
     res.send(200)
+  },
+  removeFinished (req, res, next) {
+    let customer = req.customer
+    let query = req.query || {}
+
+    if (/Workflow/.test(query.type)) {
+      Job.aggregate([{
+        $match: {
+          workflow_id: query.id.toString(),
+          customer_id: customer.id.toString()
+        }
+      }, {
+        $group: {
+          _id: '$workflow_job_id',
+          tasksJobs: {
+            $push: '$$ROOT'
+          }
+        }
+      }, {
+        $project: {
+          tasksJobs: 1,
+          finished: {
+            $allElementsTrue: {
+              $map: {
+                input: '$tasksJobs',
+                as: 'taskjob',
+                in: { $in: ['$$taskjob.lifecycle', [
+                  LifecycleConstants.FINISHED,
+                  LifecycleConstants.TERMINATED,
+                  LifecycleConstants.CANCELED,
+                  LifecycleConstants.EXPIRED,
+                  LifecycleConstants.COMPLETED
+                ]] }
+              }
+            }
+          },
+          _id: 1 }
+      }, {
+        $match: {
+          finished: true
+        }
+      }]).exec((err, result) => {
+        if (err) { return res.send(500, err) }
+
+        result.forEach(wfJob => {
+          Job.remove({
+            $or: [
+              { _id: { $eq: wfJob._id } },
+              { workflow_job_id: { $eq: wfJob._id } }
+            ]
+          }, function (err) {
+            if (err) logger.error('%o', err)
+          })
+        })
+
+        res.send(200, {})
+      })
+    } else if (/Task/.test(query.type)) {
+      Job.remove({
+        task_id: query.id.toString(),
+        $or: [
+          { lifecycle: LifecycleConstants.FINISHED },
+          { lifecycle: LifecycleConstants.TERMINATED },
+          { lifecycle: LifecycleConstants.CANCELED },
+          { lifecycle: LifecycleConstants.EXPIRED },
+          { lifecycle: LifecycleConstants.COMPLETED }
+        ]
+      }, function (err) {
+        if (err) { return res.send(500, err) }
+        res.send(200, {})
+      })
+    } else {
+      res.send(400, 'Entity type not found')
+    }
   }
 }
 
