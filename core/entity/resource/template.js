@@ -9,7 +9,8 @@ const TemplateSchema = new BaseSchema({
   monitor_template_id: { type: ObjectId, required: true },
   // RELATION
   hostgroup: { type: ObjectId, ref: 'HostGroup' }, // belongs to
-  monitor_template: { type: ObjectId, ref: 'MonitorTemplate' } // has one
+  monitor_template: { type: ObjectId, ref: 'MonitorTemplate' }, // has one
+  _type: { type: String, 'default': 'ResourceTemplate' }
 },{ collection: 'resource_templates' })
 
 TemplateSchema.methods.populate = function (options, next) {

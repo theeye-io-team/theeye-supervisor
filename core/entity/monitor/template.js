@@ -8,7 +8,8 @@ const TemplateSchema = new BaseSchema({
   hostgroup_id : { type: ObjectId, required: true },
   template_resource_id: { type: ObjectId },
   hostgroup: { type: ObjectId, ref: 'HostGroup' }, // belongs to
-  template_resource: { type: ObjectId, ref: 'ResourceTemplate' } // belongs to
+  template_resource: { type: ObjectId, ref: 'ResourceTemplate' }, // belongs to
+  _type: { type: String, 'default': 'MonitorTemplate' }
 }, { collection: 'monitor_templates' })
 
 TemplateSchema.methods.update = function(input, next) {
