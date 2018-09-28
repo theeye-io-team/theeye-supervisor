@@ -3,6 +3,7 @@ const BaseSchema = require('../base-schema')
 const mongoose = require('mongoose')
 const ObjectId = mongoose.Schema.Types.ObjectId
 const logger = require('../../lib/logger')('entity:workflow:schema')
+const randomSecret = require('../../lib/random-secret')
 
 function WorkflowSchema (props) {
   props || (props={})
@@ -25,6 +26,7 @@ function WorkflowSchema (props) {
     start_task: { type: ObjectId, ref: 'Task' },
     end_task_id: { type: ObjectId, required: false },
     end_task: { type: ObjectId, ref: 'Task', required: false },
+    secret: { type: String, default: randomSecret }, // one way hash
     _type: {
       type: String,
       default: 'Workflow'
@@ -34,6 +36,20 @@ function WorkflowSchema (props) {
   BaseSchema.call(this, Object.assign({}, properties, props), specs)
 
   this.methods.populateTriggers = _populateTriggers
+
+  const def = {
+    getters: true,
+    virtuals: true,
+    transform (doc, ret, options) {
+      ret.id = ret._id
+      delete ret._id
+      delete ret.__v
+      delete ret.secret
+    }
+  }
+
+  this.set('toJSON', def)
+  this.set('toObject', def)
 
   return this
 }
