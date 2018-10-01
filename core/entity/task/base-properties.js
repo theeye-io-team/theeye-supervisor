@@ -14,6 +14,7 @@ module.exports = {
   acl: [{ type: String }],
   secret: { type: String, default: randomSecret }, // one way hash
   grace_time: { type: Number, default: 0 },
+  timeout: { type: Number },
   task_arguments: { type: Array }, // input parameters
   output_parameters: { type: Array }, // output parameters
   workflow_id: { type: ObjectId },

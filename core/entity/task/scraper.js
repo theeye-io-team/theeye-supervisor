@@ -15,7 +15,6 @@ const ScraperSchema = new BaseSchema({
   body: { type: String },
   parser: { type: String },
   pattern: { type: String },
-  timeout: { type: Number },
   status_code: { type: Number },
   gzip: { type: Boolean },
   json: { type: Boolean },
