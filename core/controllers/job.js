@@ -245,13 +245,13 @@ const controller = {
               $map: {
                 input: '$tasksJobs',
                 as: 'taskjob',
-                in: { $in: ['$$taskjob.lifecycle', [
-                  LifecycleConstants.FINISHED,
-                  LifecycleConstants.TERMINATED,
-                  LifecycleConstants.CANCELED,
-                  LifecycleConstants.EXPIRED,
-                  LifecycleConstants.COMPLETED
-                ]] }
+                in: { $or: [
+                  { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.FINISHED ] },
+                  { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.TERMINATED ] },
+                  { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.CANCELED ] },
+                  { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.EXPIRED ] },
+                  { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.COMPLETED ] }
+                ] }
               }
             }
           },
