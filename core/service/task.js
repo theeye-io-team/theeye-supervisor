@@ -264,6 +264,8 @@ module.exports = {
 
       const publish = (job) => {
         let data = {
+          state: job.state,
+          lifecycle: job.lifecycle,
           creation_date: job.creation_date,
           id: job._id.toString(),
           name: job.name,

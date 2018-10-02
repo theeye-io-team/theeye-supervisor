@@ -59,6 +59,12 @@ class IndicatorSchema extends BaseSchema {
     this.set('toObject', def)
 
     this.index({ title: 1, customer_id: 1 }, { unique: true })
+
+    this.pre('save', function(next) {
+      this.last_update = new Date()
+      // do stuff
+      next()
+    })
   }
 }
 

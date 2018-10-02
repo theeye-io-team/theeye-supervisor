@@ -24,7 +24,13 @@ function connect () {
     );
   }
 
-  if (config.debug) mongoose.set("debug",true);
+  if (config.replicaSet) {
+    connection += `?replicaSet=${config.replicaSet}`
+  }
+
+  if (config.debug) {
+    mongoose.set("debug", true)
+  }
 
   return mongoose.createConnection(connection, (config.options||{}))
 }
