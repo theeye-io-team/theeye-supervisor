@@ -8,6 +8,7 @@ const ScriptSchema = new BaseSchema({
   script_runas: { type: String },
   script_arguments: { type: Array }, // will be replaced with task_arguments in the future
   type: { type: String, default: 'script' },
+  env: { type: Object, default: () => { return {} }},
   // relations
   host: { type: ObjectId, ref: 'Host' },
   script: { type: ObjectId, ref: 'Script' },
@@ -26,7 +27,7 @@ ScriptSchema.methods.templateProperties = function () {
   return values
 }
 
-ScriptSchema.statics.create = function (input,next) {
+ScriptSchema.statics.create = function (input, next) {
   var instance = new this()
   const host_id = input.host ? input.host._id : null
 

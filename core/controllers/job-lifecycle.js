@@ -75,18 +75,17 @@ const controller = {
     })
   },
   approve (req, res, next) {
-    const result = req.body.result || {}
+    const payload = req.body.result || {}
     const web_user_id = req.body.web_user_id
     const job = req.job
-
-    result.state = StateConstants.SUCCESS
 
     if (!isApprover(job.task.approvers, web_user_id)) {
       return res.send(403, 'you are not allowed to approve this job')
     }
 
     App.jobDispatcher.finish({
-      result,
+      result: payload.data,
+      state: StateConstants.SUCCESS,
       job: req.job,
       user: req.user,
       customer: req.customer
@@ -97,18 +96,17 @@ const controller = {
     })
   },
   reject (req, res, next) {
-    const result = req.body.result || {}
+    const payload = req.body.result || {}
     const web_user_id = req.body.web_user_id
     const job = req.job
-
-    result.state = StateConstants.FAILURE
 
     if (!isApprover(job.task.approvers, web_user_id)) {
       return res.send(403, 'you are not allowed to approve this job')
     }
 
     App.jobDispatcher.finish({
-      result,
+      result: payload.data,
+      state: StateConstants.FAILURE,
       job: req.job,
       user: req.user,
       customer: req.customer

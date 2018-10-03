@@ -137,7 +137,9 @@ const controller = {
           if (err) { return res.send(500, err.message) }
 
           var jobs = []
-          if (job != null) { jobs.push(job.publish('agent')) }
+          if (job != null) {
+            jobs.push(job.publish('agent'))
+          }
           res.send(200, { jobs })
           next()
         }
@@ -163,9 +165,11 @@ const controller = {
    *
    */
   finish (req, res, next) {
-    var result = req.body.result || {}
+    var payload = req.body.result || {}
+
     App.jobDispatcher.finish({
-      result,
+      result: (payload.data || {}),
+      state: payload.state,
       job: req.job,
       user: req.user,
       customer: req.customer

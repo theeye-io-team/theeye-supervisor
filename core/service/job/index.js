@@ -286,19 +286,19 @@ module.exports = {
     //}
 
     // if it is not a declared failure, assume success
-    let state = (input.state || result.state || StateConstants.SUCCESS)
-    var trigger_name = (state === StateConstants.FAILURE) ?
+    let state = (input.state || StateConstants.SUCCESS)
+    let trigger_name = (state === StateConstants.FAILURE) ?
       StateConstants.FAILURE : StateConstants.SUCCESS
 
     // data output, can be anything. stringify for security
+    job.result = result
     job.state = state
     job.trigger_name = trigger_name
-    job.lifecycle = LifecycleConstants.FINISHED
-    job.result = result.data
+    job.lifecycle = (job.result.killed === true) ? LifecycleConstants.TERMINATED : LifecycleConstants.FINISHED
 
-    if (result.data && result.data.output) {
-      // ok, task has output
-      let output = result.data.output
+    // parse result output
+    if (job.result.output) {
+      let output = job.result.output
       job.output = this.parseJobParameters(output)
       job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
     }
@@ -839,25 +839,12 @@ const finishDummyTaskJob = (job, input, done) => {
     task.output_parameters,
     input.task_arguments_values,
     (err, args) => {
-      let result
+      let specs = Object.assign({}, input, {
+        job,
+        result: { output: args },
+        state: StateConstants[err?'FAILURE':'SUCCESS']
+      })
 
-      if (err) {
-        result = {
-          state: StateConstants.FAILURE,
-          data: {
-            output: args
-          }
-        }
-      } else {
-        result = {
-          state: StateConstants.SUCCESS,
-          data: {
-            output: args
-          }
-        }
-      }
-
-      let specs = Object.assign({}, input, { result, job })
       App.jobDispatcher.finish(specs, done)
     }
   )
