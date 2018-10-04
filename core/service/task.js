@@ -493,15 +493,13 @@ module.exports = {
    * @param {Function} next
    */
   getRecipe (task, next) {
-    let data = { tasks: [] }
+    let data = {}
 
-    data.tasks.push(task.templateProperties())
-
+    data.task = task.templateProperties()
     // only script task
-    if (task._type === 'Task') {
-      data.files = [] // add files
+    if (task._type === 'ScriptTask') {
       App.file.getRecipe(task.script_id, (err, fprops) => {
-        data.files.push(fprops)
+        data.file = fprops
         next(null, data)
       })
     } else {
