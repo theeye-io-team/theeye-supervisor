@@ -96,15 +96,19 @@ module.exports = {
       })
     }, done)
   },
+  /**
+   *
+   *
+   */
   createFromTemplate (input, done) {
     let { template, customer } = input
 
     logger.log('creating file from template %j', template)
-    let data = lodashAssign({}, template.toObject(), {
+    let data = lodashAssign({}, (template.toObject||(() => template))(), {
       customer: customer._id,
       customer_id: customer._id,
       customer_name: customer.name,
-      template: template,
+      template: template._id,
       template_id: template._id
     })
 

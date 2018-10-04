@@ -60,6 +60,7 @@ const App = {
 
     // respond with error middleware
     server.use((req, res, next) => {
+
       res.sendError = (err, next) => {
         const status = err.statusCode || 500
         res.send(status, {
@@ -67,8 +68,9 @@ const App = {
           message: err.message,
           errors: err.errors
         })
-        if (next) next()
+        if (next) { next() }
       }
+
       next()
     })
 

@@ -80,6 +80,16 @@ module.exports = function (server, passport) {
     notifyEvent({ operation: Constants.UPDATE })
   )
 
+  server.patch(
+    '/indicator/:indicator/state',
+    middlewares,
+    router.requireCredential('agent'),
+    router.resolve.idToEntity({ param:'indicator', required: true }),
+    controller.updateState,
+    audit.afterUpdate('indicator', { display: 'title' }),
+    notifyEvent({ operation: Constants.UPDATE })
+  )
+
   server.del(
     '/indicator/:indicator',
     middlewares,
@@ -202,7 +212,30 @@ const controller = {
       }
 
       res.send(200, model)
-      next()
+      return next()
+    })
+  },
+  updateState (req, res, next) {
+    let indicator = req.indicator
+    let body = req.body
+
+    if (!body.state && !body.value) {
+      return res.send(400, 'provide the state changes. value and/or state are required')
+    }
+
+    if (body.state) { indicator.state = body.state }
+    if (body.value) { indicator.value = body.value }
+    indicator.save(err => {
+      if (err) {
+        if (err.name == 'ValidationError') {
+          return res.send(400, err.name)
+        } else {
+          return res.send(500, err)
+        }
+      }
+
+      res.send(200)
+      return next()
     })
   }
 }

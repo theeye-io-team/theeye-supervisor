@@ -90,7 +90,6 @@ const checkNestedMonitor = (resource, done) => {
       if (!monitor) {
         resource.enable = false
         resource.save()
-
         let err = new Error('no monitor found for resource %s. resource monitoring disabled', resource._id)
         logger.error(err)
         return done(err)

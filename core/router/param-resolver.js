@@ -16,9 +16,9 @@ const isObject = (value) => {
 
 module.exports = {
   idToEntity (options) {
-    options||(options={});
+    options||(options={})
 
-    if (!options.param) throw new Error('param name is required!');
+    if (!options.param) { throw new Error('param name is required') }
     var paramName = options.param;
     var entityName = (options.entity||options.param);
     var targetName = (options.into||paramName);
@@ -34,21 +34,17 @@ module.exports = {
 
       if (!_id) {
         if (options.required) {
-          var e = new Error(options.param + ' is required');
-          e.statusCode = 400;
-          return next(e);
+          return res.send(400, options.param + ' is required')
         }
 
-        logger.debug('no param "%s"', targetName);
-        req[targetName] = null;
-        return next();
+        logger.debug('no param "%s"', targetName)
+        req[targetName] = null
+        return next()
       }
 
       if (!isMongoId(_id)) {
         if (options.required) {
-          var e = new Error(options.param + ' id is invalid');
-          e.statusCode = 400;
-          return next(e);
+          return res.send(400, options.param + ' id is invalid')
         }
 
         req[targetName] = null;
@@ -73,9 +69,7 @@ module.exports = {
 
         if (!resource) {
           if (options.required) {
-            var e = new Error(options.param + ' not found');
-            e.statusCode = 404;
-            return next(e);
+            return res.send(404, options.param + ' not found')
           }
 
           req[targetName] = null;
@@ -103,9 +97,7 @@ module.exports = {
 
       if (!hostname) {
         if (options.required) {
-          var e = new Error('hostname is required');
-          e.statusCode = 400;
-          return next(e);
+          return res.send(400, 'hostname is required')
         }
 
         logger.debug('no hostname');
@@ -126,23 +118,21 @@ module.exports = {
           req.host = null ;
           return next();
         } else {
-          req.host = host ;
-          return next();
+          req.host = host
+          return next()
         }
-      });
+      })
     }
   },
   customerNameToEntity (options) {
-    options||(options={});
+    options || (options={})
 
     return function (req,res,next) {
       var name = req.params.customer || req.body.customer || req.query.customer
 
       if (!name) {
         if (options.required) {
-          var error = new Error('organization is required');
-          error.statusCode = 403;
-          return next(error);
+          return res.send(403, 'organization is required')
         }
 
         logger.debug('no customer');
@@ -152,27 +142,25 @@ module.exports = {
 
       logger.debug('resolving customer with name "%s"', name);
 
-      var query = { name : name };
+      var query = { name }
       Customer.findOne(query, (err, customer) => {
-        if(err) {
-          logger.error(err);
-          return next(err);
+        if (err) {
+          logger.error(err)
+          return next(err)
         }
 
-        if(!customer){
-          if(options.required){
-            var error = new Error('organization not found') ;
-            error.statusCode = 403;
-            return next(error);
+        if (!customer) {
+          if (options.required) {
+            return res.send(404, 'organization not found')
           }
 
-          req.customer = null;
-          return next();
+          req.customer = null
+          return next()
         }
 
-        req.customer = customer ;
-        next();
-      });
+        req.customer = customer
+        next()
+      })
     }
-  },
+  }
 }

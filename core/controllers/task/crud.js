@@ -1,17 +1,16 @@
 "use strict";
 
-const App = require('../app')
 const extend = require('lodash/assign');
-const logger = require('../lib/logger')('controller:task');
-const json = require('../lib/jsonresponse');
-const TaskService = require('../service/task');
-const router = require('../router');
-const dbFilter = require('../lib/db-filter');
-const ACL = require('../lib/acl');
-const ErrorHandler = require('../lib/error-handler');
-const audit = require('../lib/audit')
-const TaskConstants = require('../constants/task')
 const isMongoId = require('validator/lib/isMongoId')
+const App = require('../../app')
+const logger = require('../../lib/logger')('controller:task');
+const json = require('../../lib/jsonresponse');
+const router = require('../../router');
+const dbFilter = require('../../lib/db-filter');
+const ACL = require('../../lib/acl');
+const ErrorHandler = require('../../lib/error-handler');
+const audit = require('../../lib/audit')
+const TaskConstants = require('../../constants/task')
 
 module.exports = (server, passport) => {
   server.get('/:customer/task', [
@@ -20,7 +19,7 @@ module.exports = (server, passport) => {
     router.ensureCustomer,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'host' })
-  ] , controller.fetch)
+  ], controller.fetch)
 
   server.get('/:customer/task/:task' , [
     passport.authenticate('bearer', {session:false}),
@@ -73,18 +72,6 @@ module.exports = (server, passport) => {
     audit.afterRemove('task',{ display: 'name' })
   )
 
-  server.get(
-    '/task/:task/recipe',
-    [
-      passport.authenticate('bearer', { session: false }),
-      router.resolve.customerNameToEntity({ required: true }),
-      router.ensureCustomer,
-      router.requireCredential('user'),
-      router.resolve.idToEntity({ param: 'task', required: true }),
-      router.ensureAllowed({ entity: { name: 'task' } })
-    ],
-    controller.recipe
-  )
 }
 
 const controller = {
@@ -130,9 +117,9 @@ const controller = {
       return res.send(400,errors)
     }
 
-    TaskService.create(input, (err,task) => {
+    App.task.create(input, (err,task) => {
       if (err) return res.sendError(err)
-      TaskService.populate(task, (err,data) => {
+      App.task.populate(task, (err,data) => {
         if (err) return res.sendError(err)
         res.send(200,data)
         req.task = task
@@ -159,7 +146,7 @@ const controller = {
       filter.where.acl = req.user.email
     }
 
-    TaskService.fetchBy(filter, function(error, tasks) {
+    App.task.fetchBy(filter, function(error, tasks) {
       if (error) { return res.send(500) }
       res.send(200, tasks)
     });
@@ -173,7 +160,7 @@ const controller = {
    *
    */
   get (req, res, next) {
-    TaskService.populate(
+    App.task.populate(
       req.task,
       (err,data) => {
         res.send(200, data)
@@ -191,7 +178,7 @@ const controller = {
   remove (req,res,next) {
     var task = req.task;
 
-    TaskService.remove({
+    App.task.remove({
       task:task,
       user:req.user,
       customer:req.customer,
@@ -245,7 +232,7 @@ const controller = {
     }
 
     logger.log('updating task %j', input)
-    TaskService.update({
+    App.task.update({
       user: req.user,
       customer: req.customer,
       task: req.task,
@@ -272,18 +259,6 @@ const controller = {
    * @authenticate
    *
    */
-  recipe (req, res, next) {
-    let task = req.task
-
-    App.task.getRecipe(task, (err, recipe) => {
-      if (err) {
-        return res.send(err.statusCode || 500, err)
-      }
-
-      res.send(200, recipe)
-      next()
-    })
-  }
 }
 
 const validIdsArray = (value) => {

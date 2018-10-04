@@ -30,9 +30,9 @@ function TaskSchema (props, specs) {
   this.methods.templateProperties = function () {
     let values = this.toObject()
     values.source_model_id = this._id
-    delete values.id
-    delete values.host
-    delete values.host_id
+    //delete values.id
+    //delete values.host
+    //delete values.host_id
     delete values.secret
     delete values.user
     delete values.user_id

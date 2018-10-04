@@ -1,11 +1,11 @@
 "use strict";
 
-const App = require('../app');
-const logger = require('../lib/logger')('controller:task-schedule');
-const router = require('../router');
-const resolver = router.resolve;
+const App = require('../../app');
+const logger = require('../../lib/logger')('controller:task-schedule');
+const router = require('../../router');
+const JobConstants = require('../../constants/jobs')
 
-const JobConstants = require('../constants/jobs')
+const resolver = router.resolve;
 
 module.exports = function (server, passport) {
   var middlewares = [

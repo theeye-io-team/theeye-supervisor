@@ -2,13 +2,13 @@
 const ObjectId = require('mongoose').Schema.Types.ObjectId
 const randomSecret = require('../../lib/random-secret')
 module.exports = {
+  customer_id: { type: String, required: true },
+  type: { type: String, required: true },
+  name: { type: String, required: true },
   user_id: { type: String, default: null },
-  customer_id: { type: String },
   customer: { type: ObjectId, ref: 'Customer' },
   public: { type: Boolean, default: false },
   tags: { type: Array },
-  type: { type: String, required: true },
-  name: { type: String },
   description : { type: String },
   triggers: [{ type: ObjectId, ref: 'Event' }],
   acl: [{ type: String }],

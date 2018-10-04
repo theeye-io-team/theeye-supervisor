@@ -142,20 +142,19 @@ module.exports = {
     const self = this
     const template = options.template // plain object
     const customer = options.customer
-    const host = options.host
+    const host = options.host || {}
     const done = options.done || (() => {})
     var data
 
-    logger.log('creating task from template %j', template);
+    logger.log('creating task from template %j', template)
 
-    data = lodashAssign({}, template.toObject(), {
+    data = lodashAssign({}, (template.toObject||(() => template))(), {
       customer_id: customer._id,
       customer: customer,
-      host: host,
+      host: host._id,
       host_id: host._id,
       template_id: template._id,
-      template: template,
-      //_type: template._type // force _type
+      template: template._id
     })
 
     delete data._id
@@ -164,7 +163,7 @@ module.exports = {
     delete data.workflow_id
     delete data.workflow
 
-    self.create(data,(err,task) => {
+    self.create(data, (err,task) => {
       done(err, task)
     })
   },
@@ -186,7 +185,7 @@ module.exports = {
     const created = (task) => {
       logger.log('task type "%s" created', task.type)
       logger.data('%j', task)
-      return done(null,task)
+      return done(null, task)
     }
 
     const createTags = (tags) => {
@@ -197,7 +196,11 @@ module.exports = {
 
     logger.log('creating task with data %o', input)
 
-    var task = TaskFactory.create(input)
+    try {
+      var task = TaskFactory.create(input)
+    } catch (e) {
+      return done(e)
+    }
 
     // keep backward compatibility with script_arguments
     if (task.type===TaskConstants.TYPE_SCRIPT) {
