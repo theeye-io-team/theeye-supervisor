@@ -44,6 +44,12 @@ function BaseSchema (props, specs) {
     return this
   }
 
+  this.pre('save', function(next) {
+    this.last_update = new Date()
+    // do stuff
+    next()
+  })
+
   return this
 }
 
