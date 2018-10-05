@@ -1,11 +1,10 @@
 "use strict";
 
-const AppRoot = __dirname + '/../../../core'
 const lodash = require('lodash')
 //const debug = require('debug')('eye:deploy:cleanup_events')
-const Workspace = require(AppRoot + '/workspace')
+const Workspace = require('../../../workspace/app')
 
-Workspace( (err,App) => {
+Workspace((err, App) => {
 
   App.Event.fetch({ }, (err,events) => {
     var done = lodash.after(events.length, () => {

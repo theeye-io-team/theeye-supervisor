@@ -1,10 +1,8 @@
 'use strict'
 
 const debug = require('debug')('eye:workspace')
-
 const CorePath = '../core'
 const EntitiesPath = CorePath + '/entity'
-
 const mongodb = require(CorePath + '/lib/mongodb')
 const mongoose = require('mongoose')
 
@@ -12,7 +10,6 @@ if (!process.env.NODE_ENV) {
   console.error('NODE_ENV not defined')
   return
 }
-
 
 module.exports = function (next) {
 
@@ -52,5 +49,4 @@ module.exports = function (next) {
 
     next(null,App)
   })
-
 }
