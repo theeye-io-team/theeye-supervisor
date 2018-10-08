@@ -478,7 +478,14 @@ const verifyTaskBeforeExecution = (task, next) => {
 }
 
 const allowedMultitasking = (job, next) => {
-  if (job.name==='agent:config:update') { return next(null, true) }
+  //if (job.name==='agent:config:update') { return next(null, true) }
+  if (
+    job._type === 'NgrokIntegrationJob' ||
+    job._type==='AgentUpdateJob'
+  ) {
+    return next(null, true)
+  }
+
   if (job.task.multitasking !== false) { return next(null, true) }
 
   JobModels
