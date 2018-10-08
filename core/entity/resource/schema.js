@@ -61,11 +61,12 @@ function BaseSchema (props, opts) {
     return data
   }
 
-  this.pre('save', function(next) {
-    this.last_update = new Date()
-    // do stuff
-    next()
-  })
+  // NOTE: This will break Monitoring service. should use another property
+  //this.pre('save', function(next) {
+  //  this.last_update = new Date()
+  //  // do stuff
+  //  next()
+  //})
 }
 
 util.inherits(BaseSchema, Schema)
