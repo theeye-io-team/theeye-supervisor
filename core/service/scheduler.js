@@ -11,27 +11,26 @@ const App = require('../app')
 // var config = require('config');
 // var format = require('util').format;
 
-var logger = require('../lib/logger')(':scheduler');
-var mongodb = require('../lib/mongodb').connection.db;
-var Host = require('../entity/host').Entity;
-var Task = require('../entity/task').Entity;
-var Script = require('../entity/file').Script;
-var Customer = require('../entity/customer').Entity;
-var User = require('../entity/user').Entity;
+const logger = require('../lib/logger')(':scheduler')
+const mongodb = require('../lib/mongodb').connection.db
+const Host = require('../entity/host').Entity
+const Task = require('../entity/task').Entity
+const Script = require('../entity/file').Script
+const Customer = require('../entity/customer').Entity
+const User = require('../entity/user').Entity
 
 const JobConstants = require('../constants/jobs')
 const LifecycleConstants = require('../constants/lifecycle')
-const JobDispatcher = require('../service/job')
 
-function Scheduler() {
-  EventEmitter.call(this);
+function Scheduler () {
+  EventEmitter.call(this)
 
   // use the default mongodb connection
   this.agenda = new Agenda({
     mongo: mongodb,
     defaultConcurrency: 50,
     maxConcurrency: 200
-  });
+  })
 }
 
 // give the scheduler the hability to emit events
@@ -96,12 +95,7 @@ Scheduler.prototype = {
     const schedule = input.schedule
 
     const data = {
-      //event: input.event,
-      //event_data: input.event_data,
       task_id: task._id,
-      task_id: task._id,
-      host_id: task.host_id,
-      script_id: task.script_id,
       name: task.name,
       user_id: App.user._id,
       customer_id: customer._id,
@@ -243,7 +237,7 @@ Scheduler.prototype = {
     logger.log('//////////////////////////////////////////')
     logger.log('//////////////////////////////////////////')
 
-    var jobData = agendaJob.attrs.data;
+    var jobData = agendaJob.attrs.data
 
     function JobError (err) {
       agendaJob.fail(err)
@@ -251,34 +245,61 @@ Scheduler.prototype = {
       return done(err)
     }
 
-    async.parallel({
-      customer: callback => Customer.findById(jobData.customer_id, callback),
-      task: callback => Task.findById(jobData.task_id, callback),
-      host: callback => Host.findById(jobData.host_id, callback),
-      user: callback => User.findById(jobData.user_id, callback)
-    }, function (err, data) {
-      const task = data.task
+    Task.findById(jobData.task_id, (err, task) => {
+      if (err) { return new JobError(err) }
+      if (!task) {
+        let err = new Error('task %s is no longer available', jobData.task_id)
+        return new JobError(err)
+      }
 
-      if (err) return new JobError(err)
-      if (!data.customer) return new JobError( new Error('customer %s is no longer available', jobData.customer_id) )
-      if (!data.task) return new JobError( new Error('task %s is no longer available', jobData.task_id) )
-      if (!data.host) return new JobError( new Error('host %s is no longer available', jobData.host_id) )
-      if (!data.user) return new JobError( new Error('user %s is no longer available', jobData.user_id) )
-
-      JobDispatcher.create({
-        //event: jobData.event,
-        //event_data: jobData.event_data,
-        task: data.task,
-        user: data.user,
-        customer: data.customer,
-        notify: true,
-        origin: JobConstants.ORIGIN_SCHEDULER
-      }, (err,job) => {
-        if (err) return new JobError(err)
-        done()
+      verifyTask(task, (err, data) => {
+        if (err) { return new JobError(err) }
+        App.jobDispatcher.create({
+          task,
+          user: App.user,
+          customer: data.customer,
+          notify: true,
+          origin: JobConstants.ORIGIN_SCHEDULER
+        }, (err, job) => {
+          if (err) { return new JobError(err) }
+          done()
+        })
       })
     })
   }
 }
 
-module.exports = new Scheduler();
+const verifyTask = (task, done) => {
+  async.parallel({
+    customer: callback => Customer.findById(task.customer_id, callback),
+    host: callback => Host.findById(task.host_id, callback),
+    script: callback => {
+      if (task.type === 'script') {
+        Script.findById(task.script_id, callback)
+      } else {
+        callback()
+      }
+    }
+  }, (err, data) => {
+    if (err) { return done(err) }
+
+    if (!data.customer) {
+      let err = new Error('customer ' + task.customer_id + ' is no longer available')
+      return done(err)
+    }
+
+    if (!data.host) {
+      let err = new Error('host ' + task.host_id + ' is no longer available')
+      return done(err)
+    }
+
+    if (task.type==='script' && !data.script) {
+      let err = new Error('script ' + task.script_id + ' is no longer available')
+      return done(err)
+    }
+
+    return done(null, data)
+  })
+}
+
+module.exports = new Scheduler()

@@ -623,8 +623,8 @@ const detectTaskTriggersOfSameHost = (triggers, host, next) => {
 
   // pre-filter triggers data. should has been previously populated
   // if not valid object, skip
-  const filteredTriggers = triggers.filter((event) => {
-    return !(!event||!event._id)
+  const filteredTriggers = triggers.filter(event => {
+    return !(!event || !event._id)
   },[])
 
   if (filteredTriggers.length === 0) {
@@ -677,10 +677,11 @@ const isHostEvent = (event_id, host_id, next) => {
   // use fetch instead of findById because fetch also populate
   // the correct emitter
   Event.fetch({ _id: event_id }, (err,events) => {
-    if (err) return next(err)
-    if (!events) return next(null, false)
-    if (!Array.isArray(events)||events.length===0)
+    if (err) { return next(err) }
+    if (!events) { return next(null, false) }
+    if (!Array.isArray(events) || events.length===0) {
       return next(null, false)
+    }
 
     const event = events[0]
     if (!event.emitter) {
@@ -689,7 +690,7 @@ const isHostEvent = (event_id, host_id, next) => {
       logger.error(err)
       next(err, false)
     } else {
-      if (!event.emitter.host_id) { // webhooks
+      if (!event.emitter.host_id) { // webhooks, special tasks
         next(null,false)
       } else {
         // emitter.host_id and host_id are ObjectId's 

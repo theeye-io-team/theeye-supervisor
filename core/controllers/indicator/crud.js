@@ -1,32 +1,12 @@
 const extend = require('lodash/assign')
-const App = require('../app')
-const audit = require('../lib/audit')
-const router = require('../router')
-const dbFilter = require('../lib/db-filter')
-const IndicatorModels = require('../entity/indicator')
-const logger = require('../lib/logger')('eye:controller:indicator')
-const TopicsConstants = require('../constants/topics')
-const Constants = require('../constants')
-
-const findByTitleMiddleware = (req, res, next) => {
-  const title = req.params.title
-  const customer = req.customer
-
-  IndicatorModels.Indicator.findOne({
-    title,
-    customer_id: customer._id
-  }, (err, indicator) => {
-    if (err) {
-      logger.error(err)
-      return res.send(500, err.message)
-    }
-
-    if (!indicator) { return res.send(404, 'indicator not found') }
-
-    req.indicator = indicator
-    return next()
-  })
-}
+const App = require('../../app')
+const audit = require('../../lib/audit')
+const router = require('../../router')
+const dbFilter = require('../../lib/db-filter')
+const IndicatorModels = require('../../entity/indicator')
+const logger = require('../../lib/logger')('eye:controller:indicator:crud')
+const TopicsConstants = require('../../constants/topics')
+const Constants = require('../../constants')
 
 module.exports = function (server, passport) {
   var middlewares = [
@@ -272,4 +252,24 @@ const validTitle = (title) => {
   //} else {
   //  return true
   //}
+}
+
+const findByTitleMiddleware = (req, res, next) => {
+  const title = req.params.title
+  const customer = req.customer
+
+  IndicatorModels.Indicator.findOne({
+    title,
+    customer_id: customer._id
+  }, (err, indicator) => {
+    if (err) {
+      logger.error(err)
+      return res.send(500, err.message)
+    }
+
+    if (!indicator) { return res.send(404, 'indicator not found') }
+
+    req.indicator = indicator
+    return next()
+  })
 }

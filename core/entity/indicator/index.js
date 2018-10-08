@@ -12,6 +12,11 @@ const ProgressSchema = new BaseSchema({
   type: { type: String, default: 'progress' }
 })
 
+const CounterSchema = new BaseSchema({
+  value: { type: Number, default: 0 },
+  type: { type: String, default: 'counter' }
+})
+
 const TextSchema = new BaseSchema({
   value: { type: String, default: '' },
   type: { type: String, default: 'text' }
@@ -20,8 +25,10 @@ const TextSchema = new BaseSchema({
 const Indicator = mongodb.model('Indicator', IndicatorSchema)
 const ProgressIndicator = Indicator.discriminator('ProgressIndicator', ProgressSchema)
 const TextIndicator = Indicator.discriminator('TextIndicator', TextSchema)
+const CounterIndicator = Indicator.discriminator('CounterIndicator', CounterSchema)
 
 Indicator.ensureIndexes()
+CounterIndicator.ensureIndexes()
 ProgressIndicator.ensureIndexes()
 TextIndicator.ensureIndexes()
 
@@ -38,10 +45,14 @@ const IndicatorFactory = function (attrs) {
   if (attrs.type === 'text') {
     return new TextIndicator(attrs)
   }
+  if (attrs.type === 'counter') {
+    return new CounterIndicator(attrs)
+  }
   return new Indicator(attrs)
 }
 
 exports.Factory = IndicatorFactory
 exports.Indicator = Indicator
 exports.Progress = ProgressIndicator
+exports.Counter = CounterIndicator
 exports.Text = TextIndicator

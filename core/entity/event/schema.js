@@ -44,7 +44,7 @@ function BaseSchema (specs) {
       .select('_id emitter name _type emitter_id')
       .populate({
         path: 'emitter',
-        select: '_id name _type type host workflow_id',
+        select: '_id name _type type host host_id workflow_id',
         populate: {
           path: 'host',
           select: 'hostname _id'
@@ -52,26 +52,6 @@ function BaseSchema (specs) {
       }).exec((err, events) => {
         return done(err, events)
       })
-
-    // there is a bug in mongoose with this schemas.
-    // populate within the find query does not work as expected
-    //this
-    //.find(query)
-    //.exec((err, events) => {
-    //  async.each(
-    //    events,
-    //    (e, callback) => {
-    //      e.populate({
-    //        path: 'emitter',
-    //        populate: {
-    //          path: 'host',
-    //          model: 'Host'
-    //        }
-    //      }, callback)
-    //    },
-    //    (err) => done(err, events)
-    //  )
-    //})
   }
 
   return this

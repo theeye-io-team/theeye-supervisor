@@ -144,11 +144,17 @@ module.exports = {
     const customer = options.customer
     const host = options.host || {}
     const done = options.done || (() => {})
-    var data
 
     logger.log('creating task from template %j', template)
 
-    data = lodashAssign({}, (template.toObject||(() => template))(), {
+    let templateData
+    if (template.toObject) {
+      templateData = template.toObject()
+    } else {
+      templateData = template
+    }
+
+    let data = lodashAssign({}, templateData, {
       customer_id: customer._id,
       customer: customer,
       host: host._id,
@@ -550,4 +556,8 @@ const createTaskEvents = (task, customer, next) => {
       return next(err, events)
     }
   )
+}
+
+const toObject = () => {
+  return 
 }
