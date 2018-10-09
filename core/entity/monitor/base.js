@@ -48,11 +48,3 @@ MonitorSchema.methods.templateProperties = function() {
 
   return values
 }
-
-MonitorSchema.methods.update = function(input,next) {
-  var monitor = this;
-  monitor.setUpdates(input, function(err,updates){
-    monitor.set(updates)
-    monitor.save(next)
-  })
-}

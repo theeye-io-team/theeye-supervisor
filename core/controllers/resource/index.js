@@ -281,7 +281,7 @@ const controller = {
 
     const params = MonitorManager.validateData(body)
     if (params.errors && params.errors.hasErrors()) {
-      return res.send(400, params.errors);
+      return res.send(400, params.errors)
     }
 
     if (resource.type=='host') {
@@ -295,9 +295,9 @@ const controller = {
 
     const doUpdate = () => {
       App.resource.update({
-        resource: resource,
-        updates: updates
-      },(err,resource) => {
+        resource,
+        updates
+      }, (err,resource) => {
         if (err) {
           logger.error(err)
           res.send(500)
@@ -314,9 +314,9 @@ const controller = {
           logger.error(err)
           res.send(500)
         }
-        if (!host) {
-          return res.send(400,'invalid host')
-        }
+
+        if (!host) { return res.send(400,'invalid host') }
+
         updates.host_id = host._id
         updates.host = host._id
         updates.hostname = host.hostname

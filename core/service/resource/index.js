@@ -607,7 +607,7 @@ Service.createDefaultEvents = function (monitor,customer,done) {
  * update entities
  *
  */
-Service.update = function(input,next) {
+Service.update = (input, next) => {
   const updates = input.updates
   const resource = input.resource
 
@@ -615,15 +615,19 @@ Service.update = function(input,next) {
 
   // remove properties that cannot be changed from updates, if present
   delete updates.monitor
+  delete updates.customer_id
   delete updates.customer
   delete updates.user_id
   delete updates.user
+  delete updates._id
+  delete updates.id
+  delete updates.type
 
-  // when model is changed remove the linked template
+  // remove monitor from template
   updates.template = null
   updates.template_id = null
 
-  resource.update(Object.assign({},updates), (err) => {
+  resource.update(Object.assign({}, updates), err => {
     if (err) {
       logger.error(err)
       return next(err)
@@ -631,7 +635,7 @@ Service.update = function(input,next) {
 
     MonitorModel.findOne({
       resource_id: resource._id
-    }, function (error,monitor) {
+    }, (error, monitor) => {
       if (error) {
         logger.error(err)
         return next(error)
@@ -640,15 +644,15 @@ Service.update = function(input,next) {
         return next(new Error('resource monitor not found'), null)
       }
 
-      var previous_host_id = monitor.host_id
-      var new_host_id
+      let previous_host_id = monitor.host_id
+      let new_host_id
       if (updates.host_id) {
         new_host_id = updates.host_id.toString() // mongo ObjectID
       } else {
         new_host_id = monitor.host_id // current
       }
 
-      monitor.update(updates,(err) => {
+      ResourceMonitorService.update(monitor, updates, (err) => {
         if (err) {
           logger.error(err)
           return next(err)

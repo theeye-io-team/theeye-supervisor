@@ -2,12 +2,13 @@
 
 const isURL = require('validator/lib/isURL')
 const isMongoId = require('validator/lib/isMongoId')
-const assign = require('lodash/assign')
+//const assign = require('lodash/assign')
+const assign = Object.assign
 
 const logger = require('../../lib/logger')('service:resource:monitor')
 const ErrorHandler = require('../../lib/error-handler')
 const router = require('../../router')
-const MonitorEntity = require('../../entity/monitor').Entity
+const MonitorModel = require('../../entity/monitor').Entity
 const Job = require('../../entity/job').Job
 const MonitorConstants = require('../../constants/monitors')
 
@@ -43,32 +44,6 @@ function parseUnixOctalModeString (mode) {
  * @author Facundo
  */
 module.exports = {
-  /**
-   *
-   *
-   *
-   *
-   *
-   *
-   *    WARNING WARNING
-   *
-   *   NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE NOTE
-   *
-   *
-   * THIS IS JUST FOR THE CREATION PART
-   * UPDATE IS IN THIS FILE
-   *
-   * entity/monitor/schema.js
-   *
-   *
-   * UGLY I KNOW....
-   *
-   *
-   *
-   *
-   *
-   *
-   */
   setMonitorData (type, input, next) {
     var monitor;
     logger.log('setting up monitor data');
@@ -118,6 +93,104 @@ module.exports = {
       return next(e, input)
     }
   },
+  update (monitor, input, next) {
+    next || (next = function(){})
+
+    const type = monitor.type
+    logger.debug('updating monitor properties to %j', input)
+
+    /** set common properties **/
+    if (input.looptime) { monitor.looptime = input.looptime }
+    if (input.tags) { monitor.tags = input.tags }
+    if (input.name) { monitor.name = input.name }
+    if (typeof input.description === 'string') {
+      monitor.description = input.description
+    }
+    if (typeof input.enable == 'boolean') {
+      monitor.enable = input.enable
+    }
+    if (input.host_id) {
+      monitor.host = input.host_id
+      monitor.host_id = input.host_id
+    }
+
+    // remove monitor from template
+    monitor.template = null
+    monitor.template_id = null
+
+    // prepare monitor.config
+    let config = monitor.config || {}
+    if (input.config) { assign(input, input.config) }
+
+    switch (type) {
+      case 'scraper':
+        //monitor.host_id = input.external_host_id || input.host_id;
+        monitor.host_id = input.host_id;
+        config.external = Boolean(input.external_host_id);
+        config.url = input.url;
+        config.timeout = input.timeout;
+        config.method = input.method;
+        config.json = (input.json=='true'||input.json===true);
+        config.gzip = (input.gzip=='true'||input.gzip===true);
+        config.parser = input.parser;
+        config.status_code = input.status_code;
+        config.body = input.body;
+
+        if(input.parser=='pattern'){
+          config.pattern = input.pattern;
+          config.script = null;
+        } else if(input.parser=='script'){
+          config.pattern = null;
+          config.script = input.script;
+        } else {
+          config.pattern = null;
+          config.script = null;
+        }
+        break;
+      case 'process':
+        config.ps.raw_search = input.raw_search;
+        config.ps.is_regexp = Boolean(input.is_regexp=='true' || input.is_regexp===true);
+        config.ps.pattern = (!config.ps.is_regexp) ? RegExp.escape(input.raw_search) : input.raw_search;
+        config.ps.psargs = input.psargs;
+        break;
+      case 'file':
+        config.is_manual_path = input.is_manual_path
+        config.path = input.path
+        config.basename = input.basename
+        config.dirname = input.dirname
+        config.permissions = input.permissions
+        config.os_username = input.os_username
+        config.os_groupname = input.os_groupname
+        config.file = input.file
+        break;
+      case 'script':
+        if (input.script_id) config.script_id = input.script_id;
+        if (input.script_arguments) config.script_arguments = input.script_arguments;
+        if (input.script_runas) config.script_runas = input.script_runas;
+        break;
+      case 'dstat':
+        if (input.limit) { assign(input, input.limit) }
+        if (input.cpu) { config.limit.cpu = input.cpu }
+        if (input.mem) { config.limit.mem = input.mem }
+        if (input.cache) { config.limit.cache = input.cache }
+        if (input.disk) { config.limit.disk = input.disk }
+        break;
+      case 'nested':
+        config.monitors = input.monitors
+      case 'host':
+      case 'psaux':
+        // no custom configuration
+        break;
+      default:
+        var error = new Error('monitor type "' + type + '" unsupported')
+        logger.err(error.message);
+        return next(error);
+        break;
+    }
+
+    monitor.config = config
+    monitor.updateOne(monitor.toObject(), {}, next)
+  },
   /**
    *
    * @param {Object} input
@@ -134,7 +207,7 @@ module.exports = {
       errors.required('looptime', input.looptime)
     }
 
-    var data = assign({},input,{
+    let data = assign({},input,{
       name: input.name,
       description: input.description,
       type: type,
@@ -286,7 +359,7 @@ module.exports = {
         logger.data(monitor);
 
         monitor.resource = monitor.resource_id = input.resource._id;
-        MonitorEntity.create(
+        MonitorModel.create(
           monitor,
           function(error,monitor){
             if (error) {
@@ -353,12 +426,12 @@ module.exports = {
     logger.log('running query %j', query);
     if (options.populate) {
       logger.log('populating monitors');
-      MonitorEntity
+      MonitorModel
         .find(query)
         .populate('resource')
         .exec(doneExec);
     } else {
-      MonitorEntity
+      MonitorModel
         .find(query)
         .exec(doneExec);
     }

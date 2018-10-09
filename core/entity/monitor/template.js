@@ -12,19 +12,19 @@ const TemplateSchema = new BaseSchema({
   _type: { type: String, 'default': 'MonitorTemplate' }
 }, { collection: 'monitor_templates' })
 
-TemplateSchema.methods.update = function(input, next) {
-  var monitor = this;
-  monitor.setUpdates(input, function(err,updates){
-    Entity.update(
-      { _id: monitor._id },
-      updates,
-      function(error, qr) {
-        if(error) debug(error);
-        if(next) next(error, qr);
-      }
-    );
-  });
-}
+//TemplateSchema.methods.update = function(input, next) {
+//  var monitor = this;
+//  monitor.setUpdates(input, function(err,updates){
+//    Entity.update(
+//      { _id: monitor._id },
+//      updates,
+//      function(error, qr) {
+//        if(error) debug(error);
+//        if(next) next(error, qr);
+//      }
+//    );
+//  });
+//}
 
 TemplateSchema.methods.publish = function (options, next) {
   var data = this.toObject()

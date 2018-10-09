@@ -87,12 +87,16 @@ const controller = {
     if (!input.name) errors.required('name', input.name)
     if (!input.type) errors.required('type', input.type)
 
-    if (input.type!==TaskConstants.TYPE_APPROVAL && input.type!==TaskConstants.TYPE_DUMMY) {
+    if (
+      input.type===TaskConstants.TYPE_SCRIPT ||
+      input.type===TaskConstants.TYPE_SCRAPER
+    ) {
       if (!req.host) {
         errors[!req.body.host?'required':'invalid']('host', req.host)
+      } else {
+        input.host = req.host._id
+        input.host_id = req.host._id
       }
-      input.host = req.host._id
-      input.host_id = req.host._id
     }
 
     if (input.type===TaskConstants.TYPE_APPROVAL) {
