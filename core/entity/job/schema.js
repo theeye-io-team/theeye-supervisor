@@ -61,8 +61,10 @@ function BaseSchema (props) {
       }
     }
 
-    data.timeout = data.task.timeout
-    data.env = data.task.env
+    if (typeof data.task === 'object') {
+      data.timeout = data.task.timeout
+      data.env = data.task.env
+    }
 
     if (typeof data.customer === 'object') {
       delete data.customer
