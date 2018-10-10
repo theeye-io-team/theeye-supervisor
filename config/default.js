@@ -35,7 +35,7 @@ module.exports = {
     "password":"",
     "hosts": "localhost:27017",
     "database": "theeye",
-    "replicaSet": "replica set name" // >> will add ?replicaSet="name" to the connection string
+    "replicaSet": "replica_set_name" // >> will concat '?replicaSet="replica_set_name"' to the end of the connection string
   */
   },
   "monitor": {
