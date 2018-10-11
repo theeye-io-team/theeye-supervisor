@@ -19,13 +19,17 @@ const graphlib = require('graphlib')
  */
 module.exports = function (payload) {
   if (payload.topic === TopicConstants.workflow.execution) {
-    // a task belonging to a workflow has finished
-    handleWorkflowEvent(payload)
-  } else if (
+    if (payload.workflow_job_id) {
+      // a task belonging to a workflow has finished
+      handleWorkflowEvent(payload)
+    }
+  }
+
+  if (
     payload.topic === TopicConstants.task.execution ||
     payload.topic === TopicConstants.monitor.state ||
-    payload.topic === TopicConstants.webhook.triggered
-    //payload.topic === TopicConstants.workflow.execution // not yet
+    payload.topic === TopicConstants.webhook.triggered ||
+    payload.topic === TopicConstants.workflow.execution // a task inside a workflow can trigger tasks outside the workflow
   ) {
     // workflow trigger has occur
     triggerWorkflowByEvent(payload)
