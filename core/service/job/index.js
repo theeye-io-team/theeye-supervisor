@@ -754,7 +754,7 @@ const cancelJobNextLifecycle = (job) => {
  *
  */
 const dispatchFinishedTaskExecutionEvent = (job, trigger) => {
-  let { task_id, workflow_id, output } = job
+  let { task_id, output } = job
   let topic
 
   // cannot trigger a workflow event without a task
@@ -773,7 +773,7 @@ const dispatchFinishedTaskExecutionEvent = (job, trigger) => {
     }
 
     // trigger task execution event within a workflow
-    if (workflow_id) {
+    if (job.workflow_id && job.workflow_job_id) {
       topic = TopicsConstants.workflow.execution
     } else {
       topic = TopicsConstants.task.execution
@@ -783,7 +783,7 @@ const dispatchFinishedTaskExecutionEvent = (job, trigger) => {
       topic,
       event,
       workflow_job_id: job.workflow_job_id, // current workflow execution
-      workflow_id,
+      workflow_id: job.workflow_id,
       output
     })
   })
