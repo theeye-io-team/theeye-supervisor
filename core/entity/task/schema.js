@@ -44,6 +44,8 @@ function TaskSchema (props, specs) {
     delete values.customer_id
     delete values.workflow
     delete values.workflow_id
+    delete values.script
+    delete values.script_id
     return values
   }
 

@@ -23,7 +23,6 @@ ScriptSchema.methods.templateProperties = function () {
   values.script_arguments = this.script_arguments
   values.task_arguments = this.task_arguments
   values.script_runas = this.script_runas
-  values.script_id = this.script_id
   return values
 }
 
