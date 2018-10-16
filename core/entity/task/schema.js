@@ -32,6 +32,7 @@ function TaskSchema (props, specs) {
     values.source_model_id = this._id
 
     // remove non recipe properties
+    delete values.triggers
     delete values.id
     delete values.host
     delete values.host_id
