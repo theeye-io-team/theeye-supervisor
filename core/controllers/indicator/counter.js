@@ -17,6 +17,7 @@ module.exports = function (server, passport) {
     middlewares,
     router.requireCredential('agent'),
     router.resolve.idToEntity({ param:'indicator', required: true }),
+    isNumericIndicator,
     controller.increase,
     audit.afterUpdate('indicator', { display: 'title' }),
     notifyEvent({ operation: Constants.UPDATE })
@@ -27,6 +28,7 @@ module.exports = function (server, passport) {
     middlewares,
     router.requireCredential('agent'),
     router.resolve.idToEntity({ param:'indicator', required: true }),
+    isNumericIndicator,
     controller.decrease,
     audit.afterUpdate('indicator', { display: 'title' }),
     notifyEvent({ operation: Constants.UPDATE })
@@ -37,6 +39,7 @@ module.exports = function (server, passport) {
     middlewares,
     router.requireCredential('agent'),
     router.resolve.idToEntity({ param:'indicator', required: true }),
+    isNumericIndicator,
     controller.restart,
     audit.afterUpdate('indicator', { display: 'title' }),
     notifyEvent({ operation: Constants.UPDATE })
@@ -95,4 +98,12 @@ const notifyEvent = (options) => {
 
     if (next) { return next() }
   }
+}
+
+const isNumericIndicator = (req, res, next) => {
+  const indicator = req.indicator
+  if (typeof indicator.value !== 'number') {
+    return res.send(400, 'indicator type must be numeric')
+  }
+  next()
 }
