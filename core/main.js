@@ -58,11 +58,11 @@ require('./environment').setenv(function(){
         App.scheduler = scheduler
         App.eventDispatcher = Events.createDispatcher() 
         App.notifications = require('./service/notification')
-        App.start()
+        App.startApi()
         logger.log('supervisor api is running')
         require('./service/monitor').start()
 
-        App.startLocal()
+        App.startCommander()
       })
     })
   })

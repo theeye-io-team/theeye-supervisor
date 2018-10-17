@@ -17,8 +17,8 @@ const App = {
       done()
     })
   },
-  start: require('./server'),
-  startLocal: require('./local_server')
+  startApi: require('./api'),
+  startCommander: require('./commander')
 }
 
 const getApplicationUser = (next) => {
