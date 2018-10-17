@@ -61,6 +61,8 @@ require('./environment').setenv(function(){
         App.start()
         logger.log('supervisor api is running')
         require('./service/monitor').start()
+
+        App.startLocal()
       })
     })
   })

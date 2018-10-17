@@ -3,13 +3,13 @@
 const debug = require('debug');
 
 function Logger (name) {
-  var self = {};
+  var self = {}
 
-  var dlog   = debug('theeye:log:' + name);
-  var derror = debug('theeye:error:' + name);
-  var ddata  = debug('theeye:data:' + name);
-  var ddebug = debug('theeye:debug:' + name);
-  var dwarn  = debug('theeye:warn:' + name);
+  var dlog = debug('theeye:log:' + name)
+  var ddata = debug('theeye:data:' + name)
+  var dwarn = debug('theeye:warn:' + name)
+  var derror = debug('theeye:error:' + name)
+  var ddebug = debug('theeye:debug:' + name)
 
   self.log = function flog(){
     dlog.apply(self, arguments);
@@ -31,7 +31,9 @@ function Logger (name) {
     ddebug.apply(self, arguments);
   };
 
-  return self;
+  self.instance = debug
+
+  return self
 }
 
 module.exports =  Logger;
