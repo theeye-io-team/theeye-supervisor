@@ -1,3 +1,4 @@
+const App = require('../app')
 const restify = require('restify')
 const logger = require('../lib/logger')('app:local_server')
 
@@ -21,7 +22,14 @@ module.exports = function () {
 }
 
 const routes = (server) => {
-  server.put('/debug', (req, res, next) => {
+  debugCommands(server)
+  //configurationCommands(server)
+}
+
+const debugCommands = (server) => {
+  const debug = '/debug'
+
+  server.put(debug, (req, res, next) => {
     let namespace = req.query.namespace
     if (!namespace) {
       logger.instance.disable()
@@ -34,3 +42,11 @@ const routes = (server) => {
     }
   })
 }
+//
+//const configurationCommands = (server) => {
+//  const config = '/config'
+//
+//  server.get(config, (req, res, next) => {
+//    res.send(200, App.config)
+//  })
+//}

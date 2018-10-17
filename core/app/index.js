@@ -4,7 +4,12 @@ const config = require('config')
 const logger = require('../lib/logger')('app')
 const User = require('../entity/user').Entity
 
-const App = {
+const App = {}
+
+module.exports = App
+
+Object.assign(App, {
+  config: Object.assign({}, config),
   initialize (done) {
     getApplicationUser((error,user) => {
       if (error) {
@@ -19,7 +24,7 @@ const App = {
   },
   startApi: require('./api'),
   startCommander: require('./commander')
-}
+})
 
 const getApplicationUser = (next) => {
   User.findOne(config.system.user, (err, user) => {
@@ -36,5 +41,3 @@ const getApplicationUser = (next) => {
     }
   })
 }
-
-module.exports = App
