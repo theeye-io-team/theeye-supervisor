@@ -92,7 +92,6 @@ module.exports = (server, passport) => {
     '/job/secret/:secret', [
       router.resolve.customerNameToEntity({ required: true }),
       router.resolve.idToEntity({ param: 'task', required: true }),
-      //router.ensureBelongsToCustomer({ documentName: 'task' }),
       router.requireSecret('task')
     ],
     (req, res, next) => {

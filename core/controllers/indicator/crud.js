@@ -7,6 +7,7 @@ const IndicatorModels = require('../../entity/indicator')
 const logger = require('../../lib/logger')('eye:controller:indicator:crud')
 const TopicsConstants = require('../../constants/topics')
 const Constants = require('../../constants')
+const Acl = require('../../lib/acl')
 
 module.exports = function (server, passport) {
   var middlewares = [
@@ -104,7 +105,12 @@ const controller = {
       })
     )
 
-   IndicatorModels
+    if ( !Acl.hasAccessLevel(req.user.credential, 'admin') ) {
+      // find what this user can access
+      filter.where.acl = req.user.email
+    }
+
+    IndicatorModels
       .Indicator
       .find(filter.where)
       .exec((err, models) => {

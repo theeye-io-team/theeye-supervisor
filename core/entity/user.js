@@ -5,28 +5,30 @@ const Schema  = require('mongoose').Schema
 const FetchBy = require('../lib/fetch-by')
 
 const EntitySchema = Schema({
-  token: { type:String, index:true },
-  client_id: { type:String, index:true },
-  client_secret: { type:String },
-  username: { type:String, required:false, 'default':null },
-  email: { type:String, unique:true, required:true },
-  emails: { type:Array, 'default':[] },
+  token: { type: String, index: true },
+  client_id: { type: String, index: true },
+  client_secret: { type: String },
+  //username: { type: String, unique: true, required: true },
+  username: { type: String, required: true },
+  email: { type: String, unique: true, required: true },
+  emails: { type: Array, 'default': [] },
   customers: [{
-    customer: { type:Schema.Types.ObjectId, ref:'Customer' },
-    _id:String,
-    name:String
+    customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
+    _id: String,
+    name: String
   }],
-  credential: { type:String , 'default':null },
-  enabled: { type:Boolean, 'default':false },
-  last_update: { type:Date, 'default':new Date() },
-  creation_date: { type:Date, 'default':new Date() },
-  timestamp: { type:String, 'default':Date.now() },
-});
+  credential: { type: String , 'default': null },
+  enabled: { type: Boolean, 'default': false },
+  last_update: { type: Date, 'default': new Date() },
+  creation_date: { type: Date, 'default': new Date() },
+  timestamp: { type: String, 'default': Date.now() },
+})
 
 // Duplicate the ID field.
 EntitySchema.virtual('id').get(function(){
-  return this._id.toHexString();
-});
+  return this._id.toHexString()
+})
+
 const def = {
   getters: true,
   virtuals: true,
@@ -40,7 +42,6 @@ const def = {
 
 EntitySchema.set('toJSON'  , def)
 EntitySchema.set('toObject', def)
-
 
 EntitySchema.methods.publish = function (options, nextFn) {
   var user = this

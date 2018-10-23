@@ -1,9 +1,9 @@
 var debug = require('../lib/logger')('service:user');
 var User = require('../entity/user').Entity;
 var Customer = require('../entity/customer').Entity;
-var crypto = require('crypto');
 var Schema  = require('mongoose').Schema;
 var async = require('async');
+const randomToken = require('../lib/token').randomToken
 
 /**
  *
@@ -58,7 +58,7 @@ module.exports = {
    * @param {Array} filters query
    * @return null
    */
-  findBy : function(filters, next) {
+  findBy (filters, next) {
     var query = {};
 
     for(var f in filters) {
@@ -107,9 +107,6 @@ module.exports = {
    * @author Facundo
    * @return {String} sha1 token
    */
-  randomHash: function() {
-    return crypto.randomBytes(20).toString('hex');
-  },
   /**
    * @author Facundo
    * @param {Array} options
@@ -125,9 +122,9 @@ module.exports = {
         if(error) return next(error);
 
         var data = {
-          client_id: (options.client_id||self.randomHash()),
-          client_secret: (options.client_secret||self.randomHash()),
-          token: self.randomHash(),
+          client_id: (options.client_id||randomToken()),
+          client_secret: (options.client_secret||randomToken()),
+          token: randomToken(),
           email: options.email,
           customers: customers,
           credential: options.credential,
@@ -146,4 +143,4 @@ module.exports = {
       }
     );
   }
-};
+}

@@ -1,11 +1,11 @@
-var debug = require('debug')('controller:resource');
-var json = require('../lib/jsonresponse');
-var _ = require('lodash');
+var debug = require('debug')('controller:monitor');
+var after = require('lodash/after');
 var ResourceMonitor = require('../entity/monitor').Entity;
 var router = require('../router');
 var dbFilter = require('../lib/db-filter');
 
 module.exports = function (server, passport) {
+  // old api. old monitors page
   server.get('/:customer/monitor/:monitor', [
     passport.authenticate('bearer',{session:false}),
     router.requireCredential('viewer'),
@@ -21,6 +21,8 @@ module.exports = function (server, passport) {
     router.ensureCustomer,
     router.resolve.idToEntity({param:'resource'})
   ], controller.fetch);
+
+  // new api. new cruds
 }
 
 var controller = {
@@ -55,15 +57,13 @@ var controller = {
         if(total==0) return res.send(200,[]);
 
         var data = [];
-        var published = _.after(total, function(){
+        var published = after(total, function(){
           res.send(200, data);
         });
 
         for(var i=0; i<total; i++){
           var monitor = monitors[i];
-          monitor.publish({ 
-            'populate' : true 
-          },function(err,pub){
+          monitor.publish({ populate: true }, function (err, pub) {
             if(pub != null) data.push(pub);
             published();
           }); 

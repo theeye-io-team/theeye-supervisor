@@ -4,17 +4,17 @@ const merge = require('lodash/merge');
 const assign = require('lodash/assign');
 const isURL = require('validator/lib/isURL');
 
-var logger = require('../lib/logger')('controller:customer');
-var json = require('../lib/jsonresponse');
-var router = require('../router');
+var logger = require('../../lib/logger')('controller:customer');
+var json = require('../../lib/jsonresponse');
+var router = require('../../router');
 
-var User = require("../entity/user").Entity;
-var CustomerService = require('../service/customer');
-var UserService = require('../service/user');
-var ResourceService = require('../service/resource');
-var HostService = require('../service/host');
+var User = require("../../entity/user").Entity;
+var CustomerService = require('../../service/customer');
+var UserService = require('../../service/user');
+var ResourceService = require('../../service/resource');
+var HostService = require('../../service/host');
 
-module.exports = function (server, passport) {
+module.exports = (server, passport) => {
   var middlewares = [
     passport.authenticate('bearer', {session:false}),
     router.requireCredential('root'),
@@ -295,4 +295,4 @@ var controller = {
       next();
     });
   }
-};
+}
