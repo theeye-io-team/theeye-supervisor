@@ -2,6 +2,7 @@
 const Schema = require('mongoose').Schema
 const BaseSchema = require('../base-schema')
 const FetchBy = require('../../lib/fetch-by')
+const randomSecret = require('../../lib/random-secret')
 const Constants = require('../../constants/monitors')
 const ObjectId = Schema.Types.ObjectId
 
@@ -21,7 +22,9 @@ class IndicatorSchema extends BaseSchema {
       severity: { type: String, default: Constants.MONITOR_SEVERITY_HIGH },
       alerts: { type: Boolean, default: true },
       state: { type: String, default: 'normal' },
-      sticky: { type: Boolean, default: false }
+      sticky: { type: Boolean, default: false },
+      read_only: { type: Boolean, default: false },
+      secret: { type: String, default: randomSecret }, // one way hash
     }
 
     // Schema constructor
