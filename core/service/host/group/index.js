@@ -139,7 +139,6 @@ const Service = module.exports = {
         return next(err)
       }
 
-
       logger.log('creating recipe with provided data')
       createRecipe({
         tags: [],

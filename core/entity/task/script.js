@@ -20,9 +20,11 @@ module.exports = ScriptSchema
 const templateProperties = ScriptSchema.methods.templateProperties
 ScriptSchema.methods.templateProperties = function () {
   var values = templateProperties.apply(this, arguments)
+  values.env = this.env
+  values.script_id = this.script_id
   values.script_arguments = this.script_arguments
-  values.task_arguments = this.task_arguments
   values.script_runas = this.script_runas
+  values.task_arguments = this.task_arguments
   return values
 }
 
