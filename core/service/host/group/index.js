@@ -588,21 +588,23 @@ const generateTemplates = (input, done) => {
               //break
             }
           } else if (resource.type === 'script') {
-            if (resource.monitor.config.script_id === file.source_model_id.toString()) {
-              resource.monitor.config.script_id = file._id.toString()
-              //resources.splice(rdx, 1)
-              //break
+            if (resource.monitor.config && resource.monitor.config.script_id) {
+              if (resource.monitor.config.script_id === file.source_model_id.toString()) {
+                resource.monitor.config.script_id = file._id.toString()
+                //resources.splice(rdx, 1)
+                //break
+              }
             }
           }
         }
         for (let tdx = 0; tdx < tasks.length; tdx++) {
           let task = tasks[tdx]
           if (task.type === 'script') {
-            if (task.script_id.toString() === file.source_model_id.toString()) {
-              task.script = file._id.toString()
-              task.script_id = file._id.toString()
-              //tasks.splice(tdx, 1)
-              //break
+            if (task.script_id) {
+              if (task.script_id.toString() === file.source_model_id.toString()) {
+                task.script = file._id.toString()
+                task.script_id = file._id.toString()
+              }
             }
           }
         }

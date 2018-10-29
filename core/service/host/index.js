@@ -287,7 +287,7 @@ HostService.config = (host, customer, next) => {
       const completed = after(tasks.length, done)
 
       tasks.forEach(task => {
-        if (task.type===TaskConstants.TYPE_SCRIPT) {
+        if (task.type === TaskConstants.TYPE_SCRIPT && task.script_id) {
           filesToConfigure.push(task.script_id.toString())
         }
 
