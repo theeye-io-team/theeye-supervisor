@@ -106,7 +106,8 @@ module.exports = (server, passport) => {
     middlewares.concat(
       router.requireCredential('admin')
     ),
-    controller.removeFinished)
+    controller.removeFinished
+  )
 }
 
 const controller = {
@@ -228,42 +229,47 @@ const controller = {
     let query = req.query || {}
 
     if (/Workflow/.test(query.type)) {
-      Job.aggregate([{
-        $match: {
-          workflow_id: query.id.toString(),
-          customer_id: customer.id.toString()
-        }
-      }, {
-        $group: {
-          _id: '$workflow_job_id',
-          tasksJobs: {
-            $push: '$$ROOT'
+      Job.aggregate([
+        {
+          $match: {
+            workflow_id: query.id.toString(),
+            customer_id: customer.id.toString()
+          }
+        }, {
+          $group: {
+            _id: '$workflow_job_id',
+            tasksJobs: {
+              $push: '$$ROOT'
+            }
+          }
+        }, {
+          $project: {
+            //tasksJobs: 1,
+            finished: {
+              $allElementsTrue: {
+                $map: {
+                  input: '$tasksJobs',
+                  as: 'taskjob',
+                  in: {
+                    $or: [
+                      { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.FINISHED ] },
+                      { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.TERMINATED ] },
+                      { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.CANCELED ] },
+                      { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.EXPIRED ] },
+                      { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.COMPLETED ] }
+                    ]
+                  }
+                }
+              }
+            },
+            _id: 1
+          }
+        }, {
+          $match: {
+            finished: true
           }
         }
-      }, {
-        $project: {
-          tasksJobs: 1,
-          finished: {
-            $allElementsTrue: {
-              $map: {
-                input: '$tasksJobs',
-                as: 'taskjob',
-                in: { $or: [
-                  { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.FINISHED ] },
-                  { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.TERMINATED ] },
-                  { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.CANCELED ] },
-                  { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.EXPIRED ] },
-                  { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.COMPLETED ] }
-                ] }
-              }
-            }
-          },
-          _id: 1 }
-      }, {
-        $match: {
-          finished: true
-        }
-      }]).exec((err, result) => {
+      ]).exec((err, result) => {
         if (err) { return res.send(500, err) }
 
         result.forEach(wfJob => {
@@ -272,13 +278,13 @@ const controller = {
               { _id: { $eq: wfJob._id } },
               { workflow_job_id: { $eq: wfJob._id } }
             ]
-          }, function (err) {
-            if (err) logger.error('%o', err)
+          }, (err) => {
+            if (err) { logger.error('%o', err) }
           })
         })
-
         res.send(200, {})
       })
+
     } else if (/Task/.test(query.type)) {
       Job.remove({
         task_id: query.id.toString(),

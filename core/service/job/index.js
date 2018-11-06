@@ -313,7 +313,6 @@ module.exports = {
         job, user, customer, task
       })
 
-      //new ResultMail(job) // job completed mail
       dispatchFinishedTaskExecutionEvent (job, trigger_name)
     })
   },
@@ -525,37 +524,120 @@ const currentIntegrationJob = (job, next) => {
  *
  */
 const removeExceededJobsCount = (task, next) => {
+  if (task.workflow_id) {
+    removeExceededJobsCountByWorkflow(
+      task.workflow_id.toString(),
+      task.customer_id,
+      next
+    )
+  } else {
+    removeExceededJobsCountByTask(task._id.toString(), next)
+  }
+}
+
+const removeExceededJobsCountByTask = (task_id, next) => {
   const LIMIT = JobConstants.JOBS_LOG_COUNT_LIMIT - 1 // docs limit minus 1, because why are going to create the new one after removing older documents
   const Job = JobModels.Job
+  Job.count({ task_id }, (err, count) => {
+    if (err) { return next(err) }
 
-  Job.count(
-    { task_id: task._id.toString() },
-    (err, count) => {
-      if (err) { return next(err) }
+    // if count > limit allowed, then search top 6
+    // and destroy the 6th and left the others
+    if (count > LIMIT) {
+      Job
+        .find({ task_id })
+        .sort({ _id: -1 })
+        .limit(LIMIT)
+        .exec((err, docs) => {
+          let lastDoc = docs[LIMIT - 1]
 
-      // if count > limit allowed, then search top 6, and destroy the 6th and the others
-      if (count > LIMIT) {
-        Job
-          .find({ task_id: task._id.toString() })
-          .sort({ _id: -1 })
-          .limit(LIMIT)
-          .exec((err, docs) => {
-            let lastDoc = docs[LIMIT - 1]
+          // only remove finished jobs
+          Job.remove({
+            task_id,
+            _id: { $lt: lastDoc._id.toString() }, // remove older documents than last
+            $and: [
+              { lifecycle: { $ne: LifecycleConstants.READY } },
+              { lifecycle: { $ne: LifecycleConstants.ASSIGNED } },
+              { lifecycle: { $ne: LifecycleConstants.ONHOLD } }
+            ]
+          }, next)
+        })
+    } else { return next() }
+  })
+}
 
-            // only remove finished jobs
-            Job.remove({
-              task_id: task._id.toString(),
-              _id: { $lt: lastDoc._id.toString() }, // remove older documents than last
-              $and: [
-                { lifecycle: { $ne: LifecycleConstants.READY } },
-                { lifecycle: { $ne: LifecycleConstants.ASSIGNED } },
-                { lifecycle: { $ne: LifecycleConstants.ONHOLD } }
-              ]
-            }, next)
-          })
-      } else { return next() }
+const removeExceededJobsCountByWorkflow = (
+  workflow_id,
+  customer_id,
+  next
+) => {
+  const LIMIT = JobConstants.JOBS_LOG_COUNT_LIMIT
+  const Job = JobModels.Job
+
+  let query = Job.aggregate([
+    {
+      $match: {
+        workflow_id,
+        customer_id
+      }
+    }, {
+      $group: {
+        _id: '$workflow_job_id',
+        count: { $sum: 1 },
+        jobs: {
+          $push: {
+            _id: '$_id',
+            lifecycle: '$lifecycle'
+          }
+        }
+      }
+    }, {
+      $match: { _id: { '$ne': null } }
+    }, {
+      $project: {
+        _id: 1,
+        finished: {
+          $allElementsTrue: {
+            $map: {
+              input: '$jobs',
+              as: 'job',
+              in: {
+                $or: [
+                  { $eq: [ '$$job.lifecycle', LifecycleConstants.FINISHED ] },
+                  { $eq: [ '$$job.lifecycle', LifecycleConstants.TERMINATED ] },
+                  { $eq: [ '$$job.lifecycle', LifecycleConstants.CANCELED ] },
+                  { $eq: [ '$$job.lifecycle', LifecycleConstants.EXPIRED ] },
+                  { $eq: [ '$$job.lifecycle', LifecycleConstants.COMPLETED ] }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }, {
+      $sort: { _id: 1 }
     }
-  )
+  ])
+
+  query.exec((err, groups) => {
+    if (err) { return next(err) }
+    if (groups.length > LIMIT) {
+      // remove exceeded limit items
+      let toDelete = (groups.length - LIMIT)
+      let idx = 0
+      while (toDelete > 0) {
+        let group = groups[idx]
+        --toDelete
+        Job.remove({
+          $or: [
+            { workflow_job_id: group._id },
+            { _id: group._id }
+          ]
+        }).exec(err => {})
+      }
+    }
+    next()
+  })
 }
 
 const jobMustHaveATask = (job) => {
