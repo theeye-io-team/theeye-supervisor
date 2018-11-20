@@ -31,6 +31,7 @@ module.exports = (input) => {
     if (
       task._type !== 'ApprovalTask' &&
       task._type !== 'DummyTask' &&
+      task._type !== 'NotificationTask' &&
       ! task.host
     ) {
       logger.error('WARNING. Task %s does not has assigned host. Cannot execute', task._id)

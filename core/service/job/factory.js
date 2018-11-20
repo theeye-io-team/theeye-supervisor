@@ -199,7 +199,7 @@ const createScheduledJob = (input, next) => {
 
 /**
  *
- * @param {Object} input controlled internal input 
+ * @param {Object} input controlled internal input
  * @property {Object} input.vars request/process provided arguments
  * @property {Task} input.task
  * @property {Array} input.argsValues task arguments values
@@ -275,6 +275,12 @@ function createJob (input, next) {
     return saveJob(job, done)
   }
 
+  const createNotificationJob = (done) => {
+    const job = new JobModels.Notification()
+    setupJobBasicProperties(job)
+    return saveJob(job, done)
+  }
+
   const saveJob = (job, done) => {
     const saveDb = () => {
       job.save(err => {
@@ -308,6 +314,9 @@ function createJob (input, next) {
       break;
     case TaskConstants.TYPE_DUMMY:
       createDummyJob(next)
+      break;
+    case TaskConstants.TYPE_NOTIFICATION:
+      createNotificationJob(next)
       break;
     default:
       const err = new Error(`invalid or undefined task type ${task.type}`)

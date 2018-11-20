@@ -116,6 +116,7 @@ const controller = {
 
     if (input.type===TaskConstants.TYPE_DUMMY) { }
 
+    if (input.type === TaskConstants.TYPE_NOTIFICATION) { }
 
     if (errors.hasErrors()){
       return res.send(400,errors)
@@ -209,13 +210,17 @@ const controller = {
     if (!req.task) return res.send(400, errors.required('task'))
     if (!input.name) return res.send(400, errors.required('name'))
 
-    if (req.task.type!==TaskConstants.TYPE_APPROVAL && input.type!==TaskConstants.TYPE_DUMMY) {
+    delete input.type
+    let type = req.task.type
+
+    if (type !== TaskConstants.TYPE_APPROVAL && type !== TaskConstants.TYPE_DUMMY &&
+      type !== TaskConstants.TYPE_NOTIFICATION) {
       if (!req.host) {
         errors[!req.body.host?'required':'invalid']('host', req.host)
       }
     }
 
-    if (input.type===TaskConstants.TYPE_APPROVAL) {
+    if (type === TaskConstants.TYPE_APPROVAL) {
       if (!validIdsArray(input.approvers)) {
         errors.required('approvers', input.approvers)
       }
@@ -227,9 +232,11 @@ const controller = {
       }
       input.script = req.script
     }
-    if (input.type===TaskConstants.TYPE_SCRAPER) { }
+    if (type === TaskConstants.TYPE_SCRAPER) { }
 
-    if (input.type===TaskConstants.TYPE_DUMMY) { }
+    if (type === TaskConstants.TYPE_DUMMY) { }
+
+    if (type === TaskConstants.TYPE_NOTIFICATION) { }
 
     if (errors.hasErrors()){
       return res.send(400,errors)

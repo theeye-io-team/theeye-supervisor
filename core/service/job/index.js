@@ -14,6 +14,7 @@ const JobModels = require('../../entity/job')
 const TaskModel = require('../../entity/task').Entity
 const TaskEvent = require('../../entity/event').TaskEvent
 const JobFactory = require('./factory')
+const NotificationService = require('../../service/notification')
 
 module.exports = {
   ///**
@@ -113,7 +114,7 @@ module.exports = {
       {
         $match: {
           host_id: input.host._id.toString(),
-          lifecycle: LifecycleConstants.READY 
+          lifecycle: LifecycleConstants.READY
         }
       },
       { $sort: { 'task_id': 1, 'creation_date': 1 } },
@@ -166,16 +167,18 @@ module.exports = {
             job,
             user: input.user,
             customer: input.customer
+          }, () => {
+            if (TaskConstants.TYPE_DUMMY === task.type) {
+              // only Dummy:
+              // finish the task at once.
+              // bypass inputs to outputs.
+              finishDummyTaskJob(job, input, done)
+            } else if (TaskConstants.TYPE_NOTIFICATION === task.type) {
+              finishNotificationTaskJob(job, input, done)
+            } else {
+              done(null, job)
+            }
           })
-
-          if (TaskConstants.TYPE_DUMMY === task.type) {
-            // only Dummy:
-            // finish the task at once.
-            // bypass inputs to outputs.
-            finishDummyTaskJob(job, input, done)
-          } else {
-            done(null, job)
-          }
         })
       })
     })
@@ -693,7 +696,8 @@ const removeOldTaskJobs = (task, next) => {
  * @property {Customer} input.customer
  *
  */
-const registerJobOperation = (operation, topic, input) => {
+const registerJobOperation = (operation, topic, input, done) => {
+  done || (done = () => {})
   let { job, user, customer } = input
   const task = (input.task || job.task || {})
 
@@ -731,7 +735,8 @@ const registerJobOperation = (operation, topic, input) => {
 
     if (
       job._type !== JobConstants.APPROVAL_TYPE &&
-      job._type !== JobConstants.DUMMY_TYPE
+      job._type !== JobConstants.DUMMY_TYPE &&
+      job._type !== JobConstants.NOTIFICATION_TYPE
     ) {
       payload.hostname = job.host.hostname
     }
@@ -761,6 +766,8 @@ const registerJobOperation = (operation, topic, input) => {
       // nothing yet
     } else if (job._type == JobConstants.DUMMY_TYPE) {
       // nothing yet
+    } else if (job._type == JobConstants.NOTIFICATION_TYPE) {
+      // nothing yet
     } else if (job._type == JobConstants.AGENT_UPDATE_TYPE) {
       // nothing yet
     } else {
@@ -789,6 +796,7 @@ const registerJobOperation = (operation, topic, input) => {
     }
 
     elastic.submit(customer.name, topic, payload) // topic = topics.task.[execution||result] , CREATE/UPDATE
+    done()
   })
 }
 
@@ -930,4 +938,40 @@ const finishDummyTaskJob = (job, input, done) => {
       App.jobDispatcher.finish(specs, done)
     }
   )
+}
+
+const finishNotificationTaskJob = (job, input, done) => {
+  let specs = Object.assign({}, input, {
+    job,
+    result: {},
+    state: StateConstants['SUCCESS']
+  })
+
+  let payload = createNotificationJobPayload(specs)
+  NotificationService.generateSystemNotification(payload)
+
+  App.jobDispatcher.finish(specs, done)
+}
+
+const createNotificationJobPayload = (data) => {
+  let payload = {
+    topic: 'notification-task',
+    data: {
+      organization: data.customer.name,
+      operation: Constants.CREATE,
+      model_type: JobConstants.NOTIFICATION_TYPE,
+      model: {
+        task: {
+          subject: data.task.subject,
+          body: data.task.body,
+          notificationTypes: data.task.notificationTypes,
+          acl: data.task.acl,
+          name: data.task.name
+        },
+        _type: JobConstants.NOTIFICATION_TYPE,
+        id: data.job.id
+      }
+    }
+  }
+  return payload
 }

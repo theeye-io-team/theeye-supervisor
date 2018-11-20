@@ -11,6 +11,7 @@ const JobSchema = new BaseSchema({
 const ScraperSchema = new BaseSchema()
 const ApprovalSchema = new BaseSchema()
 const DummySchema = new BaseSchema()
+const NotificationSchema = new BaseSchema()
 
 const Job = mongodb.model('Job', JobSchema)
 const AgentUpdateJob = Job.discriminator('AgentUpdateJob', AgentUpdateSchema)
@@ -18,6 +19,7 @@ const ScriptJob = Job.discriminator('ScriptJob', ScriptSchema)
 const ScraperJob = Job.discriminator('ScraperJob', ScraperSchema)
 const ApprovalJob = Job.discriminator('ApprovalJob', ApprovalSchema)
 const DummyJob = Job.discriminator('DummyJob', DummySchema)
+const NotificationJob = Job.discriminator('NotificationJob', NotificationSchema)
 const WorkflowJob = Job.discriminator('WorkflowJob', WorkflowSchema)
 
 Job.ensureIndexes()
@@ -26,6 +28,7 @@ ScriptJob.ensureIndexes()
 ScraperJob.ensureIndexes()
 ApprovalJob.ensureIndexes()
 DummyJob.ensureIndexes()
+NotificationJob.ensureIndexes()
 WorkflowJob.ensureIndexes()
 
 exports.Job = Job
@@ -34,6 +37,7 @@ exports.Script = ScriptJob
 exports.Scraper = ScraperJob
 exports.Approval = ApprovalJob
 exports.Dummy = DummyJob
+exports.Notification = NotificationJob
 exports.Workflow = WorkflowJob
 
 /**

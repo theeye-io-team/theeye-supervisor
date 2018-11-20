@@ -16,7 +16,7 @@ module.exports = {
         logger.error('failed to send email');
         logger.error(error);
       } else {
-        logger.log('Message sent: ' + JSON.stringify(info)); 
+        logger.log('Message sent: ' + JSON.stringify(info));
       }
     });
   },
