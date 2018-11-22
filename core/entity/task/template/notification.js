@@ -15,7 +15,8 @@ const Schema = new BaseSchema({
         desktop: false
       }
     }
-  }
+  },
+  recipients: [{ type: String }]
 })
 
 module.exports = Schema

@@ -966,7 +966,8 @@ const createNotificationJobPayload = (data) => {
           body: data.task.body,
           notificationTypes: data.task.notificationTypes,
           acl: data.task.acl,
-          name: data.task.name
+          name: data.task.name,
+          recipients: data.task.recipients
         },
         _type: JobConstants.NOTIFICATION_TYPE,
         id: data.job.id

@@ -17,7 +17,8 @@ const NotificationSchema = new BaseSchema({
         desktop: false
       }
     }
-  }
+  },
+  recipients: [{ type: String }]
 })
 
 module.exports = NotificationSchema
