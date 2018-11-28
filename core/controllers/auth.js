@@ -1,5 +1,6 @@
 'use strict';
 
+const CustomerConstants = require('../constants/customer')
 var Token = require('../lib/auth/token');
 var passport = require('passport');
 var router = require('../router');
@@ -76,7 +77,7 @@ const rollback = (customer,agent,owner) => {
 
 const createCustomer = (input,done) => {
   const name = input.name
-  CustomerService.create({ name: name }, (err,customer) => {
+  CustomerService.create({ name }, (err,customer) => {
     if (err) {
       logger.log(err)
       err.statusCode || (err.statusCode = 500)
@@ -134,6 +135,15 @@ const controller = {
     if (!req.body.username) return res.send(400, 'name is required')
     if (!req.body.email) return res.send(400, 'email is required')
     if (!req.body.customername) return res.send(400, 'customername is required')
+
+
+    if (CustomerConstants.CUSTOMER_RESERVED_NAMES.indexOf(req.body.customername) !== -1) {
+      return responseError({
+        statusCode: 400,
+        message: 'Choose another name.',
+        errorCode: 'organizationInUse'
+      }, res)
+    }
 
     Customer.findOne({
       name: req.body.customername

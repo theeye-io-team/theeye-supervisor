@@ -23,7 +23,7 @@ module.exports = function (server, passport) {
   ]
 
   server.get(
-    '/workflow',
+    '/workflows',
     middlewares.concat([
       router.requireCredential('viewer')
     ]),
@@ -31,7 +31,7 @@ module.exports = function (server, passport) {
   )
 
   server.get(
-    '/workflow/:workflow',
+    '/workflows/:workflow',
     middlewares.concat([
       router.requireCredential('viewer'),
       router.resolve.idToEntity({ param: 'workflow', required: true }),
@@ -41,7 +41,7 @@ module.exports = function (server, passport) {
   )
 
   server.post(
-    '/workflow',
+    '/workflows',
     middlewares.concat([
       router.requireCredential('admin')
     ]),
@@ -50,7 +50,7 @@ module.exports = function (server, passport) {
   )
 
   server.del(
-    '/workflow/:workflow',
+    '/workflows/:workflow',
     middlewares.concat([
       router.requireCredential('admin'),
       router.resolve.idToEntity({param: 'workflow', required: true})
@@ -60,7 +60,7 @@ module.exports = function (server, passport) {
   )
 
   server.put(
-    '/workflow/:workflow',
+    '/workflows/:workflow',
     middlewares.concat([
       router.requireCredential('admin'),
       router.resolve.idToEntity({param: 'workflow', required: true})

@@ -14,7 +14,7 @@ module.exports = function (server, passport) {
   ]
 
   server.get(
-    '/workflow/triggers',
+    '/workflows/triggers',
     middlewares,
     controller.get
   )

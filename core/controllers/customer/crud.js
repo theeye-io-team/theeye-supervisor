@@ -1,18 +1,18 @@
-'use strict';
+'use strict'
 
-const merge = require('lodash/merge');
-const assign = require('lodash/assign');
-const isURL = require('validator/lib/isURL');
+const merge = require('lodash/merge')
+const assign = require('lodash/assign')
+const isURL = require('validator/lib/isURL')
+const logger = require('../../lib/logger')('controller:customer')
+const json = require('../../lib/jsonresponse')
+const router = require('../../router')
+const User = require("../../entity/user").Entity
+const CustomerService = require('../../service/customer')
+const UserService = require('../../service/user')
+const ResourceService = require('../../service/resource')
+const HostService = require('../../service/host')
 
-var logger = require('../../lib/logger')('controller:customer');
-var json = require('../../lib/jsonresponse');
-var router = require('../../router');
-
-var User = require("../../entity/user").Entity;
-var CustomerService = require('../../service/customer');
-var UserService = require('../../service/user');
-var ResourceService = require('../../service/resource');
-var HostService = require('../../service/host');
+const CustomerConstants = require('../../constants/customer')
 
 module.exports = (server, passport) => {
   var middlewares = [
@@ -22,19 +22,27 @@ module.exports = (server, passport) => {
     router.ensureCustomer,
   ]
 
-  // users can fetch its own current customer information
-  server.get('/:customer/customer', [
+  server.get('/customer/:customer', [
     passport.authenticate('bearer', { session: false }),
-    router.resolve.customerNameToEntity({ required: true }),
+    router.resolve.idToEntity({ param: 'customer' }),
+    router.resolve.customerNameToEntity(),
+    (req, res, next) => {
+      if (!req.customer) {
+        return res.send(401, 'customer is required')
+      }
+      next()
+    },
     router.ensureCustomer
   ], controller.get)
 
-  server.get('/customer/:customer', [
-    passport.authenticate('bearer', { session: false }),
-    router.resolve.idToEntity({ param: 'customer', required: true }),
-    //router.resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer
-  ], controller.get)
+  //
+  // users can fetch its own current customer information
+  //
+  //server.get('/:customer/customer', [
+  //  passport.authenticate('bearer', { session: false }),
+  //  router.resolve.customerNameToEntity(),
+  //  router.ensureCustomer
+  //], controller.get)
 
   server.del('/customer/:customer', middlewares,controller.remove);
   server.patch('/customer/:customer',middlewares,controller.patch);
@@ -90,6 +98,11 @@ var controller = {
     if (!input.name) {
       return res.send(400, json.error('name is required'))
     }
+
+    if (CustomerConstants.CUSTOMER_RESERVED_NAMES.indexOf(input.name) !== -1) {
+      return res.send(400, json.error('please, choose another name.'))
+    }
+
     if (input.config) {
       const elasticsearch = input.config.elasticsearch
       if (elasticsearch && elasticsearch.enabled === true) {

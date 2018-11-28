@@ -10,7 +10,7 @@ module.exports = function (server, passport) {
   var middlewares = 
 
   server.get(
-    '/workflow/:id/graph',
+    '/workflows/:id/graph',
     [
       passport.authenticate('bearer', { session: false }),
       resolve.customerNameToEntity({ required: true }),

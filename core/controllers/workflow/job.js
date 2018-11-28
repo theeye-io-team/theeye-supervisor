@@ -12,7 +12,7 @@ module.exports = (server, passport) => {
 
   // create a new workflow-job instance
   server.post(
-    '/workflow/:workflow/job',
+    '/workflows/:workflow/job',
     middlewares.concat(
       router.requireCredential('user'),
       router.resolve.idToEntity({ param: 'workflow', required: true }),
@@ -23,7 +23,7 @@ module.exports = (server, passport) => {
 
   // create job using task secret key
   server.post(
-    '/workflow/:workflow/secret/:secret/job', [
+    '/workflows/:workflow/secret/:secret/job', [
       router.resolve.customerNameToEntity({ required: true }),
       router.resolve.idToEntity({ param: 'task', required: true }),
       router.requireSecret('workflow')
