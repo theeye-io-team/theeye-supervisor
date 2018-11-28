@@ -50,7 +50,7 @@ function BaseSchema (props) {
       delete data.script
       delete data.script_arguments
 
-      if (typeof data.task === 'object') {
+      if (data.task && typeof data.task === 'object') {
         let dtask = {}
         let id = data.task._id || data.task.id
         dtask.id = id.toString()
@@ -61,16 +61,16 @@ function BaseSchema (props) {
       }
     }
 
-    if (typeof data.task === 'object') {
+    if (data.task && typeof data.task === 'object') {
       data.timeout = data.task.timeout
       data.env = data.task.env
     }
 
-    if (typeof data.customer === 'object') {
+    if (data.customer && typeof data.customer === 'object') {
       delete data.customer
     }
 
-    if (typeof data.user === 'object') {
+    if (data.user && typeof data.user === 'object') {
       let user = data.user
       let id = data.user._id || data.user.id
       data.user = {
