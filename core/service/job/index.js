@@ -960,11 +960,11 @@ const createNotificationJobPayload = (data) => {
       organization: data.customer.name,
       operation: Constants.CREATE,
       model_type: JobConstants.NOTIFICATION_TYPE,
+      notificationTypes: data.task.notificationTypes,
       model: {
         task: {
           subject: data.task.subject,
           body: data.task.body,
-          notificationTypes: data.task.notificationTypes,
           acl: data.task.acl,
           name: data.task.name,
           recipients: data.task.recipients
