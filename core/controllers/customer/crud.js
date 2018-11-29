@@ -24,25 +24,18 @@ module.exports = (server, passport) => {
 
   server.get('/customer/:customer', [
     passport.authenticate('bearer', { session: false }),
-    router.resolve.idToEntity({ param: 'customer' }),
-    router.resolve.customerNameToEntity(),
-    (req, res, next) => {
-      if (!req.customer) {
-        return res.send(401, 'customer is required')
-      }
-      next()
-    },
+    router.resolve.idToEntity({ required: true, param: 'customer' }),
     router.ensureCustomer
   ], controller.get)
 
   //
   // users can fetch its own current customer information
   //
-  //server.get('/:customer/customer', [
-  //  passport.authenticate('bearer', { session: false }),
-  //  router.resolve.customerNameToEntity(),
-  //  router.ensureCustomer
-  //], controller.get)
+  server.get('/:customer/customer', [
+    passport.authenticate('bearer', { session: false }),
+    router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer
+  ], controller.get)
 
   server.del('/customer/:customer', middlewares,controller.remove);
   server.patch('/customer/:customer',middlewares,controller.patch);
