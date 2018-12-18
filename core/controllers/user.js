@@ -198,7 +198,7 @@ var controller = {
       if(error) {
         logger.log('Error creating user');
         logger.log(error);
-        res.send(500, json.error('failed to create user'));
+        res.send(500, json.error('failed to create user: ' + error.message));
       } else {
         logger.log('new user created');
         return user.publish({
