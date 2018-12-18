@@ -6,7 +6,8 @@ const isURL = require('validator/lib/isURL')
 const logger = require('../../lib/logger')('controller:customer')
 const json = require('../../lib/jsonresponse')
 const router = require('../../router')
-const User = require("../../entity/user").Entity
+const User = require('../../entity/user').Entity
+const CustomerModel = require('../../entity/customer').Entity
 const CustomerService = require('../../service/customer')
 const UserService = require('../../service/user')
 const ResourceService = require('../../service/resource')
@@ -67,20 +68,25 @@ var controller = {
   /**
    *
    */
-  fetch (req,res,next) {
-    CustomerService.fetch({}, function(error,customers) {
-      if(error) {
-        logger.error('error fetching customers');
-        res.send(500, json.error('failed to fetch customers'));
+  fetch (req, res, next) {
+    queryCustomers(req, (err, customers) => {
+      if (err) {
+        if (err.statusCode) {
+          return res.send(err.statusCode, err.message)
+        } else {
+          logger.error('error fetching customers. ' + err.message)
+          return res.send(500, json.error('failed to fetch customers'))
+        }
       } else {
-        var published = [];
+        const published = []
 
-        for(var c=0;c<customers.length;c++)
-          published.push( customers[c].publish() );
+        for (var c=0; c<customers.length; c++) {
+          published.push( customers[c].publish() )
+        }
 
-        return res.send(200, customers.map(customer => customer.publish()) );
+        return res.send(200, customers.map(customer => customer.publish()) )
       }
-    });
+    })
   },
   /**
    *
@@ -301,4 +307,28 @@ var controller = {
       next();
     });
   }
+}
+
+const queryCustomers = (req, next) => {
+  let query = {}
+
+  if (req.query) {
+    if (req.query.name) {
+      if (typeof req.query.name === 'string') {
+        query.name = req.query.name
+      } else {
+        let error = new Error('Invalid request.')
+        error.statusCode = 400
+        return next(error)
+      }
+    }
+  }
+
+  CustomerModel.find(query, (err, customers) => {
+    if (err) {
+      return next(err)
+    } else {
+      return next(null, customers)
+    }
+  })
 }
