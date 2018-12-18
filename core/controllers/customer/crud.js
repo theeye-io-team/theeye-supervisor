@@ -125,6 +125,7 @@ var controller = {
         logger.log('new customer created')
 
         UserService.create({
+          username: customer.name + '-agent@theeye.io',
           email: customer.name + '-agent@theeye.io',
           customers: [ customer.name ],
           credential: 'agent',
