@@ -148,7 +148,7 @@ const controller = {
     var filter = dbFilter(req.query,{
       sort: {
         fails_count: -1,
-        type: 1 
+        type: 1
       }
     })
 
@@ -172,11 +172,6 @@ const controller = {
           var resource
           for (var i=0; i<resources.length; i++) {
             resource = resources[i]
-            if (resource.monitor) {
-              if (Array.isArray(resource.monitor.tags)) {
-                resource.monitor.tags.push(resource.hostname);
-              }
-            }
           }
           res.send(200,resources)
           next()
