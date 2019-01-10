@@ -1,9 +1,9 @@
 'use strict'
 
 module.exports = Object.freeze({
-  DEFAULT_HEALTH_THRESHOLD_CPU: 80,
-  DEFAULT_HEALTH_THRESHOLD_MEM: 85,
-  DEFAULT_HEALTH_THRESHOLD_CACHE: 85,
+  DEFAULT_HEALTH_THRESHOLD_CPU: 90,
+  DEFAULT_HEALTH_THRESHOLD_MEM: 90,
+  DEFAULT_HEALTH_THRESHOLD_CACHE: 90,
   DEFAULT_HEALTH_THRESHOLD_DISK: 90,
   DEFAULT_LOOPTIME: 60000, // 1 minute
   SUCCESS_STATES: ['success', 'ok', 'normal'],
@@ -47,7 +47,7 @@ module.exports = Object.freeze({
   //
   // Monitors can be in only one of the following states at the time.
   //
-  // normal, failure, updates_stopped. 
+  // normal, failure, updates_stopped.
   //
   // Can change from one state to another
   //
