@@ -61,8 +61,8 @@ const JobsFactory = {
           if (
             task.grace_time > 0 &&
             ( // automatic origin
-              jobOrigin === JobConstants.ORIGIN_WORKFLOW ||
-              jobOrigin === JobConstants.ORIGIN_TRIGGER_BY
+              input.origin === JobConstants.ORIGIN_WORKFLOW ||
+              input.origin === JobConstants.ORIGIN_TRIGGER_BY
             )
           ) {
             // use delayed execution with grace time

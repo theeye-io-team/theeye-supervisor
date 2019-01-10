@@ -160,25 +160,36 @@ module.exports = {
         JobFactory.create(task, input, (err, job) => {
           if (err) { return done(err) }
 
-          logger.log('job created.')
-          let topic = TopicsConstants.task.execution
-          registerJobOperation(Constants.CREATE, topic, {
-            task,
-            job,
-            user: input.user,
-            customer: input.customer
-          }, () => {
-            if (TaskConstants.TYPE_DUMMY === task.type) {
-              // only Dummy:
-              // finish the task at once.
-              // bypass inputs to outputs.
-              finishDummyTaskJob(job, input, done)
-            } else if (TaskConstants.TYPE_NOTIFICATION === task.type) {
-              finishNotificationTaskJob(job, input, done)
-            } else {
-              done(null, job)
-            }
-          })
+          if (job.constructor.name === 'model') {
+            logger.log('job created.')
+            let topic = TopicsConstants.task.execution
+            registerJobOperation(Constants.CREATE, topic, {
+              task,
+              job,
+              user: input.user,
+              customer: input.customer
+            }, () => {
+              if (TaskConstants.TYPE_DUMMY === task.type) {
+                // only Dummy:
+                // finish the task at once.
+                // bypass inputs to outputs.
+                finishDummyTaskJob(job, input, done)
+              } else if (TaskConstants.TYPE_NOTIFICATION === task.type) {
+                finishNotificationTaskJob(job, input, done)
+              } else {
+                done(null, job)
+              }
+            })
+          } else if (
+            job.agenda &&
+            job.agenda.constructor.name === 'Agenda'
+          ) { // scheduler agenda job
+            logger.log('job scheduled.')
+            done(null, job.attrs)
+          } else {
+            logger.error('invalid job returned.')
+            logger.error('%o', job)
+          }
         })
       })
     })
