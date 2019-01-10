@@ -98,6 +98,8 @@ module.exports = {
         return options.fail(err)
       }
 
+      createTags(task.tags, task.customer)
+
       logger.log('publishing task')
       self.populate(task, function(err,pub){
         let reportName
@@ -194,12 +196,6 @@ module.exports = {
       return done(null, task)
     }
 
-    const createTags = (tags) => {
-      if (tags && Array.isArray(tags)) {
-        Tag.create(tags, customer)
-      }
-    }
-
     logger.log('creating task with data %o', input)
 
     try {
@@ -218,7 +214,7 @@ module.exports = {
         logger.error(err)
         return done(err)
       }
-      createTags(input.tags)
+      createTags(input.tags, customer)
       createTaskEvents(task, customer)
       created(task)
     })
@@ -559,5 +555,11 @@ const createTaskEvents = (task, customer, next) => {
 }
 
 const toObject = () => {
-  return 
+  return
+}
+
+const createTags = (tags, customer) => {
+  if (tags && Array.isArray(tags)) {
+    Tag.create(tags, customer)
+  }
 }
