@@ -47,14 +47,33 @@ module.exports = function (server, passport) {
 
 const controller = {
   updateCrendential (req, res, next) {
-    var member = req.member
-    var credential = req.body.credential
+    const member = req.member
+    const credential = req.body.credential
 
     if (!credential) {
       return res.send(400, 'credential required')
     }
 
-    updateMember(member, { credential }, res, next)
+    // member is a User entity !!!
+    member.credential = credential
+    member.save(err => {
+      if (err) {
+        logger.error(err)
+        return res.send(err.statusCode || 500, err.message)
+      }
+
+      res.send(200, { id: member.id, credential })
+      return next()
+      // call publish if the member data is required in the response.
+      //member.publish(
+      //  { include_customers: true },
+      //  (err, data) => {
+      //    if (err) { return res.send(500, 'internal error') }
+      //    res.send(200, data)
+      //    return next()
+      //  }
+      //)
+    })
   },
   updateCustomers (req, res, next) {
     var member = req.member
