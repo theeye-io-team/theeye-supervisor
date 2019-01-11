@@ -36,11 +36,15 @@ function Service (resource) {
     return res
   }
 
-  const updateResourceLastEvent = (resource, lastEvent) => {
-    if (!lastEvent) { return }
-    resource.last_event = lastEvent || {}
-    if (lastEvent.data && lastEvent.data.output) {
-      resource.last_event.output = lastEvent.data.output
+  const updateResourceLastEvent = (resource, input) => {
+    if (!input) { return }
+    resource.last_event = input || {}
+    if (input.data) {
+      if (input.data.output) { // output data specified
+        resource.last_event.output = input.data.output
+      } else {
+        resource.last_event.output = [ JSON.stringify(input.data) ]
+      }
     }
   }
 
@@ -109,7 +113,10 @@ function Service (resource) {
           topic: TopicsConstants.monitor.state,
           event,
           resource,
-          output: resource.last_event.output
+          output: (
+            resource.last_event.output ||
+            resource.last_event.data
+          )
         })
       })
     })

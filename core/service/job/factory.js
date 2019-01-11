@@ -98,11 +98,16 @@ const JobsFactory = {
     let errors = new ErrorHandler()
     let filteredArguments = []
 
-    if (!Array.isArray(argumentsDefinition) || argumentsDefinition.length === 0) {
+    if (
+      !Array.isArray(argumentsDefinition) ||
+      argumentsDefinition.length === 0
+    ) {
       return next(null, [])
     }
 
-    if (!Array.isArray(argumentsValues)) { argumentsValues = [] }
+    if (!Array.isArray(argumentsValues)) {
+      argumentsValues = []
+    }
 
     argumentsDefinition.forEach((def,index) => {
       if (Boolean(def)) { // is defined
