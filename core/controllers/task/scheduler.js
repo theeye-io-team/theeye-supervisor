@@ -8,17 +8,21 @@ const JobConstants = require('../../constants/jobs')
 const resolver = router.resolve;
 
 module.exports = function (server, passport) {
-  var middlewares = [
-    passport.authenticate('bearer',{session:false}),
+  const middlewares = [
+    passport.authenticate('bearer',{ session: false }),
     router.requireCredential('admin'),
-    resolver.customerNameToEntity({required:true}),
+    resolver.customerNameToEntity({ required: true }),
     router.ensureCustomer,
-    resolver.idToEntity({param:'task'})
+    resolver.idToEntity({ param:'task', required: true })
   ]
 
   //server.post('/:customer/task/:task/schedule',middlewares,controller.create);
   server.post('/:customer/task/:task/schedule',middlewares,controller.create)
-  server.get('/:customer/task/:task/schedule',middlewares,controller.fetch)
+  server.get(
+    '/:customer/task/:task/schedule',
+    middlewares,
+    controller.fetch
+  )
   server.del('/:customer/task/:task/schedule/:schedule',middlewares,controller.remove)
 
   // this is for the email cancelation
@@ -41,14 +45,16 @@ const controller = {
    *
    */
   fetch (req, res, next) {
-    var task = req.task;
-    App.scheduler.getTaskSchedule(task._id, function (err, scheduleData) {
+    const task = req.task
+    App.scheduler.getTaskSchedule(task._id, (err, schedule) => {
       if (err) {
         logger.error('Scheduler had an error retrieving data for %s',task._id)
         logger.error(err)
         return res.send(500)
       }
-      else res.send(200, scheduleData)
+
+      res.send(200, schedule)
+      next()
     })
   },
   /**
