@@ -14,4 +14,3 @@ bundle/
 uploads/*
 *.orig
 out
-config/localdev.js

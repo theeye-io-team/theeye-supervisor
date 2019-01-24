@@ -37,19 +37,42 @@ module.exports = {
     if (!payload.topic) { return logger.error('notification event aborted. invalid payload topic %o', payload) }
     if (!payload.data) { return logger.error('notification event aborted. invalid payload data %o', payload) }
 
+    if (payload.data && payload.data.model) {
+      if (payload.data.model.constructor.name === 'model') {
+        payload.data.model = payload.data.model.toObject()
+      }
+
+      if (payload.topic === "job-crud") {
+        // remove arguments
+        if (Array.isArray(payload.data.model.task_arguments_values)) {
+          let args = payload.data.model.task_arguments_values
+
+          args.forEach((arg, index) => {
+            if (/^data:.*;base64,/.test(arg) === true) {
+              args[index] = 'File content'
+            }
+          })
+
+          payload.data.model.task_arguments_values = args
+          payload.data.model.script_arguments = args
+        }
+      }
+    }
+
     payload.id = uuidv1()
 
     request({
       followRedirect: false,
       method: 'POST',
       uri: url,
-      json: payload
-    }, function (error, response, body) {
+      json: payload,
+      gzip: true
+    }, (error, response, body) => {
       if (error) {
         logger.error('could not connect to local notification system')
         logger.error(error)
       } else if (response.statusCode != 200) {
-        logger.error('submit to local notification system failed')
+        logger.error('submit to notification system failed')
         logger.debug('payload %j', payload)
         logger.error('%s, %o', response.statusCode, body)
       } else {
