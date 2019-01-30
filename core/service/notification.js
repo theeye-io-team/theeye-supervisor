@@ -6,13 +6,28 @@ const uuidv1 = require('uuid/v1')
 
 module.exports = {
   sendEmailNotification (options) {
-    mailer.sendMail({
+    if (! options.to && ! options.bcc) {
+      logger.error('failed to send email')
+      logger.error(new Error('no recipients'))
+      return
+    }
+
+    const setup = {
       customer_name: options.customer_name,
       subject: options.subject,
-      html: options.content,
-      to: options.to
-    }, function(error, info){
-      if( error ) {
+      html: options.content
+    }
+
+    if (options.to) {
+      setup.to = options.to
+    }
+
+    if (options.bcc) {
+      setup.bcc = options.bcc
+    }
+
+    mailer.sendMail(setup, function(error, info){
+      if (error) {
         logger.error('failed to send email');
         logger.error(error);
       } else {

@@ -561,9 +561,9 @@ const sendEventNotification = (host,vent) => {
 
   Handlebars.render(template, params, function(content){
     App.customer.getAlertEmails(host.customer_name,
-    function(error,emails){
+    function (error,emails) {
       App.notification.sendEmailNotification({
-        to: emails.join(','),
+        bcc: emails.join(','),
         customer_name: host.customer_name,
         subject: subject,
         content: content

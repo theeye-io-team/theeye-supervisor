@@ -27,21 +27,21 @@ switch(trType)
 var transporter = nodemailer.createTransport(transport);
 
 module.exports = {
-  sendMail: function(options, callback) {
-    var config = mailercfg;
+  sendMail: function (options, callback) {
+    var config = mailercfg
     var from = config
       .from
-      .replace(/%customer%/g, options.customer_name) ;
+      .replace(/%customer%/g, options.customer_name) 
 
-    options.from = from;
-    options.replyTo = config.reply_to;
+    options.from = from
+    options.replyTo = config.reply_to
 
-    if( config.only_support || ! options.to ) {
-      options.to = config.support.join(',');
-    } else if( config.include_support_bcc ) {
-      options.bcc = config.support.join(',');
+    if (config.only_support || ! options.to) {
+      options.to = config.support.join(',')
+    } else if (config.include_support_bcc) {
+      options.bcc = config.support.join(',')
     }
 
-    transporter.sendMail(options, callback);
+    transporter.sendMail(options, callback)
   }
 }

@@ -155,7 +155,7 @@ function Service (resource) {
             mailTo = (extraEmail.length>0) ? emails.concat(extraEmail) : emails
 
             NotificationService.sendEmailNotification({
-              to: mailTo.join(','),
+              bcc: mailTo.join(','),
               customer_name: resource.customer_name,
               subject: details.subject,
               content: details.content
