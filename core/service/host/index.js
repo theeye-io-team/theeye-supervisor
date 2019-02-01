@@ -98,6 +98,43 @@ HostService.populate = (hosts, next) => {
   })
 }
 
+HostService.provision = (input) => {
+  const { host, customer, user, resource, skip_auto_provisioning } = input
+  const host_id = host._id
+
+  HostGroupService.orchestrate(host, (err, groups) => {
+    if (err) {
+      logger.error(err)
+      return
+    }
+
+    if (!groups || ! Array.isArray(groups) || groups.length === 0) {
+      // create resources and notify agent
+      const monitorData = {
+        user,
+        customer,
+        customer_id: customer._id,
+        customer_name: customer.name,
+        host,
+        host_id: host._id.toString(),
+        hostname: host.hostname,
+        resource,
+        enabled: true,
+        description: 'Host auto-created monitor.'
+      }
+
+      // by default add base monitors always.
+      if (skip_auto_provisioning === true) { return }
+
+      createBaseMonitors(monitorData, () => {
+        AgentUpdateJob.create({ host_id })
+      })
+    } else {
+      AgentUpdateJob.create({ host_id })
+    }
+  })
+}
+
 /**
  *
  * @author Facundo
@@ -404,12 +441,13 @@ HostService.config = (host, customer, next) => {
  * @property {String} input.info.state
  * @param {Function(Error,Object)} next
  */
-HostService.register = (input,next) => {
+HostService.register = (input, next) => {
   const hostname = input.hostname
   const customer = input.customer
   const info = input.info
   const user = input.user
-  logger.log('registering new host "%s"', hostname);
+
+  logger.log('registering new host "%s"', hostname)
 
   Host.create({
     customer_name: customer.name,
@@ -431,12 +469,12 @@ HostService.register = (input,next) => {
     logger.log('host registered. creating host resource')
 
     const data = {
-      user: user,
-      host_id: host._id,
-      hostname: host.hostname,
-      customer: customer,
+      user,
+      customer,
       customer_id: customer._id,
       customer_name: customer.name,
+      host_id: host._id,
+      hostname: host.hostname,
       name: host.hostname,
       type: 'host',
       monitor_type: 'host',
@@ -444,9 +482,9 @@ HostService.register = (input,next) => {
       description: host.hostname
     }
 
-    createHostResources(host, data, (err, payload) => {
-      if (err) return next(err)
-      logger.log('host %s resources created', hostname)
+    createHostResource(host, data, (err, payload) => {
+      if (err) { return next(err) }
+      logger.log('host %s resource created', hostname)
       next(null, payload)
     })
   })
@@ -496,19 +534,17 @@ HostService.disableHostsByCustomer = (customer, doneFn) => {
   });
 }
 
-
 /**
- * Create a resource for the host, also 
- * clone from a template if matched or the basic dstat & psaux monitors.
+ * Create a resource for the host
  *
- * @summary Create host resources, orchestrate basic or template resources
+ * @summary Create host resource
  * @param {Host} host
  * @param {Object} data
  * @property {Customer} data.customer
  * @property {Mixed} ... many more properties
  * @param {Function(Error,Object)} next
  */
-const createHostResources = (host, data, next) => {
+const createHostResource = (host, data, next) => {
   const customer = data.customer
 
   App.resource.create(data, (err, result) => {
@@ -519,25 +555,7 @@ const createHostResources = (host, data, next) => {
 
     logger.log('host resource created')
     const resource = result.resource
-    next(null, { host: host, resource: resource })
-
-    HostGroupService.orchestrate(host, (err, groups) => {
-      if (err) {
-        logger.error(err)
-        return
-      }
-
-      if (!groups||!Array.isArray(groups)||groups.length===0) {
-        // create resources and notify agent
-        const monitorData = Object.assign({}, data, { host: host, resource: resource })
-
-        createBaseMonitors(monitorData, () => {
-          AgentUpdateJob.create({ host_id: host._id })
-        })
-      } else {
-        AgentUpdateJob.create({ host_id: host._id })
-      }
-    })
+    next(null, { host, resource })
   })
 }
 
@@ -593,11 +611,20 @@ const sendEventNotification = (host,vent) => {
 const createBaseMonitors = (input, next) => {
   logger.log('creating base monitors')
   next||(next = ()=>{})
-  const dstat = Object.assign({},input,{type:'dstat'})
-  const psaux = Object.assign({},input,{type:'psaux'})
-  App.resource.createResourceOnHosts([input.host._id], dstat, (err) => {
+
+  const dstat = Object.assign({}, input, {
+    type: 'dstat',
+    name: 'Health Monitor'
+  })
+
+  const psaux = Object.assign({}, input, {
+    type: 'psaux',
+    name: 'Processes Monitor'
+  })
+
+  App.resource.createResourceOnHosts([ input.host._id ], dstat, (err) => {
     if (err) logger.error(err)
-    App.resource.createResourceOnHosts([input.host._id], psaux, (err) => {
+    App.resource.createResourceOnHosts([ input.host._id ], psaux, (err) => {
       if (err) logger.error(err)
       next()
     })

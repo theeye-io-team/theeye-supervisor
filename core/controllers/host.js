@@ -109,29 +109,23 @@ const controller = {
    *
    */
   create (req, res, next) {
-    var hostname = req.params.hostname
-
+    const hostname = req.params.hostname
     if (!hostname) {
-      return res.send(400,'hostname required');
+      return res.send(400,'hostname required')
     }
 
-    logger.log('processing hostname "%s" registration request', hostname);
+    logger.log('processing hostname "%s" registration request', hostname)
 
-    var input = req.body.info || {}
-    input.agent_version = req.body.version || null
+    registerHostname(req, (error, result) => {
+      if (error) {
+        logger.error(error)
+        return res.send()
+      }
 
-    registerHostname({
-      user: req.user,
-      customer: req.customer,
-      hostname: hostname,
-      host_properties: input
-    }, function (error,result) {
-      if (error) logger.error(error)
+      var host = result.host
+      var resource = result.resource
 
-      var host = result.host;
-      var resource = result.resource;
-
-      logger.error('host "%s" registration completed.', hostname);
+      logger.error('host "%s" registration completed.', hostname)
 
       const response = lodash.assign(
         {
@@ -141,9 +135,9 @@ const controller = {
         config.agent.core_workers.host_ping
       )
 
-      res.send(200, response); 
-      next();
-    });
+      res.send(200, response)
+      next()
+    })
   },
   /**
    *
@@ -159,61 +153,73 @@ const controller = {
 }
 
 /**
- *
  * register a hostname.
  *
  * @author Facundo
- * @param {Object} input
- *    @property {Object} customer
- *    @property {String} hostname
- *    @property {Object} host_properties
+ * @param {Object} req
+ * @property {Object} req.customer
+ * @property {String} req.params.hostname
+ * @property {Object} req.body.info hostname information
  * @param {Function} done callback
  * @return null
- *
  */
-const registerHostname = (input, done) => {
-  const customer = input.customer
-  const hostname = input.hostname
-  const properties = input.host_properties
+const registerHostname = (req, done) => {
+  const customer = req.customer
+  const hostname = req.params.hostname
+
+  // setting up registration properties
+  const properties = req.body.info || {}
+  properties.agent_version = req.body.version || null
 
   Host.findOne({
-    hostname: hostname,
+    hostname,
     customer_name: customer.name
-  }, function (error,host) {
-    if (error) return done(error);
+  }, (error, host) => {
+    if (error) {
+      return done(error)
+    }
 
     if (!host) {
-      logger.log("hostname '%s' not found.", hostname);
+      logger.log("hostname '%s' not found.", hostname)
 
       return HostService.register({
-        user: input.user,
-        hostname: hostname,
-        customer: customer,
+        user: req.user,
+        hostname,
+        customer,
         info: properties
-      }, function (err,res) {
-        if (err) return done(err)
-        done(err,res)
+      }, (err, result) => {
+        if (err) { return done(err) }
+        done(null, result)
 
-        const host = res.host
+        // async unattended steps
+        const host = result.host
+        const resource = result.resource
+        HostService.provision({
+          host,
+          resource,
+          customer,
+          user: req.user,
+          skip_auto_provisioning: req.body.skip_auto_provisioning
+        })
 
         NotificationService.generateSystemNotification({
           topic: TopicsConstants.host.registered,
           data: {
             model_type:'Host',
             model: host,
-            hostname: host.hostname,
+            hostname,
             organization: host.customer_name,
             operations: Constants.CREATE
           }
         })
       })
     } else {
-      logger.log('host found');
+      logger.log('host found')
 
       if (!host.enable) {
-        var error = new Error('host is disabled');
-        error.statusCode = 400;
-        return done(error);
+        var error = new Error('host is disabled')
+        error.statusCode = 400
+        return done(error)
       }
 
       /** update agent reported version **/
@@ -227,14 +233,12 @@ const registerHostname = (input, done) => {
             return 
           }
 
-          var data = {
-            organization: customer.name,
-            hostname: host.hostname,
-            version: host.agent_version
-          }
-
           const topic = TopicsConstants.agent.version
-          elastic.submit(customer.name, topic, data) // topic = topics.agent.version
+          elastic.submit(customer.name, topic, {
+            hostname,
+            organization: customer.name,
+            version: host.agent_version
+          }) // topic = topics.agent.version
         })
       }
 
@@ -256,7 +260,7 @@ const registerHostname = (input, done) => {
         }
 
         return done(null, { host: host, resource: resource })
-      });
+      })
     }
   })
 }
