@@ -1322,7 +1322,7 @@ const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
         proc.emitter._id,
         (err, taskToSave) => {
           if (err) {
-            logger.error('trying to link emitter %s to task %s', emitter._id, task._id)
+            logger.error('failed trying to link emitter %s to task %s', proc.emitter._id, proc.task._id)
             return done(err)
           }
           logger.log('trigger added')
