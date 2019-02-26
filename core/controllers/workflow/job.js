@@ -25,7 +25,7 @@ module.exports = (server, passport) => {
   server.post(
     '/workflows/:workflow/secret/:secret/job', [
       router.resolve.customerNameToEntity({ required: true }),
-      router.resolve.idToEntity({ param: 'task', required: true }),
+      router.resolve.idToEntity({ param: 'workflow', required: true }),
       router.requireSecret('workflow')
     ],
     (req, res, next) => {
