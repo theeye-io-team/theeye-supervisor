@@ -36,7 +36,10 @@ module.exports = {
     options.from = from
     options.replyTo = config.reply_to
 
-    if (config.only_support || ! options.to) {
+    if (
+      config.only_support ||
+      (!options.to && !options.bcc)
+    ) {
       options.to = config.support.join(',')
     } else if (config.include_support_bcc) {
       options.bcc = config.support.join(',')

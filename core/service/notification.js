@@ -28,12 +28,12 @@ module.exports = {
 
     mailer.sendMail(setup, function(error, info){
       if (error) {
-        logger.error('failed to send email');
-        logger.error(error);
+        logger.error('failed to send email')
+        logger.error(error)
       } else {
-        logger.log('Message sent: ' + JSON.stringify(info));
+        logger.log('Message sent: ' + JSON.stringify(info))
       }
-    });
+    })
   },
   /**
    * @param {Object} payload
