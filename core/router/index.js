@@ -13,6 +13,7 @@ module.exports = {
   requireCredential: require('./require-credential'),
   requireSecret: require('./require-secret'),
   ensureCustomer: require('./ensure-customer'),
+  ensureCustomerBelongs: require('./ensure-customer-belongs'),
   ensureAllowed: require('./ensure-allowed'),
   ensureHeader: require('./ensure-header'),
   loadControllers (server, passport) {

@@ -15,6 +15,7 @@ const TaskModel = require('../../entity/task').Entity
 const TaskEvent = require('../../entity/event').TaskEvent
 const JobFactory = require('./factory')
 const NotificationService = require('../../service/notification')
+const mongoose = require('mongoose')
 
 module.exports = {
   ///**
@@ -143,6 +144,7 @@ module.exports = {
    * @property {String[]} input.task_arguments_values arguments definitions
    * @property {ObjectId} input.workflow_job_id current workflow ejecution
    * @property {ObjectId} input.workflow_job
+   * @property {Workflow} input.workflow optional
    * @param {Function(Error,Job)} done
    */
   create (input, done) {
@@ -155,10 +157,14 @@ module.exports = {
     }
 
     verifyTaskBeforeExecution(task, (err) => {
-      if (err) { return done(err) }
-      removeExceededJobsCount(task, () => {
+      if (err) {
+        return done(err)
+      }
+      removeExceededJobsCount(task, input.workflow, () => {
         JobFactory.create(task, input, (err, job) => {
-          if (err) { return done(err) }
+          if (err) {
+            return done(err)
+          }
 
           if (job.constructor.name === 'model') {
             logger.log('job created.')
@@ -198,10 +204,10 @@ module.exports = {
     next || (next=()=>{})
     let { workflow, user } = input
 
-    const createWorkflowJob = (props, next) => {
+    const createWorkflowJob = (props, done) => {
       let wJob = new JobModels.Workflow(props)
       wJob.save( (err, wJob) => {
-        if (err) { return next(err) } // break
+        if (err) { return done(err) } // break
 
         let data = wJob.toObject()
         data.user = {
@@ -220,12 +226,14 @@ module.exports = {
           }
         })
 
-        next(null, wJob)
+        done(null, wJob)
       })
     }
 
     getFirstTask(workflow, (err, task) => {
-      if (err) { return next(err) }
+      if (err) {
+        return next(err)
+      }
 
       let wProps = Object.assign({}, input, {
         customer: input.customer,
@@ -240,19 +248,23 @@ module.exports = {
       })
 
       createWorkflowJob(wProps, (err, wJob) => {
-        if (err) { return next(err) }
+        if (err) {
+          return next(err)
+        }
 
-        this.create(
-          Object.assign({}, input, {
-            task,
-            workflow_job_id: wJob._id,
-            workflow_job: wJob._id
-          }),
-          (err, tJob) => {
-            if (err) { return next(err) }
-            next(null, wJob)
+        let data = Object.assign({}, input, {
+          task,
+          workflow: input.workflow, // explicit
+          workflow_job_id: wJob._id,
+          workflow_job: wJob._id
+        })
+
+        this.create(data, (err, tJob) => {
+          if (err) {
+            return next(err)
           }
-        )
+          next(null, wJob)
+        })
       })
     })
   },
@@ -472,7 +484,7 @@ const taskRequireHost = (task) => {
 
 const verifyTaskBeforeExecution = (task, next) => {
   App.taskManager.populate(task, (err, taskData) => {
-    if (err) return next(err);
+    if (err) { return next(err) }
 
     if (!task.customer) {
       err = new Error('FATAL. Task ' + task._id + 'does not has a customer')
@@ -537,13 +549,23 @@ const currentIntegrationJob = (job, next) => {
  *
  *
  */
-const removeExceededJobsCount = (task, next) => {
+const removeExceededJobsCount = (task, workflow, next) => {
   if (task.workflow_id) {
-    removeExceededJobsCountByWorkflow(
-      task.workflow_id.toString(),
-      task.customer_id,
-      next
-    )
+    // only remove workflow jobs when a new one is being created.
+    if (
+      workflow !== undefined && 
+      workflow.start_task_id !== undefined &&
+      task._id.toString() === workflow.start_task_id.toString()
+    ) {
+      removeExceededJobsCountByWorkflow(
+        task.workflow_id.toString(),
+        task.customer_id,
+        next
+      )
+    } else {
+      // is a inner workflow job is being created, ignore exceeded jobs
+      return next()
+    }
   } else {
     removeExceededJobsCountByTask(task._id.toString(), next)
   }
@@ -580,11 +602,7 @@ const removeExceededJobsCountByTask = (task_id, next) => {
   })
 }
 
-const removeExceededJobsCountByWorkflow = (
-  workflow_id,
-  customer_id,
-  next
-) => {
+const removeExceededJobsCountByWorkflow = (workflow_id, customer_id, next) => {
   const LIMIT = JobConstants.JOBS_LOG_COUNT_LIMIT
   const Job = JobModels.Job
 
@@ -633,23 +651,45 @@ const removeExceededJobsCountByWorkflow = (
     }
   ])
 
-  query.exec((err, groups) => {
-    if (err) { return next(err) }
-    if (groups.length > LIMIT) {
-      // remove exceeded limit items
-      let toDelete = (groups.length - LIMIT)
-      let idx = 0
-      while (toDelete > 0) {
-        let group = groups[idx]
-        --toDelete
-        Job.remove({
-          $or: [
-            { workflow_job_id: group._id },
-            { _id: group._id }
-          ]
-        }).exec(err => {})
+  query.exec((err, jobs) => {
+    if (err) {
+      return next(err)
+    }
+
+    if (jobs.length > LIMIT) {
+      // detect finished tasks
+      let disposables = jobs.filter(job => job.finished === true)
+
+      // finished history exceed LIMIT
+      if (disposables.length > 0) {
+        // remove exceeded items
+        let shouldDelete = (jobs.length - LIMIT)
+
+        if (disposables.length <= shouldDelete) {
+          // delete whole history
+          deleteCount = disposables.length
+        } else {
+          // delete some
+          deleteCount = disposables.length - shouldDelete
+        }
+
+        while (deleteCount > 0) {
+          let job = disposables[deleteCount - 1]
+          Job.remove({
+            $or: [
+              { workflow_job_id: job._id },
+              { _id: mongoose.Types.ObjectId(job._id) }
+            ]
+          }).exec(err => {
+            if (err) {
+              logger.err(err)
+            }
+          })
+          --deleteCount
+        }
       }
     }
+
     next()
   })
 }

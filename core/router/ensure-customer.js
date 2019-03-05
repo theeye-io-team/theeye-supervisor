@@ -1,6 +1,4 @@
-'use strict';
-
-module.exports = function (req,res,next) {
+module.exports = function (req, res, next) {
   const customer = req.customer
   const user = req.user
 
@@ -16,11 +14,13 @@ module.exports = function (req,res,next) {
     return next(err)
   }
 
-  if (user.credential==='root') return next()
+  if (user.credential === 'root') {
+    return next()
+  }
 
-  var idx = user.customers
+  let idx = user.customers
     .map( c => { return c.name })
-    .indexOf( customer.name );
+    .indexOf( customer.name )
 
   if (idx === -1) {
     var err = new Error('forbidden. you don\'t belong to this organization')

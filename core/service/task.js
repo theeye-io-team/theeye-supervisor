@@ -239,71 +239,86 @@ module.exports = {
     const data = task.toObject()
 
     // only if host_id is set
-    const populateHost = (next) => {
+    const populateHost = (populated) => {
       let id = task.host_id
-      if (!id) return next()
+      if (!id) {
+        return populated()
+      }
       Host.findById(id, (err, host) => {
-        if (err) return next(err)
-        if (!host) return next()
+        if (err) {
+          return populated(err)
+        }
+        if (!host) {
+          return populated()
+        }
         data.host = host
         data.hostname = host.hostname
-        next()
+        populated()
       })
     }
 
     // only task type script, and if script_id is set
-    const populateScript = (next) => {
+    const populateScript = (populated) => {
       let id = task.script_id
-      if (!id) { return next() }
+      if (!id) {
+        return populated()
+      }
       Script.findById(id, (err,script) => {
-        if (err) { return next(err) }
-        if (!script) { return next() }
+        if (err) {
+          return populated(err)
+        }
+        if (!script) {
+          return populated()
+        }
         data.script = script
         data.script_id = script._id
         data.script_name = script.filename
-        next()
+        populated()
       })
     }
 
-    const populateRunningJob = (next) => {
-
-      const publish = (job) => {
-        let data = {
-          state: job.state,
-          lifecycle: job.lifecycle,
-          creation_date: job.creation_date,
-          id: job._id.toString(),
-          name: job.name,
-          type: job.type,
-          _type: job._type,
-        }
-
-        if (job.user) {
-          data.user = {
-            id: job.user._id.toString(),
-            username: job.user.username,
-            email: job.user.email
+    const populateLastJob = (populated) => {
+      Job
+        .findOne({
+          task_id: task._id.toString()
+        })
+        .sort({ creation_date: -1 })
+        .populate('user')
+        .exec((err, job) => {
+          if (err) {
+            return populated(err)
           }
+          if (!job) {
+            return populated()
+          }
+          data.jobs = [publish(job)]
+          return populated()
+        })
+    }
+
+    const publish = (job) => {
+      let data = {
+        state: job.state,
+        lifecycle: job.lifecycle,
+        creation_date: job.creation_date,
+        id: job._id.toString(),
+        name: job.name,
+        type: job.type,
+        _type: job._type,
+      }
+
+      if (job.user) {
+        data.user = {
+          id: job.user._id.toString(),
+          username: job.user.username,
+          email: job.user.email
         }
-
-        return data
       }
 
-      const populateLastJob = () => {
-        Job
-          .findOne({
-            task_id: task._id.toString()
-          })
-          .sort({ creation_date: -1 })
-          .populate('user')
-          .exec((err, job) => {
-            if (err) { return next(err) }
-            if (!job) { return next() }
-            data.jobs = [publish(job)]
-            return next()
-          })
-      }
+      return data
+    }
 
+    const populateRunningJob = (populated) => {
       data.jobs = []
       Job
         .find({
@@ -317,23 +332,25 @@ module.exports = {
         .sort({ creation_date: -1 })
         .populate('user')
         .exec((err, jobs) => {
-          if (err) { return next(err) }
+          if (err) {
+            return populated(err)
+          }
           if (jobs.length===0) {
-            return populateLastJob()
+            return populateLastJob(populated)
           } else {
             data.jobs = jobs.map(job => publish(job))
-            return next()
+            return populated()
           }
         })
     }
 
-    const populateSchedules = (next) => {
+    const populateSchedules = (populated) => {
       App.scheduler.getTaskSchedule(task._id, (err, schedules) => {
         if (err) {
-          return next(err)
+          return populated(err)
         } else {
           data.schedules = schedules
-          next(null, schedules)
+          return populated(null, schedules)
         }
       })
     }
@@ -343,7 +360,7 @@ module.exports = {
       populateScript,
       populateRunningJob,
       populateSchedules
-    ], (populate,callback) => {
+    ], (populate, callback) => {
       populate(callback)
     }, err => {
       return done(err, data)

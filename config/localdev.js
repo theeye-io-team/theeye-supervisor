@@ -37,7 +37,7 @@ module.exports = {
   },
   "notifications": {
     "api": {
-      "secret": 'secret_passphrase',
+      "secret": '77E0EAF3B83DD7A7A4004602626446EADED31BF794956FC9BBAD051FA5A25038',
       "url": "http://127.0.0.1:6080/notification" // the same web server
     }
   },

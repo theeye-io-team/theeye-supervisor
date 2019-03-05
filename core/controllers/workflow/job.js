@@ -13,21 +13,21 @@ module.exports = (server, passport) => {
   // create a new workflow-job instance
   server.post(
     '/workflows/:workflow/job',
-    middlewares.concat(
-      router.requireCredential('user'),
-      router.resolve.idToEntity({ param: 'workflow', required: true }),
-      router.ensureAllowed({ entity: { name: 'workflow' } })
-    ),
+    middlewares,
+    router.requireCredential('user'),
+    router.resolve.idToEntity({ param: 'workflow', required: true }),
+    router.ensureCustomerBelongs('workflow'),
+    router.ensureAllowed({ entity: { name: 'workflow' } }),
     controller.create
   )
 
   // create job using task secret key
   server.post(
-    '/workflows/:workflow/secret/:secret/job', [
-      router.resolve.customerNameToEntity({ required: true }),
-      router.resolve.idToEntity({ param: 'workflow', required: true }),
-      router.requireSecret('workflow')
-    ],
+    '/workflows/:workflow/secret/:secret/job',
+    router.resolve.customerNameToEntity({ required: true }),
+    router.resolve.idToEntity({ param: 'workflow', required: true }),
+    router.ensureCustomerBelongs('workflow'),
+    router.requireSecret('workflow'),
     (req, res, next) => {
       req.user = App.user
       req.origin = JobConstants.ORIGIN_SECRET
