@@ -14,16 +14,16 @@ const TaskConstants = require('../../constants/task')
 
 module.exports = (server, passport) => {
   server.get('/:customer/task', [
-    passport.authenticate('bearer', {session:false}),
-    router.resolve.customerNameToEntity({required:true}),
+    passport.authenticate('bearer', { session: false }),
+    router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer,
     router.requireCredential('viewer'),
-    router.resolve.idToEntity({ param: 'host' })
+    router.resolve.idToEntity({ param: 'host', required: false })
   ], controller.fetch)
 
   server.get('/:customer/task/:task' , [
-    passport.authenticate('bearer', {session:false}),
-    router.resolve.customerNameToEntity({required:true}),
+    passport.authenticate('bearer', { session: false }),
+    router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'task', required: true }),
@@ -31,8 +31,8 @@ module.exports = (server, passport) => {
   ] , controller.get)
 
   var middlewares = [
-    passport.authenticate('bearer', {session:false}),
-    router.resolve.customerNameToEntity({required:true}),
+    passport.authenticate('bearer', { session: false }),
+    router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer
   ]
 
@@ -47,7 +47,7 @@ module.exports = (server, passport) => {
     audit.afterCreate('task',{ display: 'name' })
   )
 
-  var mws = middlewares.concat(
+  const mws = middlewares.concat(
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'task', required: true }),
     router.resolve.idToEntity({ param: 'host_id', entity: 'host', into: 'host' })
@@ -137,14 +137,29 @@ const controller = {
    * @route /task
    */
   fetch (req, res, next) {
-    const host = req.host
     const customer = req.customer
     const input = req.query
 
-    if (host) { input.host_id = host._id }
-
-    const filter = dbFilter(input,{ /** default **/ })
+    const filter = dbFilter(input, { /** default **/ })
     filter.where.customer_id = customer.id
+
+    if (!input.hasOwnProperty('unassigned')) {
+      // filter all unusable tasks
+      filter.where.$or = [
+        { _type: { $nin: [ 'ScriptTask', 'ScraperTask' ] } },
+        {
+          $and: [
+            { host_id: { $ne: null, $exists: true } },
+            { _type: 'ScriptTask', script_id: { $ne: null, $exists: true } }
+          ]
+        }
+      ]
+
+      if (req.host) {
+        filter.where.host_id = req.host._id.toString()
+      }
+    }
+    // else - fetch all including unassigned tasks, withi no host or invalid script/data (for crud opps)
 
     if ( !ACL.hasAccessLevel(req.user.credential,'admin') ) {
       // find what this user can access
