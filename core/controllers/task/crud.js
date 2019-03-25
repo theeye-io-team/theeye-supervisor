@@ -143,7 +143,8 @@ const controller = {
     const filter = dbFilter(input, { /** default **/ })
     filter.where.customer_id = customer.id
 
-    if (!input.hasOwnProperty('unassigned')) {
+    // exclude tasks with no host assigned or with invalid script/data
+    if ( ! input.hasOwnProperty('unassigned') ) {
       // filter all unusable tasks
       filter.where.$or = [
         { _type: { $nin: [ 'ScriptTask', 'ScraperTask' ] } },
@@ -154,12 +155,11 @@ const controller = {
           ]
         }
       ]
-
-      if (req.host) {
-        filter.where.host_id = req.host._id.toString()
-      }
     }
-    // else - fetch all including unassigned tasks, withi no host or invalid script/data (for crud opps)
+
+    if (req.host) {
+      filter.where.host_id = req.host._id.toString()
+    }
 
     if ( !ACL.hasAccessLevel(req.user.credential,'admin') ) {
       // find what this user can access
