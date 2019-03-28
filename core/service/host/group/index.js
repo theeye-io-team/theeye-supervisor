@@ -886,14 +886,29 @@ const copyTemplateToHost = (host, template, customer, next) => {
 
   /** @todo add async calls here to handle errors on creation process **/
   copyTasksToHost(host, template.tasks, customer, (err,tasks) => {
+    if (err) {
+      logger.error('failed to assign tasks template to host')
+      logger.error(err)
+    }
+
     copyResourcesToHost(host, template.resources, customer, (err, resources) => {
+      if (err) {
+        logger.error('failed to assign monitor template to host')
+        logger.error(err)
+      }
+
       copyTriggersToHostTasks(host, tasks, resources, template.triggers, (err) => {
+        if (err) {
+          logger.error('failed to assign triggers template to tasks')
+          logger.error(err)
+        }
+
         createRequiredFiles({
           customer,
           tasks,
           resources,
           files: template.files
-        }, () => {
+        }, (err) => {
           if (err) {
             logger.error(err)
             return next(err)
@@ -1249,15 +1264,19 @@ const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
     logger.log('processing trigger %s', trigger._id)
 
     var emitter = searchTriggerEmitter(trigger)
-    if (emitter===null||!emitter) return null
+    if (emitter === null || !emitter) {
+      return null
+    }
 
     var task = searchTriggerTask(trigger)
-    if (task===null||!task) return null
+    if (task === null || !task) {
+      return null
+    }
 
     logger.log('entities found matching trigger setup')
-    logger.data('trigger: %j',trigger)
-    logger.data('emitter: %j',emitter)
-    logger.data('task: %j',task)
+    logger.data('trigger: %j', trigger)
+    logger.data('emitter: %j', emitter)
+    logger.data('task: %j', task)
 
     return {
       task: task,
@@ -1315,7 +1334,7 @@ const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
   // async operations part
   async.map(
     procesableTriggers,
-    (proc,done) => {
+    (proc, done) => {
       addEventToTaskTriggers(
         proc.task,
         proc.trigger.event_name,
@@ -1330,7 +1349,14 @@ const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
         }
       )
     }, (err, tasksToSave) => {
-      if (tasksToSave.length===0) return next()
+      if (err) {
+        logger.error('trigger added')
+        return next(err)
+      }
+
+      if (tasksToSave.length===0) {
+        return next()
+      }
 
       logger.log('saving tasks')
       const saved = []

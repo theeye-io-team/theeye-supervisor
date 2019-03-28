@@ -546,7 +546,7 @@ Service.create = function (input, next) {
   })
 }
 
-Service.createDefaultEvents = function (monitor,customer,done) {
+Service.createDefaultEvents = function (monitor, customer, done) {
   done || (done=function(){})
 
   const createBaseMonitorEvents = (next) => {
@@ -564,7 +564,7 @@ Service.createDefaultEvents = function (monitor,customer,done) {
       Object.assign({}, base, { name: MonitorConstants.RESOURCE_RECOVERED }) ,
       Object.assign({}, base, { name: MonitorConstants.RESOURCE_STOPPED }) ,
       Object.assign({}, base, { name: MonitorConstants.RESOURCE_FAILURE }) ,
-      (err) => {
+      (err, created) => {
         if (err) { logger.error(err) }
         next(err)
       }
@@ -605,6 +605,8 @@ Service.createDefaultEvents = function (monitor,customer,done) {
       createFileMonitorEvents(done)
     } else if (monitor.type === MonitorConstants.RESOURCE_TYPE_HOST) {
       createHostMonitorEvents(done)
+    } else {
+      done()
     }
   })
 }
@@ -911,10 +913,11 @@ Service.createFromTemplate = function(options) {
         return done(err);
       }
 
-      Service.createDefaultEvents(monitor, customer)
-
       resource.monitor = monitor
-      done(null,resource)
+
+      Service.createDefaultEvents(monitor, customer, () => {
+        done(null,resource)
+      })
     })
   })
 }
