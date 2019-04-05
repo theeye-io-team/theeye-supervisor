@@ -151,7 +151,10 @@ const controller = {
         {
           $and: [
             { host_id: { $ne: null, $exists: true } },
-            { _type: 'ScriptTask', script_id: { $ne: null, $exists: true } }
+            { $or: [
+              { _type: 'ScriptTask', script_id: { $ne: null, $exists: true } },
+              { _type: 'ScraperTask' },
+            ] }
           ]
         }
       ]
