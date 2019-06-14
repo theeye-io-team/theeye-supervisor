@@ -36,6 +36,7 @@ exports.task = {
   result: 'task-result', // update/finalize job
   cancelation: 'task-cancelation', // cancel job
   terminate: 'task-terminate', // terminate a job
+  notification: 'notification-task'
 }
 exports.workflow = {
   execution: 'workflow-execution'

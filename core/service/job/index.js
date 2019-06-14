@@ -330,7 +330,9 @@ module.exports = {
     }
 
     job.save(err => {
-      if (err) logger.log('%o',err)
+      if (err) {
+        logger.log('%o',err)
+      }
 
       done(err, job) // continue process in paralell
 
@@ -997,33 +999,45 @@ const finishNotificationTaskJob = (job, input, done) => {
     result: {},
     state: StateConstants['SUCCESS']
   })
-
-  let payload = createNotificationJobPayload(specs)
-  NotificationService.generateSystemNotification(payload)
-
   App.jobDispatcher.finish(specs, done)
 }
 
-const createNotificationJobPayload = (data) => {
-  let payload = {
-    topic: 'notification-task',
-    data: {
-      organization: data.customer.name,
-      operation: Constants.CREATE,
-      model_type: JobConstants.NOTIFICATION_TYPE,
-      notificationTypes: data.task.notificationTypes,
-      model: {
-        task: {
-          subject: data.task.subject,
-          body: data.task.body,
-          acl: data.task.acl,
-          name: data.task.name,
-          recipients: data.task.recipients
-        },
-        _type: JobConstants.NOTIFICATION_TYPE,
-        id: data.job.id
-      }
-    }
-  }
-  return payload
-}
+//const createNotificationJobPayload = (data) => {
+//  let args = data.task_arguments_values
+//  let subject
+//  let body
+//  let recipients
+//
+//  if (Array.isArray(args) && args.length === 3) {
+//    subject = (args[0] || data.task.subject)
+//    body = (args[1] || data.task.body)
+//    recipients = (args[2] || data.task.recipients)
+//  } else {
+//    subject = data.task.subject
+//    body = data.task.body
+//    recipients = data.task.recipients
+//  }
+//
+//  let payload = {
+//    topic: TopicsConstants.task.notification,
+//    data: {
+//      organization: data.customer.name,
+//      operation: Constants.CREATE,
+//      model_type: JobConstants.NOTIFICATION_TYPE,
+//      notificationTypes: data.task.notificationTypes,
+//      model: {
+//        task: {
+//          subject,
+//          body,
+//          recipients,
+//          acl: data.task.acl,
+//          name: data.task.name
+//        },
+//        _type: JobConstants.NOTIFICATION_TYPE,
+//        id: data.job.id
+//      }
+//    }
+//  }
+//
+//  return payload
+//}
