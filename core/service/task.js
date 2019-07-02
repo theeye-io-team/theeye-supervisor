@@ -205,7 +205,7 @@ module.exports = {
     }
 
     // keep backward compatibility with script_arguments
-    if (task.type===TaskConstants.TYPE_SCRIPT) {
+    if (task.type === TaskConstants.TYPE_SCRIPT) {
       task.script_arguments = input.task_arguments
     }
 

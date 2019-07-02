@@ -88,8 +88,8 @@ const controller = {
     if (!input.type) errors.required('type', input.type)
 
     if (
-      input.type===TaskConstants.TYPE_SCRIPT ||
-      input.type===TaskConstants.TYPE_SCRAPER
+      input.type === TaskConstants.TYPE_SCRIPT ||
+      input.type === TaskConstants.TYPE_SCRAPER
     ) {
       if (!req.host) {
         errors[!req.body.host?'required':'invalid']('host', req.host)
@@ -99,22 +99,22 @@ const controller = {
       }
     }
 
-    if (input.type===TaskConstants.TYPE_APPROVAL) {
+    if (input.type === TaskConstants.TYPE_APPROVAL) {
       if (!validIdsArray(input.approvers)) {
         errors.required('approvers', input.approvers)
       }
     }
 
-    if (input.type===TaskConstants.TYPE_SCRIPT) {
+    if (input.type === TaskConstants.TYPE_SCRIPT) {
       if (!req.script) {
         errors[!req.body.script?'required':'invalid']('script', req.script)
       }
       input.script = req.script
     }
 
-    if (input.type===TaskConstants.TYPE_SCRAPER) { }
+    if (input.type === TaskConstants.TYPE_SCRAPER) { }
 
-    if (input.type===TaskConstants.TYPE_DUMMY) { }
+    if (input.type === TaskConstants.TYPE_DUMMY) { }
 
     if (input.type === TaskConstants.TYPE_NOTIFICATION) { }
 

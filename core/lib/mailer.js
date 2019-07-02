@@ -70,4 +70,3 @@ module.exports = {
     transport.sendMail(options, callback)
   }
 }
-

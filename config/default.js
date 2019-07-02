@@ -20,7 +20,7 @@ module.exports = {
       "token": null
     }
   },
-  "mongo":{
+  "mongo": {
   /**
     "options":{ // passed directly to the mongo-native driver
       "replset": {

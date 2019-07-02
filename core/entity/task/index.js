@@ -41,22 +41,33 @@ exports.Factory = {
       input._type = 'ScraperTask'
       return new ScraperTask(input)
     }
+
     if (input.type == TaskConstants.TYPE_APPROVAL) {
       input._type = 'ApprovalTask'
       return new ApprovalTask(input)
     }
+
     if (input.type == TaskConstants.TYPE_DUMMY) {
       input._type = 'DummyTask'
       return new DummyTask(input)
     }
+
     if (input.type == TaskConstants.TYPE_NOTIFICATION) {
       input._type = 'NotificationTask'
+      if (
+        !Array.isArray(input.task_arguments) ||
+        input.task_arguments.length === 0
+      ) {
+        delete input.task_arguments
+      }
       return new NotificationTask(input)
     }
+
     if (input.type == TaskConstants.TYPE_SCRIPT) {
       input._type = 'ScriptTask'
       return new ScriptTask(input)
     }
+
     throw new Error('invalid error type ' + input.type)
   }
 }
