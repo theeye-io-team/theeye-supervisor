@@ -32,7 +32,10 @@ module.exports = {
     "include_support_bcc": false,
     "support": [],
     "transport": {
-      "type":"sendmail"
+      //"type": "ses",
+      "type": "sendmail",
+      "options": {
+      }
     }
   },
   "notifications": {

@@ -1,37 +1,59 @@
-var config = require('config') ;
-var nodemailer = require('nodemailer');
+const logger = require('debug')('theeye:log:mailer')
+const config = require('config').get('mailer')
+const nodemailer = require('nodemailer')
+const aws = require('aws-sdk')
 
-/**
- * http://www.nodemailer.com/
- */
-var mailercfg = config.get('mailer');
-var trType = mailercfg.transport.type;
-var options = mailercfg.transport.options || {};
-switch(trType)
-{
+/** http://www.nodemailer.com/ **/
+const transportType = config.transport.type
+const options = config.transport.options || {}
+let transportSettings
+
+switch (transportType) {
   case 'ses':
-    var transport = require('nodemailer-ses-transport')(options);
-    break;
+    logger('using ses transport')
+    transportSettings = {
+      SES: new aws.SES(
+        Object.assign({
+          apiVersion: "2010-12-01"
+        }, options)
+      )
+    }
+    break
   case 'sendmail':
-    var transport = require('nodemailer-sendmail-transport')(options);
-    break;
+    logger('using sendmail transport')
+    transportSettings = {
+      sendmail: true,
+      newline: 'unix'
+    }
+    break
+  case 'gmail':
+    logger('using gmail transport')
+    transportSettings = {
+      service: 'Gmail',
+      auth: {
+        user: options.user,
+        pass: options.pass
+      }
+    }
+    break
   case 'smtp':
-    var transport = require('nodemailer-smtp-transport')(options);
-    break;
+    logger('using smtp transport')
+    transportSettings = options
+    break
   default:
-    var msg = 'nodemailer transport ' + trType + ' not implemented.';
-    throw new Error(msg);
-    break;
+    let msg = `nodemailer transport ${transportType} not implemented.`
+    logger(msg)
+    throw new Error(msg)
+    break
 }
 
-var transporter = nodemailer.createTransport(transport);
+let transport = nodemailer.createTransport(transportSettings)
 
 module.exports = {
   sendMail: function (options, callback) {
-    var config = mailercfg
-    var from = config
+    let from = config
       .from
-      .replace(/%customer%/g, options.customer_name) 
+      .replace(/%customer%/g, options.customer_name)
 
     options.from = from
     options.replyTo = config.reply_to
@@ -45,6 +67,7 @@ module.exports = {
       options.bcc = config.support.join(',')
     }
 
-    transporter.sendMail(options, callback)
+    transport.sendMail(options, callback)
   }
 }
+
