@@ -166,7 +166,10 @@ module.exports = {
       case 'script':
         if (input.script_id) config.script_id = input.script_id;
         if (input.script_arguments) config.script_arguments = input.script_arguments;
-        if (input.script_runas) config.script_runas = input.script_runas;
+        //if (input.script_runas) config.script_runas = input.script_runas;
+        if (input.hasOwnProperty('script_runas')) {
+          config.script_runas = input.script_runas
+        }
         break;
       case 'dstat':
         if (input.limit) { assign(input, input.limit) }
