@@ -54,6 +54,8 @@ function BaseSchema (props) {
         let dtask = {}
         let id = data.task._id || data.task.id
         dtask.id = id.toString()
+        dtask._type = data.task._type
+        dtask.type = data.task.type
         dtask.approvers = data.task.approvers
         dtask.task_arguments = data.task.task_arguments
         dtask.output_parameters = data.task.output_parameters

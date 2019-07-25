@@ -30,9 +30,13 @@ module.exports = {
   //  JobModels.Job.find(query,next)
   //},
   fetchBy (filter, next) {
-    return JobModels.Job.fetchBy(filter, (err,jobs) => {
-      if (err) return next(err)
-      if (jobs.length===0) return next(null,[])
+    return JobModels.Job.fetchBy(filter, (err, jobs) => {
+      if (err) {
+        return next(err)
+      }
+      if (jobs.length === 0) {
+        return next(null, [])
+      }
       next(null, jobs)
     })
   },

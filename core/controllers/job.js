@@ -15,7 +15,7 @@ const audit = require('../lib/audit')
 const merge = require('lodash/merge')
 
 const dbFilter = require('../lib/db-filter');
-const fetchBy = require('../lib/fetch-by')
+//const fetchBy = require('../lib/fetch-by')
 
 module.exports = (server, passport) => {
   var middlewares = [
@@ -149,7 +149,7 @@ const controller = {
       filter.where.customer_id = customer._id.toString()
       filter.populate = 'user'
 
-      fetchBy.call(Job, filter, (err, jobs) => {
+      Job.fetchBy(filter, (err, jobs) => {
         if (err) { return res.send(500, err) }
         let data = []
         jobs.forEach(job => data.push(job.publish()))
