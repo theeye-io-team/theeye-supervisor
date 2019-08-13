@@ -42,7 +42,6 @@ module.exports = function () {
 
   // respond with error middleware
   server.use((req, res, next) => {
-
     res.sendError = (err, next) => {
       const status = err.statusCode || 500
       res.send(status, {
@@ -52,7 +51,6 @@ module.exports = function () {
       })
       if (next) { next() }
     }
-
     next()
   })
 
@@ -60,7 +58,8 @@ module.exports = function () {
   server.use(plugins.acceptParser(server.acceptable))
   server.use(plugins.gzipResponse())
   server.use(plugins.queryParser())
-  server.use(plugins.jsonBodyParser())
+  //server.use(plugins.jsonBodyParser())
+  server.use(plugins.bodyParser())
   server.use(passport.initialize())
   server.use(multer({
     dest: config.system.file_upload_folder,
