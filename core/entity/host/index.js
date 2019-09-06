@@ -15,3 +15,4 @@ const Entity = mongodb.db.model('Host', HostSchema)
 Entity.ensureIndexes()
 
 exports.Entity = Entity
+exports.Host = Entity

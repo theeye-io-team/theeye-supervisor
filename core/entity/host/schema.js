@@ -53,7 +53,6 @@ function HostSchema () {
         return {}
       }
     }
-    //templates: [{ type: ObjectId, ref: 'HostGroup' }] // can belongs to many hostgroups templates
   }
 
   // Schema constructor

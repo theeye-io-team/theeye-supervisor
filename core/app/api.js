@@ -58,7 +58,6 @@ module.exports = function () {
   server.use(plugins.acceptParser(server.acceptable))
   server.use(plugins.gzipResponse())
   server.use(plugins.queryParser())
-  //server.use(plugins.jsonBodyParser())
   server.use(plugins.bodyParser())
   server.use(passport.initialize())
   server.use(multer({

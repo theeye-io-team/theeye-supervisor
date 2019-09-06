@@ -308,13 +308,6 @@ module.exports = {
     const result = input.result
     const task = job.task
 
-    //let lifecycle = finishJobNextLifecycle(job)
-    //if (!lifecycle) {
-    //  let err = new Error(`cannot finish job. current state lifecycle "${job.lifecycle}" does not allow the transition`)
-    //  err.statusCode = 400
-    //  return next(err)
-    //}
-
     // if it is not a declared failure, assume success
     let state = (input.state || StateConstants.SUCCESS)
     let trigger_name = (state === StateConstants.FAILURE) ?
@@ -335,17 +328,18 @@ module.exports = {
 
     job.save(err => {
       if (err) {
-        logger.log('%o',err)
+        logger.log('%o', err)
+        return done(err, job)
       }
 
-      done(err, job) // continue process in paralell
+      done(null, job) // continue process in paralell
 
       let topic = TopicsConstants.task.result
       registerJobOperation(Constants.UPDATE, topic, {
         job, user, customer, task
       })
 
-      dispatchFinishedTaskExecutionEvent (job, trigger_name)
+      dispatchFinishedTaskExecutionEvent(job, trigger_name)
     })
   },
   /**
@@ -912,7 +906,9 @@ const dispatchFinishedTaskExecutionEvent = (job, trigger) => {
     enable: true,
     name: trigger
   }, (err, event) => {
-    if (err) { return logger.error(err); }
+    if (err) {
+      return logger.error(err)
+    }
 
     if (!event) {
       var err = new Error('no handler defined for event named "' + trigger + '" on task ' + task_id)
