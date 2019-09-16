@@ -83,6 +83,10 @@ module.exports = {
     updates.template_id = null
     delete updates._id // if set
 
+    if (updates.workflow_id) {
+      delete updates.acl
+    }
+
     task.set(updates)
 
     // keep backward compatibility with script_arguments
@@ -394,6 +398,8 @@ module.exports = {
 
       task.workflow_id = null
       task.workflow = null
+      task.acl = []
+
       task.save(err => {
         if (err) {
           logger.error(err)
@@ -420,6 +426,34 @@ module.exports = {
 
       task.workflow_id = workflow._id
       task.workflow = workflow._id
+      task.acl = workflow.acl
+
+      task.save(err => {
+        if (err) {
+          logger.error(err)
+          return next(err)
+        } else {
+          sendTaskUpdatedEventNotification(task)
+          return next()
+        }
+      })
+    })
+  },
+  assignWorkflowAclToTask (taskId, workflow, next) {
+    next || (next=()=>{})
+    Task.findById(taskId, (err, task) => {
+      if (err) {
+        logger.error(err)
+        return next(err)
+      }
+
+      if (!task) {
+        logger.error('Workflow task not found!')
+        return next()
+      }
+
+      task.acl = workflow.acl
+
       task.save(err => {
         if (err) {
           logger.error(err)

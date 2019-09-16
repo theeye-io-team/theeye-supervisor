@@ -37,21 +37,35 @@ module.exports = (server, passport) => {
     controller.cancel
   )
 
+  const isApproverMiddleware = () => {
+    return (req, res, next) => {
+      const approver_id = req.body.web_user_id
+      const job = req.job
+
+      let approver = job.task.approvers.find(_id => _id.toString() === approver_id)
+
+      if (!approver) {
+        return res.send(403, 'you are not an approver of this job')
+      }
+      return next()
+    }
+  }
+
   server.put(
     '/job/:job/approve',
-    middlewares.concat(
-      router.requireCredential('user'),
-      router.resolve.idToEntity({param: 'job', required: true})
-    ),
+    middlewares,
+    router.requireCredential('viewer'),
+    router.resolve.idToEntity({ param: 'job', required: true }),
+    isApproverMiddleware(),
     controller.approve
   )
 
   server.put(
     '/job/:job/reject',
-    middlewares.concat(
-      router.requireCredential('user'),
-      router.resolve.idToEntity({param: 'job', required: true})
-    ),
+    middlewares,
+    router.requireCredential('viewer'),
+    router.resolve.idToEntity({ param: 'job', required: true }),
+    isApproverMiddleware(),
     controller.reject
   )
 }
@@ -62,7 +76,6 @@ const controller = {
   },
   cancel (req, res, next) {
     const job = req.job
-    const web_user_id = req.body.web_user_id
 
     App.jobDispatcher.cancel({ job, user: req.user, customer: req.customer }, err => {
       if (err) {
@@ -76,17 +89,12 @@ const controller = {
   },
   approve (req, res, next) {
     const payload = req.body.result || {}
-    const web_user_id = req.body.web_user_id
     const job = req.job
-
-    if (!isApprover(job.task.approvers, web_user_id)) {
-      return res.send(403, 'you are not allowed to approve this job')
-    }
 
     App.jobDispatcher.finish({
       result: payload.data,
       state: StateConstants.SUCCESS,
-      job: req.job,
+      job,
       user: req.user,
       customer: req.customer
     }, err => {
@@ -97,17 +105,12 @@ const controller = {
   },
   reject (req, res, next) {
     const payload = req.body.result || {}
-    const web_user_id = req.body.web_user_id
     const job = req.job
-
-    if (!isApprover(job.task.approvers, web_user_id)) {
-      return res.send(403, 'you are not allowed to approve this job')
-    }
 
     App.jobDispatcher.finish({
       result: payload.data,
       state: StateConstants.FAILURE,
-      job: req.job,
+      job,
       user: req.user,
       customer: req.customer
     }, err => {
@@ -116,10 +119,4 @@ const controller = {
       next()
     })
   }
-}
-
-const isApprover = (approvers, approver_id) => {
-  return approvers.find( _id => {
-    return _id.toString() === approver_id
-  })
 }

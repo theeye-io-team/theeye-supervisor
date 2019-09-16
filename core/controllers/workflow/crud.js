@@ -122,11 +122,16 @@ const controller = {
    *
    */
   replace (req, res, next) {
-    replaceWorkflow(req, (err) => {
+    replaceWorkflow(req, (err, workflow) => {
       if (err) {
         return res.send(err.statusCode || 500, err)
       }
-      res.send(200, req.workflow)
+
+      assignWorkflowAclToTasks(workflow, (err) => {
+        if (err) { return res.send(err.statusCode || 500, err) }
+
+        res.send(200, workflow)
+      })
     })
   },
   /**
@@ -268,4 +273,17 @@ const updateWorkflowGraphTasksDiferences = (oldgraph, newgraph, workflow) => {
       }
     }
   })
+}
+
+const assignWorkflowAclToTasks = (workflow, next) => {
+  const graph = graphlib.json.read(workflow.graph)
+
+  graph.nodes().forEach(id => {
+    let node = graph.node(id)
+    if (!/Event/.test(node._type)) {
+      App.task.assignWorkflowAclToTask(id, workflow)
+    }
+  })
+
+  next()
 }
