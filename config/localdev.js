@@ -30,7 +30,7 @@ module.exports = {
     "reply_to": "Support <support@theeye.io>",
     "only_support": false,
     "include_support_bcc": false,
-    "support": [],
+    "support": [ "facugon@theeye.io" ],
     "transport": {
       //"type": "ses",
       "type": "sendmail",

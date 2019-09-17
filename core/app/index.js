@@ -23,7 +23,8 @@ Object.assign(App, {
     })
   },
   startApi: require('./api'),
-  startCommander: require('./commander')
+  startCommander: require('./commander'),
+  startMonitoring: require('./monitoring')
 })
 
 const getApplicationUser = (next) => {

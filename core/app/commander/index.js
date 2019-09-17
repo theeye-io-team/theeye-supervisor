@@ -1,10 +1,14 @@
 const restify = require('restify')
-const logger = require('../../lib/logger')('app:local_server')
-
+const logger = require('../../lib/logger')(':app:commander')
 const agentsUpdate = require('./agentsUpdate')
 const debugSetup = require('./debugSetup')
 
 module.exports = function () {
+  if (process.env.COMMANDER_DISABLED === 'true') {
+    logger.log('WARNING! App Commander service is disabled via process.env')
+    return
+  }
+
   const server = restify.createServer({ strictNext: true })
   let plugins = restify.plugins
   server.use(plugins.acceptParser(server.acceptable))

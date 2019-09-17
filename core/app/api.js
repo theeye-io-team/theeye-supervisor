@@ -3,9 +3,14 @@ const multer = require('multer')
 const config = require('config')
 const router = require('../router')
 const auth = require('../lib/auth')
-const logger = require('../lib/logger')('app:server')
+const logger = require('../lib/logger')(':app:api')
 
 module.exports = function () {
+  if (process.env.API_DISABLED === 'true') {
+    logger.log('WARNING! App Api service is disabled via process.env')
+    return
+  }
+
   const server = restify.createServer({ strictNext: true })
   const passport = auth.initialize()
 
@@ -76,7 +81,7 @@ module.exports = function () {
   // Routing the controllers
   router.loadControllers(server, passport)
 
-  server.listen( config.server.port || 60080, () => {
+  server.listen(config.server.port || 60080, () => {
     logger.log('TheEye server started. listening at "%s"', server.url)
   })
 }

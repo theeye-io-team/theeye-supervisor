@@ -38,16 +38,16 @@ module.exports = {
     "replicaSet": "replica_set_name" // >> will concat '?replicaSet="replica_set_name"' to the end of the connection string
   */
   },
-  "monitor": {
-    "disabled": false,
-    "fails_count_alert": 3,
-    "check_interval": 10000
+  monitor: {
+    disabled: false,
+    fails_count_alert: 3,
+    check_interval: 10000
   },
-  "agent": {
-    "core_workers": {
-      "host_ping": {
-        "type":"keepAlive",
-        "looptime":30000
+  agent: {
+    core_workers: {
+      host_ping: {
+        type: "keepAlive",
+        looptime: 30000
       }
     }
   },

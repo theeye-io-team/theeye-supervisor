@@ -6,7 +6,7 @@ const uuidv1 = require('uuid/v1')
 
 module.exports = {
   sendEmailNotification (options) {
-    if (! options.to && ! options.bcc) {
+    if (!options.to && !options.bcc) {
       logger.error('failed to send email')
       logger.error(new Error('no recipients'))
       return

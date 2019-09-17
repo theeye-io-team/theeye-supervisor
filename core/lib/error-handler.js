@@ -68,9 +68,9 @@ ErrorHandler.prototype = {
   sendExceptionAlert: function(error){
     this.errors.push( error );
     notification.sendEmailNotification({
-      customer_name:'theeye',
-      subject:'Supervisor Exception',
-      to: config.support,
+      customer_name: 'theeye',
+      subject: 'Supervisor Exception',
+      to: config.mailer.support.join(','),
       content: this.toHtml()
     })
   }

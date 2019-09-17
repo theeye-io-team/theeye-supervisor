@@ -91,15 +91,13 @@ function Service (resource) {
     var resource_id = resource._id
     var trigger = input.event_name
 
-    MonitorModel.findOne({
-      resource_id: resource_id
-    }, function (err,monitor) {
+    MonitorModel.findOne({ resource_id }, function (err,monitor) {
       if (!monitor) {
-        logger.error('resource monitor not found %s', resource_id);
-        return;
+        logger.error('resource monitor not found %s', resource_id)
+        return
       }
 
-      logger.log('searching monitor %s event %s ', monitor.name, trigger);
+      logger.log('searching monitor %s event %s ', monitor.name, trigger)
 
       MonitorEvent.findOne({
         emitter_id: monitor._id,
@@ -143,7 +141,12 @@ function Service (resource) {
         logger.log('sending email alerts')
         CustomerService.getAlertEmails(
           resource.customer_name,
-          (error,emails) => {
+          (err, emails) => {
+            if (err) {
+              logger.error(err)
+              return
+            }
+
             var mailTo, extraEmail=[]
 
             if (Array.isArray(resource.acl) && resource.acl.length>0) {

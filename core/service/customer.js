@@ -31,16 +31,17 @@ module.exports = {
         return next(err,[]);
       }
 
-      if(customer.owner && customer.owner.email)
+      if (customer.owner && customer.owner.email) {
         emails.push(customer.owner.email)
+      }
 
       User.find({
         'customers._id': customer._id,
-        credential: { $ne:['agent'] }
-      },(error,users) => {
+        credential: { $nin: ['agent','integration'] }
+      }, (error, users) => {
         if (error) {
-          logger.log(error);
-          return next(error);
+          logger.log(error)
+          return next(error)
         }
 
         if (Array.isArray(users) && users.length > 0) {
@@ -53,9 +54,9 @@ module.exports = {
           })
         }
 
-        return next(null, emails);
-      });
-    });
+        return next(null, emails)
+      })
+    })
   },
   /**
    *
