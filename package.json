@@ -33,10 +33,9 @@
     "validator": "8.2.0"
   },
   "scripts": {
-    "start": "node --harmony_proxies $PWD/core/main.js",
+    "start": "node $PWD/core/main.js",
     "core": "NODE_TLS_REJECT_UNAUTHORIZED=0 node `pwd`/core/main.js",
     "local": "NODE_ENV=localdev NODE_TLS_REJECT_UNAUTHORIZED=0 node `pwd`/core/main.js",
-    "devel": "/bin/bash ./run.debug.sh",
     "test": "NODE_ENV=localdev ./node_modules/.bin/mocha --exit",
     "workspace": "./workspace/start.sh"
   },
