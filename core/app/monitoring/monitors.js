@@ -62,7 +62,8 @@ module.exports = (options) => {
         })
 
         resources.forEach(resource => {
-          let check = (resource.last_check.getTime() + resource.monitor.looptime + 5000) < date.getTime()
+          let last_check = (resource.last_check || new Date())
+          let check = (last_check.getTime() + resource.monitor.looptime + 5000) < date.getTime()
           if (check) {
             checksCount++
             let model = Resource.hydrate(Object.assign({}, resource, { monitor: null }))
