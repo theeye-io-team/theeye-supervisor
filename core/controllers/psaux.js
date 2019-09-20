@@ -11,22 +11,31 @@ var ResourceManager = require('../service/resource');
 
 const TopicsConstants = require('../constants/topics')
 
-module.exports = function(server, passport) {
-  var middlewares = [
+module.exports = function (server, passport) {
+  const middlewares = [
     passport.authenticate('bearer',{session:false}),
     router.requireCredential('agent',{exactMatch:true}),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,
     router.resolve.hostnameToHost({required:true})
-  ];
+  ]
 
-	server.post('/:customer/psaux/:hostname',middlewares,controller.create);
+	server.post(
+    '/:customer/psaux/:hostname',
+    middlewares,
+    controller.create
+  )
+
   /**
    *
    * KEEP ROUTE FOR OUTDATED AGENTS
    *
    */
-	server.post('/psaux/:hostname',middlewares,controller.create);
+	server.post(
+    '/psaux/:hostname',
+    middlewares,
+    controller.create
+  )
 }
 
 const controller = {
@@ -39,7 +48,9 @@ const controller = {
       logger.error(errmsg)
       return res.send(400,errmsg)
     }
-    if (!stats) return res.send(400,'psaux data required')
+    if (!stats) {
+      return res.send(400,'psaux data required')
+    }
 
     logger.log('Handling host psaux data');
 

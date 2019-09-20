@@ -789,7 +789,11 @@ const registerJobOperation = (operation, topic, input, done) => {
       job._type !== JobConstants.DUMMY_TYPE &&
       job._type !== JobConstants.NOTIFICATION_TYPE
     ) {
-      payload.hostname = job.host.hostname
+      if (job.host) {
+        payload.hostname = job.host.hostname
+      } else {
+        logger.error(new Error(`job ${job._id}/${job._type}. host not available must fix`))
+      }
     }
 
     if (jobMustHaveATask(job) && !task) {
