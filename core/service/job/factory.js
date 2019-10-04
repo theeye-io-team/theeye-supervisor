@@ -262,6 +262,22 @@ function createJob (input, next) {
       job.script_id = script._id
       job.script_arguments = argsValues
       job.script_runas = task.script_runas
+
+      job.env = Object.assign({
+        THEEYE_JOB: JSON.stringify({
+          id: job._id,
+          task: task._id
+        }),
+        THEEYE_JOB_USER: JSON.stringify({
+          id: vars.user._id,
+          email: vars.user.email
+        }),
+        THEEYE_JOB_WORKFLOW: JSON.stringify({
+          job_id: (vars.workflow_job_id || null),
+          id: (vars.workflow_id || null)
+        })
+      }, task.env)
+
       return saveJob(job, done)
     })
   }

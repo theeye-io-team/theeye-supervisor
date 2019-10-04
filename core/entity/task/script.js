@@ -4,15 +4,14 @@ const ObjectId = require('mongoose').Schema.Types.ObjectId
 const ScriptSchema = new BaseSchema({
   template_id: { type: ObjectId },
   host_id: { type: String },
+  type: { type: String, default: 'script' },
+  host: { type: ObjectId, ref: 'Host' },
+  template: { type: ObjectId, ref: 'TaskTemplate' },
   script_id: { type: String },
   script_runas: { type: String },
   script_arguments: { type: Array }, // will be replaced with task_arguments in the future
-  type: { type: String, default: 'script' },
-  env: { type: Object, default: () => { return {} }},
-  // relations
-  host: { type: ObjectId, ref: 'Host' },
   script: { type: ObjectId, ref: 'Script' },
-  template: { type: ObjectId, ref: 'TaskTemplate' },
+  env: { type: Object, default: () => { return {} }},
 })
 
 module.exports = ScriptSchema
