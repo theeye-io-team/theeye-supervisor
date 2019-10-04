@@ -19,7 +19,8 @@ module.exports = {
   notify: { type: Boolean },
   state: { type: String }, // job state
   lifecycle: { type: String },
-  task_arguments_values: [ String ], // array of task arguments
+  //task_arguments_values: [ String ], // array of task arguments
+  task_arguments_values: [ ], // array of task arguments
   result: {
     type: Object,
     default: () => { return {} }
