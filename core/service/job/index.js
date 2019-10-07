@@ -910,9 +910,7 @@ const dispatchFinishedTaskExecutionEvent = (job, trigger) => {
     enable: true,
     name: trigger
   }, (err, event) => {
-    if (err) {
-      return logger.error(err)
-    }
+    if (err) { return logger.error(err) }
 
     if (!event) {
       var err = new Error('no handler defined for event named "' + trigger + '" on task ' + task_id)

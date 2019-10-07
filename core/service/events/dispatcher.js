@@ -1,11 +1,10 @@
 'use strict';
 
 const EventEmitter = require('events').EventEmitter
-
 const logger = require('../../lib/logger')(':events:dispatcher')
-
 const _prefix = 'ID_'
 const _callbacks = []
+
 var _lastID = 1
 
 class Dispatcher extends EventEmitter {
@@ -22,6 +21,7 @@ class Dispatcher extends EventEmitter {
 		_callbacks[id] = callback
 		return id
 	}
+
 }
 
 module.exports = Dispatcher

@@ -266,7 +266,7 @@ function createJob (input, next) {
       job.env = Object.assign({
         THEEYE_JOB: JSON.stringify({
           id: job._id,
-          task: task._id
+          task_id: task._id
         }),
         THEEYE_JOB_USER: JSON.stringify({
           id: vars.user._id,
