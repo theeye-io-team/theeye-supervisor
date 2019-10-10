@@ -6,6 +6,7 @@ const ScriptSchema = new BaseSchema({
   script_arguments: [ String ],
   script: { type: Object }, // embedded not reference
   env: { type: Object, default: () => { return {} }},
+  timeout: { type: Number }
 })
 
 module.exports = ScriptSchema

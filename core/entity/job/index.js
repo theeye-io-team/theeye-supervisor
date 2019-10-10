@@ -2,13 +2,13 @@ const mongodb = require('../../lib/mongodb').db
 const IntegrationConstants = require('../../constants/integrations')
 const BaseSchema = require('./schema')
 const AgentUpdateSchema = require('./agent-update')
-const ScriptSchema = require('./script')
 const WorkflowSchema = require('./workflow')
 
+const ScriptSchema = require('./script')
+const ScraperSchema = require('./scraper')
 const JobSchema = new BaseSchema({
   _type: { type: String, default: 'Job' }
 })
-const ScraperSchema = new BaseSchema()
 const ApprovalSchema = new BaseSchema()
 const DummySchema = new BaseSchema()
 const NotificationSchema = new BaseSchema()

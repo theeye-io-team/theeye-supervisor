@@ -250,6 +250,7 @@ function createJob (input, next) {
   const createScraperJob = (done) => {
     const job = new JobModels.Scraper()
     setupJobBasicProperties(job)
+    job.timeout = task.timeout
     return saveJob(job, done)
   }
 
@@ -263,6 +264,7 @@ function createJob (input, next) {
       job.script_arguments = argsValues
       job.script_runas = task.script_runas
 
+      job.timeout = task.timeout
       job.env = Object.assign({
         THEEYE_JOB: JSON.stringify({
           id: job._id,
