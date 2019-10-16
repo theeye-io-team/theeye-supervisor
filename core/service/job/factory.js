@@ -210,7 +210,7 @@ const createScheduledJob = (input, next) => {
  * @property {Array} input.argsValues task arguments values
  *
  */
-function createJob (input, next) {
+const createJob = (input, next) => {
   let { task, vars, argsValues } = input
   let beforeSave = input.beforeSave
 
@@ -277,7 +277,9 @@ function createJob (input, next) {
         THEEYE_JOB_WORKFLOW: JSON.stringify({
           job_id: (vars.workflow_job_id || null),
           id: (vars.workflow_id || null)
-        })
+        }),
+        THEEYE_ORGANIZATION_NAME: JSON.stringify(vars.customer.name),
+        THEEYE_API_URL: JSON.stringify(App.config.system.base_url)
       }, task.env)
 
       return saveJob(job, done)

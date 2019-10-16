@@ -6,8 +6,8 @@ module.exports = {
     "auth_strategy": "bearer"
   },
   "system": {
-    "base_url": "",
-    "web_url": "",
+    "base_url": "http://127.0.0.1:60080",
+    "web_url": "http://127.0.0.1:6080",
     "view_teamplates_path": __dirname + "/../core/view/template",
     "file_upload_folder": "/tmp",
     "secret": "b28d9f2a4d52ace6e5d3ac1dd3e5c2a0e7e66472ec7276ca501b8c4fa1f07679",
