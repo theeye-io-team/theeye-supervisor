@@ -24,58 +24,42 @@ module.exports = (server, passport) => {
     router.ensureCustomer
   ]
 
-  /**
-   *
-   * users can trigger tasks
-   *
-   */
+  /** users can trigger tasks **/
   server.get(
     '/:customer/job/:job',
-    middlewares.concat(
-      router.requireCredential('viewer'),
-      router.resolve.idToEntity({param:'job',required:true})
-    ),
+    middlewares,
+    router.requireCredential('viewer'),
+    router.resolve.idToEntity({ param: 'job', required: true }),
     controller.get
   )
 
   server.get(
     '/:customer/job',
-    middlewares.concat(
-      router.requireCredential('viewer'),
-      router.resolve.hostnameToHost()
-    ),
+    middlewares,
+    router.requireCredential('viewer'),
+    router.resolve.hostnameToHost(),
     controller.fetch
   )
 
   server.put(
     '/:customer/job/:job',
-    middlewares.concat(
-      router.requireCredential('agent', { exactMatch: true }),
-      router.resolve.idToEntity({ param: 'job', required: true })
-    ),
+    middlewares,
+    router.requireCredential('agent', { exactMatch: true }),
+    router.resolve.idToEntity({ param: 'job', required: true }),
     controller.finish,
     afterFinishJobHook
   )
 
-  server.put(
-    '/job/:job/redo',
-    middlewares.concat(
-      router.requireCredential('user'),
-      router.resolve.idToEntity({ param: 'job', required: true })
-    ),
-    controller.redo
-  )
-
   server.post(
     '/:customer/job',
-    middlewares.concat(
-      router.requireCredential('user'),
-      router.resolve.idToEntity({param:'task',required:true}),
-      router.ensureAllowed({entity:{name:'task'}})
-    ),
+    middlewares,
+    router.requireCredential('user'),
+    router.resolve.idToEntity({param:'task', required:true}),
+    router.ensureAllowed({entity: {name: 'task'} }),
     controller.create
     //audit.afterCreate('job',{ display: 'name' })
   )
+
   server.post(
     '/job',
     middlewares.concat(
@@ -215,14 +199,6 @@ const controller = {
       req.job = job
       next()
     })
-  },
-  /**
-   *
-   *
-   */
-  redo (req, res, next) {
-    let job = req.job
-    res.send(200)
   },
   removeFinished (req, res, next) {
     let customer = req.customer

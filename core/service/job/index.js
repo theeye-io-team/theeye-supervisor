@@ -161,29 +161,33 @@ module.exports = {
     }
 
     verifyTaskBeforeExecution(task, (err) => {
-      if (err) {
-        return done(err)
-      }
+      if (err) { return done(err) }
+
       removeExceededJobsCount(task, input.workflow, () => {
-        JobFactory.create(task, input, (err, job) => {
-          if (err) {
-            return done(err)
+        // Dummy Task are created onhold to ask arguments
+        if (TaskConstants.TYPE_DUMMY === task.type) {
+          if (
+            input.origin !== JobConstants.ORIGIN_USER ||
+            task.always_hold === true
+          ) {
+            input.lifecycle = LifecycleConstants.ONHOLD
           }
+        }
+
+        JobFactory.create(task, input, (err, job) => {
+          if (err) { return done(err) }
 
           if (job.constructor.name === 'model') {
             logger.log('job created.')
             let topic = TopicsConstants.task.execution
-            registerJobOperation(Constants.CREATE, topic, {
-              task,
-              job,
-              user: input.user,
-              customer: input.customer
-            }, () => {
-              if (TaskConstants.TYPE_DUMMY === task.type) {
-                // only Dummy:
-                // finish the task at once.
-                // bypass inputs to outputs.
-                finishDummyTaskJob(job, input, done)
+            let payload = { task, job, user: input.user, customer: input.customer }
+            registerJobOperation(Constants.CREATE, topic, payload, () => {
+              if (task.type === TaskConstants.TYPE_DUMMY) {
+                if (job.lifecycle !== LifecycleConstants.ONHOLD) {
+                  this.finishDummyJob(job, input, done)
+                } else {
+                  done(null, job)
+                }
               } else if (TaskConstants.TYPE_NOTIFICATION === task.type) {
                 finishNotificationTaskJob(job, input, done)
               } else {
@@ -203,6 +207,54 @@ module.exports = {
         })
       })
     })
+  },
+  finishDummyJob (job, input, done) {
+    let { task } = input
+
+    JobFactory.prepareTaskArgumentsValues(
+      task.task_arguments,
+      input.task_arguments_values,
+      (err, args) => {
+        let specs = Object.assign({}, input, {
+          job,
+          result: { output: args },
+          state: StateConstants[err?'FAILURE':'SUCCESS']
+        })
+
+        App.jobDispatcher.finish(specs, done)
+      }
+    )
+  },
+  jobInputsReplenish (job, input, done) {
+    let { task, user, customer } = input
+
+    JobFactory.prepareTaskArgumentsValues(
+      task.task_arguments,
+      input.task_arguments_values,
+      (err, args) => {
+        if (err) {
+          err.statusCode = 400 // input error
+          logger.log('%o', err)
+          return done(err)
+        }
+
+        job.task_arguments_values = args
+        job.lifecycle = LifecycleConstants.READY
+        job.state = StateConstants.IN_PROGRESS
+        job.save(err => {
+          if (err) {
+            logger.log('%o', err)
+            return done(err, job)
+          }
+
+          done(null, job) // continue process in paralell
+
+          let topic = TopicsConstants.job.crud
+          let payload = { job, user, customer, task }
+          registerJobOperation(Constants.UPDATE, topic, payload)
+        })
+      }
+    )
   },
   createByWorkflow (input, next) {
     next || (next=()=>{})
@@ -553,7 +605,7 @@ const removeExceededJobsCount = (task, workflow, next) => {
   if (task.workflow_id) {
     // only remove workflow jobs when a new one is being created.
     if (
-      workflow !== undefined && 
+      workflow !== undefined &&
       workflow.start_task_id !== undefined &&
       task._id.toString() === workflow.start_task_id.toString()
     ) {
@@ -832,7 +884,7 @@ const registerJobOperation = (operation, topic, input, done) => {
     App.notifications.generateSystemNotification({
       topic: TopicsConstants.job.crud,
       data: {
-        hostname: job.hostname,
+        hostname: (job.host && job.host.hostname) || job.host_id,
         organization: customer.name,
         operation: operation,
         model_type: job._type,
@@ -977,29 +1029,12 @@ const filterOutputArray = (outputs) => {
   return result
 }
 
-const finishDummyTaskJob = (job, input, done) => {
-  let { task } = input
-
-  JobFactory.prepareTaskArgumentsValues(
-    task.output_parameters,
-    input.task_arguments_values,
-    (err, args) => {
-      let specs = Object.assign({}, input, {
-        job,
-        result: { output: args },
-        state: StateConstants[err?'FAILURE':'SUCCESS']
-      })
-
-      App.jobDispatcher.finish(specs, done)
-    }
-  )
-}
 
 const finishNotificationTaskJob = (job, input, done) => {
   let specs = Object.assign({}, input, {
     job,
     result: {},
-    state: StateConstants['SUCCESS']
+    state: StateConstants.SUCCESS
   })
   App.jobDispatcher.finish(specs, done)
 }

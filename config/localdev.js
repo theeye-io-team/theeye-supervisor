@@ -11,9 +11,7 @@ module.exports = {
   },
   "monitor": {
     "disabled": false, // this is enabled if not specified or by default
-    "fails_count_alert": 1,
-    "resources_check_failure_interval_milliseconds": 10000,
-    "resources_alert_failure_threshold_milliseconds": 30000
+    "fails_count_alert": 1
   },
   "mongo": {
     "debug":false,

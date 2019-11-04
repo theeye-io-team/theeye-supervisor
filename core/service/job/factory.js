@@ -41,19 +41,16 @@ const JobsFactory = {
       argsDefinition,
       inputArgsValues,
       (err, argsValues) => {
-        if (err) {
-          // err on arguments. cannot continue.
-          // create a terminated-with-errors job.
+        if (err || input.lifecycle === LifecycleConstants.ONHOLD) {
+          // err on arguments. cannot continue, put onhold.
           createJob({
             task,
             vars: input,
             argsValues,
             beforeSave: (job, saveCb) => {
-              job.lifecycle = LifecycleConstants.TERMINATED
-              job.state = StateConstants.ERROR
-              job.result = {
-                log: 'invalid task arguments. cannot execute'
-              }
+              //job.result = { log: JSON.stringify(err) }
+              //job.state = StateConstants.ERROR
+              job.lifecycle = LifecycleConstants.ONHOLD
               saveCb()
             }
           }, next)
@@ -110,21 +107,19 @@ const JobsFactory = {
     }
 
     argumentsDefinition.forEach((def,index) => {
-      if (Boolean(def)) { // is defined
-        if (typeof def === 'string') { // fixed value old version compatibility
-          filteredArguments[index] = def
+      let value = null
+      let order
+
+      if (Boolean(def)) {
+        // is defined
+        if (typeof def === 'string') {
+          // fixed values. old version compatibility
+          order = index
+          vlaue = def
         } else if (def.type) {
+          order = def.order
           if (def.type === TaskConstants.ARGUMENT_TYPE_FIXED) {
-            //
-            // do not replace fixed values !
-            //
-            //let found = searchInputArgumentValueByOrder(argumentsValues, def.order)
-            //if (found) { // use found value
-            //  filteredArguments[def.order] = (found.value || found)
-            //} else {
-            //  filteredArguments[def.order] = def.value
-            //}
-            filteredArguments[def.order] = def.value
+            value = def.value
           } else if (
             def.type === TaskConstants.ARGUMENT_TYPE_INPUT ||
             def.type === TaskConstants.ARGUMENT_TYPE_SELECT ||
@@ -132,28 +127,34 @@ const JobsFactory = {
             def.type === TaskConstants.ARGUMENT_TYPE_FILE ||
             def.type === TaskConstants.ARGUMENT_TYPE_REMOTE_OPTIONS
           ) {
-            // require user input
+            // user input required
             let found = searchInputArgumentValueByOrder(argumentsValues, def.order)
+
             // the argument is not present within the provided request arguments
             if (found === undefined) {
-              errors.required(def.label, null, 'task argument ' + def.label + ' is required.')
+              errors.required(def.label, null, 'task argument is required.')
             } else {
-              filteredArguments[def.order] = (found.value || found)
+              value = (found.value || found)
             }
-          } else { // bad argument definition
-            errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
+          } else {
+            // bad argument definition
+            errors.invalid(`arg${index}`, def, 'task argument definition error. type')
           }
-        } else { // argument is not a string and does not has a type
-          errors.invalid('arg' + index, def, 'task argument ' + index + ' definition error. unknown type')
+        } else {
+          // argument is not a string and does not has a type
+          order = index
+          errors.invalid(`arg${index}`, def, 'task argument definition error. malkformed')
         }
       }
+
+      filteredArguments[order] = value
     })
 
     if (errors.hasErrors()) {
       const err = new Error('invalid task arguments')
       err.statusCode = 400
       err.errors = errors
-      return next(err)
+      return next(err, filteredArguments)
     }
 
     next(null, filteredArguments)

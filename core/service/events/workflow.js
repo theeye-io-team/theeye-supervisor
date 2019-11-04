@@ -78,6 +78,7 @@ const executeWorkflowStep = (workflow, workflow_job_id, event, argsValues) => {
           user: App.user,
           task: tasks[i],
           task_arguments_values: argsValues,
+          workflow,
           workflow_job_id,
           origin: JobConstants.ORIGIN_WORKFLOW
         })
