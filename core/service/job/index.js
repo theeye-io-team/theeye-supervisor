@@ -151,7 +151,7 @@ module.exports = {
    * @property {Workflow} input.workflow optional
    * @param {Function(Error,Job)} done
    */
-  create (input, done) {
+  async create (input, done) {
     let { task } = input
     var err
 
@@ -160,53 +160,27 @@ module.exports = {
       return done(err)
     }
 
-    verifyTaskBeforeExecution(task, (err) => {
-      if (err) { return done(err) }
+    try {
+      await verifyTaskBeforeExecution(task)
+      await removeExceededJobsCount(task, input.workflow)
+ 
+      let job
+      if (
+        task.grace_time > 0 && ( // automatic origin
+          input.origin === JobConstants.ORIGIN_WORKFLOW ||
+          input.origin === JobConstants.ORIGIN_TRIGGER_BY
+        )
+      ) {
+        // agenda job
+        job = createScheduledJob(input)
+      } else {
+        job = await createJob(input)
+      }
 
-      removeExceededJobsCount(task, input.workflow, () => {
-        // Dummy Task are created onhold to ask arguments
-        if (TaskConstants.TYPE_DUMMY === task.type) {
-          if (
-            input.origin !== JobConstants.ORIGIN_USER ||
-            task.always_hold === true
-          ) {
-            input.lifecycle = LifecycleConstants.ONHOLD
-          }
-        }
-
-        JobFactory.create(task, input, (err, job) => {
-          if (err) { return done(err) }
-
-          if (job.constructor.name === 'model') {
-            logger.log('job created.')
-            let topic = TopicsConstants.task.execution
-            let payload = { task, job, user: input.user, customer: input.customer }
-            registerJobOperation(Constants.CREATE, topic, payload, () => {
-              if (task.type === TaskConstants.TYPE_DUMMY) {
-                if (job.lifecycle !== LifecycleConstants.ONHOLD) {
-                  this.finishDummyJob(job, input, done)
-                } else {
-                  done(null, job)
-                }
-              } else if (TaskConstants.TYPE_NOTIFICATION === task.type) {
-                finishNotificationTaskJob(job, input, done)
-              } else {
-                done(null, job)
-              }
-            })
-          } else if (
-            job.agenda &&
-            job.agenda.constructor.name === 'Agenda'
-          ) { // scheduler agenda job
-            logger.log('job scheduled.')
-            done(null, job.attrs)
-          } else {
-            logger.error('invalid job returned.')
-            logger.error('%o', job)
-          }
-        })
-      })
-    })
+      done(null, job)
+    } catch (e) {
+      done(err)
+    }
   },
   finishDummyJob (job, input, done) {
     let { task } = input
@@ -444,28 +418,29 @@ module.exports = {
   },
   // automatic job scheduled . send cancelation
   sendJobCancelationEmail (input) {
-    var cancelUrl = globalconfig.system.base_url +
-      '/:customer/task/:task/schedule/:schedule/secret/:secret';
+    const cancelUrl = globalconfig.system.base_url +
+      '/:customer/task/:task/schedule/:schedule/secret/:secret'
 
-    var url = cancelUrl
-      .replace(':customer',input.customer_name)
-      .replace(':task',input.task_id)
-      .replace(':secret',input.task_secret)
-      .replace(':schedule',input.schedule_id);
+    const url = cancelUrl
+      .replace(':customer', input.customer_name)
+      .replace(':task', input.task_id)
+      .replace(':secret', input.task_secret)
+      .replace(':schedule', input.schedule_id)
 
-    var html = `<h3>Task execution on ${input.hostname}<small> Cancel notification</small></h3>
-    The task ${input.task_name} will be executed on ${input.hostname} at ${input.date}.<br/>
-    If you want to cancel the task you have ${input.grace_time_mins} minutes.<br/>
-    <br/>
-    To cancel the Task <a href="${url}">press here</a> or copy/paste the following link in the browser of your preference : <br/>${url}<br/>.
-    `;
+    const html = `
+      <h3>Task execution on ${input.hostname} <small>Cancel notification</small></h3>
+      The task ${input.task_name} will be executed on ${input.hostname} at ${input.date}.<br/>
+      If you want to cancel the task you have ${input.grace_time_mins} minutes.<br/>
+      <br/>
+      To cancel the Task <a href="${url}">press here</a> or copy/paste the following link in the browser of your preference : <br/>${url}<br/>.
+    `
 
     App.notifications.sendEmailNotification({
       customer_name: input.customer_name,
       subject: `[TASK] Task ${input.task_name} execution on ${input.hostname} cancelation`,
       content: html,
       to: input.to
-    });
+    })
   },
   /**
    *
@@ -535,22 +510,26 @@ const taskRequireHost = (task) => {
 }
 
 const verifyTaskBeforeExecution = (task, next) => {
-  App.taskManager.populate(task, (err, taskData) => {
-    if (err) { return next(err) }
+  return new Promise( (resolve, reject) => {
+    App.taskManager.populate(task, (err, taskData) => {
+      if (err) {
+        return reject(err)
+      }
 
-    if (!task.customer) {
-      err = new Error('FATAL. Task ' + task._id + 'does not has a customer')
-      logger.error('%o',err)
-      return next(err)
-    }
+      if (!task.customer) {
+        err = new Error('FATAL. Task ' + task._id + 'does not has a customer')
+        logger.error('%o',err)
+        return reject(err)
+      }
 
-    if (taskRequireHost(task) && !task.host) {
-      err = new Error('invalid task ' + task._id  + ' does not has a host assigned')
-      logger.error('%o',err)
-      return next(err)
-    }
+      if (taskRequireHost(task) && !task.host) {
+        err = new Error('invalid task ' + task._id  + ' does not has a host assigned')
+        logger.error('%o',err)
+        return reject(err)
+      }
 
-    next()
+      resolve()
+    })
   })
 }
 
@@ -601,26 +580,94 @@ const currentIntegrationJob = (job, next) => {
  *
  *
  */
-const removeExceededJobsCount = (task, workflow, next) => {
-  if (task.workflow_id) {
-    // only remove workflow jobs when a new one is being created.
-    if (
-      workflow !== undefined &&
-      workflow.start_task_id !== undefined &&
-      task._id.toString() === workflow.start_task_id.toString()
-    ) {
-      removeExceededJobsCountByWorkflow(
-        task.workflow_id.toString(),
-        task.customer_id,
-        next
-      )
+const removeExceededJobsCount = (task, workflow) => {
+  return new Promise( (resolve, reject) => {
+    if (task.workflow_id) {
+      // only remove workflow jobs when a new one is being created.
+      if (
+        workflow !== undefined &&
+        workflow.start_task_id !== undefined &&
+        task._id.toString() === workflow.start_task_id.toString()
+      ) {
+        removeExceededJobsCountByWorkflow(
+          task.workflow_id.toString(),
+          task.customer_id,
+          resolve
+        )
+      } else {
+        // is a inner workflow job is being created, ignore exceeded jobs
+        return resolve()
+      }
     } else {
-      // is a inner workflow job is being created, ignore exceeded jobs
-      return next()
+      removeExceededJobsCountByTask(task._id.toString(), resolve)
     }
-  } else {
-    removeExceededJobsCountByTask(task._id.toString(), next)
-  }
+  })
+}
+
+const createJob = (input) => {
+  const { task } = input
+  return new Promise((resolve, reject) => {
+    const done = (err, job) => {
+      if (err) { reject(err) }
+      else { resolve(job) }
+    }
+
+    JobFactory.create(task, input, (err, job) => {
+      if (err) { return reject(err) }
+
+      let topic
+      if (job.constructor.name === 'model') {
+        logger.log('job created.')
+        topic = TopicsConstants.task.execution
+      } else {
+        logger.error('invalid job returned.')
+        logger.error('%o', job)
+        let err = new Error('invalid job returned')
+        err.job = job
+        return done( err )
+      }
+
+      const payload = {
+        task,
+        job,
+        user: input.user,
+        customer: input.customer
+      }
+
+      registerJobOperation(Constants.CREATE, topic, payload, () => {
+        if (task.type === TaskConstants.TYPE_DUMMY) {
+          if (job.lifecycle !== LifecycleConstants.ONHOLD) {
+            App.jobDispatcher.finishDummyJob(job, input, done)
+          } else {
+            done(null, job)
+          }
+        } else if (TaskConstants.TYPE_NOTIFICATION === task.type) {
+          finishNotificationTaskJob(job, input, done)
+        } else {
+          done(null, job)
+        }
+      })
+    })
+  })
+}
+
+const createScheduledJob = async (input) => {
+  const { customer } = input
+  const job = await JobFactory.createScheduledJob(input)
+
+  App.notifications.generateSystemNotification({
+    topic: TopicsConstants.job.scheduler.crud,
+    data: {
+      hostname: (job.host && job.host.hostname) || job.host_id,
+      organization: customer.name,
+      operation: Constants.CREATE,
+      model_type: job._type,
+      model: job,
+      approvers: (job.task && job.task.approvers) || undefined
+    }
+  })
+
+  return job
 }
 
 const removeExceededJobsCountByTask = (task_id, next) => {
@@ -801,9 +848,9 @@ const removeOldTaskJobs = (task, next) => {
  */
 const registerJobOperation = (operation, topic, input, done) => {
   done || (done = () => {})
-  let { job, user, customer } = input
-  const task = (input.task || job.task || {})
 
+  const { job, user, customer } = input
+  const task = (input.task || job.task || {})
   const jobPopulate = (next) => {
     // submit job operation to elastic search
     job.populate([

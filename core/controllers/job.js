@@ -84,12 +84,13 @@ module.exports = (server, passport) => {
       next()
     },
     controller.create
+    //audit.afterCreate('job',{ display: 'name' })
   )
 
-  server.del('/job/finished',
-    middlewares.concat(
-      router.requireCredential('admin')
-    ),
+  server.del(
+    '/job/finished',
+    middlewares,
+    router.requireCredential('admin'),
     controller.removeFinished
   )
 }
@@ -169,12 +170,12 @@ const controller = {
    *
    */
   create (req, res, next) {
-    let { task, user, customer } = req
-    let args = req.body.task_arguments || []
+    const { task, user, customer } = req
+    const args = (req.body.task_arguments || [])
 
     logger.log('creating new job')
 
-    App.jobDispatcher.create({
+    const inputs = {
       task,
       user,
       customer,
@@ -182,13 +183,21 @@ const controller = {
       origin: (req.origin || JobConstants.ORIGIN_USER),
       task_arguments_values: args,
       script_arguments: args
-    }, (err, job) => {
+    }
+
+    App.jobDispatcher.create(inputs, (err, job) => {
       if (err) {
         logger.error(err)
         return res.send(err.statusCode || 500, err.message)
       }
 
-      let data = job.publish()
+      let data
+      if (job.agent && job.agenda.constructor.name === 'Agenda') {
+        data = job.attrs
+      } else {
+        data = job.publish()
+      }
+
       data.user = {
         id: user._id.toString(),
         username: user.username,

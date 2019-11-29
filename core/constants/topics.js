@@ -19,6 +19,7 @@ exports.file = {
 exports.hostgroup = {
   crud: 'provisioning-crud'
 }
+
 exports.host = {
   integrations: {
     crud: 'host-integrations-crud'
@@ -29,9 +30,11 @@ exports.host = {
   stats: 'host-stats',
   registered: 'host-registered'
 }
+
 exports.task = {
   crud: 'task-crud',
   execution: 'task-execution', // create/start job
+  hold: 'task-hold-execution', // create holded task execution
   sent: 'task-sent', // sent to agent
   result: 'task-result', // update/finalize job
   cancelation: 'task-cancelation', // cancel job
@@ -43,12 +46,12 @@ exports.workflow = {
 }
 exports.job = {
   crud: 'job-crud',
+  scheduler: {
+    crud: 'job-scheduler-crud'
+  }
   //onhold: 'job-onhold'
 }
 exports.webhook = {
   crud: 'webhook-crud',
   triggered: 'webhook-triggered'
-}
-exports.scheduler = {
-  crud: 'scheduler-crud'
 }

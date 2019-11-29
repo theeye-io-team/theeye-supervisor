@@ -21,64 +21,92 @@ const JobsFactory = {
   create (task, input, next) {
     next || (next = () => {})
 
+    if (
+      input.origin !== JobConstants.ORIGIN_USER &&
+      task.user_inputs === true
+    ) {
+      // we don't care about automatic arguments,
+      // a user must enter the arguments values
+      input.lifecycle = LifecycleConstants.ONHOLD
+      let argsValues = []
+      return createJob({ task, vars: input, argsValues: [] }, next)
+    }
+
     /**
      *
      * @todo remove script_arguments when all agents are version 0.14.1 or higher
      * @todo upgrade templates on db. replace property script_arguments wuth task_arguments
      *
      */
-    let argsDefinition = (
-      task.task_arguments ||
-      task.script_arguments
-    )
-
-    let inputArgsValues = (
-      input.task_arguments_values ||
-      input.script_arguments
-    )
+    let argsDefinition = (task.task_arguments || task.script_arguments)
+    let inputArgsValues = (input.task_arguments_values || input.script_arguments)
 
     this.prepareTaskArgumentsValues(
       argsDefinition,
       inputArgsValues,
-      (err, argsValues) => {
-        if (err || input.lifecycle === LifecycleConstants.ONHOLD) {
-          // err on arguments. cannot continue, put onhold.
-          createJob({
-            task,
-            vars: input,
-            argsValues,
-            beforeSave: (job, saveCb) => {
-              //job.result = { log: JSON.stringify(err) }
-              //job.state = StateConstants.ERROR
-              job.lifecycle = LifecycleConstants.ONHOLD
-              saveCb()
+      (argsErr, argsValues) => {
+        createJob({
+          task,
+          vars: input,
+          argsValues,
+          beforeSave: (job, saveCb) => {
+            // notification task arguments should not be validated
+            if (TaskConstants.TYPE_NOTIFICATION === task.type || !argsErr) {
+              return saveCb()
             }
-          }, next)
-        } else {
-          if (
-            task.grace_time > 0 &&
-            ( // automatic origin
-              input.origin === JobConstants.ORIGIN_WORKFLOW ||
-              input.origin === JobConstants.ORIGIN_TRIGGER_BY
-            )
-          ) {
-            // use delayed execution with grace time
-            const runDate =  Date.now() + task.grace_time * 1000
-            createScheduledJob({
-              task,
-              runDate,
-              vars: input,
-            }, next)
-          } else {
-            createJob({
-              task,
-              vars: input,
-              argsValues
-            }, next)
+
+            // abort execution
+            job.result = { log: JSON.stringify(argsErr) }
+            job.output = JSON.stringify(argsErr.errors)
+            job.state = StateConstants.ERROR
+            job.lifecycle = LifecycleConstants.TERMINATED
+            saveCb()
           }
-        }
+        }, next)
       }
     )
+  },
+  createScheduledJob (input) {
+    return new Promise( (resolve, reject) => {
+      const task = input.task
+      const customer = input.customer
+
+      const runDate =  Date.now() + task.grace_time * 1000
+
+      let data = {
+        schedule: { runDate },
+        task,
+        customer,
+        user: input.user,
+        origin: input.origin,
+        notify: true
+      }
+
+      App.scheduler.scheduleTask(data, (err, agendaJob) => {
+        if (err) {
+          logger.error('cannot schedule workflow job')
+          logger.error(err)
+
+          return reject(err)
+        }
+
+        App.customer.getAlertEmails(customer.name, (err, emails) => {
+          App.jobDispatcher.sendJobCancelationEmail({
+            task_secret: task.secret,
+            task_id: task.id,
+            schedule_id: agendaJob.attrs._id,
+            task_name: task.name,
+            hostname: task.host.hostname,
+            date: new Date(runDate).toISOString(),
+            grace_time_mins: task.grace_time / 60,
+            customer_name: customer.name,
+            to: emails.join(',')
+          })
+        })
+
+        return resolve(agendaJob)
+      })
+    })
   },
   /**
    *
@@ -151,7 +179,9 @@ const JobsFactory = {
     })
 
     if (errors.hasErrors()) {
-      const err = new Error('invalid task arguments')
+      let name = 'InvalidTaskArguments'
+      const err = new Error(name)
+      err.name = name
       err.statusCode = 400
       err.errors = errors
       return next(err, filteredArguments)
@@ -163,45 +193,6 @@ const JobsFactory = {
 
 module.exports = JobsFactory
 
-const createScheduledJob = (input, next) => {
-  let { task, vars, runDate } = input
-  let customer = vars.customer
-
-  let data = {
-    schedule: { runDate },
-    task,
-    customer,
-    //event: vars.event._id,
-    //event_data: vars.event_data,
-    user: vars.user,
-    origin: vars.origin,
-    notify: true
-  }
-
-  App.scheduler.scheduleTask(data, (err, agenda) => {
-    if (err) {
-      logger.error('cannot schedule workflow job')
-      logger.error(err)
-      return next (err)
-    }
-
-    next (null, agenda)
-
-    App.customer.getAlertEmails(customer.name, (err, emails) => {
-      App.jobDispatcher.sendJobCancelationEmail({
-        task_secret: task.secret,
-        task_id: task.id,
-        schedule_id: agenda.attrs._id,
-        task_name: task.name,
-        hostname: task.host.hostname,
-        date: new Date(runDate).toISOString(),
-        grace_time_mins: task.grace_time / 60,
-        customer_name: customer.name,
-        to: emails.join(',')
-      })
-    })
-  })
-}
 
 /**
  *
@@ -234,8 +225,8 @@ const createJob = (input, next) => {
     job.host_id = task.host_id
     job.host = task.host_id
     job.name = task.name
-    job.lifecycle = LifecycleConstants.READY
-    job.state = StateConstants.IN_PROGRESS
+    job.state = (vars.state || StateConstants.IN_PROGRESS)
+    job.lifecycle = (vars.lifecycle || LifecycleConstants.READY)
     job.customer_id = vars.customer._id
     job.customer_name = vars.customer.name
     job.user_id = vars.user._id

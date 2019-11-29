@@ -1,11 +1,11 @@
 var config = require('config');
 var notification = require('../service/notification');
 
-var ErrorHandler = function (){
+function ErrorHandler () {
   this.errors = []
 }
 
-module.exports = ErrorHandler;
+module.exports = ErrorHandler
 
 const errorLine = (error) => {
   var message = error.message;

@@ -1,4 +1,5 @@
 
+const SCHEDULED = 'scheduled'
 const FAILURE = 'failure'
 const SUCCESS = 'success'
 const RECOVERED = 'recovered'
@@ -11,6 +12,7 @@ const INTEGRATION_STARTED = 'started'
 const INTEGRATION_STOPPED = 'stopped'
 const IN_PROGRESS = 'in_progress'
 
+exports.SCHEDULED = SCHEDULED
 exports.INTEGRATION_STARTED = INTEGRATION_STARTED
 exports.INTEGRATION_STOPPED = INTEGRATION_STOPPED
 exports.FAILURE = FAILURE

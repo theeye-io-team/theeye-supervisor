@@ -191,8 +191,12 @@ var controller = {
       enable: true,
       name: 'trigger'
     }, (err, event) => {
-      if (err) return res.send(500, err)
-      if (!event) return res.send(500)
+      if (err) {
+        return res.send(500, err)
+      }
+      if (!event) {
+        return res.send(500, 'webhook events are missing.')
+      }
 
       let output = App.jobDispatcher.parseJobParameters(body)
       App.eventDispatcher.dispatch({
