@@ -855,20 +855,43 @@ const registerJobOperation = (operation, topic, input, done) => {
     // submit job operation to elastic search
     job.populate([
       { path: 'host' },
-      { path: 'user' }
+      { path: 'user' },
+      { path: 'workflow_job' },
     ], (err) => {
       if (!job.user) {
         return next({})
       }
 
       job.user.publish({}, (err, jobUser) => {
-        next({ user: jobUser })
+        if (job.workflow_job && job.workflow_job.user) {
+          job.workflow_job.populate([
+            { path: 'user' },
+          ], (err) => {
+            if (err) return next({ user: jobUser })
+
+            let workflowJobUser = {
+              id: job.workflow_job.user.id,
+              username: job.workflow_job.user.username,
+              email: job.workflow_job.user.email
+            }
+
+            return next({ user: jobUser, workflowJobUser })
+          })
+        } else {
+          return next({ user: jobUser })
+        }
       })
     })
   }
 
-  jobPopulate(populateResult => {
+  const sendJobNotification = (jobModel, populateResult, done) => {
+    let job = jobModel.toObject()
     job.user = populateResult.user
+
+    if (populateResult.workflowJobUser) {
+      job.workflow_job.user = populateResult.workflowJobUser
+    }
+
 
     const payload = {
       state: job.state || 'undefined',
@@ -951,6 +974,10 @@ const registerJobOperation = (operation, topic, input, done) => {
 
     elastic.submit(customer.name, topic, payload) // topic = topics.task.[execution||result] , CREATE/UPDATE
     done()
+  }
+
+  jobPopulate(populateResult => {
+    sendJobNotification(job, populateResult, done)
   })
 }
 

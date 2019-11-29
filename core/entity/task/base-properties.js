@@ -22,5 +22,6 @@ module.exports = {
   register_body: { type: Boolean, default: false },
   execution_count: { type: Number, default: 0 },
   multitasking: { type: Boolean, default: true },
-  user_inputs: { type: Boolean, default: false }
+  user_inputs: { type: Boolean, default: false },
+  show_result: { type: Boolean, default: false }
 }
