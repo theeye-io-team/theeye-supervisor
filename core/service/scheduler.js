@@ -111,53 +111,48 @@ Scheduler.prototype = {
     var frequency = schedule.repeatEvery || false
 
     this.schedule(date, "task", data, frequency, (err,job) => {
-      if (err) return done(err)
+      if (err) { return done(err) }
       done(null,job)
-      // If everything went well, ensure 'scheduled' tag on the task
-      this.tagThatTask(task,() => {})
     })
   },
   /*
   * Given a task, this method will ensure it has a 'scheduled' tag
   */
-  tagThatTask (task, callback) {
-    var tags = [].concat(task.tags);
-
-    if (tags.indexOf("scheduled") === -1) {
-      tags.push("scheduled");
-      task.update({tags:tags}, callback);
-    } else {
-      callback();
-    }
-  },
+  //tagThatTask (task, callback) {
+  //  var tags = [].concat(task.tags);
+  //  if (tags.indexOf("scheduled") === -1) {
+  //    tags.push("scheduled");
+  //    task.update({tags:tags}, callback);
+  //  } else {
+  //    callback();
+  //  }
+  //},
   // When untaggin we only got ID, find and check
-  untagTask (task, callback) {
-    var tags = [].concat(task.tags);
-
-    if(tags.indexOf("scheduled") !== -1) {
-      tags.splice(tags.indexOf("scheduled"),1);
-      task.update({tags:tags}, callback);
-    }else{
-      callback();
-    }
-  },
-  handleScheduledTag (task, callback) {
-    if(!task) {
-      var err = new Error('Missing task');
-      err.statusCode = 400;
-      return callback(err);
-    }
-
-    var self = this;
-    this.taskSchedulesCount(task, function (err, count) {
-      if (err) return callback(err);
-      if (count) { //has schedules
-        self.tagThatTask(task, callback);
-      } else {
-        self.untagTask(task, callback);
-      }
-    });
-  },
+  //untagTask (task, callback) {
+  //  var tags = [].concat(task.tags);
+  //  if(tags.indexOf("scheduled") !== -1) {
+  //    tags.splice(tags.indexOf("scheduled"),1);
+  //    task.update({tags:tags}, callback);
+  //  }else{
+  //    callback();
+  //  }
+  //},
+  //handleScheduledTag (task, callback) {
+  //  if(!task) {
+  //    var err = new Error('Missing task');
+  //    err.statusCode = 400;
+  //    return callback(err);
+  //  }
+  //  var self = this;
+  //  this.taskSchedulesCount(task, function (err, count) {
+  //    if (err) return callback(err);
+  //    if (count) { //has schedules
+  //      self.tagThatTask(task, callback);
+  //    } else {
+  //      self.untagTask(task, callback);
+  //    }
+  //  });
+  //},
   /**
    * Schedules a job for its starting date and parsing its properties
    */
@@ -218,7 +213,7 @@ Scheduler.prototype = {
       if(err) return callback(err);
       callback();
       // numRemoved is lost through the callbacks, don't count on it
-      self.handleScheduledTag(task,function(){});
+      //self.handleScheduledTag(task,function(){});
     });
   },
   // deletes ALL schedules for a given task
