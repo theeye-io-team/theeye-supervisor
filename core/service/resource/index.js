@@ -2,7 +2,6 @@
 
 const App = require('../../app')
 const after = require('lodash/after')
-const assign = require('lodash/assign')
 const logger = require('../../lib/logger')('service:resource')
 const elastic = require('../../lib/elastic')
 const CustomerService = require('../customer')
@@ -121,52 +120,58 @@ function Service (resource) {
   }
 
   const sendResourceEmailAlert = (resource,input) => {
-    if (resource.alerts===false) return
-    if (resource.failure_severity=='LOW') return
+    if (resource.alerts === false) {
+      return
+    }
 
-    const query = MonitorModel.findOne({ resource_id: resource._id })
-    query.exec(function(err,monitor){
-      resource.monitor = monitor
-      var specs = assign({},input,{ resource })
+    if (resource.failure_severity === 'LOW') {
+      return
+    }
 
-      ResourcesNotifications(specs, (error, details) => {
-        if (error) {
-          if (/event ignored/.test(error.message)===false) {
-            logger.error(error)
-          }
-          logger.log('email alerts not sent.')
-          return
-        }
+    MonitorModel
+      .findOne({ resource_id: resource._id })
+      .exec(function (err, monitor) {
+        resource.monitor = monitor
+        const specs = Object.assign({}, input, { resource })
 
-        logger.log('sending email alerts')
-        CustomerService.getAlertEmails(
-          resource.customer_name,
-          (err, emails) => {
-            if (err) {
-              logger.error(err)
-              return
+        ResourcesNotifications(specs, (error, details) => {
+          if (error) {
+            if (/event ignored/.test(error.message)===false) {
+              logger.error(error)
             }
+            logger.log('email alerts not sent.')
+            return
+          }
 
-            var mailTo, extraEmail=[]
+          logger.log('sending email alerts')
+          CustomerService.getAlertEmails(
+            resource.customer_name,
+            (err, emails) => {
+              if (err) {
+                logger.error(err)
+                return
+              }
 
-            if (Array.isArray(resource.acl) && resource.acl.length>0) {
-              extraEmail = resource.acl.filter(email => {
-                emails.indexOf(email) === -1
+              var mailTo, extraEmail=[]
+
+              if (Array.isArray(resource.acl) && resource.acl.length>0) {
+                extraEmail = resource.acl.filter(email => {
+                  emails.indexOf(email) === -1
+                })
+              }
+
+              mailTo = (extraEmail.length>0) ? emails.concat(extraEmail) : emails
+
+              NotificationService.sendEmailNotification({
+                bcc: mailTo.join(','),
+                customer_name: resource.customer_name,
+                subject: details.subject,
+                content: details.content
               })
             }
-
-            mailTo = (extraEmail.length>0) ? emails.concat(extraEmail) : emails
-
-            NotificationService.sendEmailNotification({
-              bcc: mailTo.join(','),
-              customer_name: resource.customer_name,
-              subject: details.subject,
-              content: details.content
-            })
-          }
-        )
+          )
+        })
       })
-    })
   }
 
   const getEventSeverity = (resource) => {
@@ -516,7 +521,7 @@ Service.create = function (input, next) {
     }
 
     createResourceAndMonitor({
-      resource_data: assign({}, input, {
+      resource_data: Object.assign({}, input, {
         name: input.name,
         type: type,
       }),
@@ -846,7 +851,7 @@ Service.createFromTemplate = function(options) {
   const customer = options.customer
 
   const generateResourceModel = (input) => {
-    const data = assign({}, input, {
+    const data = Object.assign({}, input, {
       host: host._id,
       host_id: host._id,
       hostname: host.hostname,
@@ -864,7 +869,7 @@ Service.createFromTemplate = function(options) {
   }
 
   const generateMonitorModel = (input) => {
-    const data = assign({}, input.monitor_template, {
+    const data = Object.assign({}, input.monitor_template, {
       host: host,
       host_id: host._id,
       template: template.monitor_template._id,

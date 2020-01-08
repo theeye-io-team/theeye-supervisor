@@ -3,14 +3,12 @@
 const App = require('../../app')
 const after = require('lodash/after')
 const async = require('async')
-const Handlebars = require('../../lib/handlebars')
 const logger = require('../../lib/logger')('service:host')
 const FileHandler = require('../../lib/file')
 const HostGroupService = require('./group')
 const Constants = require('../../constants')
 const MonitorsConstants = require('../../constants/monitors')
 const TaskConstants = require('../../constants/task')
-const TopicsConstants = require('../../constants/topics')
 
 const File = require('../../entity/file').File
 const Monitor = require('../../entity/monitor').Entity
@@ -23,9 +21,7 @@ const Resource = require('../../entity/resource').Entity
 const JobModel = require('../../entity/job').Job
 const AgentUpdateJob = require('../../entity/job').AgentUpdate
 
-function HostService (host) {
-  this.host = host
-}
+const HostService = {}
 
 module.exports = HostService 
 
@@ -34,53 +30,93 @@ module.exports = HostService
 // Instance Methods
 //
 //
-HostService.prototype = {
-  agentUnreachable () {
-    const vent = 'agent_unreachable'
-    const host = this.host
-
-    App.customer.getCustomerConfig(
-      host.customer_id,
-      function (error,config) {
-        host.fails_count += 1;
-        var maxFails = config.monitor.fails_count_alert;
-        logger.log('fails count %d/%d', host.fails_count, maxFails);
-
-        if (host.fails_count > maxFails) {
-          if (host.state != vent) {
-            logger.log('host "%s" state has changed to "%s"', host.hostname, vent);
-            host.state = vent ;
-
-            logger.log('processing "%s" event',vent);
-            sendEventNotification(host,vent);
-          }
-        }
-
-        host.save();
-      }
-    )
-  },
-  agentRunning () {
-    const vent = 'agent_running'
-    const host = this.host
-
-    if (host.state != vent) {
-      logger.log('host "%s" state has changed to "%s"', host.hostname, vent)
-      host.state = vent
-      host.fails_count = 0
-      host.save()
-
-      logger.log('processing "%s" event',vent)
-      sendEventNotification(host,vent)
-    }
-  },
-}
-
+//function HostService (host) {
+//  this.host = host
+//}
 //
+//HostService.prototype = {
+//  agentUnreachable () {
+//    const vent = 'agent_unreachable'
+//    const host = this.host
 //
-// Static Methods
+//    App.customer.getCustomerConfig(
+//      host.customer_id,
+//      function (error,config) {
+//        host.fails_count += 1;
+//        var maxFails = config.monitor.fails_count_alert;
+//        logger.log('fails count %d/%d', host.fails_count, maxFails);
 //
+//        if (host.fails_count > maxFails) {
+//          if (host.state != vent) {
+//            logger.log('host "%s" state has changed to "%s"', host.hostname, vent);
+//            host.state = vent ;
 //
+//            logger.log('processing "%s" event',vent);
+//            sendEventNotification(host,vent)
+//          }
+//        }
+//
+//        host.save();
+//      }
+//    )
+//  },
+//  agentRunning () {
+//    const vent = 'agent_running'
+//    const host = this.host
+//
+//    if (host.state != vent) {
+//      logger.log('host "%s" state has changed to "%s"', host.hostname, vent)
+//      host.state = vent
+//      host.fails_count = 0
+//      host.save()
+//
+//      logger.log('processing "%s" event',vent)
+//      sendEventNotification(host,vent)
+//    }
+//  },
+//}
+//
+//const sendEventNotification = (host, vent) => {
+//  let { hostname, customer_name } = host
+//  let subject, content
+//
+//  switch (vent) {
+//    case 'agent_unreachable':
+//      subject = `[HIGH] ${customer_name}/${hostname} unreachable`
+//      content = `<div>Bot ${hostname} is unreachable</div>`
+//      break;
+//    case 'agent_running':
+//      subject = `[HIGH] ${customer_name}/${hostname} recovered`
+//      content = `<div>Bot ${hostname} restored</div>`
+//      break;
+//  }
+//
+//  App.customer.getAlertEmails(
+//    host.customer_name,
+//    function (error,emails) {
+//      App.notification.sendEmailNotification({
+//        bcc: emails.join(','),
+//        customer_name: host.customer_name,
+//        subject: subject,
+//        content: content
+//      })
+//    }
+//  )
+//
+//  const topic = TopicsConstants.host.state
+//  App.notification.generateSystemNotification({
+//    topic: topic,
+//    data: {
+//      model_type: 'Host',
+//      model: host,
+//      organization: host.customer_name,
+//      host_event: vent,
+//      hostname: host.hostname,
+//      operation: Constants.UPDATE
+//    }
+//  })
+//}
+
 /**
  *
  * @param {Array<Host>} hosts
@@ -559,49 +595,6 @@ const createHostResource = (host, data, next) => {
   })
 }
 
-const sendEventNotification = (host,vent) => {
-  var str = '[HIGH] :customer/:hostname :event';
-  var subject = str
-  .replace(':customer', host.customer_name)
-  .replace(':hostname', host.hostname);
-
-  switch (vent) {
-    case 'agent_unreachable':
-      subject = subject.replace(':event','unreachable');
-      break;
-    case 'agent_running':
-      subject = subject.replace(':event','recovered');
-      break;
-  }
-
-  var template = 'email/host/' + vent
-  var params = { 'hostname': host.hostname }
-
-  Handlebars.render(template, params, function(content){
-    App.customer.getAlertEmails(host.customer_name,
-    function (error,emails) {
-      App.notification.sendEmailNotification({
-        bcc: emails.join(','),
-        customer_name: host.customer_name,
-        subject: subject,
-        content: content
-      })
-    })
-  })
-
-  const topic = TopicsConstants.host.state
-  App.notification.generateSystemNotification({
-    topic: topic,
-    data: {
-      model_type: 'Host',
-      model: host,
-      organization: host.customer_name,
-      host_event: vent,
-      hostname: host.hostname,
-      operation: Constants.UPDATE
-    }
-  })
-}
 
 /**
  * @summary create a dstats and psaux monitoring workers

@@ -10,7 +10,7 @@ module.exports = (server, passport) => {
       passport.authenticate('bearer', { session: false }),
       router.resolve.customerNameToEntity({ required: true }),
       router.ensureCustomer,
-      router.requireCredential('user'),
+      router.requireCredential('admin'),
       router.resolve.idToEntity({ param: 'task', required: true }),
       router.ensureAllowed({ entity: { name: 'task' } })
     ],

@@ -68,7 +68,7 @@ module.exports = {
         return `[${this.severity}] ${resource.hostname} unreachable`
       },
       message: function(resource) {
-        return `Host ${resource.hostname.toUpperCase()} stopped reporting updates.`
+        return `Bot ${resource.hostname.toUpperCase()} stopped reporting updates.`
       }
     },{
       name: MonitorConstants.RESOURCE_STARTED,
@@ -76,7 +76,7 @@ module.exports = {
         return `[${this.severity}] ${resource.hostname} recovered`
       },
       message: function(resource) {
-        return `Host ${resource.hostname.toUpperCase()} started reporting again.`
+        return `Bot ${resource.hostname.toUpperCase()} started reporting again.`
       }
     }]
   },
