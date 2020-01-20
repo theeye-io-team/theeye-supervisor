@@ -182,7 +182,7 @@ const controller = {
       notify: true,
       origin: (req.origin || JobConstants.ORIGIN_USER),
       task_arguments_values: args,
-      script_arguments: args
+      //script_arguments: args
     }
 
     App.jobDispatcher.create(inputs, (err, job) => {

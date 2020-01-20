@@ -123,38 +123,26 @@ const JobsFactory = {
     let errors = new ErrorHandler()
     let filteredArguments = []
 
-    if (
-      !Array.isArray(argumentsDefinition) ||
-      argumentsDefinition.length === 0
-    ) {
+    if ( !Array.isArray(argumentsDefinition) || argumentsDefinition.length === 0 ) {
+      // no arguments
       return next(null, [])
     }
 
-    if (!Array.isArray(argumentsValues)) {
-      argumentsValues = []
-    }
-
-    argumentsDefinition.forEach((def,index) => {
+    argumentsDefinition.forEach((def, index) => {
       let value = null
       let order
 
       if (Boolean(def)) {
         // is defined
         if (typeof def === 'string') {
-          // fixed values. old version compatibility
+          // fixed values. older version compatibility
           order = index
           vlaue = def
         } else if (def.type) {
           order = def.order
           if (def.type === TaskConstants.ARGUMENT_TYPE_FIXED) {
             value = def.value
-          } else if (
-            def.type === TaskConstants.ARGUMENT_TYPE_INPUT ||
-            def.type === TaskConstants.ARGUMENT_TYPE_SELECT ||
-            def.type === TaskConstants.ARGUMENT_TYPE_DATE ||
-            def.type === TaskConstants.ARGUMENT_TYPE_FILE ||
-            def.type === TaskConstants.ARGUMENT_TYPE_REMOTE_OPTIONS
-          ) {
+          } else {
             // user input required
             let found = searchInputArgumentValueByOrder(argumentsValues, def.order)
 
@@ -164,9 +152,6 @@ const JobsFactory = {
             } else {
               value = (found.value || found)
             }
-          } else {
-            // bad argument definition
-            errors.invalid(`arg${index}`, def, 'task argument definition error. type')
           }
         } else {
           // argument is not a string and does not has a type
@@ -364,6 +349,8 @@ const prepareScript = (script_id, next) =>  {
 }
 
 const searchInputArgumentValueByOrder = (values, searchOrder) => {
+  if (!values || !Array.isArray(values)) { return undefined }
+
   return values.find((arg, idx) => {
     let order
     if (arg.order) { order = arg.order }
