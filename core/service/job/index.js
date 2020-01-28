@@ -16,6 +16,7 @@ const TaskEvent = require('../../entity/event').TaskEvent
 const JobFactory = require('./factory')
 const NotificationService = require('../../service/notification')
 const mongoose = require('mongoose')
+const RegisterOperation = require('./register')
 
 module.exports = {
   ///**
@@ -68,7 +69,7 @@ module.exports = {
         //if (err) { return terminateRecursion(err) }
 
         // Cancel this job and process next
-        if (jobMustHaveATask(job) && !job.task) {
+        if (App.jobDispatcher.jobMustHaveATask(job) && !job.task) {
           // cancel invalid job
           job.lifecycle = LifecycleConstants.CANCELED
           job.save(err => {
@@ -76,7 +77,7 @@ module.exports = {
             dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
           })
 
-          registerJobOperation(
+          RegisterOperation(
             Constants.UPDATE,
             TopicsConstants.task.cancelation,
             {
@@ -98,7 +99,7 @@ module.exports = {
                 terminateRecursion(err, job)
               })
 
-              registerJobOperation(
+              RegisterOperation(
                 Constants.UPDATE,
                 TopicsConstants.task.sent,
                 {
@@ -223,9 +224,11 @@ module.exports = {
 
           done(null, job) // continue process in paralell
 
-          let topic = TopicsConstants.job.crud
-          let payload = { job, user, customer, task }
-          registerJobOperation(Constants.UPDATE, topic, payload)
+          RegisterOperation(
+            Constants.UPDATE,
+            TopicsConstants.job.crud,
+            { job, user, customer, task }
+          )
         })
       }
     )
@@ -360,10 +363,11 @@ module.exports = {
 
       done(null, job) // continue process in paralell
 
-      let topic = TopicsConstants.task.result
-      registerJobOperation(Constants.UPDATE, topic, {
-        job, user, customer, task
-      })
+      RegisterOperation(
+        Constants.UPDATE,
+        TopicsConstants.task.result,
+        { job, user, customer, task }
+      )
 
       dispatchFinishedTaskExecutionEvent(job, trigger_name)
     })
@@ -409,11 +413,11 @@ module.exports = {
 
       logger.log('job %s terminated', job._id)
 
-      let topic = TopicsConstants.task.terminate // terminated
-      registerJobOperation(Constants.UPDATE, topic, {
-        customer: input.customer,
-        task, job, user
-      })
+      RegisterOperation(
+        Constants.UPDATE,
+        TopicsConstants.task.terminate,
+        { customer: input.customer, task, job, user }
+      )
     })
   },
   // automatic job scheduled . send cancelation
@@ -498,6 +502,15 @@ module.exports = {
           })
         })
     })
+  },
+  jobMustHaveATask (job) {
+    var result = (
+      job._type === JobConstants.SCRAPER_TYPE ||
+      job._type === JobConstants.SCRIPT_TYPE ||
+      job._type === JobConstants.APPROVAL_TYPE ||
+      job._type === JobConstants.DUMMY_TYPE
+    )
+    return result
   }
 }
 
@@ -613,12 +626,12 @@ const createJob = (input) => {
     }
 
     JobFactory.create(task, input, (err, job) => {
-      if (err) { return reject(err) }
+      if (err) {
+        return reject(err)
+      }
 
-      let topic
       if (job.constructor.name === 'model') {
         logger.log('job created.')
-        topic = TopicsConstants.task.execution
       } else {
         logger.error('invalid job returned.')
         logger.error('%o', job)
@@ -627,26 +640,24 @@ const createJob = (input) => {
         return done( err )
       }
 
-      const payload = {
-        task,
-        job,
-        user: input.user,
-        customer: input.customer
-      }
-
-      registerJobOperation(Constants.CREATE, topic, payload, () => {
-        if (task.type === TaskConstants.TYPE_DUMMY) {
-          if (job.lifecycle !== LifecycleConstants.ONHOLD) {
-            App.jobDispatcher.finishDummyJob(job, input, done)
+      RegisterOperation(
+        Constants.CREATE,
+        TopicsConstants.task.execution,
+        { task, job, user: input.user, customer: input.customer },
+        () => {
+          if (task.type === TaskConstants.TYPE_DUMMY) {
+            if (job.lifecycle !== LifecycleConstants.ONHOLD) {
+              App.jobDispatcher.finishDummyJob(job, input, done)
+            } else {
+              done(null, job)
+            }
+          } else if (TaskConstants.TYPE_NOTIFICATION === task.type) {
+            finishNotificationTaskJob(job, input, done)
           } else {
             done(null, job)
           }
-        } else if (TaskConstants.TYPE_NOTIFICATION === task.type) {
-          finishNotificationTaskJob(job, input, done)
-        } else {
-          done(null, job)
         }
-      })
+      )
     })
   })
 }
@@ -793,16 +804,6 @@ const removeExceededJobsCountByWorkflow = (workflow_id, customer_id, next) => {
   })
 }
 
-const jobMustHaveATask = (job) => {
-  var result = (
-    job._type === JobConstants.SCRAPER_TYPE ||
-    job._type === JobConstants.SCRIPT_TYPE ||
-    job._type === JobConstants.APPROVAL_TYPE ||
-    job._type === JobConstants.DUMMY_TYPE
-  )
-  return result
-}
-
 const jobInProgress = (job) => {
   if (!job) return false
   let inProgress = (
@@ -835,168 +836,6 @@ const removeOldTaskJobs = (task, next) => {
 }
 
 /**
- *
- * @summary register job operation in elastic search works for result and execution.
- * @param {String} operation
- * @param {String} topic
- * @param {Object} input
- * @property {Job} input.job
- * @property {User} input.user
- * @property {Task} input.task
- * @property {Customer} input.customer
- *
- */
-const registerJobOperation = (operation, topic, input, done) => {
-  done || (done = () => {})
-
-  const { job, user, customer } = input
-  const task = (input.task || job.task || {})
-  const jobPopulate = (next) => {
-    // submit job operation to elastic search
-    job.populate([
-      { path: 'host' },
-      { path: 'user' },
-      { path: 'workflow_job' },
-    ], (err) => {
-      if (!job.user) {
-        return next({})
-      }
-
-      job.user.publish({}, (err, jobUser) => {
-        if (job.workflow_job && job.workflow_job.user) {
-          job.workflow_job.populate([
-            { path: 'user' },
-          ], (err) => {
-            if (err) return next({ user: jobUser })
-
-            let workflowJobUser = {
-              id: job.workflow_job.user.id,
-              username: job.workflow_job.user.username,
-              email: job.workflow_job.user.email
-            }
-
-            return next({ user: jobUser, workflowJobUser })
-          })
-        } else {
-          return next({ user: jobUser })
-        }
-      })
-    })
-  }
-
-  const sendJobNotification = (jobModel, populateResult, done) => {
-    let job = jobModel.toObject()
-    job.user = populateResult.user
-
-    if (populateResult.workflowJobUser) {
-      job.workflow_job.user = populateResult.workflowJobUser
-    }
-
-
-    const payload = {
-      state: job.state || 'undefined',
-      lifecycle: job.lifecycle,
-      task_name: task.name,
-      task_type: task.type,
-      organization: customer.name,
-      user_id: user._id,
-      user_name: user.username,
-      user_email: user.email,
-      operation: operation,
-      job_type: job._type
-    }
-
-    if (
-      job._type !== JobConstants.APPROVAL_TYPE &&
-      job._type !== JobConstants.DUMMY_TYPE &&
-      job._type !== JobConstants.NOTIFICATION_TYPE
-    ) {
-      if (job.host) {
-        payload.hostname = job.host.hostname
-      } else {
-        logger.error(new Error(`job ${job._id}/${job._type}. host not available must fix`))
-      }
-    }
-
-    if (jobMustHaveATask(job) && !task) {
-      const msg = `job ${job._id}/${job._type} task is not valid or undefined`
-      logger.error(new Error(msg))
-    }
-
-    if (job._type === JobConstants.SCRAPER_TYPE) {
-      payload.url = task.url
-      payload.method = task.method
-      payload.statuscode = task.status_code
-      payload.pattern = task.pattern
-    } else if (job._type == JobConstants.SCRIPT_TYPE) {
-      if (!job.script) {
-        const msg = `job ${job._id}/${job._type} script is not valid or undefined`
-        logger.error(new Error(msg))
-      }
-
-      const script = job.script || {}
-      payload.filename = script.filename
-      payload.md5 = script.md5
-      payload.mtime = script.last_update
-      payload.mimetype = script.mimetype
-    } else if (job._type == JobConstants.APPROVAL_TYPE) {
-      // nothing yet
-    } else if (job._type == JobConstants.DUMMY_TYPE) {
-      // nothing yet
-    } else if (job._type == JobConstants.NOTIFICATION_TYPE) {
-      // nothing yet
-    } else if (job._type == JobConstants.AGENT_UPDATE_TYPE) {
-      // nothing yet
-    } else {
-      // unhandled job type
-    }
-
-    App.notifications.generateSystemNotification({
-      topic: TopicsConstants.job.crud,
-      data: {
-        hostname: (job.host && job.host.hostname) || job.host_id,
-        organization: customer.name,
-        operation: operation,
-        model_type: job._type,
-        model: job,
-        approvers: (job.task && job.task.approvers) || undefined
-      }
-    })
-
-    if (job.result) {
-      payload.result = job.result
-      if (job._type == JobConstants.SCRAPER_TYPE) {
-        if (payload.result.response && payload.result.response.body) {
-          delete payload.result.response.body
-        }
-      }
-    }
-
-    elastic.submit(customer.name, topic, payload) // topic = topics.task.[execution||result] , CREATE/UPDATE
-    done()
-  }
-
-  jobPopulate(populateResult => {
-    sendJobNotification(job, populateResult, done)
-  })
-}
-
-//const finishJobNextLifecycle = (job) => {
-//  if (
-//    job.lifecycle === LifecycleConstants.READY ||
-//    job.lifecycle === LifecycleConstants.ONHOLD
-//  ) {
-//    return LifecycleConstants.CANCELED
-//  } else if (job.lifecycle === LifecycleConstants.ASSIGNED) {
-//    return LifecycleConstants.TERMINATED
-//  } else {
-//    // current state cannot be canceled or terminated
-//    return null
-//  }
-//}
-
-/**
- *
  * @summary obtain next valid lifecycle state if apply for current job.lifecycle
  * @param {Job} job
  * @return {String} lifecycle string
@@ -1103,7 +942,6 @@ const filterOutputArray = (outputs) => {
   return result
 }
 
-
 const finishNotificationTaskJob = (job, input, done) => {
   let specs = Object.assign({}, input, {
     job,
@@ -1112,6 +950,20 @@ const finishNotificationTaskJob = (job, input, done) => {
   })
   App.jobDispatcher.finish(specs, done)
 }
+
+//const finishJobNextLifecycle = (job) => {
+//  if (
+//    job.lifecycle === LifecycleConstants.READY ||
+//    job.lifecycle === LifecycleConstants.ONHOLD
+//  ) {
+//    return LifecycleConstants.CANCELED
+//  } else if (job.lifecycle === LifecycleConstants.ASSIGNED) {
+//    return LifecycleConstants.TERMINATED
+//  } else {
+//    // current state cannot be canceled or terminated
+//    return null
+//  }
+//}
 
 //const createNotificationJobPayload = (data) => {
 //  let args = data.task_arguments_values

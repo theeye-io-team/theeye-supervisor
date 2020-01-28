@@ -26,13 +26,13 @@ process.on('exit', function(){ // always that the process ends, throws this even
   process.exit(0);
 });
 
-process.on('uncaughtException', function(error){
-  logger.error('supervisor process on "uncaughtException"');
-  logger.error(error);
+process.on('uncaughtException', function (error) {
+  logger.error('supervisor process on "uncaughtException"')
+  logger.error(error)
 
-  var handler = new ErrorHandler();
-  handler.sendExceptionAlert(error);
-});
+  let handler = new ErrorHandler()
+  handler.sendExceptionAlert(error)
+})
 
 logger.log('setting environment');
 require('./environment').setenv(function(){
