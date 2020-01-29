@@ -29,13 +29,18 @@ module.exports = (operation, topic, input, done) => {
       operation,
       task_name: task.name,
       task_type: task.type,
-      user_id: job.user._id,
-      user_name: job.user.username,
-      user_email: job.user.email,
       state: job.state,
       lifecycle: job.lifecycle,
       organization: job.customer_name,
       job_type: job._type
+    }
+
+    if (job.user) {
+      payload.user_id = job.user._id
+      payload.user_name = job.user.username
+      payload.user_email = job.user.email
+    } else {
+      logger.error(`job user not defined. ${job._id} ${topic} ${job.name}`)
     }
 
     if (
