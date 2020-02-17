@@ -4,6 +4,7 @@ const audit = require('../../lib/audit')
 const router = require('../../router')
 const dbFilter = require('../../lib/db-filter')
 const IndicatorModels = require('../../entity/indicator')
+const Tag = require('../../entity/tag').Entity
 const logger = require('../../lib/logger')('eye:controller:indicator:crud')
 const TopicsConstants = require('../../constants/topics')
 const Constants = require('../../constants')
@@ -32,13 +33,24 @@ module.exports = function (server, passport) {
     controller.get
   )
 
+  const createTags = (req, res, next) => {
+    const customer = req.customer
+    const indicator = req.indicator
+
+    let tags = indicator.tags
+    if (tags && Array.isArray(tags) && tags.length > 0) {
+      Tag.create(tags, customer)
+    }
+  }
+
   server.post(
     '/indicator',
     middlewares,
     router.requireCredential('admin'),
     controller.create,
     audit.afterCreate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.CREATE })
+    notifyEvent({ operation: Constants.CREATE }),
+    createTags,
   )
 
   server.patch(
@@ -48,7 +60,8 @@ module.exports = function (server, passport) {
     findByTitleMiddleware,
     controller.update,
     audit.afterUpdate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.UPDATE })
+    notifyEvent({ operation: Constants.UPDATE }),
+    createTags,
   )
 
   server.patch(
@@ -58,7 +71,8 @@ module.exports = function (server, passport) {
     router.resolve.idToEntity({ param:'indicator', required: true }),
     controller.update,
     audit.afterUpdate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.UPDATE })
+    notifyEvent({ operation: Constants.UPDATE }),
+    createTags,
   )
 
   server.patch(

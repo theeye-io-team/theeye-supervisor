@@ -24,6 +24,7 @@ class IndicatorSchema extends BaseSchema {
       state: { type: String, default: 'normal' },
       sticky: { type: Boolean, default: false },
       read_only: { type: Boolean, default: false },
+      tags: { type: Array },
       secret: { type: String, default: randomSecret }, // one way hash
     }
 

@@ -30,9 +30,9 @@ const specs = {
 EntitySchema.set('toJSON', specs);
 EntitySchema.set('toObject', specs);
 
-EntitySchema.statics.create = function(tags,customer,next){
+EntitySchema.statics.create = (tags, customer, next) => {
   next||(next=function(){}); //malisimo esto
-  if(!tags||tags.length===0) return next();
+  if (!tags || tags.length===0) { return next() }
   var data = tags.map(tag => {
     return {
       name: tag,
@@ -42,24 +42,23 @@ EntitySchema.statics.create = function(tags,customer,next){
   })
 
   // find or create
-  var instances = [];
-  var created = lodash.after(data.length, () => next(null, instances) );
-  data.forEach( tag => {
+  var instances = []
+  var created = lodash.after(data.length, () => next(null, instances))
+  data.forEach(tag => {
     Entity.findOne(tag , (err, model) => {
-      //TODO capturar el error para que no se convierta en un horror de debugeo
-      if( ! model ) {
-        model = new Entity(tag);
-        model.save( err => {
-          if( ! err ) instances.push( model );
-          created();
-        });
+      if (!model) {
+        model = new Entity(tag)
+        model.save(err => {
+          if (!err) instances.push(model)
+          created()
+        })
       } else {
-        instances.push( model );
-        created();
+        instances.push(model)
+        created()
       }
-    });
-  });
-};
+    })
+  })
+}
 
 EntitySchema.index({ name: 1, customer: 1 },{ unique: true });
 
