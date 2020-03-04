@@ -29,7 +29,7 @@ module.exports = function (server, passport) {
   server.get(
     '/indicator/title/:title',
     middlewares,
-    findByTitleMiddleware,
+    findByTitleMiddleware(),
     controller.get
   )
 
@@ -53,11 +53,33 @@ module.exports = function (server, passport) {
     createTags,
   )
 
+  server.put(
+    '/indicator/:indicator',
+    middlewares,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param: 'indicator' }),
+    controller.replace,
+    audit.afterReplace('indicator', { display: 'title' }),
+    notifyEvent({ operation: Constants.REPLACE }),
+    createTags,
+  )
+
+  server.put(
+    '/indicator/title/:title',
+    middlewares,
+    router.requireCredential('admin'),
+    findByTitleMiddleware({ required: false }),
+    controller.replace,
+    audit.afterReplace('indicator', { display: 'title' }),
+    notifyEvent({ operation: Constants.REPLACE }),
+    createTags,
+  )
+
   server.patch(
     '/indicator/title/:title',
     middlewares,
     router.requireCredential('admin'),
-    findByTitleMiddleware,
+    findByTitleMiddleware(),
     controller.update,
     audit.afterUpdate('indicator', { display: 'title' }),
     notifyEvent({ operation: Constants.UPDATE }),
@@ -99,7 +121,7 @@ module.exports = function (server, passport) {
     '/indicator/title/:title',
     middlewares,
     router.requireCredential('admin'),
-    findByTitleMiddleware,
+    findByTitleMiddleware(),
     controller.remove,
     audit.afterRemove('indicator', { display: 'title' }),
     notifyEvent({ operation: Constants.DELETE })
@@ -136,17 +158,43 @@ const controller = {
       })
   },
   /**
+   * @method PUT
+   */
+  replace (req, res, next) {
+    if (!req.indicator) {
+      controller.create(req, res, next)
+    } else {
+      // replace current
+      if (
+        req.body.hasOwnProperty('title') &&
+        !validTitle(req.body.title)
+      ) {
+        return res.send(400, 'invalid title')
+      }
+
+      const indicator = req.indicator
+      let values = Object.assign({}, indicatorResetValues(indicator), req.body)
+      indicator.set(values)
+      indicator.save((err, model) => {
+        if (err) {
+          if (err.name == 'ValidationError') {
+            logger.debug('%o', err)
+            return res.send(400, err)
+          } else {
+            logger.error('%o', err)
+            return res.send(500)
+          }
+        } else {
+          res.send(200, values)
+          return next()
+        }
+      })
+    }
+  },
+  /**
    * @method POST
    */
   create (req, res, next) {
-    var input = extend({}, req.body, {
-      customer: req.customer,
-      customer_id: req.customer._id,
-      customer_name: req.customer.name,
-      user: req.user,
-      user_id: req.user._id
-    })
-
     if (!req.body.type) {
       return res.send(400, 'type is required')
     }
@@ -158,6 +206,14 @@ const controller = {
     if (!validTitle(req.body.title)) {
       return res.send(400, 'title is invalid')
     }
+
+    const input = extend({}, req.body, {
+      customer: req.customer,
+      customer_id: req.customer._id,
+      customer_name: req.customer.name,
+      user: req.user,
+      user_id: req.user._id
+    })
 
     var indicator = new IndicatorModels.Factory(input)
     indicator.save((err, model) => {
@@ -176,21 +232,11 @@ const controller = {
       next()
     })
   },
-  remove (req, res, next) {
-    const indicator = req.indicator
-
-    indicator.remove(err => {
-      if (err) { return res.send(500,err) }
-      res.send(204)
-      next()
-    })
-  },
-  get (req, res, next) {
-    res.send(200, req.indicator)
-    next()
-  },
+  /**
+   * @method PATCH
+   */
   update (req, res, next) {
-    let indicator = req.indicator
+    const indicator = req.indicator
 
     if (
       req.body.hasOwnProperty('title') &&
@@ -214,6 +260,19 @@ const controller = {
       res.send(200, model)
       return next()
     })
+  },
+  remove (req, res, next) {
+    const indicator = req.indicator
+
+    indicator.remove(err => {
+      if (err) { return res.send(500,err) }
+      res.send(204)
+      next()
+    })
+  },
+  get (req, res, next) {
+    res.send(200, req.indicator)
+    next()
   },
   updateState (req, res, next) {
     let indicator = req.indicator
@@ -274,22 +333,49 @@ const validTitle = (title) => {
   //}
 }
 
-const findByTitleMiddleware = (req, res, next) => {
-  const title = req.params.title
-  const customer = req.customer
+const findByTitleMiddleware = (options = {}) => {
+  return (req, res, next) => {
+    const title = req.params.title
+    const customer = req.customer
 
-  IndicatorModels.Indicator.findOne({
-    title,
-    customer_id: customer._id
-  }, (err, indicator) => {
-    if (err) {
-      logger.error(err)
-      return res.send(500, err.message)
+    IndicatorModels.Indicator.findOne({
+      title,
+      customer_id: customer._id
+    }, (err, indicator) => {
+      if (err) {
+        logger.error(err)
+        return res.send(500, err.message)
+      }
+
+      if (!indicator && options.required !== false) {
+        return res.send(404, 'indicator not found')
+      }
+
+      req.indicator = indicator
+      return next()
+    })
+  }
+}
+
+const mutableKeys = [
+  'description','acl','severity',
+  'alerts','state','sticky','read_only',
+  'tags','value'
+]
+
+const indicatorResetValues = (indicator) => {
+  let vo = indicator.toObject()
+  for (let key in vo) {
+    if (mutableKeys.indexOf(key) !== -1) {
+      let path = indicator.schema.paths[key]
+      if (path !== undefined) {
+        if (typeof path.defaultValue === 'function') {
+          vo[key] = path.defaultValue()
+        } else {
+          vo[key] = path.defaultValue
+        }
+      }
     }
-
-    if (!indicator) { return res.send(404, 'indicator not found') }
-
-    req.indicator = indicator
-    return next()
-  })
+  }
+  return vo
 }
