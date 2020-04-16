@@ -49,6 +49,10 @@ module.exports = (server, passport) => {
       return res.send(403, 'unauthorized approver')
     }
 
+    if (job.lifecycle !== 'onhold') {
+      return res.send(409, 'approval request no longer available')
+    }
+
     return next()
   }
 
