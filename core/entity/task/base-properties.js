@@ -23,5 +23,6 @@ module.exports = {
   execution_count: { type: Number, default: 0 },
   multitasking: { type: Boolean, default: true },
   user_inputs: { type: Boolean, default: false },
+  user_inputs_members: [{ type: String }],
   show_result: { type: Boolean, default: false }
 }

@@ -151,12 +151,15 @@ const controller = {
    */
   finish (req, res, next) {
     var payload = req.body.result || {}
+    const user = req.user
 
     App.jobDispatcher.finish({
-      result: (payload.data || {}),
+      result: Object.assign({}, (payload.data || {}), {
+        user: { email: user.email, id: user._id.toString() }
+      }),
       state: payload.state,
       job: req.job,
-      user: req.user,
+      user,
       customer: req.customer
     }, (err, job) => {
       if (err) return res.send(500)

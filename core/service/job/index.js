@@ -399,7 +399,7 @@ module.exports = {
 
     next||(next=()=>{})
     job.lifecycle = lifecycle
-    job.result = {}
+    job.result = (input.result || {})
     job.state = StateConstants.CANCELED
     job.save(err => {
       if (err) {

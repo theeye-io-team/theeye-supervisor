@@ -104,8 +104,12 @@ const controller = {
   },
   cancel (req, res, next) {
     const job = req.job
+    const user = req.user
 
     App.jobDispatcher.cancel({
+      result: {
+        user: { email: user.email, id: user._id.toString() },
+      },
       job,
       user: req.user,
       customer: req.customer
@@ -121,9 +125,11 @@ const controller = {
   },
   approve (req, res, next) {
     const job = req.job
+    const user = req.user
 
     App.jobDispatcher.finish({
       result: {
+        user: { email: user.email, id: user._id.toString() },
         output: job.task_arguments_values
       },
       state: StateConstants.SUCCESS,
@@ -138,14 +144,16 @@ const controller = {
   },
   reject (req, res, next) {
     const job = req.job
+    const user = req.user
 
     App.jobDispatcher.finish({
       result: {
+        user: { email: user.email, id: user._id.toString() },
         output: job.task_arguments_values
       },
       state: StateConstants.FAILURE,
       job,
-      user: req.user,
+      user,
       customer: req.customer
     }, err => {
       if (err) { return res.send(500) }
@@ -155,6 +163,7 @@ const controller = {
   },
   async submitInput (req, res, next) {
     const job = req.job
+
     try {
       if (job._type === JobConstants.DUMMY_TYPE) {
         await submitDummyInputs(req)
