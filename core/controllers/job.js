@@ -122,9 +122,11 @@ const controller = {
           if (err) { return res.send(500, err.message) }
 
           var jobs = []
-          if (job != null) {
+          if (job) {
             jobs.push(job.publish('agent'))
+            App.jobDispatcher.scheduleJobTimeoutVerification(job)
           }
+
           res.send(200, { jobs })
           next()
         }

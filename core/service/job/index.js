@@ -77,16 +77,7 @@ module.exports = {
             dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
           })
 
-          RegisterOperation(
-            Constants.UPDATE,
-            TopicsConstants.task.cancelation,
-            {
-              job,
-              task: job.task,
-              user: input.user,
-              customer: input.customer
-            }
-          )
+          RegisterOperation(Constants.UPDATE, TopicsConstants.task.cancelation, { job })
         } else {
           allowedMultitasking(job, (err, allowed) => {
             if (!allowed) {
@@ -99,16 +90,7 @@ module.exports = {
                 terminateRecursion(err, job)
               })
 
-              RegisterOperation(
-                Constants.UPDATE,
-                TopicsConstants.task.sent,
-                {
-                  job,
-                  task: job.task,
-                  user: input.user,
-                  customer: input.customer
-                }
-              )
+              RegisterOperation(Constants.UPDATE, TopicsConstants.task.sent, { job })
             }
           })
         }
@@ -224,11 +206,7 @@ module.exports = {
 
           done(null, job) // continue process in paralell
 
-          RegisterOperation(
-            Constants.UPDATE,
-            TopicsConstants.job.crud,
-            { job, user, customer, task }
-          )
+          RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
         })
       }
     )
@@ -324,33 +302,36 @@ module.exports = {
    *
    * @param {Object} input
    * @property {Job} input.job
-   * @property {User} input.user
-   * @property {Customer} input.customer
    * @property {Object} input.result
    * @param {Function} done
    *
    */
   finish (input, done) {
     const job = input.job
-    const user = input.user
-    const customer = input.customer
-    const result = input.result
-    const task = job.task
+    const result = input.result || {}
 
-    // if it is not a declared failure, assume success
-    let state = (input.state || StateConstants.SUCCESS)
-    let trigger_name = (state === StateConstants.FAILURE) ?
-      StateConstants.FAILURE : StateConstants.SUCCESS
+    let state, lifecycle, trigger_name
+    if (result.killed === true) {
+      trigger_name = state = StateConstants.TIMEOUT
+      lifecycle = LifecycleConstants.TERMINATED
+    } else {
+      if (input.state && (input.state in StateConstants)) {
+        trigger_name = state = input.state
+      } else {
+        // assuming success
+        trigger_name = state = StateConstants.SUCCESS
+      }
+      lifecycle = LifecycleConstants.FINISHED
+    }
 
-    // data output, can be anything. stringify for security
-    job.result = result
     job.state = state
-    job.trigger_name = trigger_name
-    job.lifecycle = (job.result.killed === true) ? LifecycleConstants.TERMINATED : LifecycleConstants.FINISHED
-
+    job.trigger_name = trigger_name 
+    job.lifecycle = lifecycle
+    job.result = result
     // parse result output
-    if (job.result.output) {
-      let output = job.result.output
+    if (result.output) {
+      // data output, can be anything. stringify for security
+      let output = result.output
       job.output = this.parseJobParameters(output)
       job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
     }
@@ -363,13 +344,9 @@ module.exports = {
 
       done(null, job) // continue process in paralell
 
-      RegisterOperation(
-        Constants.UPDATE,
-        TopicsConstants.task.result,
-        { job, user, customer, task }
-      )
+      RegisterOperation(Constants.UPDATE, TopicsConstants.task.result, { job })
 
-      dispatchFinishedTaskExecutionEvent(job, trigger_name)
+      dispatchFinishedTaskExecutionEvent(job, job.trigger_name)
     })
   },
   /**
@@ -380,15 +357,13 @@ module.exports = {
    *
    * @param {Object} input
    * @property {Job} input.job
-   * @property {Customer} input.customer
-   * @property {User} input.user
    *
    */
   cancel (input, next) {
+    next || (next=()=>{})
+
     const job = input.job
-    const task = job.task
-    const customer = input.customer
-    const user = input.user
+    const result = (input.result || {})
 
     let lifecycle = cancelJobNextLifecycle(job)
     if (!lifecycle) {
@@ -397,10 +372,10 @@ module.exports = {
       return next(err)
     }
 
-    next||(next=()=>{})
     job.lifecycle = lifecycle
-    job.result = (input.result || {})
-    job.state = StateConstants.CANCELED
+    job.result = result
+    job.output = this.parseJobParameters(result.output)
+    job.state = input.state || StateConstants.CANCELED
     job.save(err => {
       if (err) {
         logger.error('fail to cancel job %s', job._id)
@@ -413,11 +388,7 @@ module.exports = {
 
       logger.log('job %s terminated', job._id)
 
-      RegisterOperation(
-        Constants.UPDATE,
-        TopicsConstants.task.terminate,
-        { customer: input.customer, task, job, user }
-      )
+      RegisterOperation(Constants.UPDATE, TopicsConstants.task.terminate, { job })
     })
   },
   // automatic job scheduled . send cancelation
@@ -511,6 +482,42 @@ module.exports = {
       job._type === JobConstants.DUMMY_TYPE
     )
     return result
+  },
+  /**
+   * @param {String} job_id
+   * @return {Promise}
+   */
+  async jobExecutionTimedOut (job_id) {
+    let job = await JobModels.Job.findById(job_id).exec()
+    if (!job) {
+      // finished/removed/canceled
+      return
+    }
+
+    // still assigned
+    if (job.lifecycle === LifecycleConstants.ASSIGNED) {
+      App.jobDispatcher.cancel({
+        job,
+        state: StateConstants.TIMEOUT,
+        result: {
+          killed: true,
+          output: [{ message: 'The task was terminated after due to the execution timeout.' }]
+        }
+      })
+    }
+
+    return
+  },
+  /**
+   * @param {Job} job
+   * @return {Promise}
+   */
+  async scheduleJobTimeoutVerification (job) {
+    let defaultTimeout = (10 * 60 * 1000) // 10 minutes in milliseconds
+    let timeout = ( job.timeout || defaultTimeout ) + (60 * 1000)
+    let now = new Date()
+    let when = new Date(now.getTime() + timeout)
+    App.scheduler.schedule(when, 'job-timeout', { job_id: job._id.toString() }, null, () => {})
   }
 }
 
@@ -643,7 +650,7 @@ const createJob = (input) => {
       RegisterOperation(
         Constants.CREATE,
         TopicsConstants.task.execution,
-        { task, job, user: input.user, customer: input.customer },
+        { job },
         () => {
           if (task.type === TaskConstants.TYPE_DUMMY) {
             if (job.lifecycle !== LifecycleConstants.ONHOLD) {
@@ -805,7 +812,9 @@ const removeExceededJobsCountByWorkflow = (workflow_id, customer_id, next) => {
 }
 
 const jobInProgress = (job) => {
-  if (!job) return false
+  if (!job) {
+    return false
+  }
   let inProgress = (
     job.lifecycle === LifecycleConstants.READY ||
     job.lifecycle === LifecycleConstants.ASSIGNED ||
@@ -878,8 +887,8 @@ const dispatchFinishedTaskExecutionEvent = (job, trigger) => {
     if (err) { return logger.error(err) }
 
     if (!event) {
-      var err = new Error('no handler defined for event named "' + trigger + '" on task ' + task_id)
-      return logger.error(err)
+      let warn = `no handler defined for event named ${trigger} of task ${task_id}`
+      return logger.error(warn)
     }
 
     // trigger task execution event within a workflow

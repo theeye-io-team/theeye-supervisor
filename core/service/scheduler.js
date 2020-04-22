@@ -50,10 +50,42 @@ Scheduler.prototype = {
     var self = this;
     var agenda = this.agenda;
 
-    agenda.define('task', function(job, done) {
-      logger.log('Called task job');
-      self.taskProcessor(job, done);
+    /**
+     *
+     * task execution handler. cron.
+     *
+     * handle scheduled task creation
+     *
+     */
+    agenda.define('task', function (job, done) {
+      logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
+      logger.log('||  Agenda Job Processor: task event         ||')
+      logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
+
+      self.taskProcessor(job, done)
     });
+
+    /**
+     *
+     * job execution timeout handler.
+     *
+     * check lifecycle of jobs under execution
+     *
+     */
+    agenda.define('job-timeout', async function (agendaJob, done) {
+      try {
+        logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
+        logger.log('||  Agenda Job Processor: job-timeout event  ||')
+        logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
+        let jobData = agendaJob.attrs.data
+        await App.jobDispatcher.jobExecutionTimedOut(jobData.job_id)
+        await agendaJob.remove()
+      } catch (err) {
+        agendaJob.fail(err)
+        await agendaJob.save()
+      }
+      done()
+    })
 
     agenda.on('start', function(job) {
       logger.log('job %s started', job.attrs.name);
@@ -110,7 +142,7 @@ Scheduler.prototype = {
     var date = new Date(schedule.runDate)
     var frequency = schedule.repeatEvery || false
 
-    this.schedule(date, "task", data, frequency, (err,job) => {
+    this.schedule(date, 'task', data, frequency, (err,job) => {
       if (err) { return done(err) }
       done(null,job)
     })
@@ -226,12 +258,6 @@ Scheduler.prototype = {
     }, callback);
   },
   taskProcessor (agendaJob, done) {
-    logger.log('//////////////////////////////////////////')
-    logger.log('//////////////////////////////////////////')
-    logger.log(' Called agendaJob processor taskProcessor ')
-    logger.log('//////////////////////////////////////////')
-    logger.log('//////////////////////////////////////////')
-
     var jobData = agendaJob.attrs.data
 
     function JobError (err) {

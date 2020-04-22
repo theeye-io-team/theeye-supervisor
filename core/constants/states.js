@@ -2,6 +2,7 @@
 const SCHEDULED = 'scheduled'
 const FAILURE = 'failure'
 const SUCCESS = 'success'
+const TIMEOUT = 'timeout'
 const RECOVERED = 'recovered'
 const MONITOR_STOPPED = 'updates_stopped'
 const MONITOR_STARTED = 'updates_started'
@@ -24,3 +25,4 @@ exports.STARTED = MONITOR_STARTED
 exports.CHANGED = CHANGED
 exports.ERROR = ERROR
 exports.IN_PROGRESS = IN_PROGRESS
+exports.TIMEOUT = TIMEOUT
