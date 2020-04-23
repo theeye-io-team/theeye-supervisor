@@ -306,48 +306,49 @@ module.exports = {
    * @param {Function} done
    *
    */
-  finish (input, done) {
-    const job = input.job
-    const result = input.result || {}
+  async finish (input, done) {
+    try {
+      const job = input.job
+      const result = input.result || {}
 
-    let state, lifecycle, trigger_name
-    if (result.killed === true) {
-      trigger_name = state = StateConstants.TIMEOUT
-      lifecycle = LifecycleConstants.TERMINATED
-    } else {
-      if (input.state && (input.state in StateConstants)) {
-        trigger_name = state = input.state
+      let state, lifecycle, trigger_name
+      if (result.killed === true) {
+        trigger_name = state = StateConstants.TIMEOUT
+        lifecycle = LifecycleConstants.TERMINATED
       } else {
-        // assuming success
-        trigger_name = state = StateConstants.SUCCESS
-      }
-      lifecycle = LifecycleConstants.FINISHED
-    }
-
-    job.state = state
-    job.trigger_name = trigger_name 
-    job.lifecycle = lifecycle
-    job.result = result
-    // parse result output
-    if (result.output) {
-      // data output, can be anything. stringify for security
-      let output = result.output
-      job.output = this.parseJobParameters(output)
-      job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
-    }
-
-    job.save(err => {
-      if (err) {
-        logger.log('%o', err)
-        return done(err, job)
+        if (input.state && (input.state in StateConstants)) {
+          trigger_name = state = input.state
+        } else {
+          // assuming success
+          trigger_name = state = StateConstants.SUCCESS
+        }
+        lifecycle = LifecycleConstants.FINISHED
       }
 
+      job.state = state
+      job.trigger_name = trigger_name 
+      job.lifecycle = lifecycle
+      job.result = result
+      // parse result output
+      if (result.output) {
+        // data output, can be anything. stringify for security
+        let output = result.output
+        job.output = this.parseJobParameters(output)
+        job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
+      }
+
+      await job.save()
       done(null, job) // continue process in paralell
 
-      RegisterOperation(Constants.UPDATE, TopicsConstants.task.result, { job })
-
-      dispatchFinishedTaskExecutionEvent(job, job.trigger_name)
-    })
+      process.nextTick(() => {
+        RegisterOperation(Constants.UPDATE, TopicsConstants.task.result, { job })
+        this.cancelScheduledTimeoutVerificationJob(job)
+        dispatchFinishedTaskExecutionEvent(job, job.trigger_name)
+      })
+    } catch (err) {
+      logger.error(err)
+      done(err)
+    }
   },
   /**
    *
@@ -528,6 +529,18 @@ module.exports = {
     let now = new Date()
     let when = new Date(now.getTime() + timeout)
     App.scheduler.schedule(when, 'job-timeout', { job_id: job._id.toString() }, null, () => {})
+  },
+  /**
+   * @param {Job} job
+   * @return {Promise}
+   */
+  cancelScheduledTimeoutVerificationJob (job) {
+    return App.scheduler.agenda.cancel({
+      $and: [
+        { name: 'job-timeout' },
+        { 'data.job_id': job._id.toString() }
+      ]
+    })
   }
 }
 
