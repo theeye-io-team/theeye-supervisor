@@ -496,12 +496,22 @@ module.exports = {
 
     // still assigned
     if (job.lifecycle === LifecycleConstants.ASSIGNED) {
+      let elapsed = (job.timeout + (60 * 1000)) / 1000
+      let elapsedText
+
+      if (elapsed > 60) {
+        elapsed = elapsed / 60 // mins
+        elapsedText = `${elapsed.toFixed(2)} minutes`
+      } else {
+        elapsedText = `${elapsed.toFixed(2)} seconds`
+      }
+
       App.jobDispatcher.cancel({
         job,
         state: StateConstants.TIMEOUT,
         result: {
           killed: true,
-          output: [{ message: 'The task was terminated after due to the execution timeout.' }]
+          output: [{ message: `The task was terminated after ${elapsedText} due to execution timeout.` }]
         }
       })
     }
