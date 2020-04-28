@@ -35,7 +35,7 @@ exports.task = {
   crud: 'task-crud',
   execution: 'task-execution', // create/start job
   hold: 'task-hold-execution', // create holded task execution
-  sent: 'task-sent', // sent to agent
+  assigned: 'task-assigned', // assigned to agent
   result: 'task-result', // update/finalize job
   cancelation: 'task-cancelation', // cancel job
   terminate: 'task-terminate', // terminate a job

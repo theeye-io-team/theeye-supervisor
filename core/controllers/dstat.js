@@ -1,5 +1,6 @@
 'use strict';
 
+const App = require('../app')
 const config = require('config');
 const logger = require('../lib/logger')('controller:dstat');
 const router = require('../router');
@@ -7,7 +8,6 @@ const json = require('../lib/jsonresponse');
 const HostStats = require('../entity/host/stats').Entity;
 const NotificationService = require('../service/notification');
 const ResourceManager = require('../service/resource');
-const elastic = require('../lib/elastic');
 const MonitorsConstants = require('../constants/monitors.js')
 const Constants = require('../constants')
 const TopicsConstants = require('../constants/topics')
@@ -39,7 +39,6 @@ const parseStats = (stats) => {
  * @param {Object} req.body.dstat
  *
  * the monitoring information is being display via web interface
- * and stored in elasticsearch if available
  *
  */
 const controller = {
@@ -64,10 +63,10 @@ const controller = {
         operation: (dstat !== null ? Constants.REPLACE : Constants.CREATE),
       }
 
-      elastic.submit(customer.name, topic, Object.assign({},data,{stats: stats})) // topic = topics.host.stats
+      App.logger.submit(customer.name, topic, Object.assign({}, data, {stats})) // topic = topics.host.stats
       NotificationService.generateSystemNotification({
-        topic: topic,
-        data: Object.assign({},data,{ model: dstat })
+        topic,
+        data: Object.assign({}, data, { model: dstat })
       })
     }
 

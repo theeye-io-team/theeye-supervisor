@@ -1,24 +1,22 @@
 'use strict'
 
-const logger = require('../lib/logger')('controller:host');
-//const debug = require('debug')('controller:host')
+const App = require('../app')
 const config = require('config')
 const lodash = require('lodash')
-const elastic = require('../lib/elastic');
-const router = require('../router');
-const Host = require("../entity/host").Entity;
-const Resource = require('../entity/resource').Entity;
-const HostService = require('../service/host');
-const NotificationService = require('../service/notification');
-const dbFilter = require('../lib/db-filter');
-
+const logger = require('../lib/logger')('controller:host')
+const router = require('../router')
+const Host = require("../entity/host").Entity
+const Resource = require('../entity/resource').Entity
+const HostService = require('../service/host')
+const NotificationService = require('../service/notification')
+const dbFilter = require('../lib/db-filter')
 const Constants = require('../constants')
 const TopicsConstants = require('../constants/topics')
 
-module.exports = function(server, passport) {
-  var middlewares = [
-    passport.authenticate('bearer',{session:false}),
-    router.resolve.customerNameToEntity({required:true}),
+module.exports = function (server, passport) {
+  const middlewares = [
+    passport.authenticate('bearer', { session: false }),
+    router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer,
   ]
 
@@ -27,12 +25,12 @@ module.exports = function(server, passport) {
    */
   server.post('/:customer/host/:hostname',
     middlewares.concat(
-      router.requireCredential('agent',{exactMatch:true}) // only agents can create hosts
+      router.requireCredential('agent', { exactMatch: true }) // only agents can create hosts
     ),
     controller.create
   )
 
-  server.get('/:customer/host',middlewares,controller.fetch)
+  server.get('/:customer/host', middlewares, controller.fetch)
 
   server.get('/:customer/host/:host',
     middlewares.concat(
@@ -234,7 +232,7 @@ const registerHostname = (req, done) => {
           }
 
           const topic = TopicsConstants.agent.version
-          elastic.submit(customer.name, topic, {
+          App.logger.submit(customer.name, topic, {
             hostname,
             organization: customer.name,
             version: host.agent_version

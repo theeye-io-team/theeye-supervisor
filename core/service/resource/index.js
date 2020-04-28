@@ -3,7 +3,6 @@
 const App = require('../../app')
 const after = require('lodash/after')
 const logger = require('../../lib/logger')('service:resource')
-const elastic = require('../../lib/elastic')
 const CustomerService = require('../customer')
 const NotificationService = require('../notification')
 const ResourceMonitorService = require('./monitor')
@@ -60,7 +59,7 @@ function Service (resource) {
       operation: Constants.UPDATE
     }
     const topic = TopicsConstants.monitor.state
-    elastic.submit(resource.customer_name, topic, payload) // topic = topics.monitor.state
+    App.logger.submit(resource.customer_name, topic, payload) // topic = topics.monitor.state
   }
 
   const sendStateChangeEventNotification = (resource, input) => {
@@ -433,9 +432,8 @@ function Service (resource) {
         state: resource.state
       }
 
-      // submit monitor result to elastic search
       const topic = TopicsConstants.monitor.execution
-      elastic.submit(resource.customer_name, topic, payload) // topic = topics.monitor.execution
+      App.logger.submit(resource.customer_name, topic, payload) // topic = topics.monitor.execution
 
       next()
     })
@@ -534,7 +532,7 @@ Service.create = function (input, next) {
       logger.log('resource & monitor created');
 
       const topic = TopicsConstants.monitor.crud
-      elastic.submit(monitor.customer_name, topic, { // topic = topics.monitor.crud , BULK CREATE
+      App.logger.submit(monitor.customer_name, topic, { // topic = topics.monitor.crud , BULK CREATE
         hostname: monitor.hostname,
         organization: monitor.customer_name,
         model_id: monitor._id,

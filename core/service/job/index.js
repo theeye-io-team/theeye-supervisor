@@ -3,7 +3,6 @@ const merge = require('lodash/merge')
 const globalconfig = require('config')
 const App = require('../../app')
 const logger = require('../../lib/logger')('service:jobs')
-const elastic = require('../../lib/elastic')
 const Constants = require('../../constants')
 const LifecycleConstants = require('../../constants/lifecycle')
 const JobConstants = require('../../constants/jobs')
@@ -90,7 +89,7 @@ module.exports = {
                 terminateRecursion(err, job)
               })
 
-              RegisterOperation(Constants.UPDATE, TopicsConstants.task.sent, { job })
+              RegisterOperation(Constants.UPDATE, TopicsConstants.task.assigned, { job })
             }
           })
         }

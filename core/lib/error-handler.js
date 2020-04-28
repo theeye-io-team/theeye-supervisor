@@ -8,18 +8,16 @@ function ErrorHandler () {
 module.exports = ErrorHandler
 
 const errorLine = (error) => {
-  let message = error.message
-  let statusCode = error.statusCode
-  let dump = error.dump
 
-  let html = `<h2>Exception</h2><pre>${error.stack}</pre>`
+  let dump = error.toJSON()
 
-  if (statusCode) {
-    html += `<p><h3>status code</h3> ${statusCode}</p>`
-  }
+  let html = `<h2>Exception</h2><pre>${dump.stack}</pre>`
 
-  if (dump) {
-    html += `<p><h3>error dump</h3> ${JSON.stringify(dump)}</p>`
+  delete dump.stack
+  delete dump.message
+
+  for (let prop in dump) {
+    html += `<p><h3>${prop}</h3> ${JSON.stringify(dump[prop])}</p>`
   }
 
   return html

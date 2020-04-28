@@ -2,10 +2,9 @@ const App = require('../../app')
 const JobConstants = require('../../constants/jobs')
 const TopicsConstants = require('../../constants/topics')
 const logger = require('../../lib/logger')('service:jobs')
-const elastic = require('../../lib/elastic')
 
 /**
- * @summary register job operation in elastic search
+ * @summary register job operation and notify
  *
  * @param {String} operation
  * @param {String} topic
@@ -112,7 +111,7 @@ module.exports = (operation, topic, input, done) => {
 
     // async call
     // topic = topics.task.[execution||result] , CREATE/UPDATE
-    elastic.submit(job.customer_name, topic, payload)
+    App.logger.submit(job.customer_name, topic, payload)
     return
   }
 

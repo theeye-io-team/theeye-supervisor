@@ -1,13 +1,12 @@
 'use strict';
 
-const config = require('config');
-const merge = require('lodash/merge');
-var logger = require('../lib/logger')('service:customer');
-var Customer = require('../entity/customer').Entity;
-var User = require('../entity/user').Entity;
-var ResourceMonitor = require('../entity/user').Entity;
-var ACL = require('../lib/acl');
-
+const config = require('config')
+const merge = require('lodash/merge')
+const logger = require('../lib/logger')('service:customer')
+const ACL = require('../lib/acl')
+const Customer = require('../entity/customer').Entity
+const User = require('../entity/user').Entity
+const ResourceMonitor = require('../entity/user').Entity
 
 module.exports = {
   /**
@@ -63,11 +62,10 @@ module.exports = {
    * @param {Mixed} filters, string or query
    *
    */
-  getCustomerConfig (filters,next) {
-    if (!next) return
-    if (!filters) return
-
-    const query = (typeof filters == 'string') ? { _id : filters } : filters
+  getCustomerConfig (filters, next) {
+    if (!next) { return }
+    if (!filters) { return }
+    const query = (typeof filters === 'string') ? { _id : filters } : filters
 
     Customer.findOne(query, (error, customer) => {
       if (error) {
@@ -83,15 +81,15 @@ module.exports = {
       }
 
       const basecfg = {
-        monitor: config.get('monitor')||{},
-        elasticsearch: config.get('elasticsearch')||{enabled:false} // no config available
+        monitor: config.get('monitor') || {},
+        elasticsearch: config.get('elasticsearch') || {enabled:false} // no config available
       }
 
       // deep replace objects properties
-      var ccfg = merge({}, basecfg, (customer.config||{}))
+      var ccfg = merge({}, basecfg, (customer.config || {}))
 
       // extend default config options with customer defined options
-      if (next) return next(null,ccfg)
+      if (next) { return next(null,ccfg) }
     })
   },
   fetch (filter, next) {

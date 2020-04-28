@@ -28,6 +28,7 @@ const S3Storage = {
   save (input, next) {
     //var file = input.script
     const s3 = new AWS.S3({
+      apiVersion: '2006-03-01',
       params: {
         Bucket: config.integrations.aws.s3.bucket,
         Key: input.filename // keyname ?

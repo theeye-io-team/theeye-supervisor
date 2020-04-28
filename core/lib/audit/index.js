@@ -1,6 +1,6 @@
 'use strict'
 
-const elastic = require('../elastic')
+const App = require('../../app')
 const Constants = require('../../constants')
 const TopicsConstants = require('../../constants/topics')
 const NotificationService = require('../../service/notification')
@@ -10,7 +10,7 @@ module.exports = {
     const topic = specs.topic || TopicsConstants[name].crud
     return function (req, res, next) {
       const model = req[name]
-      elastic.submit(req.customer.name, topic, { // topic = topics[name].crud , UPDATE
+      App.logger.submit(req.customer.name, topic, { // topic = topics[name].crud , UPDATE
         hostname: model.hostname || 'undefined',
         model_id: model._id,
         model_name: model[ specs.display ],
@@ -41,7 +41,7 @@ module.exports = {
     const topic = specs.topic || TopicsConstants[name].crud
     return function (req, res, next) {
       const model = req[name]
-      elastic.submit(req.customer.name, topic, { // topic = topics[name].crud , REPLACE
+      App.logger.submit(req.customer.name, topic, { // topic = topics[name].crud , REPLACE
         hostname: model.hostname || 'undefined',
         model_id: model._id,
         model_name: model[ specs.display ],
@@ -72,7 +72,7 @@ module.exports = {
     var topic = specs.topic || TopicsConstants[name].crud
     return function (req, res, next) {
       var model = req[name]
-      elastic.submit(req.customer.name, topic, { // topic = topics[name].crud , DELETE
+      App.logger.submit(req.customer.name, topic, { // topic = topics[name].crud , DELETE
         hostname: model.hostname || 'undefined',
         model_id: model._id,
         model_name: model[ specs.display ],
@@ -103,7 +103,7 @@ module.exports = {
     var topic = specs.topic || TopicsConstants[name].crud
     return function (req, res, next) {
       var model = req[name]
-      elastic.submit(req.customer.name, topic, { // topic = topics[name].crud , CREATE
+      App.logger.submit(req.customer.name, topic, { // topic = topics[name].crud , CREATE
         hostname: model.hostname || 'undefined',
         model_id: model._id,
         model_name: model[ specs.display ],

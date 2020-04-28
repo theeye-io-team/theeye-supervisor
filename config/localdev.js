@@ -20,8 +20,11 @@ module.exports = {
     "hosts": "127.0.0.1:27017",
     "database": "theeye"
   },
-  "elasticsearch": {
-    "enabled": true
+  logger: {
+    dump: {
+      enabled: false,
+      filename: '/tmp/logger.log'
+    }
   },
   "mailer": {
     "from": "The Eye Development %customer% <%customer%@theeye.io>",

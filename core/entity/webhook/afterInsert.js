@@ -1,7 +1,6 @@
 "use strict";
 
 var WebhookEvent = require('../event').WebhookEvent;
-var elastic = require('../../lib/elastic');
 var config = require('config');
 
 module.exports = function (webhook) {

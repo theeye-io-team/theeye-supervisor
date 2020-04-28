@@ -18,7 +18,7 @@ const dbFilter = require('../lib/db-filter');
 //const fetchBy = require('../lib/fetch-by')
 
 module.exports = (server, passport) => {
-  var middlewares = [
+  const middlewares = [
     passport.authenticate('bearer', {session:false}),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer
@@ -56,33 +56,34 @@ module.exports = (server, passport) => {
     router.requireCredential('user'),
     router.resolve.idToEntity({param:'task', required:true}),
     router.ensureAllowed({entity: {name: 'task'} }),
+    validateTaskArgumentsMiddleware,
     controller.create
     //audit.afterCreate('job',{ display: 'name' })
   )
 
   server.post(
     '/job',
-    middlewares.concat(
-      router.requireCredential('user'),
-      router.resolve.idToEntity({param:'task',required:true}),
-      router.ensureAllowed({entity:{name:'task'}})
-    ),
+    middlewares,
+    router.requireCredential('user'),
+    router.resolve.idToEntity({ param: 'task', required: true }),
+    router.ensureAllowed({ entity: { name: 'task' } }),
+    validateTaskArgumentsMiddleware,
     controller.create
     //audit.afterCreate('job',{ display: 'name' })
   )
 
   // create job using task secret key
   server.post(
-    '/job/secret/:secret', [
-      router.resolve.customerNameToEntity({ required: true }),
-      router.resolve.idToEntity({ param: 'task', required: true }),
-      router.requireSecret('task')
-    ],
+    '/job/secret/:secret',
+    router.resolve.customerNameToEntity({ required: true }),
+    router.resolve.idToEntity({ param: 'task', required: true }),
+    router.requireSecret('task'),
     (req, res, next) => {
       req.user = App.user
       req.origin = JobConstants.ORIGIN_SECRET
       next()
     },
+    validateTaskArgumentsMiddleware,
     controller.create
     //audit.afterCreate('job',{ display: 'name' })
   )
@@ -93,6 +94,40 @@ module.exports = (server, passport) => {
     router.requireCredential('admin'),
     controller.removeFinished
   )
+}
+
+const validateTaskArgumentsMiddleware = (req, res, next) => {
+  let args
+  let task = req.task
+
+  try {
+    if (task.task_arguments.length > 0) {
+
+      // we need arguments to start this task ! lets validate them
+      args = (req.body.task_arguments || req.query.task_arguments)
+
+      if (!args) {
+        // task_arguments keys are not present.
+        if ( Array.isArray(req.body) ) {
+          // the full body is the array of arguments
+          args = req.body
+        } else {
+          throw new Error('task need arguments')
+        }
+      } else {
+        if (args.length < task.task_arguments.length) {
+          throw new Error('invalid task arguments length')
+        }
+      }
+    } else {
+      args = []
+    }
+
+    req.task_arguments = args
+    next()
+  } catch (e) {
+    return res.send(400, e.message)
+  }
 }
 
 const controller = {
@@ -171,12 +206,9 @@ const controller = {
   },
   /**
    *
-   * @param {Object[]} req.body.task_arguments an array of objects with { order, label, value } arguments definition
-   *
    */
   create (req, res, next) {
-    const { task, user, customer } = req
-    const args = (req.body.task_arguments || [])
+    const { task, user, customer, task_arguments } = req
 
     logger.log('creating new job')
 
@@ -186,8 +218,8 @@ const controller = {
       customer,
       notify: true,
       origin: (req.origin || JobConstants.ORIGIN_USER),
-      task_arguments_values: args,
-      //script_arguments: args
+      task_arguments_values: task_arguments,
+      //script_arguments: task_arguments 
     }
 
     App.jobDispatcher.create(inputs, (err, job) => {

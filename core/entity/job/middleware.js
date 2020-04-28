@@ -3,7 +3,6 @@ const logger = require('../../lib/logger')('entity:job')
 const NotificationService = require('../../service/notification')
 const TopicsConstants = require('../../constants/topics')
 const Constants = require('../../constants')
-const elastic = require('../../lib/elastic')
 
 module.exports = {
   //postSave: (job) => {

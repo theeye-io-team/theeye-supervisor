@@ -93,15 +93,24 @@ module.exports = {
       type: "sendmail"
     }
   },
-  /**
-   *
-   * elastic search global settings for all organization
-   *
-   */
-  elasticsearch: {
-    timeout: 5000,
-    enabled: true,
-    url: "",
+  logger: {
+    dump: {
+      enabled: false,
+      filename: '/tmp/logger.log'
+    },
+    remote: {
+      timeout: 5000,
+      enabled: true
+    },
+    /**
+     *
+     * elastic search global settings for all organization
+     *
+     */
+    elasticsearch: {
+      timeout: 5000,
+      enabled: true
+    }
   },
   /**
    *

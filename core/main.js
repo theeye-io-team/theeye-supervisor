@@ -12,27 +12,41 @@ if (!RegExp.escape) {
 }
 
 process.on('SIGINT', function(){
-  logger.log('supervisor process ends on "SIGINT"');
-  process.exit(0);
-});
+  logger.log('supervisor process ends on "SIGINT"')
+  process.exit(0)
+})
 
 process.on('SIGTERM', function(){
-  logger.log('supervisor process ends on "SIGTERM"');
-  process.exit(0);
-});
+  logger.log('supervisor process ends on "SIGTERM"')
+  process.exit(0)
+})
 
 process.on('exit', function(){ // always that the process ends, throws this event
-  logger.log('supervisor process ends on "process.exit"');
-  process.exit(0);
-});
-
-process.on('uncaughtException', function (error) {
-  logger.error('supervisor process on "uncaughtException"')
-  logger.error(error)
-
-  let handler = new ErrorHandler()
-  handler.sendExceptionAlert(error)
+  logger.log(`supervisor process ends on "process.exit"`)
+  process.exit(0)
 })
+
+const handleException = eventName => {
+  let handler
+  if (process.env.NODE_ENV !== 'production') {
+    handler = error => {
+      console.error(error)
+      process.exit()
+    }
+  } else {
+    handler = error => {
+      logger.error(`handling exception ${eventName}`)
+      logger.error(error)
+
+      let handler = new ErrorHandler()
+      handler.sendExceptionAlert(error)
+    }
+  }
+  return handler
+}
+
+process.on('uncaughtException', handleException('uncaughtException'))
+process.on('unhandledRejection', handleException('unhandledRejection'))
 
 logger.log('setting environment');
 require('./environment').setenv(function(){
@@ -54,6 +68,7 @@ require('./environment').setenv(function(){
         App.resource = require('./service/resource')
         App.task = require('./service/task')
         App.file = require('./service/file')
+        App.logger = require('./service/logger')
         App.hostTemplate = require('./service/host/group')
         App.scheduler = scheduler
         App.eventDispatcher = Events.createDispatcher() 

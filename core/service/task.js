@@ -25,7 +25,6 @@ const TopicsConstants = require('../constants/topics')
 const TaskTemplate = require('../entity/task/template')
 
 // var filter = require('../router/param-filter');
-//const elastic = require('../lib/elastic')
 const FetchBy = require('../lib/fetch-by')
 
 module.exports = {
