@@ -115,7 +115,8 @@ const validateTaskArgumentsMiddleware = (req, res, next) => {
           throw new Error('task need arguments')
         }
       } else {
-        if (args.length < task.task_arguments.length) {
+        let taskArgs = task.task_arguments.filter(arg => arg.type !== 'fixed')
+        if (args.length < taskArgs.length) {
           throw new Error('invalid task arguments length')
         }
       }

@@ -81,8 +81,8 @@ module.exports = {
       }
 
       const basecfg = {
-        monitor: config.get('monitor') || {},
-        elasticsearch: config.get('elasticsearch') || {enabled:false} // no config available
+        monitor: config.monitor || {},
+        elasticsearch: config.logger.elasticsearch || {enabled:false} // no config available
       }
 
       // deep replace objects properties
@@ -115,7 +115,7 @@ module.exports = {
     if (input.config) {
       const config = input.config
       data.config = {
-        elasticsearch: (config.elasticsearch || { enabled: false }),
+        elasticsearch: (config.logger.elasticsearch || { enabled: false }),
         kibana: (config.kibana || null)
       }
     }

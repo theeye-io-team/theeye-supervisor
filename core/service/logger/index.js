@@ -9,26 +9,29 @@ const remote = require('./remote')
 
 module.exports = {
   async submit (customer_name, topic, data) {
-    if (!customer_name) {
-      let err = new Error('customer name is required')
-      err.context = { customer_name, topic, data }
+    try {
+      if (!customer_name) {
+        let err = new Error('customer name is required')
+        err.context = { customer_name, topic, data }
+        throw err
+      }
+
+      let customerConfig = await getCustomerConfig(customer_name)
+
+      // force required properties in payload
+      let date = new Date()
+      let payload = Object.assign({ topic }, data)
+      payload.organization = customer_name
+      payload.timestamp = date.getTime()
+      payload.date = date.toISOString()
+
+      dump(config.logger, payload)
+
+      elastic.submit(customerConfig.elasticsearch, topic, payload)
+      remote.submit(customerConfig.remote_logger, topic, payload)
+    } catch (err) {
       logger.error('%o', err)
-      throw err
     }
-
-    let customerConfig = await getCustomerConfig(customer_name)
-
-    // force required properties in payload
-    let date = new Date()
-    let payload = Object.assign({ topic }, data)
-    payload.organization = customer_name
-    payload.timestamp = date.getTime()
-    payload.date = date.toISOString()
-
-    dump(config.logger, payload)
-
-    elastic.submit(customerConfig.elasticsearch, topic, payload)
-    remote.submit(customerConfig.remote_logger, topic, payload)
   }
 }
 
