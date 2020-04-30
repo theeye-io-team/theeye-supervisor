@@ -324,6 +324,9 @@ module.exports = {
         lifecycle = LifecycleConstants.FINISHED
       }
 
+      //@TODO: dont remove !!!
+      trigger_name = (state === StateConstants.FAILURE) ? StateConstants.FAILURE : StateConstants.SUCCESS
+
       job.state = state
       job.trigger_name = trigger_name 
       job.lifecycle = lifecycle
