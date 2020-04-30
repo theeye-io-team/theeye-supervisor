@@ -315,7 +315,7 @@ module.exports = {
         trigger_name = state = StateConstants.TIMEOUT
         lifecycle = LifecycleConstants.TERMINATED
       } else {
-        if (input.state && (input.state in StateConstants)) {
+        if (input.state) {
           trigger_name = state = input.state
         } else {
           // assuming success
