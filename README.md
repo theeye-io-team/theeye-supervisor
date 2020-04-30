@@ -1,5 +1,6 @@
 # TheEye Supervisor REST API Documentation
 
+
 ## Supervisor API Documentation
 
 > _NOTE1  "**:hostname**" part of all routes should be replaced with the registered hostname_   
