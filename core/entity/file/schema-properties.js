@@ -2,7 +2,6 @@
 module.exports = {
   customer_id: { type: String },
   customer_name: { type: String },
-  user_id: { type: String },
   filename: { type: String },
   keyname: { type: String },
   mimetype: { type: String },

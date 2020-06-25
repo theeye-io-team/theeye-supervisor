@@ -1,4 +1,3 @@
-"use strict";
 
 const util = require('util');
 const Schema = require('mongoose').Schema;
@@ -67,16 +66,6 @@ function BaseSchema (props) {
       delete data.customer
     }
 
-    if (data.user && typeof data.user === 'object') {
-      let user = data.user
-      let id = data.user._id || data.user.id
-      data.user = {
-        id: id.toString(),
-        username: user.username,
-        email: user.email
-      }
-    }
-
     return data
   }
 
@@ -86,9 +75,9 @@ function BaseSchema (props) {
     next()
   })
 
-  return this;
+  return this
 }
 
-util.inherits(BaseSchema, Schema);
+util.inherits(BaseSchema, Schema)
 
-module.exports = BaseSchema;
+module.exports = BaseSchema

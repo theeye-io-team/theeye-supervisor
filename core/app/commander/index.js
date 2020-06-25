@@ -24,7 +24,7 @@ module.exports = function () {
   routes(server)
 
   server.listen(6666, () => {
-    logger.log('TheEye Local server started')
+    logger.log('TheEye Commander started. Listening at "%s"', server.url)
   })
 }
 

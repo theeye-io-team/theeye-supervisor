@@ -16,7 +16,7 @@ module.exports = {
         model_name: model[ specs.display ],
         model_type: model._type || 'undefined',
         organization: req.customer.name,
-        user_id: req.user._id,
+        user_id: req.user.id,
         user_name: req.user.username,
         user_email: req.user.email,
         operation: Constants.UPDATE
@@ -47,7 +47,7 @@ module.exports = {
         model_name: model[ specs.display ],
         model_type: model._type || 'undefined',
         organization: req.customer.name,
-        user_id: req.user._id,
+        user_id: req.user.id,
         user_name: req.user.username,
         user_email: req.user.email,
         operation: Constants.REPLACE
@@ -78,7 +78,7 @@ module.exports = {
         model_name: model[ specs.display ],
         model_type: model._type || 'undefined',
         organization: req.customer.name,
-        user_id: req.user._id,
+        user_id: req.user.id,
         user_name: req.user.username,
         user_email: req.user.email,
         operation: Constants.DELETE
@@ -109,7 +109,7 @@ module.exports = {
         model_name: model[ specs.display ],
         model_type: model._type || 'undefined',
         organization: req.customer.name,
-        user_id: req.user._id,
+        user_id: req.user.id,
         user_name: req.user.username,
         user_email: req.user.email,
         operation: Constants.CREATE

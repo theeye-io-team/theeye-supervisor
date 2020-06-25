@@ -12,18 +12,14 @@ const Constants = require('../../../constants/monitors');
  * @param {Object} specs.data
  * @param {String} specs.failure_severity
  */
-module.exports = function (specs, done) {
+module.exports = (specs) => {
   const resource = specs.resource
   const type = resource.type
   const event_name = specs.event_name // || resource.state
   const severity = specs.failure_severity
-  var typeEvent
 
-  try {
-    typeEvent = searchTypeEvent(type, event_name)
-  } catch (error) {
-    return done(error,null)
-  }
+  let typeEvent
+  typeEvent = searchTypeEvent(type, event_name)
 
   if (!typeEvent) {
     typeEvent = Object.create(defaultTypeEvent(event_name))
@@ -31,10 +27,12 @@ module.exports = function (specs, done) {
 
   typeEvent.severity = severity ? severity.toUpperCase() : 'HIGH'
 
-  return done(null,{
-    content: typeEvent.message(resource, specs),
+  let result = {
+    body: typeEvent.message(resource, specs),
     subject: typeEvent.subject(resource, specs)
-  })
+  }
+
+  return result
 }
 
 /**

@@ -1,12 +1,12 @@
 'use strict';
 
-const config = require('config')
-const merge = require('lodash/merge')
-const logger = require('../lib/logger')('service:customer')
-const ACL = require('../lib/acl')
-const Customer = require('../entity/customer').Entity
-const User = require('../entity/user').Entity
-const ResourceMonitor = require('../entity/user').Entity
+const config = require('config');
+const merge = require('lodash/merge');
+const logger = require('../lib/logger')('service:customer');
+const Customer = require('../entity/customer').Entity;
+const User = require('../entity/user').Entity;
+const ResourceMonitor = require('../entity/user').Entity;
+const ACL = require('../lib/acl');
 
 module.exports = {
   /**
@@ -62,36 +62,31 @@ module.exports = {
    * @param {Mixed} filters, string or query
    *
    */
-  getCustomerConfig (filters, next) {
-    if (!next) { return }
-    if (!filters) { return }
-    const query = (typeof filters === 'string') ? { _id : filters } : filters
-
-    Customer.findOne(query, (error, customer) => {
-      if (error) {
-        logger.error(error)
-        return next(error)
-      }
-
-      if (!customer) {
-        const err = new Error('customer not found')
-        err.filters = filters 
-        logger.error('%o',err)
-        return next(err)
-      }
-
-      const basecfg = {
-        monitor: config.monitor || {},
-        elasticsearch: config.logger.elasticsearch || {enabled:false} // no config available
-      }
-
-      // deep replace objects properties
-      var ccfg = merge({}, basecfg, (customer.config || {}))
-
-      // extend default config options with customer defined options
-      if (next) { return next(null,ccfg) }
-    })
-  },
+  //getCustomerConfig (filters,next) {
+  //  if (!next) return
+  //  if (!filters) return
+  //  const query = (typeof filters == 'string') ? { _id : filters } : filters
+  //  Customer.findOne(query, (error, customer) => {
+  //    if (error) {
+  //      logger.error(error)
+  //      return next(error)
+  //    }
+  //    if (!customer) {
+  //      const err = new Error('customer not found')
+  //      err.filters = filters 
+  //      logger.error('%o',err)
+  //      return next(err)
+  //    }
+  //    const basecfg = {
+  //      monitor: config.get('monitor')||{},
+  //      elasticsearch: config.get('elasticsearch')||{enabled:false} // no config available
+  //    }
+  //    // deep replace objects properties
+  //    var ccfg = merge({}, basecfg, (customer.config||{}))
+  //    // extend default config options with customer defined options
+  //    if (next) return next(null,ccfg)
+  //  })
+  //},
   fetch (filter, next) {
     Customer.find({}, function(err, customers) {
       if(err) return next(err);

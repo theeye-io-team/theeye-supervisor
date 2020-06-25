@@ -12,59 +12,54 @@ const Tag = require('../../entity/tag').Entity
 const ACL = require('../../lib/acl');
 const dbFilter = require('../../lib/db-filter');
 
-module.exports = function (server, passport) {
+module.exports = function (server) {
   // const crudTopic = TopicsConstants.workflow.crud
 
   // default middlewares
   var middlewares = [
-    passport.authenticate('bearer', {session: false}),
+    server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({required: true}),
     router.ensureCustomer
   ]
 
   server.get(
     '/workflows',
-    middlewares.concat([
-      router.requireCredential('viewer')
-    ]),
+    middlewares,
+    router.requireCredential('viewer') ,
     controller.fetch
   )
 
   server.get(
     '/workflows/:workflow',
-    middlewares.concat([
-      router.requireCredential('viewer'),
-      router.resolve.idToEntity({ param: 'workflow', required: true }),
-      router.ensureAllowed({ entity: { name: 'workflow' } })
-    ]),
+    middlewares,
+    router.requireCredential('viewer'),
+    router.resolve.idToEntity({ param: 'workflow', required: true }),
+    router.ensureAllowed({ entity: { name: 'workflow' } }) ,
     controller.get
   )
 
   server.post(
     '/workflows',
-    middlewares.concat([
-      router.requireCredential('admin')
-    ]),
+    middlewares,
+    router.requireCredential('admin') ,
     controller.create
     // audit.afterCreate('workflow',{ display: 'name' }) // cannot audit bulk creation
   )
 
   server.del(
     '/workflows/:workflow',
-    middlewares.concat([
-      router.requireCredential('admin'),
-      router.resolve.idToEntity({param: 'workflow', required: true})
-    ]),
+    middlewares,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({param: 'workflow', required: true}) ,
     controller.remove
     // audit.afterRemove('workflow',{ display: 'name', topic: crudTopic })
   )
 
   server.put(
     '/workflows/:workflow',
-    middlewares.concat([
-      router.requireCredential('admin'),
-      router.resolve.idToEntity({param: 'workflow', required: true})
-    ]),
+    middlewares,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({param: 'workflow', required: true}) ,
     controller.replace
     // audit.afterReplace('workflow',{ display: 'name', topic: crudTopic  })
   )
@@ -166,10 +161,10 @@ const createWorkflow = (req, next) => {
     var workflow = new Workflow(
       Object.assign({}, body, {
         _type: 'Workflow',
-        customer: customer._id,
-        customer_id: customer._id,
-        user: req.user._id,
-        user_id: req.user._id
+        customer: customer.id,
+        customer_id: customer.id,
+        user: req.user.id,
+        user_id: req.user.id
       })
     )
 

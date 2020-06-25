@@ -1,11 +1,19 @@
+// DEPRECATED
+// DEPRECATED
+// DEPRECATED
+// DEPRECATED
+// DEPRECATED
+// DEPRECATED
+// DEPRECATED
+console.warn(' DEPRECATED')
 
 const logger = require('../lib/logger')('controller:member')
-const UserService = require('../service/user')
+//const UserService = require('../service/user')
 const router = require('../router')
 
-module.exports = function (server, passport) {
+module.exports = function (server) {
   const middleware = [
-    passport.authenticate('bearer', { session: false }),
+    server.auth.bearerMiddleware,
     router.requireCredential('manager'),
     router.resolve.customerNameToEntity({}),
     router.ensureCustomer,

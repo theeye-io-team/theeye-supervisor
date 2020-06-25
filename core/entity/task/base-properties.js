@@ -5,7 +5,6 @@ module.exports = {
   customer_id: { type: String, required: true },
   type: { type: String, required: true },
   name: { type: String, required: true },
-  user_id: { type: String, default: null },
   customer: { type: ObjectId, ref: 'Customer' },
   public: { type: Boolean, default: false },
   tags: { type: Array },

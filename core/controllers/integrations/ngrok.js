@@ -5,12 +5,12 @@ const Host = require('../../entity/host').Entity
 const merge = require('lodash/merge')
 const IntegrationConstants = require('../../constants/integrations')
 
-module.exports = (server, passport) => {
+module.exports = (server) => {
 
   server.get(
     '/integrations/ngrok',
     [
-      passport.authenticate('bearer', { session:false }),
+      server.auth.bearerMiddleware,
       router.requireCredential('admin'),
       router.resolve.customerNameToEntity({ required:true }),
       router.ensureCustomer,
@@ -22,7 +22,7 @@ module.exports = (server, passport) => {
   server.put(
     '/integrations/ngrok/start',
     [
-      passport.authenticate('bearer', { session:false }),
+      server.auth.bearerMiddleware,
       router.requireCredential('admin'),
       router.resolve.customerNameToEntity({ required:true }),
       router.ensureCustomer,
@@ -36,7 +36,7 @@ module.exports = (server, passport) => {
   server.put(
     '/integrations/ngrok/stop',
     [
-      passport.authenticate('bearer', { session:false }),
+      server.auth.bearerMiddleware,
       router.requireCredential('admin'),
       router.resolve.customerNameToEntity({ required:true }),
       router.ensureCustomer,

@@ -3,11 +3,11 @@ const logger = require('../../lib/logger')('controller:task:integrations');
 const router = require('../../router');
 const TaskConstants = require('../../constants')
 
-module.exports = (server, passport) => {
+module.exports = (server) => {
   server.get(
-    '/task/:task/credentials',
+    '/:customer/task/:task/credentials',
     [
-      passport.authenticate('bearer', { session: false }),
+      server.auth.bearerMiddleware,
       router.resolve.customerNameToEntity({ required: true }),
       router.ensureCustomer,
       router.requireCredential('admin'),

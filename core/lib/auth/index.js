@@ -1,56 +1,183 @@
-'use strict';
+const passport = require('passport')
+const BearerStrategy = require('passport-http-bearer').Strategy
+const BasicStrategy = require('passport-http').BasicStrategy
+const jwt = require('jsonwebtoken')
 
-var passport = require('passport');
-var BearerStrategy = require('passport-http-bearer').Strategy;
-var BasicStrategy = require('passport-http').BasicStrategy;
-var User = require('../../entity/user').Entity;
-var debug = require('../logger')(':auth');
-var moment = require('moment');
+//var User = require('../../entity/user').Entity;
+//var moment = require('moment');
+const logger = require('../logger')(':auth')
+const http = require('http')
+const https = require('https')
+const config = require('config').authentication
+
+const request = config.protocol === 'https' ? https.request : http.request
+
+const requestOptions = {
+  host: config.api.host,
+  port: config.api.port
+}
 
 module.exports = {
-  initialize (options) {
-    options||(options={});
-
-    passport.use(new BasicStrategy(function(client_id, client_secret, done){
-      debug.log('new connection [basic]');
-
-      User.findOne({
-        client_id: client_id,
-        client_secret: client_secret
-      }, function(error, user) {
-        if (error) return done(error); 
-        if (!user) {
-          debug.error('invalid request, client %s', client_id);
-          return done(null, false); 
+  initialize () {
+    const basicStrategy = new BasicStrategy(async (client_id, client_secret, done) => {
+      logger.log('new connection [basic]')
+      try {
+        let response = await createSession(client_id, client_secret)
+        if (response.statusCode === 200) {
+          let json = JSON.parse(response.rawBody)
+          return done(null, json.access_token)
         } else {
-          debug.log('client "%s" connected [basic]', user.client_id);
-          return done(null, user);
+          logger.error(response.rawBody, response.statusCode)
+          let err = new Error(`authentication failed`)
+          err.name = 'authentication failed'
+          err.body = response.rawBody
+          err.statusCode = response.statusCode || 500
+          throw err
         }
-      });
-    }));
+      } catch (err) {
+        logger.error(err)
+        if (!err.statusCode) {
+          err.statusCode = 500
+        }
+        return done(err)
+      }
+    })
 
-    passport.use(new BearerStrategy(function(token, done){
-      var timestamp = moment().format('YYYY-MM-DD HH:00:00');
-      debug.log('new connection [bearer]');
-
-      User.findOne({
-        token: token, 
-        //timestamp: timestamp 
-      }, function (error, user) {
-        if (error) {
-          debug.error('error fetching user by token');
-          debug.error(error);
-          return done(error);
-        } else if (!user) {
-          debug.error('invalid or outdated token %s', token);
-          return done(null, false); 
+    const bearerStrategy = new BearerStrategy((token, done) => {
+      logger.log('new connection [bearer]')
+      /**
+       * verify incomming json web token validity
+       */
+      let decoded = jwt.verify(token, config.secret, {}, (err, decoded) => {
+        if (err) {
+          logger.error(err)
+          err.status = 401
+          return done(err)
         } else {
-          debug.log('client "%s" connected [bearer]', user.client_id );
-          return done(null, user);
+          //sessionVerify(token).then(profile => {})
+          fetchProfile(token)
+            .then(response => {
+              if (response.statusCode === 200) {
+                let profile = JSON.parse(response.rawBody)
+                return done(null, profile)
+              } else {
+                logger.error(response.rawBody, response.statusCode)
+                let err = new Error(`authentication failed`)
+                err.name = 'authentication failed'
+                err.body = response.rawBody
+                err.statusCode = response.statusCode || 500
+                throw err
+              }
+            })
+            .catch(err => {
+              done(err)
+            })
         }
       })
-    }));
+    })
 
-    return passport;
+    passport.use(basicStrategy)
+    passport.use(bearerStrategy)
+
+    const bearerMiddleware = (req, res, next) => {
+      passport.authenticate('bearer', (err, profile) => {
+        if (err) {
+          if (err.status >= 400) {
+            return res.send(401, 'Unauthorized')
+          }
+          next(err)
+        } else if (!profile) {
+          res.send(401, 'Unauthorized')
+          //next(null, false)
+        } else {
+          req.user = profile
+          req.params.customer = profile.current_customer.name
+          //req.customer = profile.current_customer
+          next()
+        }
+      }, { session: false })(req, res, next)
+    }
+
+    return { bearerMiddleware }
   }
+}
+
+const fetchProfile = (token) => {
+  return new Promise((resolve, reject) => {
+    let reqOpts = Object.assign({
+      path: `/api/session/profile?access_token=${token}`,
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    }, requestOptions)
+
+    const req = request(reqOpts, res => {
+      let str = ''
+      res.on('data', d => { if (d) { str += d } })
+      res.on('end', () =>  {
+        res.rawBody = str
+        resolve(res)
+      })
+    })
+    req.on('error', error => reject(error))
+    //req.write(JSON.stringify(payload))
+    req.end()
+  })
+}
+
+const createSession = (user, pass) => {
+  return new Promise((resolve, reject) => {
+    const creds = Buffer.from(`${user}:${pass}`).toString('base64')
+    let reqOpts = Object.assign({
+      path: `/api/auth/login`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Basic ${creds}`
+      }
+    }, requestOptions)
+
+    const req = request(reqOpts, function (res) {
+      let str = ''
+      res.on('data', d => { if (d) { str += d } })
+      res.on('end', function () {
+        res.rawBody = str
+        resolve(res)
+      })
+    })
+    req.on('error', error => reject(error))
+    req.end()
+  })
+}
+
+const sessionVerify = (token) => {
+  return new Promise((resolve, reject) => {
+    let reqOpts = Object.assign({
+      path: `/api/session/verify?access_token=${token}`,
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    }, requestOptions)
+
+    const req = request(reqOpts, res => {
+      let str = ''
+      res.on('data', d => { if (d) { str += d } })
+      res.on('end', () =>  {
+        try {
+          resolve(JSON.parse(str))
+        } catch (error) {
+          reject(error)
+        }
+      })
+    })
+
+    req.on('error', error => reject(error))
+    //req.write(JSON.stringify(payload))
+    req.end()
+  })
 }

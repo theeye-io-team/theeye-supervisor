@@ -1,15 +1,13 @@
-"use strict";
-
 const App = require('../../app');
-const logger = require('../../lib/logger')('controller:task-schedule');
-const router = require('../../router');
+const logger = require('../../lib/logger')('controller:task:scheduler')
+const router = require('../../router')
 const JobConstants = require('../../constants/jobs')
 
-const resolver = router.resolve;
+const resolver = router.resolve
 
-module.exports = function (server, passport) {
+module.exports = function (server) {
   const middlewares = [
-    passport.authenticate('bearer',{ session: false }),
+    server.auth.bearerMiddleware,
     router.requireCredential('admin'),
     resolver.customerNameToEntity({ required: true }),
     router.ensureCustomer,
@@ -17,13 +15,23 @@ module.exports = function (server, passport) {
   ]
 
   //server.post('/:customer/task/:task/schedule',middlewares,controller.create);
-  server.post('/:customer/task/:task/schedule',middlewares,controller.create)
+  server.post(
+    '/:customer/task/:task/schedule',
+    middlewares,
+    controller.create
+  )
+
   server.get(
     '/:customer/task/:task/schedule',
     middlewares,
     controller.fetch
   )
-  server.del('/:customer/task/:task/schedule/:schedule',middlewares,controller.remove)
+
+  server.del(
+    '/:customer/task/:task/schedule/:schedule',
+    middlewares,
+    controller.remove
+  )
 
   // this is for the email cancelation
   // authenticate with a secret token

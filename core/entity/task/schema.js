@@ -37,8 +37,6 @@ function TaskSchema (props, specs) {
     delete values.host
     delete values.host_id
     delete values.secret
-    delete values.user
-    delete values.user_id
     delete values.acl
     delete values.customer
     delete values.customer_id

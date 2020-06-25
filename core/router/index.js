@@ -1,6 +1,6 @@
-'use strict'
 
 const logger = require('../lib/logger')(':router')
+const auth = require('../lib/auth')
 
 /**
  *
@@ -16,36 +16,37 @@ module.exports = {
   ensureCustomerBelongs: require('./ensure-customer-belongs'),
   ensureAllowed: require('./ensure-allowed'),
   ensureHeader: require('./ensure-header'),
-  loadControllers (server, passport) {
+  loadControllers (server) {
+    logger.log('loading controllers')
+
+    server.auth = auth.initialize()
+
     // avoiding dynamic linker
-    logger.log('loading controllers');
-    require('../controllers/indicator')(server,passport);
-    require('../controllers/index')(server,passport);
-    require('../controllers/agent')(server,passport);
-    require('../controllers/auth')(server);
-    require('../controllers/status')(server,passport);
-    require('../controllers/customer')(server,passport);
-    require('../controllers/dstat')(server,passport);
-    require('../controllers/event')(server,passport);
-    require('../controllers/host-stats')(server,passport);
-    require('../controllers/host')(server,passport);
-    require('../controllers/hostgroup')(server,passport);
-    require('../controllers/job')(server,passport);
-    require('../controllers/job-lifecycle')(server,passport);
-    require('../controllers/psaux')(server,passport);
-    require('../controllers/monitor')(server,passport);
-    require('../controllers/resource')(server,passport);
-    require('../controllers/resource/nested')(server,passport);
-    require('../controllers/script')(server,passport);
-    require('../controllers/file')(server,passport);
-    require('../controllers/recipe')(server,passport);
-    require('../controllers/schedule')(server,passport);
-    require('../controllers/tags')(server,passport);
-    require('../controllers/task')(server,passport);
-    require('../controllers/user')(server,passport);
-    require('../controllers/webhook')(server,passport);
-    require('../controllers/workflow')(server,passport);
-    require('../controllers/member')(server,passport);
-    require('../controllers/integrations')(server,passport);
-  },
+    require('../controllers/indicator')(server)
+    require('../controllers/index')(server)
+    require('../controllers/agent')(server)
+    require('../controllers/dstat')(server)
+    require('../controllers/event')(server)
+    require('../controllers/host-stats')(server)
+    require('../controllers/host')(server)
+    require('../controllers/hostgroup')(server)
+    require('../controllers/job')(server)
+    require('../controllers/psaux')(server)
+    require('../controllers/resource')(server)
+    require('../controllers/monitor')(server)
+    require('../controllers/script')(server)
+    require('../controllers/file')(server)
+    require('../controllers/recipe')(server)
+    require('../controllers/schedule')(server)
+    require('../controllers/tags')(server)
+    require('../controllers/task')(server)
+    require('../controllers/webhook')(server)
+    require('../controllers/workflow')(server)
+    require('../controllers/integrations')(server)
+    // DEPRECATED - In Progress
+    require('../controllers/auth')(server)
+    //require('../controllers/customer')(server)
+    //require('../controllers/user')(server)
+    //require('../controllers/member')(server)
+  }
 }

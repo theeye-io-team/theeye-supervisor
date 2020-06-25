@@ -3,15 +3,15 @@
 const resolver = require('../router/param-resolver')
 const Event = require('../entity/event').Event
 
-module.exports = function (server, passport) {
+module.exports = function (server) {
   server.get('/:customer/event/:event',[
-    passport.authenticate('bearer', {session:false}),
+    server.auth.bearerMiddleware,
     resolver.customerNameToEntity({}),
     resolver.idToEntity({ param: 'event' })
   ], controller.get)
 
   server.get('/:customer/event',[
-    passport.authenticate('bearer', {session:false}),
+    server.auth.bearerMiddleware,
     resolver.customerNameToEntity({})
   ], controller.fetch)
 }

@@ -14,12 +14,12 @@ var ResourceMonitorService = require('../service/resource/monitor');
 
 const Host = require('../entity/host').Entity;
 const File = require('../entity/file').File;
-const User = require('../entity/user').Entity
+//const User = require('../entity/user').Entity
 
 
-module.exports = function (server, passport) {
+module.exports = function (server) {
 	server.put('/:customer/agent/:hostname', [
-    passport.authenticate('bearer', {session:false}),
+    server.auth.bearerMiddleware,
     router.requireCredential('agent'),
     router.resolve.customerNameToEntity({}),
     router.ensureCustomer,
@@ -27,19 +27,19 @@ module.exports = function (server, passport) {
   ], controller.update)
 
   server.get('/:customer/agent/:hostname/config', [
-    passport.authenticate('bearer', {session:false}),
+    server.auth.bearerMiddleware,
     router.requireCredential('agent'),
     router.resolve.customerNameToEntity({}),
     router.ensureCustomer,
     router.resolve.hostnameToHost({})
   ], controller.config)
 
-  server.get('/:customer/agent/credentials', [
-    passport.authenticate('bearer', {session:false}),
-    router.requireCredential('admin'),
-    router.resolve.customerNameToEntity({}),
-    router.ensureCustomer,
-  ], controller.credentials)
+  //server.get('/:customer/agent/credentials', [
+  //  server.auth.bearerMiddleware,
+  //  router.requireCredential('admin'),
+  //  router.resolve.customerNameToEntity({}),
+  //  router.ensureCustomer,
+  //], controller.credentials)
 }
 
 const controller = {
@@ -76,8 +76,12 @@ const controller = {
           return res.send(503)
         }
 
-        let handler = new ResourceManager(resource)
-        handler.handleState({ state: MONITORS.RESOURCE_NORMAL })
+        let manager = new ResourceManager(resource)
+        manager
+          .handleState({ state: MONITORS.RESOURCE_NORMAL })
+          .catch(err => {
+            logger.error(err)
+          })
 
         res.send(200)
         next()
@@ -120,29 +124,25 @@ const controller = {
       });
     })
   },
-  credentials (req, res, next) {
-    const customer = req.customer
-
-    User.findOne({
-      credential: 'agent',
-      'customers.name': customer.name
-    }).exec((err, agent) => {
-      if (err) return next(err)
-
-      if (agent===null) return res.send(404,'agent not found')
-
-      const baseConfig = {
-        supervisor: {
-          api_url: systemConfig.base_url,
-          client_id: agent.client_id,
-          client_secret: agent.client_secret,
-          client_customer: customer.name
-        }
-      }
-
-      return res.send(200, baseConfig)
-    })
-  }
+  //credentials (req, res, next) {
+  //  const customer = req.customer
+  //  User.findOne({
+  //    credential: 'agent',
+  //    'customers.name': customer.name
+  //  }).exec((err, agent) => {
+  //    if (err) return next(err)
+  //    if (agent===null) return res.send(404,'agent not found')
+  //    const baseConfig = {
+  //      supervisor: {
+  //        api_url: systemConfig.base_url,
+  //        client_id: agent.client_id,
+  //        client_secret: agent.client_secret,
+  //        client_customer: customer.name
+  //      }
+  //    }
+  //    return res.send(200, baseConfig)
+  //  })
+  //}
 }
 
 const generateAgentConfig = (monitors,next) => {

@@ -131,55 +131,81 @@ module.exports = {
    * @property {ObjectId} input.workflow_job_id current workflow ejecution
    * @property {ObjectId} input.workflow_job
    * @property {Workflow} input.workflow optional
-   * @param {Function(Error,Job)} done
    */
-  async create (input, done) {
+  async create (input) {
     let { task } = input
-    var err
+    let job
 
-    if (!task) {
-      err = new Error('task is required')
-      return done(err)
+    if (!task) { throw new Error('task is required') }
+
+    verifyTaskBeforeExecution(task)
+    await removeExceededJobsCount(task, input.workflow)
+
+    if (
+      task.grace_time > 0 && ( // automatic origin
+        input.origin === JobConstants.ORIGIN_WORKFLOW ||
+        input.origin === JobConstants.ORIGIN_TRIGGER_BY
+      )
+    ) {
+      job = await createScheduledJob(input) // agenda job
+    } else {
+      job = await createJob(input)
     }
 
+    return job
+  },
+  async createAgentUpdateJob (host_id) {
     try {
-      await verifyTaskBeforeExecution(task)
-      await removeExceededJobsCount(task, input.workflow)
- 
-      let job
-      if (
-        task.grace_time > 0 && ( // automatic origin
-          input.origin === JobConstants.ORIGIN_WORKFLOW ||
-          input.origin === JobConstants.ORIGIN_TRIGGER_BY
-        )
-      ) {
-        // agenda job
-        job = createScheduledJob(input)
-      } else {
-        job = await createJob(input)
-      }
+      // check if there are update jobs already created for this host
+      const jobs = await JobModels.Job.find({
+        host_id,
+        lifecycle: LifecycleConstants.READY
+      }).exec()
 
-      done(null, job)
-    } catch (e) {
-      done(err)
+      // return any job
+      if (jobs.length !== 0) { return jobs[0] }
+
+      await JobModels.Job.deleteOne({ host_id })
+
+      const host = await App.Models.Host.findById(host_id).exec()
+      if (!host) { throw new Error('Host not found') }
+
+      const job = new JobModels.AgentUpdate()
+      job.host_id = host_id // enforce host_id, just in case
+      job.host = host_id // enforce host_id, just in case
+      job.customer = host.customer_id
+      job.customer_id = host.customer_id
+      job.customer_name = host.customer_name
+      await job.save()
+
+      logger.log('agent update job created')
+      return job
+    } catch (err) {
+      logger.error(err)
+      return err
     }
   },
-  finishDummyJob (job, input, done) {
-    let { task } = input
+  finishDummyJob (job, input) {
+    return new Promise((resolve, reject) => {
+      let { task } = input
 
-    JobFactory.prepareTaskArgumentsValues(
-      task.task_arguments,
-      input.task_arguments_values,
-      (err, args) => {
-        let specs = Object.assign({}, input, {
-          job,
-          result: { output: args },
-          state: StateConstants[err?'FAILURE':'SUCCESS']
-        })
+      JobFactory.prepareTaskArgumentsValues(
+        task.task_arguments,
+        input.task_arguments_values,
+        (err, args) => {
+          if (err) reject(err)
 
-        App.jobDispatcher.finish(specs, done)
-      }
-    )
+          App.jobDispatcher.finish(Object.assign({}, input, {
+            job,
+            result: { output: args },
+            state: StateConstants[err?'FAILURE':'SUCCESS']
+          }), (err) => {
+            if (err) reject(err)
+            else resolve()
+          })
+        }
+      )
+    })
   },
   jobInputsReplenish (job, input, done) {
     let { task, user, customer } = input
@@ -212,7 +238,7 @@ module.exports = {
   },
   createByWorkflow (input, next) {
     next || (next=()=>{})
-    let { workflow, user } = input
+    const { workflow, user, customer } = input
 
     const createWorkflowJob = (props, done) => {
       let wJob = new JobModels.Workflow(props)
@@ -221,7 +247,7 @@ module.exports = {
 
         let data = wJob.toObject()
         data.user = {
-          id: user._id.toString(),
+          id: user.id,
           username: user.username,
           email: user.email
         }
@@ -229,7 +255,8 @@ module.exports = {
         App.notifications.generateSystemNotification({
           topic: TopicsConstants.job.crud,
           data: {
-            organization: props.customer_name,
+            organization: customer.name,
+            organization_id: customer._id,
             operation: Constants.CREATE,
             model_type: data._type,
             model: data
@@ -246,45 +273,42 @@ module.exports = {
       }
 
       let wProps = Object.assign({}, input, {
-        customer: input.customer,
-        customer_id: input.customer._id.toString(),
-        customer_name: input.customer.name,
+        customer,
+        customer_id: customer._id.toString(),
+        customer_name: customer.name,
         workflow_id: workflow._id,
         workflow: workflow._id,
-        user: user._id,
-        user_id: user._id,
+        user_id: user.id,
         task_arguments_values: null,
         name: workflow.name
       })
 
       createWorkflowJob(wProps, (err, wJob) => {
-        if (err) {
-          return next(err)
-        }
+        if (err) { return next(err) }
 
-        let data = Object.assign({}, input, {
+        const data = Object.assign({}, input, {
           task,
           workflow: input.workflow, // explicit
           workflow_job_id: wJob._id,
           workflow_job: wJob._id
         })
 
-        this.create(data, (err, tJob) => {
-          if (err) {
-            return next(err)
-          }
+        this.create(data).then(tJob => {
           next(null, wJob)
+        }).catch(err => {
+          logger.error(err)
+          next(err)
         })
       })
     })
   },
   /**
    *
-   * @summary parse incomming job input parameters.
+   * @summary parse incomming job output -> input parameters.
    * @return {[String]} array of strings (json encoded strings)
    *
    */
-  parseJobParameters (output) {
+  parseOutputParameters (output) {
     if (typeof output === 'string') {
       return parseOutputStringAsJSON (output)
     } else {
@@ -312,7 +336,9 @@ module.exports = {
 
       let state, lifecycle, trigger_name
       if (result.killed === true) {
-        trigger_name = state = StateConstants.TIMEOUT
+        state = StateConstants.TIMEOUT
+        //trigger_name = StateConstants.TIMEOUT
+        trigger_name = StateConstants.FAILURE
         lifecycle = LifecycleConstants.TERMINATED
       } else {
         if (input.state) {
@@ -335,7 +361,7 @@ module.exports = {
       if (result.output) {
         // data output, can be anything. stringify for security
         let output = result.output
-        job.output = this.parseJobParameters(output)
+        job.output = this.parseOutputParameters(output)
         job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
       }
 
@@ -377,7 +403,7 @@ module.exports = {
 
     job.lifecycle = lifecycle
     job.result = result
-    job.output = this.parseJobParameters(result.output)
+    job.output = this.parseOutputParameters(result.output)
     job.state = input.state || StateConstants.CANCELED
     job.save(err => {
       if (err) {
@@ -395,31 +421,31 @@ module.exports = {
     })
   },
   // automatic job scheduled . send cancelation
-  sendJobCancelationEmail (input) {
-    const cancelUrl = globalconfig.system.base_url +
-      '/:customer/task/:task/schedule/:schedule/secret/:secret'
+  //sendJobCancelationEmail (input) {
+  //  const cancelUrl = globalconfig.system.base_url +
+  //    '/:customer/task/:task/schedule/:schedule/secret/:secret'
 
-    const url = cancelUrl
-      .replace(':customer', input.customer_name)
-      .replace(':task', input.task_id)
-      .replace(':secret', input.task_secret)
-      .replace(':schedule', input.schedule_id)
+  //  const url = cancelUrl
+  //    .replace(':customer', input.customer_name)
+  //    .replace(':task', input.task_id)
+  //    .replace(':secret', input.task_secret)
+  //    .replace(':schedule', input.schedule_id)
 
-    const html = `
-      <h3>Task execution on ${input.hostname} <small>Cancel notification</small></h3>
-      The task ${input.task_name} will be executed on ${input.hostname} at ${input.date}.<br/>
-      If you want to cancel the task you have ${input.grace_time_mins} minutes.<br/>
-      <br/>
-      To cancel the Task <a href="${url}">press here</a> or copy/paste the following link in the browser of your preference : <br/>${url}<br/>.
-    `
+  //  const html = `
+  //    <h3>Task execution on ${input.hostname} <small>Cancel notification</small></h3>
+  //    The task ${input.task_name} will be executed on ${input.hostname} at ${input.date}.<br/>
+  //    If you want to cancel the task you have ${input.grace_time_mins} minutes.<br/>
+  //    <br/>
+  //    To cancel the Task <a href="${url}">press here</a> or copy/paste the following link in the browser of your preference : <br/>${url}<br/>.
+  //  `
 
-    App.notifications.sendEmailNotification({
-      customer_name: input.customer_name,
-      subject: `[TASK] Task ${input.task_name} execution on ${input.hostname} cancelation`,
-      content: html,
-      to: input.to
-    })
-  },
+  //  App.notifications.sendEmailNotification({
+  //    customer_name: input.customer_name,
+  //    subject: `[TASK] Task ${input.task_name} execution on ${input.hostname} cancelation`,
+  //    content: html,
+  //    to: input.to
+  //  })
+  //},
   /**
    *
    * @summary create an integration job for the agent.
@@ -546,43 +572,31 @@ module.exports = {
   }
 }
 
+const verifyTaskBeforeExecution = (task) => {
+  //let taskData = await App.task.populate(task)
+  if (!task.customer) {
+    throw new Error(`FATAL. Task ${task._id} does not has a customer`)
+  }
+
+  if (taskRequireHost(task) && !task.host) {
+    throw new Error(`invalid task ${task._id} does not has a host assigned`)
+  }
+
+  return
+}
+
 const taskRequireHost = (task) => {
-  var res = (
+  const res = (
     task.type === TaskConstants.TYPE_SCRIPT ||
     task.type === TaskConstants.TYPE_SCRAPER
   )
   return res
 }
 
-const verifyTaskBeforeExecution = (task, next) => {
-  return new Promise( (resolve, reject) => {
-    App.taskManager.populate(task, (err, taskData) => {
-      if (err) {
-        return reject(err)
-      }
-
-      if (!task.customer) {
-        err = new Error('FATAL. Task ' + task._id + 'does not has a customer')
-        logger.error('%o',err)
-        return reject(err)
-      }
-
-      if (taskRequireHost(task) && !task.host) {
-        err = new Error('invalid task ' + task._id  + ' does not has a host assigned')
-        logger.error('%o',err)
-        return reject(err)
-      }
-
-      resolve()
-    })
-  })
-}
-
 const allowedMultitasking = (job, next) => {
-  //if (job.name==='agent:config:update') { return next(null, true) }
   if (
-    job._type === 'NgrokIntegrationJob' ||
-    job._type==='AgentUpdateJob'
+    job._type === JobConstants.NGROK_INTEGRATION_TYPE ||
+    job._type === JobConstants.AGENT_UPDATE_TYPE
   ) {
     return next(null, true)
   }
@@ -650,17 +664,11 @@ const removeExceededJobsCount = (task, workflow) => {
 }
 
 const createJob = (input) => {
-  const { task } = input
   return new Promise((resolve, reject) => {
-    const done = (err, job) => {
-      if (err) { reject(err) }
-      else { resolve(job) }
-    }
+    const { task } = input
 
     JobFactory.create(task, input, (err, job) => {
-      if (err) {
-        return reject(err)
-      }
+      if (err) { return reject(err) }
 
       if (job.constructor.name === 'model') {
         logger.log('job created.')
@@ -669,7 +677,7 @@ const createJob = (input) => {
         logger.error('%o', job)
         let err = new Error('invalid job returned')
         err.job = job
-        return done( err )
+        return reject(err)
       }
 
       RegisterOperation(
@@ -679,14 +687,21 @@ const createJob = (input) => {
         () => {
           if (task.type === TaskConstants.TYPE_DUMMY) {
             if (job.lifecycle !== LifecycleConstants.ONHOLD) {
-              App.jobDispatcher.finishDummyJob(job, input, done)
+              App.jobDispatcher.finishDummyJob(job, input).then(resolve).catch(reject)
             } else {
-              done(null, job)
+              resolve(job)
             }
           } else if (TaskConstants.TYPE_NOTIFICATION === task.type) {
-            finishNotificationTaskJob(job, input, done)
+            App.jobDispatcher.finish(Object.assign({}, input, {
+              job,
+              result: {},
+              state: StateConstants.SUCCESS
+            }), (err) => {
+              if (err) reject(err)
+              else resolve(job)
+            })
           } else {
-            done(null, job)
+            resolve(job)
           }
         }
       )
@@ -703,6 +718,7 @@ const createScheduledJob = async (input) => {
     data: {
       hostname: (job.host && job.host.hostname) || job.host_id,
       organization: customer.name,
+      organization_id: customer._id,
       operation: Constants.CREATE,
       model_type: job._type,
       model: job,
@@ -716,7 +732,7 @@ const createScheduledJob = async (input) => {
 const removeExceededJobsCountByTask = (task_id, next) => {
   const LIMIT = JobConstants.JOBS_LOG_COUNT_LIMIT - 1 // docs limit minus 1, because why are going to create the new one after removing older documents
   const Job = JobModels.Job
-  Job.count({ task_id }, (err, count) => {
+  Job.countDocuments({ task_id }, (err, count) => {
     if (err) { return next(err) }
 
     // if count > limit allowed, then search top 6
@@ -975,66 +991,3 @@ const filterOutputArray = (outputs) => {
   })
   return result
 }
-
-const finishNotificationTaskJob = (job, input, done) => {
-  let specs = Object.assign({}, input, {
-    job,
-    result: {},
-    state: StateConstants.SUCCESS
-  })
-  App.jobDispatcher.finish(specs, done)
-}
-
-//const finishJobNextLifecycle = (job) => {
-//  if (
-//    job.lifecycle === LifecycleConstants.READY ||
-//    job.lifecycle === LifecycleConstants.ONHOLD
-//  ) {
-//    return LifecycleConstants.CANCELED
-//  } else if (job.lifecycle === LifecycleConstants.ASSIGNED) {
-//    return LifecycleConstants.TERMINATED
-//  } else {
-//    // current state cannot be canceled or terminated
-//    return null
-//  }
-//}
-
-//const createNotificationJobPayload = (data) => {
-//  let args = data.task_arguments_values
-//  let subject
-//  let body
-//  let recipients
-//
-//  if (Array.isArray(args) && args.length === 3) {
-//    subject = (args[0] || data.task.subject)
-//    body = (args[1] || data.task.body)
-//    recipients = (args[2] || data.task.recipients)
-//  } else {
-//    subject = data.task.subject
-//    body = data.task.body
-//    recipients = data.task.recipients
-//  }
-//
-//  let payload = {
-//    topic: TopicsConstants.task.notification,
-//    data: {
-//      organization: data.customer.name,
-//      operation: Constants.CREATE,
-//      model_type: JobConstants.NOTIFICATION_TYPE,
-//      notificationTypes: data.task.notificationTypes,
-//      model: {
-//        task: {
-//          subject,
-//          body,
-//          recipients,
-//          acl: data.task.acl,
-//          name: data.task.name
-//        },
-//        _type: JobConstants.NOTIFICATION_TYPE,
-//        id: data.job.id
-//      }
-//    }
-//  }
-//
-//  return payload
-//}

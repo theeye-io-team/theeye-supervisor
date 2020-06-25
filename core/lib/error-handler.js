@@ -1,16 +1,87 @@
-var config = require('config')
-var notification = require('../service/notification')
+const config = require('config')
+const notification = require('../service/notification')
 
-function ErrorHandler () {
-  this.errors = []
+class ErrorHandler {
+  constructor () {
+    this.errors = []
+  }
+
+  required (name, value, message) {
+    var e = new ExtendedError(name + ' is required')
+    e.statusCode = 400
+    e.field = name
+    e.value = value
+    e.code = 'EREQ'
+    e.message = message
+    this.errors.push( e )
+    return this
+  }
+
+  invalid (name, value, message) {
+    var e = new ExtendedError(name + ' is invalid')
+    e.statusCode = 400
+    e.field = name
+    e.value = value
+    e.code = 'EVALID'
+    e.message = message
+    this.errors.push( e )
+    return this
+  }
+
+  /**
+   *
+   * turn object into Array.
+   * Array knows how turn it self into string
+   *
+   */
+  toString () {
+    var e = []
+    for (var i=0; i<this.errors.length; i++) {
+      var err = this.errors[i]
+      delete err.stack
+      e.push(err)
+    }
+    return e
+  }
+
+  toJSON () {
+    return this.toString()
+  }
+
+  toHtml () {
+    var e = []
+    for (var i=0; i<this.errors.length; i++) {
+      e.push( htmlErrorLine( this.errors[i] ) )
+    }
+    return e.join('<br/>')
+  }
+
+  hasErrors () {
+    return this.errors.length > 0
+  }
 }
 
 module.exports = ErrorHandler
 
-const errorLine = (error) => {
+class ExtendedError extends Error {
+  toJSON () {
+    let alt = {}
+    let storeKey = function (key) {
+      if (key === 'stack') {
+        if (process.env.NODE_ENV !== 'production') {
+          alt[key] = this[key]
+        }
+      } else {
+        alt[key] = this[key]
+      }
+    }
+    Object.getOwnPropertyNames(this).forEach(storeKey, this)
+    return alt
+  }
+}
 
+const htmlErrorLine = (error) => {
   let dump = error.toJSON()
-
   let html = `<h2>Exception</h2><pre>${dump.stack}</pre>`
 
   delete dump.stack
@@ -23,61 +94,26 @@ const errorLine = (error) => {
   return html
 }
 
-ErrorHandler.prototype = {
-  required (name, value, message) {
-    var e = new Error(name + ' is required')
-    e.statusCode = 400
-    e.field = name
-    e.value = value
-    e.code = 'EREQ'
-    e.message = message
-    this.errors.push( e )
-		return this
-  },
-  invalid (name, value, message) {
-    var e = new Error(name + ' is invalid')
-    e.statusCode = 400
-    e.field = name
-    e.value = value
-    e.code = 'EVALID'
-    e.message = message
-    this.errors.push( e )
-		return this
-  },
-  /**
-   *
-   * turn object into Array.
-   * Array knows how turn it self into string
-   *
-   */
-  toString () {
-    var e = [];
-    for (var i=0; i<this.errors.length; i++) {
-      var err = this.errors[i];
-      delete err.stack;
-      e.push(err);
-    }
-    return e;
-  },
-  toHtml () {
-    var e = [];
-    for(var i=0; i<this.errors.length; i++){
-      e.push( errorLine( this.errors[i] ) );
-    }
-    return e.join('<br/>');
-  },
-  hasErrors () {
-    return this.errors.length > 0;
-  },
-  sendExceptionAlert (error) {
-    this.errors.push(error)
-    notification.sendEmailNotification({
-      customer_name: 'theeye',
-      subject: 'Supervisor Exception',
-      to: config.mailer.support.join(','),
-      content: this.toHtml()
-    })
+class ClientError extends ExtendedError {
+  constructor (message, options) {
+    super(message || 'Invalid Request')
+    options||(options={})
+    this.name = this.constructor.name
+    this.code = options.code || ''
+    this.status = options.statusCode || 400
   }
 }
 
-ErrorHandler.prototype.toJSON = ErrorHandler.prototype.toString
+class ServerError extends ExtendedError {
+  constructor (message, options) {
+    super(message || 'Internal Server Error')
+    options||(options={})
+    this.name = this.constructor.name
+    this.code = options.code || ''
+    this.status = options.statusCode || 500
+  }
+}
+
+ErrorHandler.ClientError = ClientError
+
+ErrorHandler.ServerError = ServerError

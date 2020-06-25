@@ -5,53 +5,6 @@ var Schema  = require('mongoose').Schema;
 var async = require('async');
 const randomToken = require('../lib/token').randomToken
 
-/**
- *
- * convert an array of customer names into an array
- * of customer objects, with the required data to store
- * them into the user entity attribute "customers".
- *
- * @author Facundo
- * @param {Array} names
- * @param {Function} completedFn callback
- * @return null
- *
- */
-function customerNamesToUserCustomers (names, completedFn) {
-  if(!names||names.length==0) return completedFn(null,[]);
-
-  function createCallFn (name) {
-    return function (doneFn) {
-      Customer.findOne({
-        'name': name
-      }, function(error, customer) {
-        if(error) return doneFn(error);
-        if(!customer) {
-          debug.error('WARNING customer %s not found!', name);
-          return doneFn();
-        }
-        else {
-          var data = {
-            '_id': customer._id,
-            'name': customer.name,
-            'customer': customer._id // to populate it later
-          }
-          doneFn(null,data);
-        }
-      });
-    }
-  }
-
-  var calls = [];
-
-  for(var i=0; i<names.length; i++){
-    var name = names[i];
-    calls.push( createCallFn(name) );
-  }
-
-  return async.parallel(calls, completedFn);
-}
-
 module.exports = {
   /**
    * @author Facundo
@@ -143,4 +96,51 @@ module.exports = {
       }
     );
   }
+}
+
+/**
+ *
+ * convert an array of customer names into an array
+ * of customer objects, with the required data to store
+ * them into the user entity attribute "customers".
+ *
+ * @author Facundo
+ * @param {Array} names
+ * @param {Function} completedFn callback
+ * @return null
+ *
+ */
+function customerNamesToUserCustomers (names, completedFn) {
+  if(!names||names.length==0) return completedFn(null,[]);
+
+  function createCallFn (name) {
+    return function (doneFn) {
+      Customer.findOne({
+        'name': name
+      }, function(error, customer) {
+        if(error) return doneFn(error);
+        if(!customer) {
+          debug.error('WARNING customer %s not found!', name);
+          return doneFn();
+        }
+        else {
+          var data = {
+            '_id': customer._id,
+            'name': customer.name,
+            'customer': customer._id // to populate it later
+          }
+          doneFn(null,data);
+        }
+      });
+    }
+  }
+
+  var calls = [];
+
+  for(var i=0; i<names.length; i++){
+    var name = names[i];
+    calls.push( createCallFn(name) );
+  }
+
+  return async.parallel(calls, completedFn);
 }

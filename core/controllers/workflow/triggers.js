@@ -6,9 +6,9 @@ const Event = require('../../entity/event').Event
 const Workflow = require('../../lib/workflow')
 const logger = require('../../lib/logger')('controller:workflow')
 
-module.exports = function (server, passport) {
+module.exports = (server) => {
   var middlewares = [
-    passport.authenticate('bearer', { session: false }),
+    server.auth.bearerMiddleware,
     resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer // requesting user is authorized to access the customer
   ]

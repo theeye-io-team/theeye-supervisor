@@ -1,11 +1,7 @@
-"use strict"
 
 const App = require('../../app')
 const after = require('lodash/after')
 const logger = require('../../lib/logger')('service:resource')
-const CustomerService = require('../customer')
-const NotificationService = require('../notification')
-const ResourceMonitorService = require('./monitor')
 const ResourcesNotifications = require('./notifications')
 
 const TopicsConstants = require('../../constants/topics')
@@ -13,7 +9,6 @@ const Constants = require('../../constants')
 const MonitorConstants = require('../../constants/monitors')
 const Lifecycle = require('../../constants/lifecycle')
 // Entities
-const AgentUpdateJob = require('../../entity/job').AgentUpdate
 const MonitorEvent = require('../../entity/event').MonitorEvent
 const ResourceModel = require('../../entity/resource').Entity
 const MonitorModel = require('../../entity/monitor').Entity
@@ -62,19 +57,28 @@ function Service (resource) {
     App.logger.submit(resource.customer_name, topic, payload) // topic = topics.monitor.state
   }
 
-  const sendStateChangeEventNotification = (resource, input) => {
+  const sendStateChangeEventNotification = (resource, input, message) => {
     const topic = TopicsConstants.monitor.state
-    NotificationService.generateSystemNotification({
+    let payload = {
+      model_type: 'Resource',
+      model: resource,
+      hostname: resource.hostname,
+      organization: resource.customer_name,
+      organization_id: resource.customer_id,
+      operation: Constants.UPDATE,
+      monitor_event: input.event_name,
+      custom_event: input.custom_event
+    }
+
+    // attach email data
+    if (message) {
+      payload.subject = message.subject
+      payload.body = message.body
+    }
+
+    App.notifications.generateSystemNotification({
       topic: topic,
-      data: {
-        model_type: 'Resource',
-        model: resource,
-        hostname: resource.hostname,
-        organization: resource.customer_name,
-        operation: Constants.UPDATE,
-        monitor_event: input.event_name,
-        custom_event: input.custom_event
-      }
+      data: payload
     })
   }
 
@@ -95,15 +99,18 @@ function Service (resource) {
         return
       }
 
-      logger.log('searching monitor %s event %s ', monitor.name, trigger)
+      logger.log('searching monitor [%s] event [%s] ', monitor.name, trigger)
 
       MonitorEvent.findOne({
         emitter_id: monitor._id,
         enable: true,
         name: trigger
       }, function (err, event) {
-        if (err) return logger.error(err);
-        else if (!event) return;
+        if (err) {
+          return logger.error(err)
+        } else if (!event) {
+          return
+        }
 
         App.eventDispatcher.dispatch({
           topic: TopicsConstants.monitor.state,
@@ -118,59 +125,67 @@ function Service (resource) {
     })
   }
 
-  const sendResourceEmailAlert = (resource,input) => {
-    if (resource.alerts === false) {
-      return
+  const resourceEmailAlert = async (resource, input) => {
+    let details
+    try {
+      if (resource.alerts === false) {
+        let err = new Error('MonitorEventIgnored')
+        err.reason = 'alerts disabled'
+        throw err
+      }
+
+      if (resource.failure_severity === MonitorConstants.MONITOR_SEVERITY_LOW) {
+        let err = new Error('MonitorEventIgnored')
+        err.reason = 'monitor severity LOW'
+        throw err
+      }
+
+      await resource.populate('monitor').execPopulate()
+      const specs = Object.assign({}, input, { resource })
+
+      details = ResourcesNotifications(specs)
+
+      console.log(specs)
+      console.log(details)
+    } catch (err) {
+      if (/MonitorEventIgnored/.test(err.message) === true) {
+        logger.log(err.message)
+        logger.log(err.reason)
+      } else {
+        logger.error(err.message)
+        return err
+      }
     }
 
-    if (resource.failure_severity === 'LOW') {
-      return
-    }
+      //App.notifications.sendEmailNotification({
+      //  bcc: 'facugon@theeye.io',
+      //  customer_name: resource.customer_name,
+      //  subject: details.subject,
+      //  content: details.content
+      //})
+    return details
 
-    MonitorModel
-      .findOne({ resource_id: resource._id })
-      .exec(function (err, monitor) {
-        resource.monitor = monitor
-        const specs = Object.assign({}, input, { resource })
-
-        ResourcesNotifications(specs, (error, details) => {
-          if (error) {
-            if (/event ignored/.test(error.message)===false) {
-              logger.error(error)
-            }
-            logger.log('email alerts not sent.')
-            return
-          }
-
-          logger.log('sending email alerts')
-          CustomerService.getAlertEmails(
-            resource.customer_name,
-            (err, emails) => {
-              if (err) {
-                logger.error(err)
-                return
-              }
-
-              var mailTo, extraEmail=[]
-
-              if (Array.isArray(resource.acl) && resource.acl.length>0) {
-                extraEmail = resource.acl.filter(email => {
-                  emails.indexOf(email) === -1
-                })
-              }
-
-              mailTo = (extraEmail.length>0) ? emails.concat(extraEmail) : emails
-
-              NotificationService.sendEmailNotification({
-                bcc: mailTo.join(','),
-                customer_name: resource.customer_name,
-                subject: details.subject,
-                content: details.content
-              })
-            }
-          )
-        })
-      })
+    //@TODO: DEPRECATED: MOVE TO NOTIFICATIONS API.
+    //App.customer.getAlertEmails( resource.customer_name, (err, emails) => {
+    //  if (err) {
+    //    logger.error(err)
+    //    return
+    //  }
+    //  logger.log('sending email alerts')
+    //  var mailTo, extraEmail=[]
+    //  if (Array.isArray(resource.acl) && resource.acl.length>0) {
+    //    extraEmail = resource.acl.filter(email => {
+    //      emails.indexOf(email) === -1
+    //    })
+    //  }
+    //  mailTo = (extraEmail.length>0) ? emails.concat(extraEmail) : emails
+    //  App.notifications.sendEmailNotification({
+    //    bcc: mailTo.join(','),
+    //    customer_name: resource.customer_name,
+    //    subject: details.subject,
+    //    content: details.content
+    //  })
+    //})
   }
 
   const getEventSeverity = (resource) => {
@@ -180,10 +195,13 @@ function Service (resource) {
       ) !== -1
 
     // severity is set and is valid
-    if (hasSeverity) return resource.failure_severity;
+    if (hasSeverity) {
+      return resource.failure_severity
+    }
 
     // else try to determine the severity
-    return (resource.type == MonitorConstants.RESOURCE_TYPE_DSTAT) ? 'LOW' : 'HIGH'
+    return (resource.type == MonitorConstants.RESOURCE_TYPE_DSTAT) ?
+      MonitorConstants.MONITOR_SEVERITY_LOW : MonitorConstants.MONITOR_SEVERITY_HIGH
   }
 
   /**
@@ -223,83 +241,82 @@ function Service (resource) {
    * state change handlers
    *
    */
-  const handleFailureState = (resource,input,config) => {
-    const newState = MonitorConstants.RESOURCE_FAILURE
-    const failure_threshold = config.fails_count_alert;
-    logger.log('resource "%s" check fails.', resource.name);
+  const handleFailureState = async (resource,input,config) => {
+    const failure_threshold = config.fails_count_alert
+    logger.log('resource "%s" check fails.', resource.name)
 
     updateResourceLastEvent(resource, input)
 
-    resource.fails_count++;
+    resource.fails_count++
     logger.log(
       'resource %s[%s] failure event count %s/%s', 
       resource.name, 
       resource._id,
       resource.fails_count,
       failure_threshold
-    );
+    )
 
     // current resource state
-    if (resource.state != newState) {
-      // is it time to start sending failure alerts?
+    if (resource.state != MonitorConstants.RESOURCE_FAILURE) {
+      // it is time to start sending failure alerts
       if (resource.fails_count >= failure_threshold) {
         logger.log('resource "%s" state failure', resource.name);
 
         input.event_name = MonitorConstants.RESOURCE_FAILURE
         input.custom_event = input.event
         input.failure_severity = getEventSeverity(resource)
-        resource.state = newState
+        resource.state = MonitorConstants.RESOURCE_FAILURE
 
+        let message = await resourceEmailAlert(resource, input)
+        sendStateChangeEventNotification(resource, input, message)
         logStateChange(resource, input)
         dispatchStateChangeEvent(resource, input)
-        sendStateChangeEventNotification(resource, input)
-        sendResourceEmailAlert(resource, input)
       }
     }
   }
 
-  const handleNormalState = (resource,input,config) => {
-    const newState = MonitorConstants.RESOURCE_NORMAL
-    logger.log('"%s"("%s") state is normal', resource.name, resource.type);
-
-    const failure_threshold = config.fails_count_alert;
-    const isRecoveredFromFailure = Boolean(resource.state===MonitorConstants.RESOURCE_FAILURE);
+  const handleNormalState = async (resource, input, config) => {
+    logger.log('"%s"("%s") state is normal', resource.name, resource.type)
 
     updateResourceLastEvent(resource, input)
 
-    // failed at least once
-    if (resource.fails_count!==0||resource.state!==newState) {
-      resource.state = newState;
-      // resource failure was alerted ?
-      if (resource.fails_count >= failure_threshold) {
-        logger.log('"%s" has been restored', resource.name);
-
-        input.custom_event = input.event
-        input.failure_severity = getEventSeverity(resource);
-
-        if (!isRecoveredFromFailure) {
-          // is recovered from updates_stopped
-          input.event_name = MonitorConstants.RESOURCE_STARTED
-          if (needToSendUpdatesStoppedEmail(resource)) {
-            sendResourceEmailAlert(resource, input)
-          }
-        } else {
-          input.event_name = MonitorConstants.RESOURCE_RECOVERED
-          sendResourceEmailAlert(resource, input)
-        }
-
-        logStateChange(resource, input)
-        dispatchStateChangeEvent(resource, input)
-        sendStateChangeEventNotification(resource, input)
+    if (resource.state === MonitorConstants.RESOURCE_NORMAL) {
+      if (resource.fails_count !== 0) {
+        logger.log('monitor state restarted')
+        resource.fails_count = 0
+        resource.state = MonitorConstants.RESOURCE_NORMAL
       }
-
-      logger.log('state restarted');
-      // reset state
-      resource.fails_count = 0;
+      return
     }
+
+    // monitor state check back to success
+    input.custom_event = input.event
+    input.failure_severity = getEventSeverity(resource)
+
+    const isRecoveredFromFailure = Boolean(resource.state === MonitorConstants.RESOURCE_FAILURE)
+    let message
+    if (isRecoveredFromFailure) {
+      input.event_name = MonitorConstants.RESOURCE_RECOVERED
+      message = await resourceEmailAlert(resource, input)
+    } else {
+      // is recovered from updates_stopped
+      input.event_name = MonitorConstants.RESOURCE_STARTED
+      if (needToSendUpdatesStoppedEmail(resource)) {
+        message = await resourceEmailAlert(resource, input)
+      }
+    }
+
+    resource.fails_count = 0
+    resource.state = MonitorConstants.RESOURCE_NORMAL
+
+    sendStateChangeEventNotification(resource, input, message)
+    logStateChange(resource, input)
+    dispatchStateChangeEvent(resource, input)
+    // reset state
+    logger.log('monitor "%s" recovered', resource.name)
   }
 
-  const handleUpdatesStoppedState = (resource,input,config) => {
+  const handleUpdatesStoppedState = async (resource, input, config) => {
     const newState = MonitorConstants.RESOURCE_STOPPED
     const failure_threshold = config.fails_count_alert
     resource.fails_count++
@@ -315,14 +332,16 @@ function Service (resource) {
     const resourceUpdatesStopped = resource.state != newState &&
       resource.fails_count >= failure_threshold
 
-    const dispatchNotifications = () => {
-      if (needToSendUpdatesStoppedEmail(resource)) {
-        sendResourceEmailAlert(resource, input)
-      }
+    const dispatchNotifications = async () => {
+      logStateChange(resource, input) // Logger/Streaming
+      dispatchStateChangeEvent(resource, input) // Trigger/Workflow
 
-      logStateChange(resource, input)
-      dispatchStateChangeEvent(resource, input)
-      sendStateChangeEventNotification(resource, input)
+      //@TODO unify
+      let message
+      if (needToSendUpdatesStoppedEmail(resource)) {
+        message = await resourceEmailAlert(resource, input) // Notification System
+      }
+      sendStateChangeEventNotification(resource, input, message) // Notification System
     }
 
     // current resource state
@@ -331,7 +350,6 @@ function Service (resource) {
 
       input.event_name = MonitorConstants.RESOURCE_STOPPED // generic event
       input.custom_event = input.event // specific event reported
-
       input.failure_severity = getEventSeverity(resource)
       resource.state = newState
       dispatchNotifications()
@@ -353,21 +371,20 @@ function Service (resource) {
    * this is emitted only once to trigger the change event
    *
    */
-  const handleChangedStateEvent = (resource,input,config) => {
+  const handleChangedStateEvent = async (resource,input,config) => {
     const newState = MonitorConstants.RESOURCE_NORMAL
-
     updateResourceLastEvent(resource, input)
-
     resource.state = newState
-
     input.event_name = MonitorConstants.RESOURCE_CHANGED
     input.custom_event = input.event
-
     input.failure_severity = getEventSeverity(resource)
-    logStateChange(resource, input)
-    dispatchStateChangeEvent(resource, input)
-    sendStateChangeEventNotification(resource, input)
-    sendResourceEmailAlert(resource, input)
+
+    logStateChange(resource, input) // Logger/Streaming
+    dispatchStateChangeEvent(resource, input) // Trigger/Workflow
+
+    //@TODO unify
+    let message = await resourceEmailAlert(resource, input) // Notification System
+    sendStateChangeEventNotification(resource, input, message) // Notification System
   }
 
   /**
@@ -376,67 +393,35 @@ function Service (resource) {
    * @param Function next
    * @return null
    */
-  this.handleState = function (input,next) {
-    next || (next=function(){})
+  this.handleState = async (input) => {
     const resource = _resource
     input.state = filterStateEvent(input.state)
 
     resource.last_check = new Date()
 
-    CustomerService.getCustomerConfig(resource.customer_id, (err,config) => {
-      if (err || !config) {
-        throw new Error('customer config unavailable')
-      }
+    const monitorConfig = App.config.monitor // global application configuration
 
-      const monitorConfig = config.monitor
+    switch (input.state) {
+      case MonitorConstants.RESOURCE_CHANGED:
+        await handleChangedStateEvent(resource, input, monitorConfig)
+        break
+      case MonitorConstants.AGENT_STOPPED:
+      case MonitorConstants.RESOURCE_STOPPED:
+        await handleUpdatesStoppedState(resource, input, monitorConfig)
+        break
+      case MonitorConstants.RESOURCE_NORMAL:
+        resource.last_update = new Date()
+        await handleNormalState(resource, input, monitorConfig)
+        break
+      default:
+      case MonitorConstants.RESOURCE_FAILURE:
+        resource.last_update = new Date()
+        await handleFailureState(resource, input, monitorConfig)
+        break
+    }
 
-      switch (input.state) {
-        case MonitorConstants.RESOURCE_CHANGED:
-          handleChangedStateEvent(resource, input, monitorConfig)
-          break
-        case MonitorConstants.AGENT_STOPPED:
-        case MonitorConstants.RESOURCE_STOPPED:
-          handleUpdatesStoppedState(resource, input, monitorConfig)
-          break
-        case MonitorConstants.RESOURCE_NORMAL:
-          resource.last_update = new Date()
-          handleNormalState(resource, input, monitorConfig)
-          break
-        default:
-        case MonitorConstants.RESOURCE_FAILURE:
-          resource.last_update = new Date()
-          handleFailureState(resource, input, monitorConfig)
-          break
-      }
-
-      resource.save(err => {
-        if (err) {
-          logger.error('error saving resource state')
-          logger.error(err, err.errors)
-        }
-      })
-
-      //input.hostname = resource.hostname
-      //input.name = resource.name
-      //input.type = resource.type
-      //input.customer_name = resource.customer_name
-
-      let payload = {
-        hostname: resource.hostname,
-        organization: resource.customer_name,
-        model_name: resource.name,
-        model_type: resource.type,
-        model_id: resource._id,
-        operation: Constants.UPDATE,
-        result: resource.last_event.data,
-        state: resource.state
-      }
-
-      const topic = TopicsConstants.monitor.execution
-      App.logger.submit(resource.customer_name, topic, payload) // topic = topics.monitor.execution
-
-      next()
-    })
+    await resource.save()
+    return
   }
 }
 
@@ -505,51 +490,41 @@ Service.findHostResources = function(host,options,done) {
  * @property {} input.
  *
  */
-Service.create = function (input, next) {
-  next||(next=function(){})
-  logger.log('creating resource for host %j', input)
-  var type = (input.type||input.monitor_type)
+Service.create = async (input, next) => {
+  next || (next=()=>{})
 
-  ResourceMonitorService.setMonitorData(type, input, function (error, monitor_data) {
-    if (error) { return next(error) }
-    if (!monitor_data) {
-      var e = new Error('invalid resource data')
-      e.statusCode = 400
-      return next(e)
-    }
+  try {
+    logger.log('creating resource for host %j', input)
 
-    createResourceAndMonitor({
-      resource_data: Object.assign({}, input, {
-        name: input.name,
-        type: type,
-      }),
-      monitor_data: monitor_data
-    }, function (err,result) {
-      if (err) { return next(err) }
+    let attrs = Object.assign({}, input, { name: input.name })
+    let resource = await createResourceMonitor(attrs)
 
-      var monitor = result.monitor
-      var resource = result.resource
-      logger.log('resource & monitor created');
+    logger.log('resource & monitor created')
+    const monitor = resource.monitor
 
-      const topic = TopicsConstants.monitor.crud
-      App.logger.submit(monitor.customer_name, topic, { // topic = topics.monitor.crud , BULK CREATE
-        hostname: monitor.hostname,
-        organization: monitor.customer_name,
-        model_id: monitor._id,
-        model_name: monitor.name,
-        model_type: monitor.type,
-        user_id: input.user._id,
-        user_email: input.user.email,
-        user_name: input.user.username,
-        operation: Constants.CREATE
-      })
-
-      Service.createDefaultEvents(monitor,input.customer)
-      Tag.create(input.tags,input.customer)
-      AgentUpdateJob.create({ host_id: monitor.host_id })
-      next(null,result)
+    const topic = TopicsConstants.monitor.crud
+    App.logger.submit(monitor.customer_name, topic, { // topic = topics.monitor.crud , BULK CREATE
+      hostname: monitor.hostname,
+      organization: monitor.customer_name,
+      model_id: monitor._id,
+      model_name: monitor.name,
+      model_type: monitor.type,
+      user_id: input.user.id,
+      user_email: input.user.email,
+      //user_name: input.user.username,
+      operation: Constants.CREATE
     })
-  })
+
+    Service.createDefaultEvents(monitor, input.customer)
+    Tag.create(input.tags,input.customer)
+
+    App.jobDispatcher.createAgentUpdateJob(monitor.host_id)
+    next(null, resource)
+    return resource
+  } catch (err) {
+    logger.error(err)
+    next(err)
+  }
 }
 
 Service.createDefaultEvents = function (monitor, customer, done) {
@@ -622,14 +597,22 @@ Service.createDefaultEvents = function (monitor, customer, done) {
  * update entities
  *
  */
-Service.update = (input, next) => {
+Service.update = async (input, next) => {
   const updates = input.updates
   const resource = input.resource
 
   logger.log('updating monitor %j', updates)
 
-  // remove properties that cannot be changed from updates, if present
+  // remove properties that cannot be changed
+  delete updates.last_event
+  delete updates.last_check
+  delete updates.last_update
+  delete updates.creation_date
+  delete updates.resource_id
+  delete updates.resource
+  delete updates.monitor_id
   delete updates.monitor
+  delete updates.customer_name
   delete updates.customer_id
   delete updates.customer
   delete updates.user_id
@@ -637,51 +620,47 @@ Service.update = (input, next) => {
   delete updates._id
   delete updates.id
   delete updates.type
+  delete updates._type
+  delete updates.fails_count
 
   // remove monitor from template
   updates.template = null
   updates.template_id = null
 
-  resource.update(Object.assign({}, updates), err => {
-    if (err) {
-      logger.error(err)
-      return next(err)
-    }
+  let monitor = await MonitorModel.findOne({ resource_id: resource._id })
+  if (!monitor) {
+    throw new Error('resource monitor not found')
+  }
 
-    MonitorModel.findOne({
-      resource_id: resource._id
-    }, (error, monitor) => {
-      if (error) {
+  resource.set( Object.assign({}, updates) )
+  await resource.save()
+
+  let previous_host_id = monitor.host_id
+  let new_host_id
+  if (updates.host_id) {
+    new_host_id = updates.host_id.toString() // mongo ObjectID
+  } else {
+    new_host_id = monitor.host_id // current
+  }
+
+  return new Promise((resolve, reject) => {
+    App.resourceMonitor.update(monitor, updates, (err) => {
+      if (err) {
         logger.error(err)
-        return next(error)
-      }
-      if (!monitor) {
-        return next(new Error('resource monitor not found'), null)
-      }
-
-      let previous_host_id = monitor.host_id
-      let new_host_id
-      if (updates.host_id) {
-        new_host_id = updates.host_id.toString() // mongo ObjectID
+        reject(err)
       } else {
-        new_host_id = monitor.host_id // current
+        if (monitor.runOnHost() === true) {
+          App.jobDispatcher.createAgentUpdateJob(new_host_id)
+          // if monitor host is changed, the new and the old agents should be notified
+          if (new_host_id !== null && previous_host_id != new_host_id) {
+            App.jobDispatcher.createAgentUpdateJob(previous_host_id)
+          }
+        }
+
+        Tag.create(updates.tags, { _id: resource.customer_id })
+        resource.monitor = monitor
+        resolve(resource)
       }
-
-      ResourceMonitorService.update(monitor, updates, (err) => {
-        if (err) {
-          logger.error(err)
-          return next(err)
-        }
-
-        AgentUpdateJob.create({ host_id: new_host_id })
-        // if monitor host is changed, the new and the old agents should be notified
-        if (new_host_id !== null && previous_host_id != new_host_id) {
-          AgentUpdateJob.create({ host_id: previous_host_id })
-        }
-
-        Tag.create(updates.tags,{ _id: resource.customer_id })
-        next(null,resource)
-      })
     })
   })
 }
@@ -731,42 +710,44 @@ Service.fetchBy = function (filter,next) {
  *
  */
 Service.remove = function (input, done) {
-  done||(done=function(){});
-  var resource = input.resource;
-  var notifyAgents = input.notifyAgents;
+  done || (done = function(){})
 
-  logger.log('removing resource "%s" monitors', resource.name);
+  const resource = input.resource
 
-  MonitorModel.find({
-    resource_id: resource._id
-  },function(error,monitors){
-    if (monitors.length !== 0) {
-      var monitor = monitors[0]
-      monitor.remove(function(err){
-        if (err) {
-          return logger.error(err)
-        }
+  logger.log('removing resource "%s" monitors', resource.name)
 
-        MonitorEvent.remove({
-          emitter_id: monitor._id
-        }, (err) => {
-          if (err) logger.error(err)
+  resource
+    .populate('monitor', (err) => {
+      if (err) {
+        logger.error(err)
+        return done(err)
+      }
+      let monitor = resource.monitor
+      if (!monitor) {
+        logger.error('monitor not found.')
+        resource.remove(done)
+      } else {
+        monitor.remove(err => {
+          if (err) {
+            logger.error('cannot remove monitor %s', monitor.name)
+            logger.error(err)
+            return done(err)
+          }
+
+          logger.log('monitor %s removed', monitor.name)
+
+          MonitorEvent.remove({ emitter_id: monitor._id }, (err) => {
+            if (err) logger.error(err)
+          })
+
+          if (input.notifyAgents) {
+            App.jobDispatcher.createAgentUpdateJob(monitor.host_id)
+          }
+
+          resource.remove(done)
         })
-
-        logger.log('monitor %s removed', monitor.name);
-        if (notifyAgents) {
-          AgentUpdateJob.create({ host_id: monitor.host_id });
-        }
-      })
-    } else {
-      logger.error('monitor not found.')
-    }
-
-    resource.remove(function(err){
-      if (err) return done(err)
-      done()
+      }
     })
-  })
 }
 
 Service.disableResourcesByCustomer = function(customer, doneFn){
@@ -799,7 +780,7 @@ Service.disableResourcesByCustomer = function(customer, doneFn){
  * @return null
  *
  */
-Service.createResourceOnHosts = function(hosts,input,done) {
+Service.createResourceOnHosts = function (hosts, input, done) {
   done||(done=()=>{});
   logger.log('preparing to create resources');
   logger.log(input);
@@ -928,13 +909,13 @@ Service.createFromTemplate = function(options) {
   })
 }
 
-Service.onScriptRemoved = function (script) {
-  updateMonitorsWithDeletedScript(script);
-}
+//Service.onScriptRemoved = function (script) {
+//  updateMonitorsWithDeletedScript(script);
+//}
 
-Service.onScriptUpdated = function (script) {
-  notifyScriptMonitorsUpdate(script);
-}
+//Service.onScriptUpdated = function (script) {
+//  notifyScriptMonitorsUpdate(script);
+//}
 
 /**
  *
@@ -1013,39 +994,30 @@ const handleHostIdAndData = (hostId, input, doneFn) => {
  * create entities
  *
  */
-const createResourceAndMonitor = (input, done) => {
-  var monitor_data = input.monitor_data
-  var resource_data = input.resource_data
+const createResourceMonitor = async (input, done) => {
+  const type = ( input.type || input.monitor_type )
+  let monitor
+  monitor = await App.resourceMonitor.create(type, input)
 
-  logger.log('creating monitor')
+  if (!monitor) {
+    var err = new Error('invalid resource data')
+    err.statusCode = 400
+    throw err
+  }
 
-  resource_data._type = 'Resource'
-  let resource = new ResourceModel(resource_data)
-
-  monitor_data._type = 'ResourceMonitor'
-  let monitor = new MonitorModel(monitor_data)
+  logger.log('creating resource')
+  let resource = new ResourceModel(input)
 
   // referencing
-  resource.monitor = monitor._id
+  resource.monitor = monitor
   resource.monitor_id = monitor._id
+
   monitor.resource = resource._id
   monitor.resource_id = resource._id
 
-  resource.save((err, resource) => {
-    if (err) {
-      logger.error('%o',err)
-      return done(err)
-    }
-
-    monitor.save((err, monitor) => {
-      if (err) {
-        logger.error('%o',err)
-        return done(err)
-      }
-
-      return done(null, { resource, monitor })
-    })
-  })
+  await resource.save()
+  await monitor.save()
+  return resource
 }
 
 /**
@@ -1055,53 +1027,53 @@ const createResourceAndMonitor = (input, done) => {
  * @return null
  *
  */
-const updateMonitorsWithDeletedScript = (script,done) => {
-  done=done||function(){};
+//const updateMonitorsWithDeletedScript = (script,done) => {
+//  done=done||function(){}
+//
+//  logger.log('searching script "%s" resource-monitor', script._id)
+//  var query = { type: 'script', script: script._id }
+//  var options = { populate: true }
+//
+//  App.resourceMonitor.findBy(
+//    query,
+//    options,
+//    function(error, monitors){
+//      if(!monitors||monitors.length==0){
+//        logger.log('no monitores linked to the script found.')
+//        return done()
+//      }
+//
+//      for(var i=0; i<monitors.length; i++) {
+//        var monitor = monitors[i]
+//        detachMonitorScript (monitor)
+//      }
+//    }
+//  )
+//}
 
-  logger.log('searching script "%s" resource-monitor', script._id);
-  var query = { type: 'script', script: script._id };
-  var options = { populate: true };
-
-  ResourceMonitorService.findBy(
-    query,
-    options,
-    function(error, monitors){
-      if(!monitors||monitors.length==0){
-        logger.log('no monitores linked to the script found.');
-        return done();
-      }
-
-      for(var i=0; i<monitors.length; i++) {
-        var monitor = monitors[i];
-        detachMonitorScript (monitor);
-      }
-    }
-  );
-}
-
-const detachMonitorScript = (monitor, done) => {
-  done=done||function(){};
-  if (!monitor.resource._id) {
-    var err = new Error('populate monitor first. resource object required');
-    logger.error(err);
-    return done(err);
-  }
-
-  var resource = monitor.resource;
-  resource.enable = false;
-  resource.save(function(error){
-    if (error) return logger.error(error);
-    monitor.enable = false;
-    monitor.config.script_id = null;
-    monitor.config.script_arguments = [];
-    monitor.save(function(error){
-      if (error) return logger.error(error);
-      logger.log('monitor changes saved');
-      logger.log('notifying "%s"', monitor.host_id);
-      AgentUpdateJob.create({ host_id: monitor.host_id });
-    });
-  });
-}
+//const detachMonitorScript = (monitor, done) => {
+//  done=done||function(){}
+//  if (!monitor.resource._id) {
+//    var err = new Error('populate monitor first. resource object required')
+//    logger.error(err)
+//    return done(err)
+//  }
+//
+//  var resource = monitor.resource
+//  resource.enable = false
+//  resource.save(function(error){
+//    if (error) return logger.error(error)
+//    monitor.enable = false
+//    monitor.config.script_id = null
+//    monitor.config.script_arguments = []
+//    monitor.save(function(error){
+//      if (error) return logger.error(error)
+//      logger.log('monitor changes saved')
+//      logger.log('notifying "%s"', monitor.host_id);
+//      AgentUpdateJob.create({ host_id: monitor.host_id })
+//    })
+//  })
+//}
 
 /**
 *
@@ -1112,33 +1084,34 @@ const detachMonitorScript = (monitor, done) => {
 * @return null
 *
 */
-const notifyScriptMonitorsUpdate = (script) => {
-  var query = {
-    type: 'script',
-    script: script._id
-  }
-  ResourceMonitorService.findBy(query, function (error, monitors) {
-    if (!monitors||monitors.length==0) {
-      logger.log('no monitors with this script attached found.');
-      return;
-    }
-
-    var hosts = [];
-    // create one notification for each host
-    for(var i=0; i<monitors.length; i++){
-      var monitor = monitors[i];
-      if( hosts.indexOf(monitor.host_id) === -1 ){
-        hosts.push(monitor.host_id);
-      }
-    }
-
-    for(var i=0;i<hosts.length;i++){
-      var host = hosts[i];
-      logger.log('notifying host "%s"', host)
-      AgentUpdateJob.create({ host_id: host })
-    }
-  })
-}
+//const notifyScriptMonitorsUpdate = (script) => {
+//  var query = {
+//    type: 'script',
+//    script: script._id
+//  }
+//
+//  App.resourceMonitor.findBy(query, function (error, monitors) {
+//    if (!monitors||monitors.length==0) {
+//      logger.log('no monitors with this script attached found.');
+//      return;
+//    }
+//
+//    var hosts = [];
+//    // create one notification for each host
+//    for(var i=0; i<monitors.length; i++){
+//      var monitor = monitors[i];
+//      if( hosts.indexOf(monitor.host_id) === -1 ){
+//        hosts.push(monitor.host_id);
+//      }
+//    }
+//
+//    for(var i=0;i<hosts.length;i++){
+//      var host = hosts[i];
+//      logger.log('notifying host "%s"', host)
+//      AgentUpdateJob.create({ host_id: host })
+//    }
+//  })
+//}
 
 /**
  * if any job is assigned to the host's agent cancel it.

@@ -75,87 +75,64 @@ module.exports = (options) => {
       })
   }
 
-  function checkRunningMonitors (resource, done) {
-    CustomerService.getCustomerConfig(
-      resource.customer_id,
-      function (error, customerConfig) {
-        if (error) {
-          logger.error('customer %s configuration fetch failed', resource.customer_name)
-          return done()
-        }
-
-        if (!customerConfig) {
-          logger.error('customer %s configuration unavailable', resource.customer_name)
-          return done()
-        }
-
-        if (resource.type === 'host') {
-          checkHostResourceStatus(resource, customerConfig.monitor, done)
-        } else {
-          checkResourceMonitorStatus(resource, customerConfig.monitor, done)
-        }
-      }
-    )
-  }
-
-  function checkResourceMonitorStatus (resource, customerConfig, done) {
-    done || (done = function () {})
-
-    ResourceMonitor.findOne({
-      enable: true,
-      resource_id: resource._id
-    }, function (error, monitor) {
-      if (error) {
-        logger.error('Resource monitor query error : %s', error.message)
-        return done()
-      }
-
-      if (!monitor) {
-        logger.debug('resource hasn\'t got any monitor')
-        return done()
-      }
-
-      logger.debug('checking monitor "%s"', resource.name)
-
-      var trigger = triggerAlert(
-        resource.last_update,
-        monitor.looptime,
-        resource.fails_count,
-        customerConfig.fails_count_alert
-      )
-
-      if (trigger === true) {
-        var manager = new ResourceService(resource)
-        manager.handleState({ state: MonitorConstants.RESOURCE_STOPPED })
+  async function checkRunningMonitors (resource, done) {
+    try {
+      if (resource.type === 'host') {
+        await checkHostResourceStatus(resource, App.config.monitor)
       } else {
-        resource.last_check = new Date()
-        resource.save()
+        await checkResourceMonitorStatus(resource, App.config.monitor)
       }
-
       done()
-    })
+    } catch (err) {
+      logger.error(err)
+      done(err)
+    }
   }
 
-  function checkHostResourceStatus (resource, customerConfig, done) {
-    done || (done = function () {})
+  async function checkResourceMonitorStatus (resource, config) {
+    let monitor = ResourceMonitor.findOne({ enable: true, resource_id: resource._id })
 
-    logger.debug('checking host resource %s', resource.name)
-    var trigger = triggerAlert(
+    if (!monitor) {
+      logger.debug('resource hasn\'t got any monitor')
+      return
+    }
+
+    logger.debug('checking monitor "%s"', resource.name)
+
+    let trigger = triggerAlert(
       resource.last_update,
-      options.agent_keep_alive,
+      monitor.looptime,
       resource.fails_count,
-      customerConfig.fails_count_alert
+      config.fails_count_alert
     )
 
     if (trigger === true) {
-      var manager = new ResourceService(resource)
-      manager.handleState({ state: MonitorConstants.RESOURCE_STOPPED })
+      const manager = new ResourceService(resource)
+      await manager.handleState({ state: MonitorConstants.RESOURCE_STOPPED })
     } else {
       resource.last_check = new Date()
-      resource.save()
+      await resource.save()
     }
+    return
+  }
 
-    done()
+  async function checkHostResourceStatus (resource, config) {
+    logger.debug('checking host resource %s', resource.name)
+    let trigger = triggerAlert(
+      resource.last_update,
+      options.agent_keep_alive,
+      resource.fails_count,
+      config.fails_count_alert
+    )
+
+    if (trigger === true) {
+      const manager = new ResourceService(resource)
+      await manager.handleState({ state: MonitorConstants.RESOURCE_STOPPED })
+    } else {
+      resource.last_check = new Date()
+      await resource.save()
+    }
+    return
   }
 
   /**

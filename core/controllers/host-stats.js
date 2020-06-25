@@ -3,9 +3,9 @@ var debug = require('../lib/logger')('controller:host-stats');
 var router = require('../router');
 var HostStats = require('../entity/host/stats').Entity;
 
-module.exports = function (server, passport) {
+module.exports = function (server) {
   var middlewares = [
-    passport.authenticate('bearer', {session:false}),
+    server.auth.bearerMiddleware,
     router.requireCredential('viewer'),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,

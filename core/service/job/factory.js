@@ -90,19 +90,20 @@ const JobsFactory = {
           return reject(err)
         }
 
-        App.customer.getAlertEmails(customer.name, (err, emails) => {
-          App.jobDispatcher.sendJobCancelationEmail({
-            task_secret: task.secret,
-            task_id: task.id,
-            schedule_id: agendaJob.attrs._id,
-            task_name: task.name,
-            hostname: task.host.hostname,
-            date: new Date(runDate).toISOString(),
-            grace_time_mins: task.grace_time / 60,
-            customer_name: customer.name,
-            to: emails.join(',')
-          })
-        })
+        // @TODO: DEPRECATED - MOVE TO NOTIFICATION API
+        //App.customer.getAlertEmails(customer.name, (err, emails) => {
+        //  App.jobDispatcher.sendJobCancelationEmail({
+        //    task_secret: task.secret,
+        //    task_id: task.id,
+        //    schedule_id: agendaJob.attrs._id,
+        //    task_name: task.name,
+        //    hostname: task.host.hostname,
+        //    date: new Date(runDate).toISOString(),
+        //    grace_time_mins: task.grace_time / 60,
+        //    customer_name: customer.name,
+        //    to: emails.join(',')
+        //  })
+        //})
 
         return resolve(agendaJob)
       })
@@ -115,11 +116,7 @@ const JobsFactory = {
    * @param {Function} next callback
    *
    */
-  prepareTaskArgumentsValues (
-    argumentsDefinition,
-    argumentsValues,
-    next
-  ) {
+  prepareTaskArgumentsValues (argumentsDefinition, argumentsValues, next) {
     let errors = new ErrorHandler()
     let filteredArguments = []
 
@@ -150,7 +147,8 @@ const JobsFactory = {
             if (found === undefined) {
               errors.required(def.label, null, 'task argument is required.')
             } else {
-              value = (found.value || found)
+              if (!found) value = found // null
+              else value = (found.value || found)
             }
           }
         } else {
@@ -205,6 +203,7 @@ const createJob = (input, next) => {
       host: null
     }) // >>> add .id  / embedded
 
+    job.logging = (task.logging || false)
     job.task_id = task._id
     job.task_arguments_values = argsValues
     job.host_id = task.host_id
@@ -214,8 +213,8 @@ const createJob = (input, next) => {
     job.lifecycle = (vars.lifecycle || LifecycleConstants.READY)
     job.customer_id = vars.customer._id
     job.customer_name = vars.customer.name
-    job.user_id = vars.user._id
-    job.user = vars.user._id
+    job.user_id = (vars.user&&vars.user.id)
+    //job.user = vars.user._id
     job.notify = vars.notify
     job.origin = vars.origin
     //job.event = vars.event || null
@@ -248,7 +247,7 @@ const createJob = (input, next) => {
           task_id: task._id
         }),
         THEEYE_JOB_USER: JSON.stringify({
-          id: vars.user._id,
+          id: vars.user.id,
           email: vars.user.email
         }),
         THEEYE_JOB_WORKFLOW: JSON.stringify({
@@ -353,8 +352,11 @@ const searchInputArgumentValueByOrder = (values, searchOrder) => {
 
   return values.find((arg, idx) => {
     let order
-    if (arg.order) { order = arg.order }
-    else { order = idx }
+    if (!arg || !arg.order) {
+      order = idx
+    } else {
+      order = arg.order
+    }
     return (order === searchOrder)
   })
 }

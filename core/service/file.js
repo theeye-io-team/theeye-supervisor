@@ -11,11 +11,11 @@ const FileModel = require('../entity/file')
 const Monitor = require('../entity/monitor').Entity
 
 module.exports = {
-  remove (input,next) {
+  remove (input, next) {
     next || (next = () => {})
-    var file = input.file;
-    var filter = { _id: file._id }
-    FileModel.File.remove(filter, function (error) {
+    let file = input.file
+    let filter = { _id: file._id }
+    FileModel.File.deleteOne(filter, function (error) {
       if (error) { return next(error) }
       storage.remove({ key: file.keyname }, function (error, data) {
         if (error) { return next(error) }
@@ -23,53 +23,49 @@ module.exports = {
       })
     })
   },
-  getLinkedModels (input,next) {
-    next||(next=function(){})
-    const file = input.file
+  getLinkedModels (input) {
+    return new Promise((resolve, reject) => {
 
-    var models = []
-    const done = after(2, () => next(null, models))
+      const file = input.file
+      const done = after(2, () => next(null, models))
 
-    Task
-      .find({ script_id: file._id })
-      .select({
-        name: 1,
-        _type: 1,
-        host_id: 1
-      })
-      .exec(function(error,tasks) {
-        if (error) return next(error)
-        if (tasks && tasks.length > 0) {
-          Array.prototype.push.apply(models, tasks)
+      const tasksPromise = Task
+        .find({ script_id: file._id.toString() })
+        .select({ name: 1, _type: 1, host_id: 1 })
+        .exec()
+
+      const monitorsPromise = Monitor
+        .find({
+          $or: [
+            {
+              $and: [
+                { type: 'script' },
+                { 'config.script_id': file._id.toString() }
+              ]
+            },
+            {
+              $and: [
+                { type: 'file' },
+                { 'config.file': file._id.toString() }
+              ]
+            }
+          ]
+        })
+        .select({ name: 1, _type: 1, host_id: 1, type: 1, config: 1 })
+        .exec()
+
+      let linked = []
+
+      Promise.all([ tasksPromise, monitorsPromise ]).then(models => {
+        if (models[0] && models[0].length > 0) {
+          Array.prototype.push.apply(linked, models[0])
         }
-        done()
-      })
-
-    Monitor
-      .find({
-        $or: [
-          {
-            $and: [
-              { type: 'script' },
-              { 'config.script_id': file._id.toString() }
-            ]
-          },
-          {
-            $and: [
-              { type: 'file' },
-              { 'config.file': file._id.toString() }
-            ]
-          }
-        ]
-      })
-      .select({ name: 1, _type: 1, host_id: 1 })
-      .exec(function(error, monitors) {
-        if (error) return next (error)
-        if (monitors && monitors.length > 0) {
-          Array.prototype.push.apply(models, monitors)
+        if (models[1] && models[1].length > 0) {
+          Array.prototype.push.apply(linked, models[1])
         }
-        done()
-      })
+        resolve(linked)
+      }).catch(reject)
+    })
   },
   /**
    *

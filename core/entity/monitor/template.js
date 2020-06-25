@@ -5,10 +5,10 @@ const logger = require('../../lib/logger')('eye:entity:monitor:template')
 
 const TemplateSchema = new BaseSchema({
   source_model_id: { type: ObjectId }, // if provided, is a reference to the source model. beware, won't be valid forever (eg. if the source model is deleted)
-  hostgroup_id : { type: ObjectId, required: true },
-  template_resource_id: { type: ObjectId },
   hostgroup: { type: ObjectId, ref: 'HostGroup' }, // belongs to
+  hostgroup_id : { type: ObjectId, required: true },
   template_resource: { type: ObjectId, ref: 'ResourceTemplate' }, // belongs to
+  template_resource_id: { type: ObjectId },
   _type: { type: String, 'default': 'MonitorTemplate' }
 }, { collection: 'monitor_templates' })
 

@@ -1,10 +1,17 @@
+// DEPRECATED
+// DEPRECATED
+// DEPRECATED
+// DEPRECATED
+// DEPRECATED
+// DEPRECATED
+console.warn('DEPRECATED')
 const router = require('../../router')
-const Token = require('../../entity/user').Entity
+//const Token = require('../../entity/user').Entity
 const randomToken = require('../../lib/token').randomToken
 
-module.exports = (server, passport) => {
+module.exports = (server) => {
   let middlewares = [
-    passport.authenticate('bearer', {session:false}),
+    server.auth.bearerMiddleware,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'customer', required: true }),
     router.ensureCustomer,

@@ -15,8 +15,6 @@ function WorkflowSchema (props) {
     tags: { type: Array, default: [] },
     acl: [{ type: String }],
     triggers: [{ type: ObjectId, ref: 'Event' }],
-    user_id: { type: ObjectId },
-    user: { type: ObjectId, ref: 'User' },
     graph: { type: Object },
     lifecycle: { type: String },
     state: { type: String },

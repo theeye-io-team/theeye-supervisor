@@ -31,15 +31,8 @@ module.exports = (operation, topic, input, done) => {
       state: job.state,
       lifecycle: job.lifecycle,
       organization: job.customer_name,
+      organization_id: job.customer_id,
       job_type: job._type
-    }
-
-    if (job.user) {
-      payload.user_id = job.user._id
-      payload.user_name = job.user.username
-      payload.user_email = job.user.email
-    } else {
-      logger.error(`job user not defined. ${job._id} ${topic} ${job.name}`)
     }
 
     if (
@@ -87,18 +80,22 @@ module.exports = (operation, topic, input, done) => {
       // unhandled job type
     }
 
-    // async call
-    App.notifications.generateSystemNotification({
-      topic: TopicsConstants.job.crud,
-      data: {
-        hostname: (job.host && job.host.hostname) || job.host_id,
-        organization: job.customer_name,
-        operation: operation,
-        model_type: job._type,
-        model: job,
-        approvers: (task && task.approvers) || undefined
-      }
-    })
+    // skip system notifications for this job.
+    if (job.notify !== false) {
+      // async call
+      App.notifications.generateSystemNotification({
+        topic: TopicsConstants.job.crud,
+        data: {
+          hostname: (job.host && job.host.hostname) || job.host_id,
+          organization: job.customer_name,
+          organization_id: job.customer_id,
+          operation: operation,
+          model_type: job._type,
+          model: job,
+          approvers: (task && task.approvers) || undefined
+        }
+      })
+    }
 
     if (job.result) {
       payload.result = job.result
@@ -112,47 +109,15 @@ module.exports = (operation, topic, input, done) => {
     // async call
     // topic = topics.task.[execution||result] , CREATE/UPDATE
     App.logger.submit(job.customer_name, topic, payload)
-    return
+
+    // async
+    done()
   }
 
-  jobPopulate(job, (err, users) => {
-    if (err) { return done(err) }
-
-    let data = job.toObject()
-    data.user = users.job_user
-
-    if (users.workflowJobUser) {
-      data.workflow_job.user = users.workflow_user
-    }
-
-    sendJobNotification(data)
-    done()
-  })
-}
-
-const jobPopulate = (job, next) => {
   job.populate([
     { path: 'host', select: 'id hostname' },
-    { path: 'user', select: 'id email username' },
     { path: 'workflow_job' },
   ], (err) => {
-    if (err) { return next(err) }
-
-    if (!job.user) { return next(null, {}) }
-    let job_user = job.user.toObject()
-
-    if (job.workflow_job && job.workflow_job.user) {
-      job.workflow_job.populate([
-        { path: 'user', select: 'email username id' }
-      ], (err) => {
-        if (err) { return next(err) }
-
-        let workflow_user = job.workflow_job.user.toObject()
-
-        return next(null, { job_user, workflow_user })
-      })
-    } else {
-      return next(null, { job_user })
-    }
+    sendJobNotification(job.toObject())
   })
 }

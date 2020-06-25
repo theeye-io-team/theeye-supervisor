@@ -6,10 +6,6 @@ const isMongoId = require('validator/lib/isMongoId')
 const logger = require('../lib/logger')('service:task')
 const asyncMap = require('async/map')
 
-const lodashAssign = require('lodash/assign')
-const lodashAfter = require('lodash/after')
-const lodashExtend = require('lodash/extend')
-
 const Tag = require('../entity/tag').Entity
 const Host = require('../entity/host').Entity
 const Task = require('../entity/task').Entity
@@ -70,9 +66,7 @@ module.exports = {
    * @param {Object} options
    *
    */
-  update (options) {
-    const self = this
-    const done = options.done
+  async update (options) {
     const task = options.task
     const updates = options.updates
 
@@ -89,48 +83,46 @@ module.exports = {
     task.set(updates)
 
     // keep backward compatibility with script_arguments
-    if (task.type===TaskConstants.TYPE_SCRIPT) {
+    if (task.type === TaskConstants.TYPE_SCRIPT) {
       task.script_arguments = updates.task_arguments
+      let runas = updates.script_runas
+      if (runas) {
+        if (/%script%/.test(runas) === false) {
+          runas += ' %script%'
+          task.script_runas = runas
+        }
+      }
     }
 
-    task.save(function (err, task) {
-      if (err) {
-        if (err.name=='ValidationError') {
-          err.statusCode = 400
-        }
-        return options.fail(err)
-      }
-
+    try {
+      await task.save()
       createTags(task.tags, task.customer)
-
       logger.log('publishing task')
-      self.populate(task, function(err,pub){
-        let reportName
-        if (task.name != updates.name) {
-          reportName = `${task.name} > ${updates.name}`
-        } else  {
-          reportName = task.name
-        }
-        done(pub)
-      })
-    })
+      options.done( await this.populate(task) )
+    } catch (e) {
+      if (err.name === 'ValidationError') {
+        err.statusCode = 400
+      }
+      return options.fail(err)
+    }
   },
   /**
    *
    * @author Facundo
    *
    */
-  fetchBy (filter,next) {
-    const self = this
-    FetchBy.call(Task, filter, function (err, tasks) {
+  fetchBy (filter, next) {
+    FetchBy.call(Task, filter, async (err, tasks) => {
       if (err) { return next(err) }
-      if (tasks.length===0) { return next(null, tasks) }
+      if (tasks.length === 0) { return next(null, tasks) }
 
-      asyncMap(
-        tasks,
-        (task, callback) => { self.populate(task, callback) },
-        (err, published) => { next(err, published) }
-      )
+      let published = []
+      for (let index in tasks) {
+        let task = tasks[index]
+        let data = await this.populate(task) 
+        published.push(data)
+      }
+      next(null, published)
     })
   },
   /**
@@ -144,7 +136,6 @@ module.exports = {
    *
    */
   createFromTemplate (options) {
-    const self = this
     const template = options.template // plain object
     const customer = options.customer
     const host = options.host || {}
@@ -159,7 +150,7 @@ module.exports = {
       templateData = template
     }
 
-    let data = lodashAssign({}, templateData, {
+    let data = Object.assign({}, templateData, {
       customer_id: customer._id,
       customer: customer,
       host: host._id,
@@ -174,7 +165,7 @@ module.exports = {
     delete data.workflow_id
     delete data.workflow
 
-    self.create(data, (err,task) => {
+    this.create(data, (err,task) => {
       done(err, task)
     })
   },
@@ -183,123 +174,164 @@ module.exports = {
    * @summary Create a task
    * @param {Object} input
    * @property {Customer} input.customer
-   * @property {User} input.user
    * @property {Host} input.host
    * @property {TaskTemplate} input.template
    * @param {Function(Error,)} done
    */
-  create (input, done) {
-    const self = this
-    const customer = input.customer
-    const user = input.user
-
-    const created = (task) => {
-      logger.log('task type "%s" created', task.type)
-      logger.data('%j', task)
-      return done(null, task)
-    }
-
-    logger.log('creating task with data %o', input)
-
+  async create (input, done) {
     try {
-      var task = TaskFactory.create(input)
-    } catch (e) {
-      return done(e)
-    }
+      logger.log('creating task')
+      logger.data(input)
 
-    // keep backward compatibility with script_arguments
-    if (task.type === TaskConstants.TYPE_SCRIPT) {
-      task.script_arguments = input.task_arguments
-    }
+      const customer = input.customer
+      const task = TaskFactory.create(input)
 
-    task.save(err => {
-      if (err) {
-        logger.error(err)
-        return done(err)
+      let errors = task.validateSync()
+      if (errors) {
+        let err = new Error('TaskValidationError')
+        err.statusCode = 400
+        err.errors = errors
+        throw err
       }
+
+      await task.save()
+
       createTags(input.tags, customer)
       createTaskEvents(task, customer)
-      created(task)
-    })
+
+      logger.log('task created')
+      logger.data(task)
+      return done(null, task)
+    } catch (err) {
+      logger.error(err)
+      done(err)
+    }
   },
-  populateAll (tasks, next) {
-    var result = []
+  async populateAll (tasks, next) {
+    let populated = []
     if (!Array.isArray(tasks)||tasks.length===0) {
-      return next(null,result)
+      return next(null, populated)
     }
 
-    const populated = lodashAfter(tasks.length,() => next(null, result))
-
-    for (var i=0; i<tasks.length; i++) {
+    for (let i=0; i<tasks.length; i++) {
       const task = tasks[i]
-      this.populate(task,() => {
-        result.push(task)
-        populated()
-      })
+      populated.push( await this.populate(task) )
     }
+
+    next(null, populated)
   },
-  populate (task, done) {
+  async populate (task) {
     const data = task.toObject()
 
     // only if host_id is set
-    const populateHost = (populated) => {
-      let id = task.host_id
-      if (!id) {
-        return populated()
-      }
-      Host.findById(id, (err, host) => {
-        if (err) {
-          return populated(err)
+    const populateHost = (task) => {
+      return new Promise( (resolve, reject) => {
+        let data = {
+          host: null,
+          hostname: ''
         }
-        if (!host) {
-          return populated()
-        }
-        data.host = host
-        data.hostname = host.hostname
-        populated()
+
+        const id = task.host_id
+        if (!id) { return resolve() }
+
+        Host.findById(id, (err, host) => {
+          if (err) { return reject(err) }
+          if (host !== null) {
+            data.host = host
+            data.hostname = host.hostname
+          }
+
+          return resolve(data)
+        })
       })
     }
 
     // only task type script, and if script_id is set
-    const populateScript = (populated) => {
-      let id = task.script_id
-      if (!id) {
-        return populated()
-      }
-      Script.findById(id, (err,script) => {
-        if (err) {
-          return populated(err)
+    const populateScript = (task) => {
+      return new Promise( (resolve, reject) => {
+        let data = {
+          script: null,
+          script_id: '',
+          script_name: '' 
         }
-        if (!script) {
-          return populated()
+
+        let id = task.script_id
+        if (!id) {
+          return resolve(data)
         }
-        data.script = script
-        data.script_id = script._id
-        data.script_name = script.filename
-        populated()
+
+        Script.findById(id, (err, script) => {
+          if (err) { reject(err) }
+          else {
+            if (script !== null) {
+              data.script = script
+              data.script_id = script._id
+              data.script_name = script.filename
+            }
+            return resolve(data) 
+          }
+        })
       })
     }
 
-    const populateLastJob = (populated) => {
-      Job
-        .findOne({
-          task_id: task._id.toString()
-        })
-        .sort({ creation_date: -1 })
-        .populate('user')
-        .exec((err, job) => {
-          if (err) {
-            return populated(err)
-          }
-          if (!job) {
-            return populated()
-          }
-          data.jobs = [publish(job)]
-          return populated()
-        })
+    const populateLastJob = (task) => {
+      return new Promise( (resolve, reject) => {
+        Job
+          .findOne({ task_id: task._id.toString() })
+          .sort({ creation_date: -1 })
+          .populate('user')
+          .exec((err, job) => {
+            if (err) { reject(err) }
+            else if (!job) { resolve([]) }
+            else { resolve([ prepareJob(job) ]) }
+          })
+      })
     }
 
-    const publish = (job) => {
+    const populateRunningJob = async (task) => {
+      return new Promise( (resolve, reject) => {
+        const query = {
+          task_id: task._id.toString(),
+          $or: [
+            { lifecycle: LifecycleConstants.READY },
+            { lifecycle: LifecycleConstants.ASSIGNED },
+            { lifecycle: LifecycleConstants.ONHOLD }
+          ]
+        }
+
+        Job
+          .find(query)
+          .sort({ creation_date: -1 })
+          .populate('user')
+          .exec(async (err, jobs) => {
+            if (err) { reject(err) }
+            else {
+              try {
+                if (jobs.length === 0) {
+                  jobs = await populateLastJob(task)
+                } else {
+                  jobs = jobs.map(job => prepareJob(job))
+                }
+
+                resolve(jobs)
+              } catch (err) {
+                reject(err)
+              }
+            }
+          })
+      })
+    }
+
+    const populateSchedules = (task) => {
+      return new Promise( (resolve, reject) => {
+        App.scheduler.getTaskSchedule(task._id, (err, schedules) => {
+          if (err) { reject(err) }
+          else { resolve(schedules) }
+        })
+      })
+    }
+
+    const prepareJob = (job) => {
       let data = {
         state: job.state,
         lifecycle: job.lifecycle,
@@ -308,66 +340,18 @@ module.exports = {
         name: job.name,
         type: job.type,
         _type: job._type,
-      }
-
-      if (job.user) {
-        data.user = {
-          id: job.user._id.toString(),
-          username: job.user.username,
-          email: job.user.email
+        user: {
+          id: job.user_id,
         }
       }
 
       return data
     }
 
-    const populateRunningJob = (populated) => {
-      data.jobs = []
-      Job
-        .find({
-          task_id: task._id.toString(),
-          $or: [
-            { lifecycle: LifecycleConstants.READY },
-            { lifecycle: LifecycleConstants.ASSIGNED },
-            { lifecycle: LifecycleConstants.ONHOLD }
-          ]
-        })
-        .sort({ creation_date: -1 })
-        .populate('user')
-        .exec((err, jobs) => {
-          if (err) {
-            return populated(err)
-          }
-          if (jobs.length===0) {
-            return populateLastJob(populated)
-          } else {
-            data.jobs = jobs.map(job => publish(job))
-            return populated()
-          }
-        })
-    }
-
-    const populateSchedules = (populated) => {
-      App.scheduler.getTaskSchedule(task._id, (err, schedules) => {
-        if (err) {
-          return populated(err)
-        } else {
-          data.schedules = schedules
-          return populated(null, schedules)
-        }
-      })
-    }
-
-    asyncMap([
-      populateHost,
-      populateScript,
-      populateRunningJob,
-      populateSchedules
-    ], (populate, callback) => {
-      populate(callback)
-    }, err => {
-      return done(err, data)
-    })
+    Object.assign(data, await populateScript(task), await populateHost(task))
+    data.jobs = await populateRunningJob(task)
+    data.schedules = await populateSchedules(task)
+    return data
   },
   /**
    *
@@ -515,7 +499,7 @@ module.exports = {
         data.hostgroup = hostgroup
         data.customer_id = customer._id
         data.customer = customer
-        data.user_id = user._id
+        data.user_id = user.id
         data.user = user
         data.source_model_id = task.source_model_id
         data.triggers = task.triggers || []

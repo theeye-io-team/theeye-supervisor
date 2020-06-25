@@ -13,66 +13,26 @@ var ResourceService = require('../service/resource')
 var Script = require('../entity/file').Script
 var dbFilter = require('../lib/db-filter')
 
-//const filenameRegexp = /^[0-9a-zA-Z-_.]*$/
-//function isValidFilename (filename) {
-//  if (!filename) {
-//    return false
-//  }
-//  return filenameRegexp.test(filename)
-//}
-
-module.exports = function(server, passport){
-  var middlewares = [
-    passport.authenticate('bearer', {session:false}),
-    router.requireCredential('admin'),
-    router.resolve.customerNameToEntity({required:true}),
-    router.ensureCustomer,
-  ]
-
+module.exports = function(server){
   server.get('/:customer/script' , [
-    passport.authenticate('bearer', {session:false}),
+    server.auth.bearerMiddleware,
     router.requireCredential('viewer'),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,
   ] , controller.fetch)
 
-  //server.post(
-  //  '/:customer/script',
-  //  middlewares,
-  //  controller.create,
-  //  audit.afterCreate('script',{ display: 'filename' })
-  //)
-
-  var mws = middlewares.concat(
-    router.resolve.idToEntity({param:'script',required:true,entity:'file'})
-  )
-
   server.get('/:customer/script/:script', [
-    passport.authenticate('bearer', {session:false}),
+    server.auth.bearerMiddleware,
     router.requireCredential('viewer'),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,
     router.resolve.idToEntity({param:'script',required:true,entity:'file'})
   ] , controller.get)
 
-  //server.patch(
-  //  '/:customer/script/:script',
-  //  mws,
-  //  controller.patch,
-  //  audit.afterUpdate('script',{ display: 'filename' })
-  //)
-
-  //server.del(
-  //  '/:customer/script/:script',
-  //  mws,
-  //  controller.remove,
-  //  audit.afterRemove('script',{ display: 'filename' })
-  //)
-
   // clients can download scripts
 	server.get(
     '/:customer/script/:script/download',[
-      passport.authenticate('bearer', {session:false}),
+      server.auth.bearerMiddleware,
       router.requireCredential('user'),
       router.resolve.customerNameToEntity({required:true}),
       router.ensureCustomer,

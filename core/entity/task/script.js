@@ -12,6 +12,7 @@ const ScriptSchema = new BaseSchema({
   script_arguments: { type: Array }, // will be replaced with task_arguments in the future
   script: { type: ObjectId, ref: 'Script' },
   env: { type: Object, default: () => { return {} }},
+  logging: { type: Boolean, default: false }
 })
 
 module.exports = ScriptSchema
@@ -39,7 +40,6 @@ ScriptSchema.statics.create = function (input, next) {
   instance.script_arguments = input.script_arguments
   instance.task_arguments = input.task_arguments
   instance.script_runas = input.script_runas
-  instance.user_id = input.user._id
   instance.tags = input.tags
   instance.public = input.public || false
   instance.name = input.name || null

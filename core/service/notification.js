@@ -1,5 +1,5 @@
 const config = require('config')
-const request = require('request')
+const got = require('got')
 const mailer = require('../lib/mailer')
 const logger = require('../lib/logger')('service:notification')
 const uuidv1 = require('uuid/v1')
@@ -76,24 +76,29 @@ module.exports = {
 
     payload.id = uuidv1()
 
-    request({
-      followRedirect: false,
-      method: 'POST',
-      uri: url,
-      json: payload,
-      gzip: true
-    }, (error, response, body) => {
-      if (error) {
-        logger.error('could not connect to local notification system')
-        logger.error(error)
-      } else if (response.statusCode != 200) {
-        logger.error('submit to notification system failed')
-        logger.debug('payload %j', payload)
-        logger.error('%s, %o', response.statusCode, body)
-      } else {
-        logger.log('notification registered')
-        logger.log(body.replace(/(\r\n|\n|\r)/gm,''))
-      }
-    })
+    got
+      .post(url, {
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
+      .then(function (res) {
+        if (res.statusCode != 200) {
+          logger.error('submit to notification system failed')
+          logger.debug('payload %j', payload)
+          logger.error('%s, %o', res.statusCode, body)
+        } else if (res.body) {
+          logger.log('notification registered')
+          logger.log(res.body.replace(/(\r\n|\n|\r)/gm,''))
+        } else {
+          logger.error('unhandled response message')
+          logger.debug(arguments)
+        }
+      })
+      .catch(err => {
+        logger.error('notification system failure')
+        logger.error(err)
+      })
   }
 }

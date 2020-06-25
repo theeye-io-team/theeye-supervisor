@@ -1,8 +1,5 @@
-'use strict';
-
 var logger = require('../lib/logger')(':router:middleware:params-resolver');
 var Host = require('../entity/host').Entity;
-var User = require('../entity/user').Entity;
 var Customer = require('../entity/customer').Entity;
 var isMongoId = require('validator/lib/isMongoId')
 
@@ -27,7 +24,11 @@ module.exports = {
     var targetName = (options.into||paramName)
 
     return function (req, res, next) {
-      var _id = req.params[paramName] || req.body[paramName] || req.query[paramName]
+      let _id = (
+        req.params[paramName] ||
+        (req.body && req.body[paramName]) ||
+        req.query[paramName]
+      )
 
       if (isObject(_id)) {
         _id = ( _id._id || _id.id || undefined )
@@ -86,11 +87,15 @@ module.exports = {
     }
   },
   hostnameToHost (options) {
-    options||(options={});
+    options||(options={})
 
-    return function (req,res,next) {
-      var hostname = req.params.hostname || req.body.hostname || req.query.hostname
-      var customer = req.customer;
+    return (req, res, next) => {
+      var hostname = (
+        req.params.hostname ||
+        (req.body && req.body.hostname) ||
+        req.query.hostname
+      )
+      var customer = req.customer
 
       if (!customer) {
         logger.debug('no customer yet present');
@@ -131,7 +136,11 @@ module.exports = {
     options || (options={})
 
     return function (req,res,next) {
-      var name = req.params.customer || req.body.customer || req.query.customer
+      const name = (
+        req.params.customer ||
+        (req.body && req.body.customer) ||
+        req.query.customer
+      )
 
       if (!name) {
         if (options.required) {

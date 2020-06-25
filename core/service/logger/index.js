@@ -2,6 +2,7 @@ const fs = require('fs')
 const App = require('../../app')
 const logger = require('../../lib/logger')(':logger')
 const config = require('config')
+const Customer = require('../../entity/customer').Entity
 
 const elastic = require('./elastic')
 const remote = require('./remote')
@@ -37,20 +38,20 @@ module.exports = {
 
 const getCustomerConfig = (customer_name) => {
   return new Promise((resolve, reject) => {
-    App.customer.getCustomerConfig({ name: customer_name }, (err, customerConfig) => {
-      if (err) {
-        logger.error('failed to fetch customer configuration.')
-        logger.error(err.message)
-        return reject(err)
+    Customer.findOne({ name: customer_name }, (error, customer) => {
+      if (error) {
+        logger.error(error)
+        return resolve(error)
       }
 
-      if (!customerConfig) {
-        // customer not configured. abort
-        logger.log('customer configuration not set.')
-        return resolve(null)
+      if (!customer) {
+        const err = new Error('customer not found')
+        err.filters = filters 
+        logger.error('%o',err)
+        return resolve(err)
       }
 
-      resolve(customerConfig)
+      resolve(customer.config || {})
     })
   })
 }

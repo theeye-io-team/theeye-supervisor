@@ -1,44 +1,67 @@
-"use strict"
-
-const config = require('config')
+const MongoDB = require('../lib/mongodb')
 const logger = require('../lib/logger')('app')
-const User = require('../entity/user').Entity
-
+//const User = require('../entity/user').Entity
 const App = {}
+const AWS = require('aws-sdk')
 
 module.exports = App
 
-Object.assign(App, {
-  config: Object.assign({}, config),
-  initialize (done) {
-    getApplicationUser((error,user) => {
-      if (error) {
-        logger.error('cannot initialize application user')
-        throw error
-      }
+App.boot = async (config) => {
 
-      App.user = user
-      logger.log('apps is ready')
-      done()
-    })
-  },
-  startApi: require('./api'),
-  startCommander: require('./commander'),
-  startMonitoring: require('./monitoring')
-})
+  App.config = config
+  await MongoDB.connect(config.mongo)
 
-const getApplicationUser = (next) => {
-  User.findOne(config.system.user, (err, user) => {
-    if (err) return next(err)
-    if (!user) {
-      // system user not found. create one
-      let user = new User(config.system.user)
-      user.save( err => {
-        if (err) return next(err)
-        next(null, user)
-      })
-    } else {
-      next(null, user)
+  const Models = require('./models')
+  const Events = require('../service/events')
+
+  Object.assign(App, Models)
+
+  const start = async () => {
+    configureAws(config.integrations.aws)
+
+    App.user = getApplicationUser()
+    StartServices()
+
+    Api()
+    Commander()
+    Monitoring()
+
+    logger.log('App is ready')
+  }
+
+  const StartServices = async () => {
+    logger.log('initializing scheduler')
+
+    App.scheduler = require('../service/scheduler')
+    await App.scheduler.initialize(config.scheduler)
+
+    App.eventDispatcher = Events.createDispatcher() 
+    App.jobDispatcher = require('../service/job')
+    //App.customer = require('../service/customer')
+    App.resource = require('../service/resource')
+    App.task = require('../service/task')
+    App.file = require('../service/file')
+    App.host = require('../service/host')
+    App.logger = require('../service/logger')
+    App.hostTemplate = require('../service/host/group')
+    App.notifications = require('../service/notification')
+    App.resourceMonitor = require('../service/resource/monitor')
+  }
+
+  const Api = require('./api')
+  const Commander = require('./commander')
+  const Monitoring = require('./monitoring')
+
+  const configureAws = (aws) => {
+    if (aws.enabled === true) { // then configure AWS SDK
+      logger.log('configuring aws integration')
+      AWS.config.update( aws.config )
     }
-  })
+  }
+
+  const getApplicationUser = () => {
+    return {}
+  }
+
+  start()
 }

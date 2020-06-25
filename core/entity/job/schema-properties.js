@@ -11,7 +11,6 @@ module.exports = {
   host_id: { type: String },
   host: { type: ObjectId, ref: 'Host' },
   user_id: { type: String },
-  user: { type: ObjectId, ref: 'User' },
   customer: { type: ObjectId, ref: 'Customer' },
   customer_id: { type: String },
   customer_name: { type: String },

@@ -15,16 +15,16 @@ const TopicsConstants = require('../constants/topics')
  * @author Facundo
  *
  */
-module.exports = function(server, passport) {
+module.exports = function(server) {
   const crudTopic = TopicsConstants.hostgroup.crud
   const middleware = [
-    passport.authenticate('bearer', {session:false}),
+    server.auth.bearerMiddleware,
     router.requireCredential('admin'),
     router.resolve.customerNameToEntity({}),
     router.ensureCustomer,
   ]
 
-  server.get('/:customer/hostgroup',middleware,controller.fetch)
+  server.get('/:customer/hostgroup', middleware, controller.fetch)
   server.post(
     '/:customer/hostgroup',
     middleware,
@@ -32,36 +32,25 @@ module.exports = function(server, passport) {
     audit.afterCreate('group', { display: 'name', topic: crudTopic })
   )
 
-  server.get('/:customer/hostgroup/:group',
-    middleware.concat(
-      router.resolve.idToEntity({
-        param: 'group',
-        entity: 'host/group',
-        required: true
-      })
-    ), controller.get
+  server.get(
+    '/:customer/hostgroup/:group',
+    middleware,
+    router.resolve.idToEntity({ param: 'group', entity: 'host/group', required: true }),
+    controller.get
   )
 
-  server.put('/:customer/hostgroup/:group',
-    middleware.concat(
-      router.resolve.idToEntity({
-        param: 'group',
-        entity: 'host/group',
-        required: true
-      })
-    ),
+  server.put(
+    '/:customer/hostgroup/:group',
+    middleware,
+    router.resolve.idToEntity({ param: 'group', entity: 'host/group', required: true }),
     controller.replace,
     audit.afterReplace('group', { display: 'name', topic: crudTopic })
   )
 
-  server.del('/:customer/hostgroup/:group',
-    middleware.concat(
-      router.resolve.idToEntity({
-        param: 'group',
-        entity: 'host/group',
-        required: true
-      })
-    ),
+  server.del(
+    '/:customer/hostgroup/:group',
+    middleware,
+    router.resolve.idToEntity({ param: 'group', entity: 'host/group', required: true }),
     controller.remove,
     audit.afterRemove('group', { display: 'name', topic: crudTopic })
   )

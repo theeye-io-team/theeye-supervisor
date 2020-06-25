@@ -1,15 +1,10 @@
-'use strict'
 
 const Agenda = require('agenda')
-const async = require('async')
 const ObjectId = require('mongoose').Types.ObjectId
 const EventEmitter = require('events').EventEmitter
 const util = require('util')
 
 const App = require('../app')
-
-// var config = require('config');
-// var format = require('util').format;
 
 const logger = require('../lib/logger')(':scheduler')
 const mongodb = require('../lib/mongodb').connection.db
@@ -17,7 +12,6 @@ const Host = require('../entity/host').Entity
 const Task = require('../entity/task').Entity
 const Script = require('../entity/file').Script
 const Customer = require('../entity/customer').Entity
-const User = require('../entity/user').Entity
 
 const JobConstants = require('../constants/jobs')
 const LifecycleConstants = require('../constants/lifecycle')
@@ -34,85 +28,30 @@ function Scheduler () {
 }
 
 // give the scheduler the hability to emit events
-util.inherits(Scheduler, EventEmitter);
+util.inherits(Scheduler, EventEmitter)
 
 Scheduler.prototype = {
-  initialize (ready) {
-    var self = this;
-    this.agenda.on('ready', function(){
-      logger.log('scheduler is ready');
-      ready();
-      self.setupAgenda();
-    });
-    this.agenda.start();
-  },
-  setupAgenda () {
-    var self = this;
-    var agenda = this.agenda;
+  initialize (config) {
+    return new Promise((resolve, reject) => {
+      let agenda = this.agenda
 
-    /**
-     *
-     * task execution handler. cron.
-     *
-     * handle scheduled task creation
-     *
-     */
-    agenda.define('task', function (job, done) {
-      logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
-      logger.log('||  Agenda Job Processor: task event         ||')
-      logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
+      agenda.on('ready', () => {
+        logger.log('Scheduler API is connected')
 
-      self.taskProcessor(job, done)
-    });
+        if (config.enabled !== true) {
+          logger.warn('WARNING! Scheduler JOBS are disabled by config')
+        } else if (process.env.SCHEDULER_JOBS_DISABLED === 'true') {
+          logger.warn('WARNING! Scheduler JOBS are disabled by ENV: SCHEDULER_JOBS_DISABLED="true"')
+        } else {
+          logger.log('Preparing scheduler jobs queues')
+          setupAgendaJobs(agenda)
+        }
 
-    /**
-     *
-     * job execution timeout handler.
-     *
-     * check lifecycle of jobs under execution
-     *
-     */
-    agenda.define('job-timeout', async function (agendaJob, done) {
-      try {
-        logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
-        logger.log('||  Agenda Job Processor: job-timeout event  ||')
-        logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
-        let jobData = agendaJob.attrs.data
-        await App.jobDispatcher.jobExecutionTimedOut(jobData.job_id)
-        await agendaJob.remove()
-      } catch (err) {
-        agendaJob.fail(err)
-        await agendaJob.save()
-      }
-      done()
+        resolve()
+      })
+
+      agenda.start()
     })
-
-    agenda.on('start', function(job) {
-      logger.log('job %s started', job.attrs.name);
-    });
-
-    agenda.on('complete', function(job) {
-      logger.log('job %s completed', job.attrs.name);
-      //TODO nice place to check for schedules and ensure tag
-    });
-
-    agenda.on('error', function(err, job) {
-      logger.log('job %s error %j', job.name, err.stack);
-    });
-
-    agenda.on('fail', function(err, job) {
-      logger.log('job %s failed %j', job.name, err.stack);
-    });
-
-    // Unlock agenda events when process finishes
-    function graceful() {
-      logger.log('SIGTERM/SIGINT agenda graceful stop');
-      agenda.stop(function(){});
-      // process.exit(0);
-    }
-
-    process.on('SIGTERM', graceful);
-    process.on('SIGINT', graceful);
   },
   /**
    * schedules a task
@@ -120,207 +59,243 @@ Scheduler.prototype = {
    * @property {String} input.origin job schedule creator
    * @property {Task} input.task the task definition
    */
-  scheduleTask (input, done) {
-    const task = input.task
-    const customer = input.customer
-    const user = input.user
-    const schedule = input.schedule
+  async scheduleTask (input, done) {
+    try {
+      const task = input.task
+      const customer = input.customer
+      const user = input.user
+      const schedule = input.schedule
 
-    const data = {
-      task_id: task._id,
-      name: task.name,
-      user_id: App.user._id,
-      customer_id: customer._id,
-      customer_name: customer.name,
-      lifecycle: LifecycleConstants.READY,
-      notify: input.notify || false,
-      scheduleData: schedule,
-      origin: input.origin
+      const data = {
+        task_id: task._id,
+        name: task.name,
+        user_id: App.user.id,
+        customer_id: customer.id,
+        customer_name: customer.name,
+        lifecycle: LifecycleConstants.READY,
+        notify: input.notify || false,
+        scheduleData: schedule,
+        origin: input.origin
+      }
+
+      // runDate is miliseconds
+      let date = new Date(schedule.runDate)
+      let frequency = schedule.repeatEvery || false
+      let job = await this.schedule(date, 'task', data, frequency)
+      return done(null, job)
+    } catch (err) {
+      return done(err)
     }
-
-    // runDate is miliseconds
-    var date = new Date(schedule.runDate)
-    var frequency = schedule.repeatEvery || false
-
-    this.schedule(date, 'task', data, frequency, (err,job) => {
-      if (err) { return done(err) }
-      done(null,job)
-    })
   },
-  /*
-  * Given a task, this method will ensure it has a 'scheduled' tag
-  */
-  //tagThatTask (task, callback) {
-  //  var tags = [].concat(task.tags);
-  //  if (tags.indexOf("scheduled") === -1) {
-  //    tags.push("scheduled");
-  //    task.update({tags:tags}, callback);
-  //  } else {
-  //    callback();
-  //  }
-  //},
-  // When untaggin we only got ID, find and check
-  //untagTask (task, callback) {
-  //  var tags = [].concat(task.tags);
-  //  if(tags.indexOf("scheduled") !== -1) {
-  //    tags.splice(tags.indexOf("scheduled"),1);
-  //    task.update({tags:tags}, callback);
-  //  }else{
-  //    callback();
-  //  }
-  //},
-  //handleScheduledTag (task, callback) {
-  //  if(!task) {
-  //    var err = new Error('Missing task');
-  //    err.statusCode = 400;
-  //    return callback(err);
-  //  }
-  //  var self = this;
-  //  this.taskSchedulesCount(task, function (err, count) {
-  //    if (err) return callback(err);
-  //    if (count) { //has schedules
-  //      self.tagThatTask(task, callback);
-  //    } else {
-  //      self.untagTask(task, callback);
-  //    }
-  //  });
-  //},
   /**
    * Schedules a job for its starting date and parsing its properties
+   *
+   * @return {Promise}
    */
-  schedule (starting, jobName, data, interval, done) {
-    var agendaJob = this.agenda.create(jobName, data);
-    agendaJob.schedule(starting);
-    logger.log("agendaJob.schedule %s", starting);
+  schedule (starting, jobName, data, interval) {
+    let agendaJob = this.agenda.create(jobName, data)
+    agendaJob.schedule(starting)
+    logger.log("agendaJob.schedule %s", starting)
     if (interval) {
-      logger.log("repeatEvery %s", interval);
-      agendaJob.repeatEvery(interval);
+      logger.log("repeatEvery %s", interval)
+      agendaJob.repeatEvery(interval)
     }
-    agendaJob.save(done);
+    return agendaJob.save()
   },
-  getTaskSchedule (taskId, callback) {
-    if (!taskId) return callback(new Error('task id required'))
-
-    this.agenda.jobs({
-      $and:[
-        {name: 'task'},
-        {'data.task_id': taskId},
-        {nextRunAt: {$ne: null}}
-      ]
-    }, callback)
-  },
-  // searches for task jobs of a given customer id
-  // TODO method naming could be improved if it's not gonna be a generic getter
-  getSchedules (cid, callback) {
-    if (!cid) {
-      return callback(new Error('user id must be provided'));
+  async getTaskSchedule (taskId, callback) {
+    if (!taskId) {
+      let err = new Error('task id required')
+      return callback(err)
     }
 
-    this.agenda.jobs({
-      $and:[
-        {name: 'task'},
-        {'data.customer_id': cid}
-      ]
-    }, callback)
+    try {
+      let jobs = await this.agenda.jobs({
+        $and: [
+          { name: 'task' },
+          { 'data.task_id': taskId },
+          { nextRunAt: { $ne: null } }
+        ]
+      })
+      callback(null, jobs)
+    } catch (err) {
+      callback(err)
+    }
+  },
+  async getSchedules (customerId, callback) {
+    if (!customerId) {
+      let err = new Error('customer id must be provided')
+      return callback(err)
+    }
+
+    try {
+      let jobs = await this.agenda.jobs({
+        $and: [
+          { name: 'task' },
+          { 'data.customer_id': customerId }
+        ]
+      })
+
+      callback(null, jobs)
+    } catch (err) {
+      callback(err)
+    }
   },
   // Counts schedules for the given task
   // @param callback: Function (err, schedulesCount)
   taskSchedulesCount (task, callback) {
-    this.getTaskSchedule(task._id, function(err, schedules){
-      return callback(err, err ? 0 : schedules.length);
-    });
+    this.getTaskSchedule(task._id, (err, schedules) => {
+      return callback(err, err ? 0 : schedules.length)
+    })
   },
   //Cancels a specific scheduleId. Task is provided for further processing
-  cancelTaskSchedule (task, scheduleId, callback) {
-    if(!scheduleId) return callback(new Error('schedule id must be provided'));
-
-    var self = this;
-    // la verdad es que con el schedule id alcanza
-    this.agenda.cancel({
-      $and:[
-        {name: 'task'},
-        {_id: new ObjectId(scheduleId)}
-      ]
-    }, function(err, numRemoved){
-      if(err) return callback(err);
-      callback();
-      // numRemoved is lost through the callbacks, don't count on it
-      //self.handleScheduledTag(task,function(){});
-    });
-  },
-  // deletes ALL schedules for a given task
-  unscheduleTask (task, callback) {
-    this.agenda.cancel({
-      $and: [
-        { name: 'task' },
-        { "data.task_id": task._id }
-      ]
-    }, callback);
-  },
-  taskProcessor (agendaJob, done) {
-    var jobData = agendaJob.attrs.data
-
-    function JobError (err) {
-      agendaJob.fail(err)
-      agendaJob.save()
-      return done(err)
+  async cancelTaskSchedule (task, scheduleId, callback) {
+    if (!scheduleId) {
+      let err = new Error('schedule id must be provided')
+      return callback(err)
     }
 
-    Task.findById(jobData.task_id, (err, task) => {
-      if (err) { return new JobError(err) }
-      if (!task) {
-        let err = new Error('task %s is no longer available', jobData.task_id)
-        return new JobError(err)
-      }
-
-      verifyTask(task, (err, data) => {
-        if (err) { return new JobError(err) }
-        App.jobDispatcher.create({
-          task,
-          user: App.user,
-          customer: data.customer,
-          notify: true,
-          origin: JobConstants.ORIGIN_SCHEDULER
-        }, (err, job) => {
-          if (err) { return new JobError(err) }
-          done()
-        })
+    try {
+      let numRemoved = await this.agenda.cancel({
+        $and: [
+          { name: 'task' },
+          { _id: new ObjectId(scheduleId) }
+        ]
       })
+      callback(null, numRemoved)
+    } catch (err) {
+      callback(err)
+    }
+  },
+  // deletes ALL schedules for a given task
+  unscheduleTask (task) {
+    return this.agenda.cancel({
+      $and: [
+        { name: 'task' },
+        { 'data.task_id': task._id }
+      ]
     })
   }
 }
 
-const verifyTask = (task, done) => {
-  async.parallel({
-    customer: callback => Customer.findById(task.customer_id, callback),
-    host: callback => Host.findById(task.host_id, callback),
-    script: callback => {
-      if (task.type === 'script') {
-        Script.findById(task.script_id, callback)
-      } else {
-        callback()
-      }
-    }
-  }, (err, data) => {
-    if (err) { return done(err) }
+const setupAgendaJobs = (agenda) => {
+  /**
+   *
+   * task execution handler. cron.
+   *
+   * handle scheduled task creation
+   *
+   */
+  agenda.define('task', async job => {
+    logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
+    logger.log('||  Agenda Job Processor: task event         ||')
+    logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
 
-    if (!data.customer) {
-      let err = new Error('customer ' + task.customer_id + ' is no longer available')
-      return done(err)
-    }
-
-    if (!data.host) {
-      let err = new Error('host ' + task.host_id + ' is no longer available')
-      return done(err)
-    }
-
-    if (task.type==='script' && !data.script) {
-      let err = new Error('script ' + task.script_id + ' is no longer available')
-      return done(err)
-    }
-
-    return done(null, data)
+    return await taskProcessor(job)
   })
+
+  /**
+   *
+   * job execution timeout handler.
+   *
+   * check lifecycle of jobs under execution
+   *
+   */
+  agenda.define('job-timeout', async function (agendaJob, done) {
+    try {
+      logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
+      logger.log('||  Agenda Job Processor: job-timeout event  ||')
+      logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
+      let jobData = agendaJob.attrs.data
+      await App.jobDispatcher.jobExecutionTimedOut(jobData.job_id)
+      await agendaJob.remove()
+    } catch (err) {
+      agendaJob.fail(err)
+      await agendaJob.save()
+    }
+    done()
+  })
+
+  agenda.on('start', (job) => {
+    logger.log('job %s started', job.attrs.name)
+  })
+
+  agenda.on('complete', (job) => {
+    logger.log('job %s completed', job.attrs.name)
+    //TODO nice place to check for schedules and ensure tag
+  })
+
+  agenda.on('error', (err, job) => {
+    logger.log('job %s error %j', job.name, err.stack)
+  })
+
+  agenda.on('fail', (err, job) => {
+    logger.log('job %s failed %j', job.name, err.stack)
+  })
+
+  // Unlock agenda events when process finishes
+  const graceful = () => {
+    logger.log('SIGTERM/SIGINT agenda graceful stop')
+    agenda.stop(function(){})
+    //process.exit(0)
+  }
+
+  process.on('SIGTERM', graceful)
+  process.on('SIGINT', graceful)
+}
+
+const taskProcessor = async (agendaJob) => {
+  try {
+    const { task_id } = agendaJob.attrs.data
+    const task = await Task.findById(task_id)
+
+    if (!task) {
+      throw new Error('task %s is no longer available', task_id)
+    }
+
+    const [ customer ] = await verifyTask(task)
+
+    let payload = {
+      task,
+      customer,
+      user: App.user,
+      notify: true,
+      origin: JobConstants.ORIGIN_SCHEDULER
+    }
+
+    return await App.jobDispatcher.create(payload)
+  } catch (err) {
+    logger.error(err)
+    agendaJob.fail(err)
+    return await agendaJob.save()
+  }
+}
+
+/**
+ * @return {Array}
+ */
+const verifyTask = async (task, done) => {
+  let customer = Customer.findById(task.customer_id)
+  let host = Host.findById(task.host_id)
+  let script
+  if (task.type === 'script') {
+    script = Script.findById(task.script_id)
+  }
+
+  let data = await Promise.all([ customer, host, script ])
+
+  if (!data[0]) {
+    throw new Error(`customer ${task.customer_id} is no longer available`)
+  }
+
+  if (!data[1]) {
+    throw new Error(`host ${task.host_id} is no longer available`)
+  }
+
+  if (task.type === 'script' && ! data[2]) {
+    throw new Error(`script ${task.script_id} is no longer available`)
+  }
+
+  return data
 }
 
 module.exports = new Scheduler()

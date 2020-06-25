@@ -3,9 +3,9 @@
 var Tag = require('../entity/tag').Entity;
 var router = require('../router');
 
-module.exports = function(server, passport){
+module.exports = function(server){
   server.get('/:customer/tag',[
-    passport.authenticate('bearer', {session:false}),
+    server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer
   ], controller.get);

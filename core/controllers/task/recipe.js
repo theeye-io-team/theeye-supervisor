@@ -3,11 +3,11 @@ const logger = require('../../lib/logger')('controller:task:recipe');
 const router = require('../../router');
 const TaskConstants = require('../../constants')
 
-module.exports = (server, passport) => {
+module.exports = (server) => {
   server.get(
-    '/task/:task/recipe',
+    '/:customer/task/:task/recipe',
     [
-      passport.authenticate('bearer', { session: false }),
+      server.auth.bearerMiddleware,
       router.resolve.customerNameToEntity({ required: true }),
       router.ensureCustomer,
       router.requireCredential('admin'),
@@ -18,9 +18,9 @@ module.exports = (server, passport) => {
   )
 
   server.post(
-    '/task/import',
+    '/:customer/task/import',
     [
-      passport.authenticate('bearer', { session: false }),
+      server.auth.bearerMiddleware,
       router.resolve.customerNameToEntity({ required: true }),
       router.ensureCustomer,
       router.requireCredential('admin'),

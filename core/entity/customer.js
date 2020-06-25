@@ -1,8 +1,6 @@
-"use strict";
-
-const mongodb = require("../lib/mongodb");
-const mongoose = require('mongoose');
-const util = require('util');
+const mongodb = require('../lib/mongodb')
+const mongoose = require('mongoose')
+const util = require('util')
 
 function Schema () {
   mongoose.Schema.call(this,{
@@ -15,29 +13,30 @@ function Schema () {
     },
     description: { type: String, default: '' },
     owner_id: { type: mongoose.Schema.Types.ObjectId },
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-    agent: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-    config: { type: Object, default: function(){
-      return {
-        monitor: {},
-        kibana: null,
-        elasticsearch: {
-          enabled: false,
-          url: ''
-        },
-        ngrok: {
-          enabled: false,
-          authtoken: '',
-          address: '',
-          protocol: ''
+    //owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    //agent: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    config: {
+      type: Object,
+      default: () => {
+        return {
+          monitor: {},
+          kibana: null,
+          elasticsearch: {
+            enabled: false,
+            url: ''
+          },
+          ngrok: {
+            enabled: false,
+            authtoken: '',
+            address: '',
+            protocol: ''
+          }
         }
       }
-    } },
-    creation_date: {
-      type: Date,
-      default: new Date()
-    }
-  });
+    },
+    creation_date: { type: Date, default: new Date() },
+    last_update: { type: Date, default: new Date() },
+  })
 
   // Duplicate the ID field.
   this.virtual('id').get(function(){

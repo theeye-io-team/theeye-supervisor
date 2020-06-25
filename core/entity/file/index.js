@@ -10,7 +10,6 @@ ScriptSchema.statics.create = function (data,next) {
     customer: data.customer_id,
     customer_id: data.customer_id,
     customer_name: data.customer_name,
-    user_id: data.user_id,
     filename: data.filename,
     keyname: data.keyname,
     mimetype: data.mimetype,

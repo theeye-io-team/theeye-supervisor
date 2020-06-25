@@ -21,7 +21,6 @@ const FileModel = require('../../../entity/file')
 const Monitor = require('../../../entity/monitor').Entity
 const Resource = require('../../../entity/resource').Entity
 const Task = require('../../../entity/task').Entity
-const AgentUpdateJob = require('../../../entity/job').AgentUpdate
 const ResourceTemplateService = require('../../../service/resource/template')
 
 //exports.Monitor = require('./monitor')
@@ -64,7 +63,7 @@ const Service = module.exports = {
               logger.log('all removed')
               if (hosts.length>0) {
                 hosts.forEach(host => {
-                  AgentUpdateJob.create({ host_id: host._id })
+                  App.jobDispatcher.createAgentUpdateJob( host._id )
                 })
               }
             })
@@ -124,8 +123,8 @@ const Service = module.exports = {
       files: [],
       tasks: [],
       resources: [],
-      user_id: user._id,
-      customer_id: customer._id,
+      user_id: user.id,
+      customer_id: customer.id,
       customer_name: customer.name,
       hosts: findAndRemove(input.host_origin, input.hosts.slice())
     })
@@ -145,8 +144,8 @@ const Service = module.exports = {
         public: false,
         customer: customer._id,
         customer_id: customer._id,
-        user: user._id,
-        user_id: user._id,
+        //user: user.id,
+        user_id: user.id,
         name: group.name,
         description: group.description,
         instructions: { resources, tasks, triggers, files },
@@ -289,7 +288,7 @@ const Service = module.exports = {
             findHost(delHosts[i], (err,host) => {
               if (err || !host) return
               unlinkHostFromTemplate(host, group, keepInstances, (err) => {
-                AgentUpdateJob.create({ host_id: host._id })
+                App.jobDispatcher.createAgentUpdateJob( host._id )
               })
             })
           }
@@ -580,16 +579,17 @@ const generateTemplates = (input, done) => {
         if (!file.source_model_id) { continue }
         for (let rdx = 0; rdx < resources.length; rdx++) {
           let resource = resources[rdx]
+          let monitorData = Object.assign({}, resources.monitor, resource.monitor.config)
           if (resource.type === 'file') {
-            if (resource.monitor.config.file === file.source_model_id.toString()) {
-              resource.monitor.config.file = file._id.toString()
+            if (monitorData.file === file.source_model_id.toString()) {
+              monitorData.file = file._id.toString()
               //resources.splice(rdx, 1)
               //break
             }
           } else if (resource.type === 'script') {
-            if (resource.monitor.config && resource.monitor.config.script_id) {
-              if (resource.monitor.config.script_id === file.source_model_id.toString()) {
-                resource.monitor.config.script_id = file._id.toString()
+            if (monitorData.script_id) {
+              if (monitorData.script_id === file.source_model_id.toString()) {
+                monitorData.script_id = file._id.toString()
                 //resources.splice(rdx, 1)
                 //break
               }
@@ -916,7 +916,7 @@ const copyTemplateToHost = (host, template, customer, next) => {
           logger.log('all entities processed')
           logger.log(tasks)
 
-          AgentUpdateJob.create({ host_id: host._id })
+          App.jobDispatcher.createAgentUpdateJob( host._id )
 
           next()
         })

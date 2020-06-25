@@ -4,10 +4,10 @@ const job = require('./job')
 const triggers = require('./triggers')
 const integrations = require('./integrations')
 
-module.exports = (server, passport) => {
-  crud(server, passport)
-  job(server, passport)
-  graph(server, passport)
-  triggers(server, passport)
-  integrations(server, passport)
+module.exports = (server) => {
+  job(server)
+  crud(server)
+  graph(server)
+  triggers(server)
+  integrations(server)
 }

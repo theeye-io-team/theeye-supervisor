@@ -35,39 +35,44 @@ exports.ApprovalTask = ApprovalTask
 exports.DummyTask = DummyTask
 exports.NotificationTask = NotificationTask
 
+const ClassesMap = {}
+ClassesMap[ TaskConstants.TYPE_SCRIPT ] = function (input) {
+  let task = new ScriptTask(input)
+  // keep backward compatibility with script_arguments
+  task.script_arguments = input.task_arguments
+
+  if (input.script_runas) {
+    task.script_runas = input.script_runas
+    if (/%script%/.test(input.script_runas) === false) {
+      task.script_runas += ' %script%'
+    }
+  }
+  return task
+}
+ClassesMap[ TaskConstants.TYPE_SCRAPER ] = ScraperTask
+ClassesMap[ TaskConstants.TYPE_APPROVAL ] = ApprovalTask
+ClassesMap[ TaskConstants.TYPE_DUMMY ] = DummyTask
+ClassesMap[ TaskConstants.TYPE_NOTIFICATION ] = function (input) {
+  if (
+    !Array.isArray(input.task_arguments) ||
+    input.task_arguments.length === 0
+  ) {
+    delete input.task_arguments
+  }
+  return new NotificationTask(input)
+}
+
 exports.Factory = {
   create (input) {
-    if (input.type == TaskConstants.TYPE_SCRAPER) {
-      input._type = 'ScraperTask'
-      return new ScraperTask(input)
-    }
+    delete input._type
+    delete input.creation_date
+    delete input.last_update
+    delete input.secret
+    input.customer = input.customer_id
 
-    if (input.type == TaskConstants.TYPE_APPROVAL) {
-      input._type = 'ApprovalTask'
-      return new ApprovalTask(input)
+    if (ClassesMap.hasOwnProperty(input.type)) {
+      return new ClassesMap[input.type](input)
     }
-
-    if (input.type == TaskConstants.TYPE_DUMMY) {
-      input._type = 'DummyTask'
-      return new DummyTask(input)
-    }
-
-    if (input.type == TaskConstants.TYPE_NOTIFICATION) {
-      input._type = 'NotificationTask'
-      if (
-        !Array.isArray(input.task_arguments) ||
-        input.task_arguments.length === 0
-      ) {
-        delete input.task_arguments
-      }
-      return new NotificationTask(input)
-    }
-
-    if (input.type == TaskConstants.TYPE_SCRIPT) {
-      input._type = 'ScriptTask'
-      return new ScriptTask(input)
-    }
-
     throw new Error('invalid error type ' + input.type)
   }
 }

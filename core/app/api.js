@@ -1,8 +1,6 @@
 const restify = require('restify')
-const multer = require('multer')
 const config = require('config')
 const router = require('../router')
-const auth = require('../lib/auth')
 const logger = require('../lib/logger')(':app:api')
 
 module.exports = function () {
@@ -12,16 +10,24 @@ module.exports = function () {
   }
 
   const server = restify.createServer({ strictNext: true })
-  const passport = auth.initialize()
 
   server.pre((req, res, next) => {
-    logger.log('REQUEST %s %s', req.method, req.url)
+    logger.log('REQUEST %s %s %j', req.method, req.url, req.headers)
     next()
   })
 
   server.pre((req, res, next) => { // CORS
-    res.header('Access-Control-Allow-Origin', '*')
+    let origin = (req.headers && (req.headers.origin||req.headers.Origin))
+    //intercepts OPTIONS method
+    if (origin) {
+      res.header('Access-Control-Allow-Origin', origin)
+    } else {
+      res.header('Access-Control-Allow-Origin', '*')
+    }
+
     res.header('Access-Control-Allow-Methods', 'GET,PUT,PATCH,POST,DELETE,OPTIONS')
+    res.header('Access-Control-Allow-Credentials', 'true')
+
     let headers = [
       'Origin',
       'Accept',
@@ -34,11 +40,12 @@ module.exports = function () {
       'Content-Length',
       'X-Requested-With'
     ]
+
     res.header("Access-Control-Allow-Headers", headers.join(', '))
-    //intercepts OPTIONS method
+
     if ('options' === req.method.toLowerCase()) {
       //respond with 200
-      res.send(200)
+      res.send(204)
     } else {
       //move on
       next()
@@ -60,17 +67,15 @@ module.exports = function () {
   })
 
   let plugins = restify.plugins
+  server.acceptable = server.acceptable.concat(
+    server.acceptable.map(accept => `${accept};charset=UTF-8`)
+  )
+
   server.use(plugins.acceptParser(server.acceptable))
   server.use(plugins.gzipResponse())
   server.use(plugins.queryParser())
   server.use(plugins.bodyParser())
-  server.use(passport.initialize())
-  server.use(multer({
-    dest: config.system.file_upload_folder,
-    rename: (fieldname, filename) => {
-      return filename
-    }
-  }))
+  //server.use(passport.initialize())
 
   server.on('uncaughtException', (req, res, route, error) => {
     logger.error('Message Error: %s', error.message)
@@ -79,9 +84,9 @@ module.exports = function () {
   })
 
   // Routing the controllers
-  router.loadControllers(server, passport)
+  router.loadControllers(server)
 
   server.listen(config.server.port || 60080, () => {
-    logger.log('TheEye server started. listening at "%s"', server.url)
+    logger.log('TheEye API started. Listening at "%s"', server.url)
   })
 }

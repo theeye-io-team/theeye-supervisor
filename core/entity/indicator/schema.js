@@ -14,8 +14,6 @@ class IndicatorSchema extends BaseSchema {
     const specs = { collection: 'indicators' }
     const baseProps = {
       customer_name: { type: String, required: true },
-      user_id: { type: ObjectId }, // owner/creator
-      user: { type: ObjectId, ref: 'User' },
       description: { type: String },
       title: { type: String, required: true, index: true },
       acl: [{ type: String }],
@@ -53,8 +51,6 @@ class IndicatorSchema extends BaseSchema {
         ret.id = ret._id
         delete ret._id
         delete ret.__v
-
-        delete ret.user
         delete ret.customer
       }
     }

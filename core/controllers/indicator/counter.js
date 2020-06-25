@@ -5,9 +5,9 @@ const logger = require('../../lib/logger')('eye:controller:indicator:counter')
 const TopicsConstants = require('../../constants/topics')
 const Constants = require('../../constants')
 
-module.exports = function (server, passport) {
+module.exports = function (server) {
   var middlewares = [
-    passport.authenticate('bearer', { session: false }),
+    server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer
   ]
@@ -91,6 +91,7 @@ const notifyEvent = (options) => {
       data: {
         operation,
         organization: req.customer.name,
+        organization_id: req.customer._id,
         model_type: indicator._type,
         model: indicator
       }

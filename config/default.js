@@ -4,8 +4,7 @@ module.exports = {
   server: {
     name: "TheEye",
     version: process.env.VERSION || undefined,
-    port: process.env.PORT || 60080,
-    auth_strategy: "bearer"
+    port: process.env.PORT || 60080
   },
   system: {
     base_url: "http://127.0.0.1:60080",
@@ -60,8 +59,18 @@ module.exports = {
    *
    */
   mongo: {
-    hosts: "localhost:27017",
-    database: "theeye"
+    debug: false,
+    user: "",
+    password: "",
+    hosts: "127.0.0.1:27017",
+    database: "theeye",
+    // sample uri
+    // uri: mongodb+srv://<user>:<password>@<host>/<db>?retryWrites=true&w=majority
+    // options are passed directly to the mongo-native driver
+    options: {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    }
   },
   /**
    *
@@ -88,9 +97,10 @@ module.exports = {
     reply_to: "Info <info@theeye.io>",
     only_support: false,
     include_support_bcc: false,
-    support: [],
+    support: [ "facugon@theeye.io" ],
     transport: {
-      type: "sendmail"
+      type: "sendmail",
+      options: { }
     }
   },
   logger: {
@@ -112,6 +122,9 @@ module.exports = {
       enabled: true
     }
   },
+  scheduler: {
+    enabled: true // enabled-disable jobs scheduler. will not listen to job events
+  },
   /**
    *
    * notifications api configuration.
@@ -120,10 +133,20 @@ module.exports = {
    */
   notifications: {
     api: {
-      timeout: 5000,
       // outgoing requests secret passphrase
       secret: '77E0EAF3B83DD7A7A4004602626446EADED31BF794956FC9BBAD051FA5A25038',
-      url: process.env.CONFIG_NOTIFICATIONS_API_URL || "" // e.g. "url": "http://127.0.0.1:6080/notification" // the same web server
+      timeout: 5000,
+      url: process.env.CONFIG_NOTIFICATIONS_API_URL || "http://127.0.0.1:6080/api/notification"
+    }
+  },
+  authentication: {
+    // same key must be in every internal service
+    secret: '692fc164a0c06a9fd02575cf17688c9e',
+    protocol: 'http', // http or https
+    api: {
+      timeout: 5000,
+      host: '127.0.0.1',
+      port: '6080'
     }
   },
   /**
@@ -136,7 +159,7 @@ module.exports = {
     aws: {
       enabled: true,
       config: {
-        username:"",
+        username: "",
         accessKeyId: "",
         secretAccessKey: "",
         region: ""

@@ -1,114 +1,96 @@
-'use strict';
 
+const App = require('../app')
 const Constants = require('../constants')
 const MonitorsConstants = require('../constants/monitors')
-var json = require('../lib/jsonresponse');
-var HostStats = require('../entity/host/stats').Entity;
-var NotificationService = require('../service/notification');
-var logger = require('../lib/logger')('controller:dstat');
-var router = require('../router');
-var ResourceManager = require('../service/resource');
+const HostStats = require('../entity/host/stats').Entity;
+const logger = require('../lib/logger')('controller:dstat');
+const router = require('../router');
 
 const TopicsConstants = require('../constants/topics')
 
-module.exports = function (server, passport) {
+module.exports = function (server) {
   const middlewares = [
-    passport.authenticate('bearer',{session:false}),
+    server.auth.bearerMiddleware,
     router.requireCredential('agent',{exactMatch:true}),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,
     router.resolve.hostnameToHost({required:true})
   ]
 
-	server.post(
-    '/:customer/psaux/:hostname',
-    middlewares,
-    controller.create
-  )
-
-  /**
-   *
-   * KEEP ROUTE FOR OUTDATED AGENTS
-   *
-   */
-	server.post(
-    '/psaux/:hostname',
-    middlewares,
-    controller.create
-  )
+	server.post('/:customer/psaux/:hostname', middlewares, create)
+	server.post('/psaux/:hostname', middlewares, create)
 }
 
-const controller = {
-  create (req, res, next) {
-    var host = req.host
-    var stats = req.body.psaux
+const create = async (req, res, next) => {
+  try {
+    let host = req.host
+    let stats = req.body.psaux
 
     if (!host) {
-      var errmsg = 'host is not valid or was removed'
-      logger.error(errmsg)
-      return res.send(400,errmsg)
+      let err = new Error('host is not valid or was removed')
+      err.statusCode = 400
+      throw err
     }
+
     if (!stats) {
-      return res.send(400,'psaux data required')
+      let err = new Error('processes data required')
+      err.statusCode = 400
+      throw err
     }
 
-    logger.log('Handling host psaux data');
+    logger.log('Handling host psaux data')
 
-    const topic = TopicsConstants.host.processes
-
-    HostStats.findOne({
+    let psaux = await HostStats.findOne({
       host_id: host._id,
-      type: 'psaux'
-    },function(error,psaux){
-      if (error) {
-        return logger.error(error);
-      }
+      type: MonitorsConstants.RESOURCE_TYPE_PSAUX
+    })
 
-      if (psaux === null) {
-        logger.log('creating host psaux');
-        HostStats.create(host,'psaux',stats,(err,psaux) => {
-          NotificationService.generateSystemNotification({
-            topic: topic,
-            data: {
-              model_type: 'HostStats',
-              model: psaux,
-              hostname: host.hostname,
-              organization: host.customer_name,
-              operation: Constants.CREATE
-            }
-          })
-        })
-      } else {
-        logger.log('updating host psaux')
-        var date = new Date()
-        psaux.last_update = date
-        psaux.last_update_timestamp = date.getTime()
-        psaux.stats = stats
-        psaux.save()
-
-        NotificationService.generateSystemNotification({
-          topic: topic,
+    if (psaux === null) {
+      logger.log('creating host psaux')
+      HostStats.create(host, MonitorsConstants.RESOURCE_TYPE_PSAUX, stats, (err, psaux) => {
+        App.notifications.generateSystemNotification({
+          topic: TopicsConstants.host.processes,
           data: {
             model_type: 'HostStats',
             model: psaux,
             hostname: host.hostname,
             organization: host.customer_name,
-            operation: Constants.REPLACE
+            operation: Constants.CREATE
           }
         })
-      }
-    });
+      })
+    } else {
+      logger.log('updating host psaux')
+      var date = new Date()
+      psaux.last_update = date
+      psaux.last_update_timestamp = date.getTime()
+      psaux.stats = stats
+      psaux.save()
 
-    ResourceManager.findHostResources(host,{
-      type:'psaux',
-      ensureOne:true
-    },(err,resource)=>{
-      if(err||!resource)return;
-      var handler = new ResourceManager(resource);
+      App.notifications.generateSystemNotification({
+        topic: TopicsConstants.host.processes,
+        data: {
+          model_type: 'HostStats',
+          model: psaux,
+          hostname: host.hostname,
+          organization_id: host.customer_id,
+          organization: host.customer_name,
+          operation: Constants.REPLACE
+        }
+      })
+    }
+
+    App.resource.findHostResources(host, { type: 'psaux', ensureOne: true }, (err, resource) => {
+      if (!resource) { return }
+      let handler = new App.resource(resource)
       handler.handleState({ state: MonitorsConstants.RESOURCE_NORMAL })
-    });
+    })
 
     res.send(200)
     return next()
+
+  } catch (err) {
+    logger.error(err)
+    res.send(err.statusCode, err.message)
   }
-};
+}

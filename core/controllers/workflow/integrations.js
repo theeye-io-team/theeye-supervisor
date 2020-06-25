@@ -2,17 +2,15 @@ const App = require('../../app')
 const logger = require('../../lib/logger')('controller:task:integrations');
 const router = require('../../router');
 
-module.exports = (server, passport) => {
+module.exports = (server) => {
   server.get(
-    '/workflow/:workflow/credentials',
-    [
-      passport.authenticate('bearer', { session: false }),
-      router.resolve.customerNameToEntity({ required: true }),
-      router.ensureCustomer,
-      router.requireCredential('admin'),
-      router.resolve.idToEntity({ param: 'workflow', required: true }),
-      router.ensureAllowed({ entity: { name: 'workflow' } })
-    ],
+    '/workflows/:workflow/credentials',
+    server.auth.bearerMiddleware,
+    router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param: 'workflow', required: true }),
+    router.ensureAllowed({ entity: { name: 'workflow' } }),
     controller.credentials
   )
 }

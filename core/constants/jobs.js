@@ -9,6 +9,8 @@ exports.WORKFLOW_TYPE = 'WorkflowJob'
 exports.DEFAULT_TYPE = 'Job'
 exports.AGENT_UPDATE_TYPE = 'AgentUpdateJob'
 
+exports.NGROK_INTEGRATION_TYPE = 'NgrokIntegrationJob'
+
 exports.ORIGIN_SECRET = 'secret'
 exports.ORIGIN_USER = 'user'
 exports.ORIGIN_WORKFLOW = 'workflow'

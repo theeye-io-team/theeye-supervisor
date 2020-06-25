@@ -1,39 +1,44 @@
-'use strict';
 
-const debug = require('debug');
+const debug = require('debug')
+const os = require('os')
 
 function Logger (name) {
-  var self = {}
+  const self = {}
 
-  var dlog = debug('theeye:log:' + name)
-  var ddata = debug('theeye:data:' + name)
-  var dwarn = debug('theeye:warn:' + name)
-  var derror = debug('theeye:error:' + name)
-  var ddebug = debug('theeye:debug:' + name)
+  let message = `theeye:%LEVEL%:${name}`
+  if (process.env.THEEYE_NODE_HOSTNAME) {
+    message = `${process.env.THEEYE_NODE_HOSTNAME} ${message}`
+  }
+
+  const ddata  = debug(message.replace('%LEVEL%','data'))
+  const ddebug = debug(message.replace('%LEVEL%','debug'))
+  const dlog   = debug(message.replace('%LEVEL%','log'))
+  const dwarn  = debug(message.replace('%LEVEL%','warn'))
+  const derror = debug(message.replace('%LEVEL%','error'))
 
   self.log = function flog(){
-    dlog.apply(self, arguments);
-  };
+    dlog.apply(self, arguments)
+  }
 
   self.error = function ferror(){
-    derror.apply(self, arguments);
-  };
+    derror.apply(self, arguments)
+  }
 
   self.warn = function fwarn(){
-    dwarn.apply(self, arguments);
-  };
+    dwarn.apply(self, arguments)
+  }
 
   self.data = function fdata(){
-    ddata.apply(self, arguments);
-  };
+    ddata.apply(self, arguments)
+  }
 
   self.debug = function fdebug(){
-    ddebug.apply(self, arguments);
-  };
+    ddebug.apply(self, arguments)
+  }
 
   self.instance = debug
 
   return self
 }
 
-module.exports =  Logger;
+module.exports = Logger

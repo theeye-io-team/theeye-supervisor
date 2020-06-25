@@ -7,7 +7,6 @@ const Constants = require('../../constants')
 module.exports = {
   //postSave: (job) => {
   //  logger.debug('job %s saved. sending system event', job._id)
-  //  job.populate('user', err => {
   //    const topic = TopicsConstants.job.crud
   //    elastic.submit(job.customer_name, topic, job) // topic = topics.job.crud
   //    NotificationService.generateSystemNotification({
@@ -19,7 +18,6 @@ module.exports = {
   //        model_type: job._type,
   //        model: job
   //      }
-  //    })
   //  })
   //}
 }

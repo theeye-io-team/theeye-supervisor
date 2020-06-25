@@ -17,7 +17,7 @@ module.exports = (input) => {
   task.populate([
     { path: 'customer' },
     { path: 'host' }
-  ], err => {
+  ], async err => {
     if (err) {
       logger.error(err)
       return
@@ -38,18 +38,18 @@ module.exports = (input) => {
       return
     }
 
-    App.jobDispatcher.create(
-      Object.assign(input, {
+    try {
+      const data = Object.assign({}, input, {
         customer: task.customer,
         notify: true,
-      }), (err, job) => {
-        if (err) {
-          logger.error('cannot create workflow job')
-          return logger.error(err)
-        }
-        // job created
-        logger.log('job created by workflow')
-      }
-    )
+      })
+
+      let job = await App.jobDispatcher.create(data)
+      // job created
+      logger.log('job created by workflow')
+    } catch (err) {
+      logger.error('cannot create workflow job')
+      return logger.error(err)
+    }
   })
 }

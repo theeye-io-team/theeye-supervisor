@@ -6,7 +6,6 @@ const props = {
   workflow_id: { type: String }, // job belongs to a specific workflow
   workflow: { type: ObjectId, ref: 'Workflow' },
   user_id: { type: String },
-  user: { type: ObjectId, ref: 'User' },
   customer_id: { type: String },
   customer_name: { type: String },
   name: { type: String },

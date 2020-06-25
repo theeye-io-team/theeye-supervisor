@@ -90,16 +90,14 @@ module.exports = (options) => {
         if (states.find(state => state === MonitorConstants.RESOURCE_NORMAL) === undefined) {
           // all failing and already in failure state. stop checking
           if (resource.state !== MonitorConstants.RESOURCE_FAILURE) {
-            manager.handleState({
-              state: MonitorConstants.RESOURCE_FAILURE
-            })
+            await manager.handleState({ state: MonitorConstants.RESOURCE_FAILURE })
           } else {
             logger.log('no monitors recovery detected')
             return done()
           }
         } else {
           // recover
-          manager.handleState({ state: MonitorConstants.RESOURCE_NORMAL })
+          await manager.handleState({ state: MonitorConstants.RESOURCE_NORMAL })
         }
 
         done()

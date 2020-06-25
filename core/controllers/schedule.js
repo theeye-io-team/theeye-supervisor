@@ -4,9 +4,9 @@ var logger = require('../lib/logger')('eye:supervisor:controller:schedule');
 var Scheduler = require('../service/scheduler');
 var router = require('../router');
 
-module.exports = function(server, passport){
+module.exports = function(server){
   var middlewares = [
-    passport.authenticate('bearer',{session:false}),
+    server.auth.bearerMiddleware,
     router.requireCredential('admin'),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer

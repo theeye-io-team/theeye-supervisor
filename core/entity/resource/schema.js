@@ -5,8 +5,8 @@ const FetchBy = require('../../lib/fetch-by')
 const lifecicle = require('mongoose-lifecycle')
 
 const properties = {
+  customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
   customer_id: { type: String, required: true },
-  user_id: { type: String }, // owner/creator
   customer_name: { type: String, required: true },
   description: { type: String },
   name: { type: String, required: true },
@@ -14,9 +14,6 @@ const properties = {
   acl: [{ type: String }],
   failure_severity: { type: String, default: Constants.MONITOR_SEVERITY_HIGH },
   alerts: { type: Boolean, default: true },
-  // relation
-  customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
-  user: { type: Schema.Types.ObjectId, ref: 'User' },
   creation_date: { type: Date, default: Date.now },
   last_update: { type: Date, default: Date.now }
 }
@@ -26,7 +23,7 @@ function BaseSchema (props, opts) {
 
   const specs = {
     collection: opts.collection || 'resources',
-    discriminatorKey: '_type' 
+    discriminatorKey: '_type'
   }
 
   Schema.call(this, Object.assign({}, properties, props), specs)

@@ -1,9 +1,16 @@
-'use strict';
+// DEPRECATED
+// DEPRECATED
+// DEPRECATED
+// DEPRECATED
+// DEPRECATED
+// DEPRECATED
+//
+console.log('CUSTOMERS CONTROLLER DEPRECATED')
 
 const crud = require('./crud')
 const tokens = require('./tokens')
 
-module.exports = (server, passport) => {
-  crud(server, passport)
-  tokens(server, passport)
+module.exports = (server) => {
+  crud(server)
+  tokens(server)
 }

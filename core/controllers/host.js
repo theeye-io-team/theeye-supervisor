@@ -2,54 +2,40 @@
 
 const App = require('../app')
 const config = require('config')
-const lodash = require('lodash')
-const logger = require('../lib/logger')('controller:host')
-const router = require('../router')
-const Host = require("../entity/host").Entity
-const Resource = require('../entity/resource').Entity
-const HostService = require('../service/host')
-const NotificationService = require('../service/notification')
-const dbFilter = require('../lib/db-filter')
 const Constants = require('../constants')
+const dbFilter = require('../lib/db-filter')
+const Host = require("../entity/host").Entity
+const HostService = require('../service/host')
+const logger = require('../lib/logger')('controller:host')
+const NotificationService = require('../service/notification')
+const Resource = require('../entity/resource').Entity
+const router = require('../router')
 const TopicsConstants = require('../constants/topics')
 
-module.exports = function (server, passport) {
+module.exports = function (server) {
   const middlewares = [
-    passport.authenticate('bearer', { session: false }),
+    server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer,
   ]
 
-  /**
-   * NEW ROUTES WITH CUSTOMER , TO KEEP IT GENERIC
-   */
-  server.post('/:customer/host/:hostname',
-    middlewares.concat(
-      router.requireCredential('agent', { exactMatch: true }) // only agents can create hosts
-    ),
-    controller.create
-  )
+  server.get( '/:customer/host', middlewares, controller.fetch)
 
-  server.get('/:customer/host', middlewares, controller.fetch)
-
-  server.get('/:customer/host/:host',
-    middlewares.concat(
-      router.resolve.idToEntity({
-        param: 'host',
-        required: true
-      })
-    ),
+  server.get(
+    '/:customer/host/:host',
+    middlewares,
+    router.resolve.idToEntity({ param: 'host', required: true }),
     controller.get
   )
 
-  server.get('/:customer/host/:host/config',
-    middlewares.concat(
-      router.resolve.idToEntity({
-        param: 'host',
-        required: true
-      })
-    ),
-    controller.config
+  /**
+   * NEW ROUTES WITH CUSTOMER , TO KEEP IT GENERIC
+   */
+  server.post(
+    '/:customer/host/:hostname',
+    middlewares,
+    router.requireCredential('agent',{exactMatch:true}), // only agents can create hosts
+    controller.create
   )
 
   /**
@@ -57,10 +43,10 @@ module.exports = function (server, passport) {
    *
    * AGENTS VERSION <= v0.9.1
    */
-  server.post('/host/:hostname',
-    middlewares.concat(
-      router.requireCredential('agent',{exactMatch:true}) // only agents can create hosts
-    ),
+  server.post(
+    '/host/:hostname',
+    middlewares,
+    router.requireCredential('agent', { exactMatch: true }), // only agents can create hosts
     controller.create
   )
 }
@@ -125,7 +111,7 @@ const controller = {
 
       logger.error('host "%s" registration completed.', hostname)
 
-      const response = lodash.assign(
+      const response = Object.assign(
         {
           resource_id: resource ? resource._id : null,
           host_id: host._id
@@ -141,13 +127,13 @@ const controller = {
    *
    *
    */
-  config (req, res, next) {
-    const customer = req.customer
-    const host = req.host
-    HostService.config(host, customer, (err, cfg) => {
-      res.send(200,cfg)
-    })
-  }
+  //config (req, res, next) {
+  //  const customer = req.customer
+  //  const host = req.host
+  //  HostService.config(host, customer, (err, cfg) => {
+  //    res.send(200,cfg)
+  //  })
+  //}
 }
 
 /**
@@ -206,7 +192,8 @@ const registerHostname = (req, done) => {
             model_type:'Host',
             model: host,
             hostname,
-            organization: host.customer_name,
+            organization: customer.name,
+            organization_id: customer._id,
             operations: Constants.CREATE
           }
         })

@@ -1,6 +1,3 @@
-"use strict";
-
-const extend = require('lodash/assign');
 const isMongoId = require('validator/lib/isMongoId')
 const App = require('../../app')
 const logger = require('../../lib/logger')('controller:task');
@@ -12,9 +9,9 @@ const ErrorHandler = require('../../lib/error-handler');
 const audit = require('../../lib/audit')
 const TaskConstants = require('../../constants/task')
 
-module.exports = (server, passport) => {
+module.exports = (server) => {
   server.get('/:customer/task', [
-    passport.authenticate('bearer', { session: false }),
+    server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer,
     router.requireCredential('viewer'),
@@ -22,7 +19,7 @@ module.exports = (server, passport) => {
   ], controller.fetch)
 
   server.get('/:customer/task/:task' , [
-    passport.authenticate('bearer', { session: false }),
+    server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer,
     router.requireCredential('viewer'),
@@ -31,7 +28,7 @@ module.exports = (server, passport) => {
   ] , controller.get)
 
   var middlewares = [
-    passport.authenticate('bearer', { session: false }),
+    server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer
   ]
@@ -77,7 +74,7 @@ module.exports = (server, passport) => {
 const controller = {
   create (req, res, next) {
     const errors = new ErrorHandler()
-    const input = extend({},req.body,{
+    const input = Object.assign({},req.body,{
       customer: req.customer,
       customer_id: req.customer._id,
       user: req.user,
@@ -110,26 +107,30 @@ const controller = {
         errors[!req.body.script?'required':'invalid']('script', req.script)
       }
       input.script = req.script
+
+      if (!input.script_runas) {
+        errors['required']('script_runas', input.script_runas)
+      }
     }
 
     if (input.type === TaskConstants.TYPE_SCRAPER) { }
-
     if (input.type === TaskConstants.TYPE_DUMMY) { }
-
     if (input.type === TaskConstants.TYPE_NOTIFICATION) { }
-
-    if (errors.hasErrors()){
+    if (errors.hasErrors()) {
       return res.send(400,errors)
     }
 
-    App.task.create(input, (err,task) => {
-      if (err) return res.sendError(err)
-      App.task.populate(task, (err,data) => {
-        if (err) return res.sendError(err)
-        res.send(200,data)
+    App.task.create(input, async (err,task) => {
+      if (err) { return res.sendError(err) }
+
+      try {
+        let data = await App.task.populate(task)
+        res.send(200, data)
         req.task = task
         next()
-      })
+      } catch (err) {
+        return res.sendError(err)
+      }
     })
   },
   /**
@@ -169,32 +170,32 @@ const controller = {
       filter.where.acl = req.user.email
     }
 
-    App.task.fetchBy(filter, function(error, tasks) {
-      if (error) { return res.send(500) }
+    App.task.fetchBy(filter, (err, tasks) => {
+      if (err) { return res.send(500) }
       res.send(200, tasks)
-    });
+    })
   },
   /**
    *
    * @author Facundo
    * @method GET
-   * @route /task/:task
+   * @route /:customer/task/:task
    * @param {String} :task , mongo ObjectId
    *
    */
-  get (req, res, next) {
-    App.task.populate(
-      req.task,
-      (err,data) => {
-        res.send(200, data)
-      }
-    )
+  async get (req, res, next) {
+    try {
+      let data = await App.task.populate(req.task)
+      res.send(200, data)
+    } catch (e) {
+      res.send(e.statusCode, e)
+    }
   },
   /**
    *
    * @author Facundo
    * @method DELETE
-   * @route /task/:task
+   * @route /:customer/task/:task
    * @param {String} :task , mongo ObjectId
    *
    */
@@ -216,14 +217,14 @@ const controller = {
    *
    * @author Facundo
    * @method PATCH/PUT
-   * @route /task/:task
+   * @route /:customer/task/:task
    * @param {String} :task , mongo ObjectId
    * @param ...
    *
    */
   update (req,res,next) {
     var errors = new ErrorHandler()
-    var input = extend({},req.body)
+    var input = Object.assign({},req.body)
 
     if (!req.task) return res.send(400, errors.required('task'))
     if (!input.name) return res.send(400, errors.required('name'))
@@ -275,19 +276,7 @@ const controller = {
         res.sendError(err)
       }
     })
-  },
-  /**
-   *
-   * @summary get the recipe of a task
-   * @method GET
-   * @route /task/:task/recipe
-   * @param {WebRequest} req
-   * @property {Task} req.task
-   * @property {Customer} req.customer
-   * @property {User} req.user
-   * @authenticate
-   *
-   */
+  }
 }
 
 const validIdsArray = (value) => {

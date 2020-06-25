@@ -1,4 +1,3 @@
-'use strict';
 
 const extend = require('lodash/assign');
 const dbFilter = require('../lib/db-filter');
@@ -11,55 +10,51 @@ const Webhook = require('../entity/webhook').Webhook;
 const Constants = require('../constants')
 const TopicsConstants = require('../constants/topics')
 
-module.exports = function (server, passport) {
-  var middlewares = [
-    passport.authenticate('bearer', { session: false }),
+module.exports = function (server) {
+  const middlewares = [
+    server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer
-  ];
+  ]
 
   server.get(
     '/:customer/webhook',
     middlewares,
     controller.fetch
-  );
+  )
 
   server.post(
     '/:customer/webhook',
-    middlewares.concat(
-      router.requireCredential('admin')
-    ),
+    middlewares,
+    router.requireCredential('admin'),
     controller.create,
     audit.afterCreate('webhook',{display:'name'})
-  );
+  )
 
   server.get(
     '/:customer/webhook/:webhook',
-    middlewares.concat(
-      router.resolve.idToEntity({ param:'webhook', required:true })
-    ),
+    middlewares,
+    router.resolve.idToEntity({ param:'webhook', required:true }),
     controller.get
-  );
+  )
 
   server.put(
     '/:customer/webhook/:webhook',
-    middlewares.concat(
-      router.requireCredential('admin'),
-      router.resolve.idToEntity({ param:'webhook', required: true })
-    ),
+    middlewares,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param:'webhook', required: true }),
     controller.update,
     audit.afterUpdate('webhook',{display:'name'})
-  );
+  )
 
   server.del(
     '/:customer/webhook/:webhook',
-    middlewares.concat(
-      router.requireCredential('admin'),
-      router.resolve.idToEntity({ param:'webhook', required: true })
-    ),
+    middlewares,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param:'webhook', required: true }),
     controller.remove,
     audit.afterRemove('webhook',{display:'name'})
-  );
+  )
 
   /**
    *
@@ -68,27 +63,25 @@ module.exports = function (server, passport) {
    */
   server.post(
     '/:customer/webhook/:webhook/trigger',
-    middlewares.concat(
-      router.requireCredential('user'),
-      router.resolve.idToEntity({ param:'webhook', required:true }),
-      router.ensureAllowed({ entity:{name:'webhook'} })
-    ),
+    middlewares,
+    router.requireCredential('user'),
+    router.resolve.idToEntity({ param:'webhook', required:true }),
+    router.ensureAllowed({ entity:{name:'webhook'} }),
     controller.trigger
-  );
+  )
 
   // use custom middleware.
   // requesting user is anonymous, only need to provide secret token
   server.post(
-    '/:customer/webhook/:webhook/trigger/secret/:secret', [
-      router.resolve.customerNameToEntity({ required: true }),
-      router.resolve.idToEntity({ param:'webhook', required: true }),
-      router.requireSecret('webhook')
-    ],
+    '/:customer/webhook/:webhook/trigger/secret/:secret',
+    router.resolve.customerNameToEntity({ required: true }),
+    router.resolve.idToEntity({ param:'webhook', required: true }),
+    router.requireSecret('webhook'),
     controller.trigger
   )
 }
 
-var controller = {
+const controller = {
   /**
    * @method GET
    */
@@ -182,6 +175,7 @@ var controller = {
         model_type: 'Webhook',
         model: webhook,
         organization: req.customer.name,
+        organization_id: req.customer._id,
         operation: Constants.TRIGGER
       }
     })
@@ -191,21 +185,17 @@ var controller = {
       enable: true,
       name: 'trigger'
     }, (err, event) => {
-      if (err) {
-        return res.send(500, err)
-      }
-      if (!event) {
-        return res.send(500, 'webhook events are missing.')
-      }
+      if (err) { return res.send(500, err) }
+      if (!event) { return res.send(500, 'webhook events are missing.') }
 
-      let output = App.jobDispatcher.parseJobParameters(body)
+      let output = App.jobDispatcher.parseOutputParameters(body)
       App.eventDispatcher.dispatch({
         topic: TopicsConstants.webhook.triggered,
         event,
         output
       })
 
-      res.send(200,{ message: 'success' })
+      res.send(200, { message: 'success' })
       next()
     })
   }

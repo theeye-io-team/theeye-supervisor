@@ -1,364 +1,338 @@
-'use strict';
-
 const fs = require('fs')
 const md5 = require('md5')
-const AgentUpdateJob = require('../entity/job').AgentUpdate
+const multer = require('multer')
+const config = require('config')
 
-var router = require('../router')
-var logger = require('../lib/logger')('eye:controller:file')
-var audit = require('../lib/audit')
-var dbFilter = require('../lib/db-filter')
-var File = require('../entity/file').File
-var Script = require('../entity/file').Script
+const App = require('../app')
+const router = require('../router')
+const logger = require('../lib/logger')('eye:controller:file')
+const audit = require('../lib/audit')
+const dbFilter = require('../lib/db-filter')
 const FileHandler = require('../lib/file')
-var FileService = require('../service/file')
 
-module.exports = function(server, passport){
-  var middlewares = [
-    passport.authenticate('bearer', {session:false}),
-    router.resolve.customerNameToEntity({required:true}),
+const File = require('../entity/file').File
+const Script = require('../entity/file').Script
+
+module.exports = (server) => {
+
+  const upload = multer({
+    dest: config.system.file_upload_folder,
+    rename: (fieldname, filename) => {
+      return filename
+    }
+  })
+
+  const middlewares = [
+    server.auth.bearerMiddleware,
+    router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer
   ]
 
   // FETCH
-  server.get('/:customer/file', middlewares, controller.fetch);
+  server.get('/:customer/file', middlewares, fetchFiles)
 
   // GET
   server.get(
     '/:customer/file/:file',
-    middlewares.concat(
-      router.resolve.idToEntity({ param:'file', required:true })
-    ),
-    controller.get
+    middlewares,
+    router.resolve.idToEntity({ param: 'file', required: true }),
+    getFile
   )
 
   // CREATE
   server.post(
     '/:customer/file',
     middlewares.concat(router.requireCredential('admin')),
-    controller.create,
-    audit.afterCreate('file', { display: 'filename' })
-  )
-  // KEEP COMPATIBILITY WITH OLDER MONITORS PAGE CREATION
-  server.post(
-    '/:customer/script',
-    middlewares.concat(router.requireCredential('admin')),
-    controller.create,
+    upload.single('file'),
+    createFile,
     audit.afterCreate('file', { display: 'filename' })
   )
 
   // UPDATE
   server.put(
     '/:customer/file/:file',
-    middlewares.concat(
-      router.requireCredential('admin'),
-      router.resolve.idToEntity({ param:'file', required:true })
-    ),
-    controller.update,
+    middlewares,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param:'file', required:true }),
+    upload.single('file'),
+    updateFile,
+    checkAfectedModels,
     audit.afterUpdate('file', { display: 'filename' })
-  )
-  // KEEP COMPATIBILITY WITH OLDER MONITORS PAGE UPDATE
-  server.patch(
-    '/:customer/script/:script',
-    middlewares.concat(
-      router.requireCredential('admin'),
-      router.resolve.idToEntity({ param: 'script', required: true, entity: 'file' })
-    ),
-    controller.update,
-    audit.afterUpdate('script', { display: 'filename' })
   )
 
   // DELETE
   server.del(
     '/:customer/file/:file',
-    middlewares.concat(
-      router.requireCredential('admin'),
-      router.resolve.idToEntity({ param: 'file', required: true })
-    ),
-    controller.remove,
+    middlewares,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param: 'file', required: true }),
+    removeFile,
     audit.afterRemove('file', { display: 'filename' })
   )
-  // KEEP COMPATIBILITY WITH OLDER MONITORS PAGE UPDATE
-  server.del(
-    '/:customer/script/:script',
-    middlewares.concat(
-      router.requireCredential('admin'),
-      router.resolve.idToEntity({ param: 'script', required: true, entity: 'file' })
-    ),
-    controller.remove,
-    audit.afterRemove('script', { display: 'filename' })
-  )
 
-  // users can download scripts
+  // DOWNLOAD SCRIPTS
   server.get(
     '/:customer/file/:file/download',
-    [
-      passport.authenticate('bearer', {session:false}),
-      router.requireCredential('user'),
-      router.resolve.customerNameToEntity({required:true}),
-      router.ensureCustomer,
-      router.resolve.idToEntity({param:'file',required:true})
-    ],
-    controller.download
-  );
+    server.auth.bearerMiddleware,
+    router.requireCredential('user'),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer,
+    router.resolve.idToEntity({param:'file',required:true}),
+    downloadFile
+  )
 
-  // get file linked models
-  //
-  // API V3
+  // GET LINKED MODELS
   server.get(
-    '/file/:file/linkedmodels',
-    middlewares.concat(
-      router.resolve.idToEntity({ param:'file', required:true })
-    ),
-    controller.getLinkedModels
+    '/:customer/file/:file/linkedmodels',
+    middlewares,
+    router.resolve.idToEntity({ param:'file', required:true }),
+    getLinkedModels
   )
 }
 
-const controller = {
-  /**
-   *
-   * @method GET
-   *
-   */
-  fetch (req, res, next) {
-    var customer = req.customer;
-    var query = req.query;
+/**
+ *
+ * @method GET
+ *
+ */
+const fetchFiles = (req, res, next) => {
+  const customer = req.customer
+  const query = req.query
+  const filter = dbFilter(query, { sort: { filename: 1 } })
+  filter.where.customer_id = customer.id
 
-    var filter = dbFilter(query,{
-      sort: { filename: 1 }
-    });
-    filter.where.customer_id = customer.id;
+  File.fetchBy(filter, (error, files) => {
+    if (!files) { files = [] }
+    res.send(200, files)
+    next()
+  })
+}
 
-    File.fetchBy(filter, function(error,files){
-      if (!files) files = [];
-      res.send(200,files);
-      next();
-    });
-  },
-  /**
-   *
-   * @method GET
-   *
-   */
-  get (req, res, next) {
-    req.file.publish(function(error,file){
-      if (error) return next(error);
-      res.send(200,file);
-    });
-  },
-  /**
-   *
-   * @method PUT/PATCH
-   *
-   */
-  update (req, res, next) {
-    const user = req.user
-    const customer = req.customer
-    const fileModel = req.file || req.script
-    const fileUploaded = req.files.file || req.files.script
-    const description = req.body.description
-    const isPublic = (req.body.public || false)
+/**
+ *
+ * @method GET
+ *
+ */
+const getFile = (req, res, next) => {
+  req.file.publish((err, file) => {
+    if (err) { return next(err) }
+    res.send(200, file)
+  })
+}
 
-    if (!fileUploaded) {
-      return res.send(400, 'file is required')
+/**
+ *
+ * @method PUT/PATCH
+ *
+ */
+const updateFile = (req, res, next) => {
+  const fileModel = req.file || req.script
+  const fileUploaded = req.files.file
+  const description = req.params.description
+  const isPublic = (req.params.public || false)
+  const mimetype = req.params.mimetype
+  const extension = req.params.extension
+
+  if (!fileUploaded) {
+    return res.send(400, 'file is required')
+  }
+
+  logger.log('Updating file content')
+  FileHandler.replace({
+    model: fileModel,
+    filepath: fileUploaded.path,
+    filename: fileUploaded.name,
+    storename: req.customer.name
+  }, function (err, storeData) {
+    if (err) {
+      logger.error(err)
+      return next(err)
     }
 
-    FileHandler.replace({
-      model: fileModel,
-      filepath: fileUploaded.path,
+    let buf = fs.readFileSync(fileUploaded.path)
+
+    let data = {
       filename: fileUploaded.name,
-      storename: req.customer.name
-    }, function (err, storeData) {
+      mimetype: mimetype,
+      extension: extension,
+      size: fileUploaded.size,
+      description: description,
+      keyname: storeData.keyname,
+      md5: md5(buf),
+      public: isPublic
+    }
+
+    logger.log('File model is being updated')
+    fileModel.set(data)
+    fileModel.save(err => {
       if (err) {
         logger.error(err)
-        return next(err)
+        next(err)
+      } else {
+        fileModel.publish((err, pub) => {
+          if (err) { return next(err) }
+          res.send(200,pub)
+          logger.log('Operation completed')
+          next()
+        })
       }
+    })
+  })
+}
 
-      let buf = fs.readFileSync(fileUploaded.path)
+/**
+ *
+ * @method POST
+ *
+ */
+const createFile = (req, res, next) => {
+  const customer = req.customer
+  const file = req.files.file
+  const description = req.params.description
+  const isPublic = (req.params.public || false)
+  const mimetype = req.params.mimetype
+  const extension = req.params.extension
+
+  logger.log('creating file');
+
+  FileHandler.storeFile({
+    filepath: file.path,
+    filename: file.name,
+    storename: req.customer.name
+  }, function (err, storeData) {
+    if (err) {
+      logger.error(err);
+      return next(err);
+    } else {
+
+      let buf = fs.readFileSync(file.path);
 
       let data = {
-        filename: fileUploaded.name,
-        mimetype: fileUploaded.mimetype,
-        extension: fileUploaded.extension,
-        size: fileUploaded.size,
+        filename: file.name,
+        mimetype: mimetype,
+        extension: extension,
+        size: file.size,
         description: description,
-        user_id: user._id,
+        customer: customer,
+        customer_id: customer._id,
+        customer_name: customer.name,
         keyname: storeData.keyname,
         md5: md5(buf),
         public: isPublic
       }
 
-      fileModel.set(data)
-      fileModel.save(err => {
+      Script.create(data,(err,file) => {
         if (err) {
           logger.error(err)
           next(err)
         } else {
-          checkLinkedMonitors(fileModel)
+          file.publish((err,data) => {
+            if (err) return next(err)
 
-          fileModel.publish((err, pub) => {
-            if (err) {
-              return next(err)
-            }
-
-            res.send(200,pub)
+            req.file = file; // assign to the route to audit
+            res.send(200,data)
             next()
           })
         }
       })
-    })
-  },
-  /**
-   *
-   * @method POST
-   *
-   */
-  create (req, res, next) {
-    const user = req.user
-    const customer = req.customer
-    const file = req.files.file || req.files.script
-    const description = req.body.description
-    const isPublic = (req.body.public || false)
+    }
+  })
+}
 
-    logger.log('creating file');
-
-    FileHandler.storeFile({
-      filepath: file.path,
-      filename: file.name,
-      storename: req.customer.name
-    }, function (err, storeData) {
-      if (err) {
-        logger.error(err);
-        return next(err);
-      } else {
-
-        let buf = fs.readFileSync(file.path);
-
-        let data = {
-          filename: file.name,
-          mimetype: file.mimetype,
-          extension: file.extension,
-          size: file.size,
-          description: description,
-          customer: customer,
-          customer_id: customer._id,
-          customer_name: customer.name,
-          user_id: user._id,
-          keyname: storeData.keyname,
-          md5: md5(buf),
-          public: isPublic
-        }
-
-        Script.create(data,(err,file) => {
-          if (err) {
-            logger.error(err);
-            next(err);
-          } else {
-            file.publish((err,data) => {
-              if (err) return next(err);
-
-              req.file = file; // assign to the route to audit
-              res.send(200,data);
-              next();
-            });
-          }
-        });
+/**
+ *
+ * @method GET
+ *
+ */
+const downloadFile = (req, res, next) => {
+  let file = req.file
+  FileHandler.getStream(file, (error, stream) => {
+    if (error) {
+      logger.error(error)
+      next(error)
+    } else {
+      logger.log('streaming file to client')
+      var headers = {
+        'Content-Disposition': 'attachment; filename=' + file.filename
       }
-    });
-  },
-  /**
-   *
-   * @method GET
-   *
-   */
-  download (req, res, next) {
+      res.writeHead(200,headers)
+      stream.pipe(res)
+    }
+  })
+}
+
+/**
+ *
+ * @method DELETE
+ *
+ */
+const removeFile = async (req, res, next) => {
+  try {
+    //let file = req.file || req.script
     let file = req.file
-    FileHandler.getStream(file, (error, stream) => {
-      if (error) {
-        logger.error(error)
-        next(error)
-      } else {
-        logger.log('streaming file to client')
-        var headers = {
-          'Content-Disposition': 'attachment; filename=' + file.filename
-        }
-        res.writeHead(200,headers)
-        stream.pipe(res)
-      }
-    })
-  },
-  /**
-   *
-   * @method DELETE
-   *
-   */
-  remove (req, res, next) {
-    let file = req.file || req.script
-    if (!file) {
-      return res.send(400,'file is required.');
+    let models = await App.file.getLinkedModels({ file })
+
+    if (models.length > 0) {
+      let err = new Error('Cannot delete this file. It is being used')
+      err.code = 'FileInUse'
+      err.statusCode = 400
+      throw err
     }
 
-    FileService.getLinkedModels({
-      file,
-    }, function (err, models) {
-      if (err) {
-        logger.error(err)
-        return res.send(500)
-      }
-
-      if (models.length > 0) {
-        res.send(400, 'Cannot delete this file. It is being used by tasks or monitors')
-        return next()
-      } 
-
-      FileService.remove({
+    await new Promise((resolve, reject) => {
+      App.file.remove({
         file,
         user: req.user,
         customer: req.customer
-      }, function (err,data) {
-        if (err) {
-          logger.error(err)
-          return res.send(500)
-        }
-
-        res.send(204)
-        return next()
+      }, (err, data) => {
+        if (err) reject(err)
+        else resolve(data)
       })
     })
-  },
-  /**
-   *
-   * GET LINKED MODELS
-   *
-   */
-  getLinkedModels (req, res, next) {
-    const file = req.file
-
-    FileService.getLinkedModels({
-      file: file,
-    },function (err,models) {
-      if (err) {
-        logger.error(err)
-        return res.send(500)
-      }
-      res.send(200, models)
-      next()
-    })
+  } catch (err) {
+    logger.error(err)
+    res.send(err.statusCode || 500, err.message)
+    next()
   }
 }
 
-const checkLinkedMonitors = (file) => {
-  FileService.getLinkedModels({
-    file: file
-  }, (err, models) => {
-    if (err) return res.send(500,err)
-    if (Array.isArray(models) && models.length>0) {
-      for (let idx=0; idx<models.length; idx++) {
-        let model = models[idx]
-        if (model._type === 'ResourceMonitor') {
-          AgentUpdateJob.create({ host_id: model.host_id })
+/**
+ *
+ * GET LINKED MODELS
+ *
+ */
+const getLinkedModels = async (req, res, next) => {
+  try {
+    const file = req.file
+    let models = await App.file.getLinkedModels({ file })
+    res.send(200, models)
+    next()
+  } catch (err) {
+    logger.error(err)
+    return res.send(500)
+  }
+}
+
+
+const checkAfectedModels = async (req, res, next) => {
+  try {
+    let file = req.file
+    let models = await App.file.getLinkedModels({ file })
+    if (Array.isArray(models) && models.length > 0) {
+      for (let model of models) {
+        if (
+          model._type === 'ResourceMonitor'||
+          model._type === 'FileMonitor' ||
+          model._type === 'ScriptMonitor'
+        ) {
+          await App.resourceMonitor.updateMonitorWithFile(model, file)
         }
       }
     }
-  })
+  } catch (err) {
+    logger.error(err)
+  }
+
+  // call next middleware
+  next()
 }

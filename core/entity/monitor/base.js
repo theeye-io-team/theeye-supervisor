@@ -48,3 +48,9 @@ MonitorSchema.methods.templateProperties = function() {
 
   return values
 }
+
+MonitorSchema.methods.runOnHost = function() {
+  if (this.type === 'nested') { return false }
+  if (this.hasOwnProperty('host_id')) { return true }
+  return true
+}

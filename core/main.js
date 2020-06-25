@@ -1,9 +1,8 @@
-'use strict';
-
+const logger = require('./lib/logger')('main')
 require('./lib/error-extend')
 const ErrorHandler = require('./lib/error-handler')
-const logger = require('./lib/logger')('main')
-logger.log('initializing supervisor');
+
+logger.log('initializing supervisor')
 
 if (!RegExp.escape) {
   RegExp.escape = function(s){
@@ -48,36 +47,15 @@ const handleException = eventName => {
 process.on('uncaughtException', handleException('uncaughtException'))
 process.on('unhandledRejection', handleException('unhandledRejection'))
 
-logger.log('setting environment');
-require('./environment').setenv(function(){
+const boot = async () => {
+  if (!process.env.NODE_ENV) {
+    logger.error('NODE_ENV is required')
+    return process.exit(-1)
+  }
 
-  logger.log('connecting mongo db');
-  require('./lib/mongodb').connect(function(){
+  const config = require('config')
+  const App = require('./app')
+  App.boot(config)
+}
 
-    logger.log('initializing scheduler');
-    const scheduler = require('./service/scheduler')
-    const Events = require('./service/events')
-
-    scheduler.initialize(() => {
-      logger.log('initializing server')
-      const App = require('./app')
-      App.initialize(err => {
-        App.jobDispatcher = require('./service/job')
-        App.taskManager = require('./service/task')
-        App.customer = require('./service/customer')
-        App.resource = require('./service/resource')
-        App.task = require('./service/task')
-        App.file = require('./service/file')
-        App.logger = require('./service/logger')
-        App.hostTemplate = require('./service/host/group')
-        App.scheduler = scheduler
-        App.eventDispatcher = Events.createDispatcher() 
-        App.notifications = require('./service/notification')
-
-        App.startApi()
-        App.startCommander()
-        App.startMonitoring(App)
-      })
-    })
-  })
-})
+boot()

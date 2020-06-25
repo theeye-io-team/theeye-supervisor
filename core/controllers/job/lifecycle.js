@@ -1,19 +1,17 @@
-'use strict'
-
-const App = require('../app')
-const logger = require('../lib/logger')('controller:job-lifecycle')
-const router = require('../router')
-const StateConstants = require('../constants/states')
-const JobConstants = require('../constants/jobs')
+const App = require('../../app')
+const logger = require('../../lib/logger')('controller:job-lifecycle')
+const router = require('../../router')
+const StateConstants = require('../../constants/states')
+const JobConstants = require('../../constants/jobs')
 
 /**
  * @summary Job.lifecycle property CRUD
  * @namespace Controller
  * @module Job:Lifecycle
  */
-module.exports = (server, passport) => {
+module.exports = (server) => {
   const middlewares = [
-    passport.authenticate('bearer', {session: false}),
+    server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({required: true}),
     router.ensureCustomer
   ]
@@ -57,7 +55,7 @@ module.exports = (server, passport) => {
   }
 
   server.put(
-    '/job/:job/approve',
+    '/:customer/job/:job/approve',
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'job', required: true }),
@@ -66,7 +64,7 @@ module.exports = (server, passport) => {
   )
 
   server.put(
-    '/job/:job/reject',
+    '/:customer/job/:job/reject',
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'job', required: true }),
@@ -89,7 +87,7 @@ module.exports = (server, passport) => {
   }
 
   server.put(
-    '/job/:job/input',
+    '/:customer/job/:job/input',
     middlewares,
     router.requireCredential('user'),
     router.resolve.idToEntity({ param: 'job', required: true }),
@@ -108,7 +106,7 @@ const controller = {
 
     App.jobDispatcher.cancel({
       result: {
-        user: { email: user.email, id: user._id.toString() },
+        user: { email: user.email, id: user.id },
       },
       job,
       user: req.user,
@@ -129,7 +127,7 @@ const controller = {
 
     App.jobDispatcher.finish({
       result: {
-        user: { email: user.email, id: user._id.toString() },
+        user: { email: user.email, id: user.id },
         output: job.task_arguments_values
       },
       state: StateConstants.SUCCESS,
@@ -148,7 +146,7 @@ const controller = {
 
     App.jobDispatcher.finish({
       result: {
-        user: { email: user.email, id: user._id.toString() },
+        user: { email: user.email, id: user.id },
         output: job.task_arguments_values
       },
       state: StateConstants.FAILURE,
@@ -192,9 +190,7 @@ const submitJobInputs = (req) => {
       user: req.user,
       customer: req.customer
     }, (err) => {
-      if (err) {
-        reject(err)
-      }
+      if (err) reject(err)
       else resolve(job)
     })
   })
@@ -203,15 +199,10 @@ const submitJobInputs = (req) => {
 const submitDummyInputs = (req) => {
   const args = (req.body.args || [])
   const job = req.job
-  return new Promise((resolve, reject) => {
-    App.jobDispatcher.finishDummyJob(job, {
-      task: job.task,
-      task_arguments_values: args,
-      user: req.user,
-      customer: req.customer
-    }, (err) => {
-      if (err) reject(err)
-      else resolve(job)
-    })
+  return App.jobDispatcher.finishDummyJob(job, {
+    task: job.task,
+    task_arguments_values: args,
+    user: req.user,
+    customer: req.customer
   })
 }

@@ -26,8 +26,6 @@ ResourceSchema.methods.templateProperties = function () {
 
   values.source_model_id = this._id
   delete values.acl
-  delete values.user
-  delete values.user_id
   delete values.customer
   delete values.customer_id
   delete values.customer_name
