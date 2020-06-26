@@ -62,10 +62,12 @@ const create = async (req, res, next) => {
     } else {
       logger.log('updating host psaux')
       var date = new Date()
-      psaux.last_update = date
-      psaux.last_update_timestamp = date.getTime()
-      psaux.stats = stats
-      psaux.save()
+
+      await HostStats.updateOne({ _id: psaux._id }, {
+        last_update: date,
+        last_update_timestamp: date.getTime(),
+        stats
+      })
 
       App.notifications.generateSystemNotification({
         topic: TopicsConstants.host.processes,
