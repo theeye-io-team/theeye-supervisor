@@ -59,6 +59,18 @@ class ErrorHandler {
   hasErrors () {
     return this.errors.length > 0
   }
+
+	sendExceptionAlert (error) {
+		this.errors.push(error)
+		notification.sendEmailNotification({
+			customer_name: 'TheEye',
+			subject: 'Supervisor Exception',
+			to: config.mailer.support.join(','),
+			content: this.toHtml()
+		})
+		return this.errors.length > 0
+	}
+
 }
 
 module.exports = ErrorHandler
