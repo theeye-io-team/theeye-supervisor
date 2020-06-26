@@ -34,7 +34,7 @@ module.exports = (server) => {
   )
 
   const verifyApprovalMiddleware = (req, res, next) => {
-    const approver_id = req.query.web_user_id
+    const approver_id = req.user.id
     const job = req.job
 
     if (job._type !== JobConstants.APPROVAL_TYPE) {
