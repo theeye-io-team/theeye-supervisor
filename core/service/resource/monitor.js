@@ -71,14 +71,10 @@ module.exports = {
     delete input._type
     delete input._id
     delete input.__v
+    delete input._v
 
-    if (!input.name) {
-      errors.required('name', input.name)
-    }
-
-    if (!type) {
-      errors.required('type', type)
-    }
+    if (!input.name) { errors.required('name', input.name) }
+    if (!type) { errors.required('type', type) }
 
     if (
       type !== MonitorConstants.RESOURCE_TYPE_NESTED &&
@@ -95,7 +91,7 @@ module.exports = {
       tags: router.filter.toArray(input.tags)
     })
 
-    logger.log('setting up resource type & properties')
+    logger.log('Setting up monitor type & properties')
     logger.data(data)
 
     switch (type) {
@@ -169,14 +165,11 @@ module.exports = {
         var scriptArgs = router.filter.toArray(input.script_arguments)
         data.script_arguments = scriptArgs
         data.script_id = input.script_id||errors.required('script_id',input.script_id)
-        if (!input.script_runas) {
-          errors.required('script_runas', input.script_runas)
-        } else {
-          if (/%script%/.test(input.script_runas) === false) {
-            input.script_runas += ' %script%' // force
-          }
-          data.script_runas = input.script_runas
+
+        if (/%script%/.test(input.script_runas) === false) {
+          input.script_runas += ' %script%' // force
         }
+        data.script_runas = input.script_runas
 
         break
 

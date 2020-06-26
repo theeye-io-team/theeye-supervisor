@@ -34,24 +34,24 @@ module.exports = {
     async.map(
       resources,
       (resource, next) => {
-        const monitor = resource.monitor
-
-        if (!monitor) {
-          const err = new Error('resource monitor data not defined')
+        if (!resource || !resource.monitor) {
+          const err = new Error('Invalid Monitor Data')
           err.statusCode = 400
           err.resource = resource
           return next(err)
         }
 
+        const monitor = resource.monitor
         const config = Object.assign({}, monitor, monitor.config||{})
         const result = App.resourceMonitor.validateData(config)
 
         if (!result || result.errors) {
-          const msg = 'invalid resource monitor data'
+          const msg = 'Invalid monitor data'
           logger.error(msg)
           const e = new Error(msg)
           e.statusCode = 400
-          e.info = result.error
+          e.data = config
+          e.errors = result.errors
           return next(e)
         }
 
@@ -68,7 +68,7 @@ module.exports = {
       },
       (err, templates) => {
         if (err) {
-          logger.error('failed to create resource template')
+          logger.error('Failed to create monitor template')
           logger.error(err, err.resource)
           return done(err)
         }
