@@ -27,7 +27,8 @@ module.exports = {
           let json = JSON.parse(response.rawBody)
           return done(null, json.access_token)
         } else {
-          logger.error(response.rawBody, response.statusCode)
+          logger.error(client_id, client_secret)
+          logger.error(response.rawBody)
           let err = new Error(`authentication failed`)
           err.name = 'authentication failed'
           err.body = response.rawBody
