@@ -48,12 +48,12 @@ module.exports = {
       /**
        * verify incomming json web token validity
        */
-      let decoded = jwt.verify(token, config.secret, {}, (err, decoded) => {
-        if (err) {
-          logger.error(err)
-          err.status = 401
-          return done(err)
-        } else {
+      //let decoded = jwt.verify(token, config.secret, {}, (err, decoded) => {
+      //  if (err) {
+      //    logger.error(err)
+      //    err.status = 401
+      //    return done(err)
+      //  } else {
           //sessionVerify(token).then(profile => {})
           fetchProfile(token)
             .then(response => {
@@ -72,8 +72,8 @@ module.exports = {
             .catch(err => {
               done(err)
             })
-        }
-      })
+      //  }
+      //})
     })
 
     passport.use(basicStrategy)
