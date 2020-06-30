@@ -144,9 +144,6 @@ function Service (resource) {
       const specs = Object.assign({}, input, { resource })
 
       details = ResourcesNotifications(specs)
-
-      console.log(specs)
-      console.log(details)
     } catch (err) {
       if (/MonitorEventIgnored/.test(err.message) === true) {
         logger.log(err.message)
