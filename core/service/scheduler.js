@@ -94,12 +94,14 @@ Scheduler.prototype = {
    */
   schedule (starting, jobName, data, interval) {
     let agendaJob = this.agenda.create(jobName, data)
-    agendaJob.schedule(starting)
     logger.log("agendaJob.schedule %s", starting)
+
     if (interval) {
       logger.log("repeatEvery %s", interval)
       agendaJob.repeatEvery(interval)
     }
+
+    agendaJob.schedule(starting)
     return agendaJob.save()
   },
   async getTaskSchedule (taskId, callback) {

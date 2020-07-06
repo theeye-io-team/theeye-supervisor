@@ -27,19 +27,15 @@ module.exports = {
           let json = JSON.parse(response.rawBody)
           return done(null, json.access_token)
         } else {
-          logger.error(client_id, client_secret)
-          logger.error(response.rawBody)
-          let err = new Error(`authentication failed`)
-          err.name = 'authentication failed'
+          let err = new Error(`Gateway Authentication Failed`)
+          err.creds = `${client_id}:${client_secret}`
           err.body = response.rawBody
           err.statusCode = response.statusCode || 500
           throw err
         }
       } catch (err) {
-        logger.error(err)
-        if (!err.statusCode) {
-          err.statusCode = 500
-        }
+        logger.error('%j', err)
+        if (!err.statusCode) { err.statusCode = 500 }
         return done(err)
       }
     })

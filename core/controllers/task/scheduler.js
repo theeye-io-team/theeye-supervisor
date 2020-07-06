@@ -14,7 +14,6 @@ module.exports = function (server) {
     resolver.idToEntity({ param:'task', required: true })
   ]
 
-  //server.post('/:customer/task/:task/schedule',middlewares,controller.create);
   server.post(
     '/:customer/task/:task/schedule',
     middlewares,
