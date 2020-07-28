@@ -80,7 +80,7 @@ module.exports = (server) => {
       into: 'host'
     }),
     router.filter.spawn({ filter: 'emailArray', param: 'acl' }),
-    controller.replace,
+    replace,
     audit.afterReplace('resource', { display: 'name', topic: crudTopic  })
   )
 
@@ -233,40 +233,6 @@ const controller = {
   },
   /**
    *
-   * @method PUT
-   *
-   */
-  async replace (req, res, next) {
-    try {
-      const resource = req.resource
-      const body = req.body
-      body.host = req.host
-
-      const params = App.resourceMonitor.validateData(body)
-      if (params.errors && params.errors.hasErrors()) {
-        return res.send(400, params.errors)
-      }
-
-      if (resource.type !== MonitorConstants.RESOURCE_TYPE_HOST) {
-        updates = params.data
-      }
-
-      Object.assign(updates, { acl: req.acl, tags: body.tags })
-      await updateResource(resource, updates)
-
-      res.send(200, resource)
-      next()
-    } catch (e) {
-      logger.error(e)
-      if (e.statusCode) {
-        res.send(e.statusCode, e.message)
-      } else {
-        res.send(500, e.message)
-      }
-    }
-  },
-  /**
-   *
    * change the alert level
    * @author Facugon
    * @method PATCH
@@ -284,6 +250,42 @@ const controller = {
         next()
       }
     })
+  }
+}
+
+/**
+ *
+ * @method PUT
+ *
+ */
+const replace = async (req, res, next) => {
+  try {
+    const resource = req.resource
+    const body = req.body
+    body.host = req.host
+
+    const params = App.resourceMonitor.validateData(body)
+    if (params.errors && params.errors.hasErrors()) {
+      return res.send(400, params.errors)
+    }
+
+    let updates = {}
+    if (resource.type !== MonitorConstants.RESOURCE_TYPE_HOST) {
+      updates = params.data
+    }
+
+    Object.assign(updates, { acl: req.acl, tags: body.tags })
+    await updateResource(resource, updates)
+
+    res.send(200, resource)
+    next()
+  } catch (e) {
+    logger.error(e)
+    if (e.statusCode) {
+      res.send(e.statusCode, e.message)
+    } else {
+      res.send(500, e.message)
+    }
   }
 }
 

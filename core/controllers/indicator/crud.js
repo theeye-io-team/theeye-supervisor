@@ -282,7 +282,10 @@ const controller = {
       return res.send(400, 'provide the state changes. value and/or state are required')
     }
 
-    if (body.state) { indicator.state = body.state }
+    let state = body.state
+    if (state === 'success') { state = 'normal' }
+
+    if (body.state) { indicator.state = state }
     if (body.value) { indicator.value = body.value }
     indicator.save(err => {
       if (err) {

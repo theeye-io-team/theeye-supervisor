@@ -141,7 +141,6 @@ const controller = {
 
     const filter = dbFilter(query, { /** default **/ })
     filter.where.customer_id = customer._id.toString()
-    filter.populate = 'user'
 
     Job.fetchBy(filter, (err, jobs) => {
       if (err) { return res.send(500, err) }

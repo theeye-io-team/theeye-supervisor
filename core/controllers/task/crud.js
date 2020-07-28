@@ -145,7 +145,7 @@ const controller = {
     filter.where.customer_id = customer.id
 
     // exclude tasks with no host assigned or with invalid script/data
-    if ( ! input.hasOwnProperty('unassigned') ) {
+    if ( ! input.hasOwnProperty('unassigned') || input.unassigned !== true ) {
       // filter all unusable tasks
       filter.where.$or = [
         { _type: { $nin: [ 'ScriptTask', 'ScraperTask' ] } },
