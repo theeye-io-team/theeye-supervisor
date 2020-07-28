@@ -164,16 +164,21 @@ const controller = {
     if (!req.indicator) {
       controller.create(req, res, next)
     } else {
+      const body = req.body
+      if (!body) {
+        return res.send(400, 'empty payload. JSON body is required')
+      }
+
       // replace current
       if (
-        req.body.hasOwnProperty('title') &&
-        !validTitle(req.body.title)
+        body.hasOwnProperty('title') &&
+        !validTitle(body.title)
       ) {
         return res.send(400, 'invalid title')
       }
 
       const indicator = req.indicator
-      let values = Object.assign({}, indicatorResetValues(indicator), req.body)
+      let values = Object.assign({}, indicatorResetValues(indicator), body)
       indicator.set(values)
       indicator.save((err, model) => {
         if (err) {
@@ -195,19 +200,24 @@ const controller = {
    * @method POST
    */
   create (req, res, next) {
-    if (!req.body.type) {
+    const body = req.body
+    if (!body) {
+      return res.send(400, 'empty payload. JSON body is required')
+    }
+
+    if (!body.type) {
       return res.send(400, 'type is required')
     }
 
-    if (!req.body.title) {
+    if (!body.title) {
       return res.send(400, 'title is required')
     }
 
-    if (!validTitle(req.body.title)) {
+    if (!validTitle(body.title)) {
       return res.send(400, 'title is invalid')
     }
 
-    const input = extend({}, req.body, {
+    const input = extend({}, body, {
       customer: req.customer,
       customer_id: req.customer._id,
       customer_name: req.customer.name,
@@ -237,15 +247,20 @@ const controller = {
    */
   update (req, res, next) {
     const indicator = req.indicator
+    const body = req.body
+
+    if (!body) {
+      return res.send(400, 'empty payload. JSON body is required')
+    }
 
     if (
-      req.body.hasOwnProperty('title') &&
-      !validTitle(req.body.title)
+      body.hasOwnProperty('title') &&
+      !validTitle(body.title)
     ) {
       return res.send(400, 'invalid title')
     }
 
-    indicator.set(req.body)
+    indicator.set(body)
     indicator.save((err, model) => {
       if (err) {
         if (err.name == 'ValidationError') {
