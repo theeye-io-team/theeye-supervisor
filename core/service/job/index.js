@@ -354,7 +354,7 @@ module.exports = {
       trigger_name = (state === StateConstants.FAILURE) ? StateConstants.FAILURE : StateConstants.SUCCESS
 
       job.state = state
-      job.trigger_name = trigger_name 
+      job.trigger_name = trigger_name
       job.lifecycle = lifecycle
       job.result = result
       // parse result output
@@ -363,6 +363,18 @@ module.exports = {
         let output = result.output
         job.output = this.parseOutputParameters(output)
         job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
+      }
+
+      try {
+        let jsonLastline = JSON.parse(result.lastline)
+        // looking for state and output
+        if (isObject(jsonLastline)) {
+          if (jsonLastline.components) {
+            job.result.components = jsonLastline.components
+          }
+        }
+      } catch (err) {
+        logger.log(err)
       }
 
       await job.save()
@@ -990,4 +1002,8 @@ const filterOutputArray = (outputs) => {
     }
   })
   return result
+}
+
+const isObject = (value) => {
+  return Object.prototype.toString.call(value) === '[object Object]'
 }
