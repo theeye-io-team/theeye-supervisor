@@ -13,6 +13,7 @@ class IndicatorSchema extends BaseSchema {
 
     const specs = { collection: 'indicators' }
     const baseProps = {
+      order: { type: Number, default: 0 },
       customer_name: { type: String, required: true },
       description: { type: String },
       title: { type: String, required: true, index: true },

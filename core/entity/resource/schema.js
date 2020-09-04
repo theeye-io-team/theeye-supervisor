@@ -5,6 +5,7 @@ const FetchBy = require('../../lib/fetch-by')
 const lifecicle = require('mongoose-lifecycle')
 
 const properties = {
+  order: { type: Number, default: 0 },
   customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
   customer_id: { type: String, required: true },
   customer_name: { type: String, required: true },

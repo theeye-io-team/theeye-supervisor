@@ -2,6 +2,7 @@
 const ObjectId = require('mongoose').Schema.Types.ObjectId
 const randomSecret = require('../../lib/random-secret')
 module.exports = {
+  order: { type: Number, default: 0 },
   customer_id: { type: String, required: true },
   type: { type: String, required: true },
   name: { type: String, required: true },
