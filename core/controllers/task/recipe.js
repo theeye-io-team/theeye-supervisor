@@ -38,10 +38,11 @@ const controller = {
    * @param {Function} next
    */
   recipe (req, res, next) {
-    let task = req.task
+    const task = req.task
+    const query = req.query || {}
 
-    let data = {}
-    data.task = task.templateProperties()
+    const data = {}
+    data.task = task.templateProperties({ backup: (query.backup === true || query.backup === "true") })
 
     // only script task has a file so far
     if (task._type === 'ScriptTask') {

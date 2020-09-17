@@ -1,5 +1,6 @@
 const BaseSchema = require('./schema')
 const ObjectId = require('mongoose').Schema.Types.ObjectId
+const TaskConstants = require('../../constants/task')
 
 const ScriptSchema = new BaseSchema({
   template_id: { type: ObjectId },
@@ -18,13 +19,32 @@ const ScriptSchema = new BaseSchema({
 module.exports = ScriptSchema
 
 const templateProperties = ScriptSchema.methods.templateProperties
-ScriptSchema.methods.templateProperties = function () {
-  var values = templateProperties.apply(this, arguments)
-  values.env = this.env
-  values.script_id = this.script_id
-  values.script_arguments = this.script_arguments
-  values.script_runas = this.script_runas
-  values.task_arguments = this.task_arguments
+
+ScriptSchema.methods.templateProperties = function ({ backup }) {
+  if (backup === true) {
+    return this.toObject()
+  }
+
+  const values = templateProperties.apply(this, arguments)
+
+  //values.env = this.env
+  //values.task_arguments = this.task_arguments
+
+  // blank user defined env properties values
+  for (let name in values.env) {
+    values.env[name] = ''
+  }
+
+  for (let name in values.task_arguments) {
+    let arg = values.task_arguments[name]
+    if (arg.type === TaskConstants.ARGUMENT_TYPE_FIXED) {
+      values.task_arguments[name].value = '' // empty value
+    }
+  }
+
+  //values.script_runas = this.script_runas
+  values.script_arguments = values.task_arguments
+
   return values
 }
 
