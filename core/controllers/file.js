@@ -305,6 +305,7 @@ const getLinkedModels = async (req, res, next) => {
   try {
     const file = req.file
     let models = await App.file.getLinkedModels({ file })
+
     res.send(200, models)
     next()
   } catch (err) {

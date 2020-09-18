@@ -4,6 +4,7 @@ const logger = require('../../lib/logger')('controller:workflow:job')
 const JobConstants = require('../../constants/jobs')
 const LifecycleConstants = require('../../constants/lifecycle')
 const Job = require('../../entity/job').Job
+const jobArgumentsValidateMiddleware = require('../../service/job/arguments-validation')
 
 module.exports = (server) => {
   const middlewares = [
@@ -12,14 +13,33 @@ module.exports = (server) => {
     router.ensureCustomer
   ]
 
+  const verifyStartingTask = async (req, res, next) => {
+    try {
+      if (!req.task) {
+        const { workflow } = req
+        const taskId = workflow.start_task_id
+        const task = await App.Models.Task.Task.findById(taskId)
+        if (!task) {
+          throw new Error('workflow first task not found')
+        }
+        req.task = task
+      }
+      return next()
+    } catch (err) {
+      res.send(400, err.message)
+    }
+  }
+
   // create a new workflow-job instance
   server.post(
     '/workflows/:workflow/job',
     middlewares,
     router.requireCredential('user'),
     router.resolve.idToEntity({ param: 'workflow', required: true }),
+    router.resolve.idToEntity({ param: 'task' }),
     router.ensureCustomerBelongs('workflow'),
     router.ensureAllowed({ entity: { name: 'workflow' } }),
+    verifyStartingTask,
     controller.create
   )
 
@@ -28,6 +48,7 @@ module.exports = (server) => {
     '/workflows/:workflow/secret/:secret/job',
     router.resolve.customerNameToEntity({ required: true }),
     router.resolve.idToEntity({ param: 'workflow', required: true }),
+    router.resolve.idToEntity({ param: 'task' }),
     router.ensureCustomerBelongs('workflow'),
     router.requireSecret('workflow'),
     (req, res, next) => {
@@ -35,6 +56,7 @@ module.exports = (server) => {
       req.origin = JobConstants.ORIGIN_SECRET
       next()
     },
+    verifyStartingTask,
     controller.create
   )
 
@@ -60,24 +82,22 @@ module.exports = (server) => {
 }
 
 const controller = {
-  create (req, res, next) {
-    let { workflow, user, customer } = req
-    let args = req.body.task_arguments || []
+  async create (req, res, next) {
+    try {
+      const { workflow, user, customer, task } = req
+      const args = jobArgumentsValidateMiddleware(req)
 
-    App.jobDispatcher.createByWorkflow({
-      workflow,
-      user,
-      customer,
-      notify: true,
-      task_arguments_values: args,
-      origin: (req.origin || JobConstants.ORIGIN_USER)
-    }, (err, job) => {
-      if (err) {
-        logger.error('%o', err)
-        return res.send(err.statusCode || 500, err.message)
-      }
+      const wJob = await App.jobDispatcher.createByWorkflow({
+        task,
+        workflow,
+        user,
+        customer,
+        notify: true,
+        task_arguments_values: args,
+        origin: (req.origin || JobConstants.ORIGIN_USER)
+      })
 
-      let data = job.publish()
+      let data = wJob.publish()
       data.user = {
         id: user.id,
         username: user.username,
@@ -85,9 +105,16 @@ const controller = {
       }
 
       res.send(200, data)
-      req.job = job
+      req.job = wJob
       next()
-    })
+    } catch (err) {
+      if (err.name === 'ClientError') {
+        return res.send(err.status, err.message)
+      }
+
+      logger.error('%o', err)
+      return res.send(500, 'Internal Server Error')
+    }
   },
   remove (req, res, next) {
     const workflow = req.workflow

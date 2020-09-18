@@ -236,43 +236,21 @@ module.exports = {
       }
     )
   },
-  createByWorkflow (input, next) {
-    next || (next=()=>{})
+  async createByWorkflow (input) {
     const { workflow, user, customer } = input
 
-    const createWorkflowJob = (props, done) => {
-      let wJob = new JobModels.Workflow(props)
-      wJob.save( (err, wJob) => {
-        if (err) { return done(err) } // break
-
-        let data = wJob.toObject()
-        data.user = {
-          id: user.id,
-          username: user.username,
-          email: user.email
-        }
-
-        App.notifications.generateSystemNotification({
-          topic: TopicsConstants.job.crud,
-          data: {
-            organization: customer.name,
-            organization_id: customer._id,
-            operation: Constants.CREATE,
-            model_type: data._type,
-            model: data
-          }
-        })
-
-        done(null, wJob)
-      })
+    // if task is not specified , then use workflow starting task
+    let task = input.task
+    if (!task) {
+      let taskId = workflow.start_task_id
+      task = await App.Models.Task.Task.findById(taskId)
+      if (!task) {
+        throw new Error('workflow first task not found. cannot execute')
+      }
     }
 
-    getFirstTask(workflow, (err, task) => {
-      if (err) {
-        return next(err)
-      }
-
-      let wProps = Object.assign({}, input, {
+    const wJob = new JobModels.Workflow(
+      Object.assign({}, input, {
         customer,
         customer_id: customer._id.toString(),
         customer_name: customer.name,
@@ -282,25 +260,23 @@ module.exports = {
         task_arguments_values: null,
         name: workflow.name
       })
+    )
+    await wJob.save()
 
-      createWorkflowJob(wProps, (err, wJob) => {
-        if (err) { return next(err) }
+    // send before creating the first task job
+    submitWorkflowJobNotification({ wJob, user, customer })
 
-        const data = Object.assign({}, input, {
-          task,
-          workflow: input.workflow, // explicit
-          workflow_job_id: wJob._id,
-          workflow_job: wJob._id
-        })
-
-        this.create(data).then(tJob => {
-          next(null, wJob)
-        }).catch(err => {
-          logger.error(err)
-          next(err)
-        })
+    // create first task job
+    this.create(
+      Object.assign({}, input, {
+        task,
+        workflow: input.workflow, // explicit
+        workflow_job_id: wJob._id,
+        workflow_job: wJob._id
       })
-    })
+    )
+
+    return wJob
   },
   /**
    *
@@ -374,7 +350,7 @@ module.exports = {
           }
         }
       } catch (err) {
-        logger.log(err)
+        //logger.log(err)
       }
 
       await job.save()
@@ -961,19 +937,19 @@ const dispatchFinishedTaskExecutionEvent = (job, trigger) => {
   })
 }
 
-const getFirstTask = (workflow, next) => {
-  let taskId = workflow.start_task_id
-  TaskModel.findById(taskId, (err, task) => {
-    if (err) {
-      return next(err)
-    }
-    if (!task) {
-      return next(new Error('workflow first task not found'))
-    }
-
-    return next(null, task)
-  })
-}
+//const getFirstTask = (workflow, next) => {
+//  let taskId = workflow.start_task_id
+//  TaskModel.findById(taskId, (err, task) => {
+//    if (err) {
+//      return next(err)
+//    }
+//    if (!task) {
+//      return next(new Error('workflow first task not found'))
+//    }
+//
+//    return next(null, task)
+//  })
+//}
 
 const parseOutputStringAsJSON = (output) => {
   let result
@@ -1006,4 +982,24 @@ const filterOutputArray = (outputs) => {
 
 const isObject = (value) => {
   return Object.prototype.toString.call(value) === '[object Object]'
+}
+
+const submitWorkflowJobNotification = ({ wJob, user, customer }) => {
+  //let data = wJob.toObject()
+  //data.user = {
+  //  id: user.id,
+  //  username: user.username,
+  //  email: user.email
+  //}
+
+  App.notifications.generateSystemNotification({
+    topic: TopicsConstants.job.crud,
+    data: {
+      organization: customer.name,
+      organization_id: customer._id,
+      operation: Constants.CREATE,
+      model_type: wJob._type,
+      model: wJob
+    }
+  })
 }

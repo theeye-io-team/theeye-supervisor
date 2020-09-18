@@ -2,6 +2,7 @@ const App = require('../../app')
 const router = require('../../router')
 const logger = require('../../lib/logger')('controller:workflow:job')
 const LifecycleConstants = require('../../constants/lifecycle')
+const JobConstants = require('../../constants/jobs')
 const createJob = require('../../service/job/create')
 
 module.exports = (server) => {
@@ -17,6 +18,20 @@ module.exports = (server) => {
     router.requireCredential('user'),
     router.resolve.idToEntity({ param: 'task', required: true }),
     router.ensureAllowed({ entity: { name: 'task' } }),
+    createJob
+  )
+
+  server.post(
+    '/:customer/task/:task/secret/:secret/job',
+    router.resolve.customerNameToEntity({ required: true }),
+    router.resolve.idToEntity({ param: 'task', required: true }),
+    router.ensureCustomerBelongs('task'),
+    router.requireSecret('task'),
+    (req, res, next) => {
+      req.user = App.user
+      req.origin = JobConstants.ORIGIN_SECRET
+      next()
+    },
     createJob
   )
 

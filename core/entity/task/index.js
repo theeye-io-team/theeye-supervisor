@@ -29,6 +29,7 @@ Task.on('afterSave', function(model) {
 })
 
 exports.Entity = Task
+exports.Task = Task
 exports.ScriptTask = ScriptTask
 exports.ScraperTask = ScraperTask
 exports.ApprovalTask = ApprovalTask
