@@ -36,9 +36,10 @@ exports.task = {
   execution: 'task-execution', // create/start job
   hold: 'task-hold-execution', // create holded task execution
   assigned: 'task-assigned', // assigned to agent
-  result: 'task-result', // update/finalize job
-  cancelation: 'task-cancelation', // cancel job
-  terminate: 'task-terminate', // terminate a job
+  result: 'task-result', // job result updated
+  cancelation: 'task-cancelation', // job canceled
+  terminate: 'task-terminate', // job terminate
+  completed: 'task-completed', // job execution completed
   notification: 'notification-task'
 }
 exports.workflow = {

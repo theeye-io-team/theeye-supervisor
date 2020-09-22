@@ -1,5 +1,3 @@
-'use strict'
-
 const mongodb = require('../../lib/mongodb').db
 const FileSchema = require('./schema')
 const Template = require('./template')

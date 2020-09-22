@@ -329,6 +329,7 @@ const notifyEvent = (options) => {
         operation,
         organization: req.customer.name,
         organization_id: req.customer._id,
+        model_id: indicator._id,
         model_type: indicator._type,
         model: indicator
       }

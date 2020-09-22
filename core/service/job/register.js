@@ -10,114 +10,113 @@ const logger = require('../../lib/logger')('service:jobs')
  * @param {String} topic
  * @param {Object} input
  * @property {Job} input.job
- *
+ * @return {Promise}
  */
-module.exports = (operation, topic, input, done) => {
-  done || (done = () => {})
-
+module.exports = async (operation, topic, input) => {
   const { job } = input
+  const task = (job.task || {})
 
-  /**
-   * @param {Object} jobData plain object
-   */
-  const sendJobNotification = (jobData) => {
-    let job = jobData
-    let task = (jobData.task || {})
-
-    const payload = {
-      operation,
-      task_name: task.name,
-      task_type: task.type,
-      state: job.state,
-      lifecycle: job.lifecycle,
-      organization: job.customer_name,
-      organization_id: job.customer_id,
-      job_type: job._type
-    }
-
-    if (
-      job._type !== JobConstants.APPROVAL_TYPE &&
-      job._type !== JobConstants.DUMMY_TYPE &&
-      job._type !== JobConstants.NOTIFICATION_TYPE
-    ) {
-      if (job.host) {
-        payload.hostname = job.host.hostname
-      } else {
-        logger.error(new Error(`job ${job._id}/${job._type}. host not available must fix`))
-      }
-    }
-
-    if (App.jobDispatcher.jobMustHaveATask(job) && !task) {
-      let err = new Error(`job ${job._id}/${job._type} task is not valid or undefined`)
-      throw err
-    }
-
-    if (job._type === JobConstants.SCRAPER_TYPE) {
-      payload.url = task.url
-      payload.method = task.method
-      payload.statuscode = task.status_code
-      payload.pattern = task.pattern
-    } else if (job._type == JobConstants.SCRIPT_TYPE) {
-      if (!job.script) {
-        const msg = `job ${job._id}/${job._type} script is not valid or undefined`
-        logger.error(new Error(msg))
-      } else {
-        const script = job.script || {}
-        payload.filename = script.filename
-        payload.md5 = script.md5
-        payload.mtime = script.last_update
-        payload.mimetype = script.mimetype
-      }
-    } else if (job._type == JobConstants.APPROVAL_TYPE) {
-      // nothing yet
-    } else if (job._type == JobConstants.DUMMY_TYPE) {
-      // nothing yet
-    } else if (job._type == JobConstants.NOTIFICATION_TYPE) {
-      // nothing yet
-    } else if (job._type == JobConstants.AGENT_UPDATE_TYPE) {
-      // nothing yet
-    } else {
-      // unhandled job type
-    }
-
-    // skip system notifications for this job.
-    if (job.notify !== false) {
-      // async call
-      App.notifications.generateSystemNotification({
-        topic: TopicsConstants.job.crud,
-        data: {
-          hostname: (job.host && job.host.hostname) || job.host_id,
-          organization: job.customer_name,
-          organization_id: job.customer_id,
-          operation: operation,
-          model_type: job._type,
-          model: job,
-          approvers: (task && task.approvers) || undefined
-        }
-      })
-    }
-
-    if (job.result) {
-      payload.result = job.result
-      if (job._type == JobConstants.SCRAPER_TYPE) {
-        if (payload.result.response && payload.result.response.body) {
-          delete payload.result.response.body
-        }
-      }
-    }
-
-    // async call
-    // topic = topics.task.[execution||result] , CREATE/UPDATE
-    App.logger.submit(job.customer_name, topic, payload)
-
-    // async
-    done()
-  }
-
-  job.populate([
+  await job.populate([
     { path: 'host', select: 'id hostname' },
     { path: 'workflow_job' },
-  ], (err) => {
-    sendJobNotification(job.toObject())
-  })
+  ]).execPopulate()
+
+  //sendJobNotification(job)
+  //let job = jobData
+
+  // skip system notifications for this job.
+  if (job.notify !== false) {
+    // async call
+    App.notifications.generateSystemNotification({
+      topic: TopicsConstants.job.crud,
+      data: {
+        hostname: (job.host && job.host.hostname) || job.host_id,
+        organization: job.customer_name,
+        organization_id: job.customer_id,
+        operation,
+        model_id: job._id,
+        model_type: job._type,
+        model: job.toObject(),
+        approvers: (task && task.approvers) || undefined
+      }
+    })
+  }
+
+  const logPayload = prepareLog(job, task)
+  logPayload.operation = operation
+
+  // topic = topics.task.[execution||result] , CREATE/UPDATE
+  App.logger.submit(job.customer_name, topic, logPayload)
+
+  return
+}
+
+const prepareLog = (job, task) => {
+  const payload = {
+    operation: null,
+    task_id: task._id,
+    task_name: task.name,
+    task_type: task.type,
+    state: job.state,
+    lifecycle: job.lifecycle,
+    organization: job.customer_name,
+    organization_id: job.customer_id,
+    job_type: job._type
+  }
+
+  if (
+    job._type !== JobConstants.APPROVAL_TYPE &&
+    job._type !== JobConstants.DUMMY_TYPE &&
+    job._type !== JobConstants.NOTIFICATION_TYPE
+  ) {
+    if (job.host) {
+      payload.hostname = job.host.hostname
+    } else {
+      logger.error(new Error(`job ${job._id}/${job._type}. host not available must fix`))
+    }
+  }
+
+  if (App.jobDispatcher.jobMustHaveATask(job) && !task) {
+    throw new Error(`job ${job._id}/${job._type} task is not valid or undefined`)
+  }
+
+  if (job._type === JobConstants.SCRAPER_TYPE) {
+    payload.url = task.url
+    payload.method = task.method
+    payload.statuscode = task.status_code
+    payload.pattern = task.pattern
+  } else if (job._type == JobConstants.SCRIPT_TYPE) {
+    if (!job.script) {
+      const msg = `job ${job._id}/${job._type} script is not valid or undefined`
+      logger.error(new Error(msg))
+    } else {
+      const script = job.script || {}
+      payload.filename = script.filename
+      payload.md5 = script.md5
+      payload.mtime = script.last_update
+      payload.mimetype = script.mimetype
+    }
+  } else if (job._type == JobConstants.APPROVAL_TYPE) {
+    // nothing yet
+  } else if (job._type == JobConstants.DUMMY_TYPE) {
+    // nothing yet
+  } else if (job._type == JobConstants.NOTIFICATION_TYPE) {
+    // nothing yet
+  } else if (job._type == JobConstants.AGENT_UPDATE_TYPE) {
+    // nothing yet
+  } else {
+    // unhandled job type
+  }
+
+  if (job.result) {
+    // clone result to avoid removing the original data
+    payload.result = JSON.parse(JSON.stringify(job.result))
+    if (job._type == JobConstants.SCRAPER_TYPE) {
+      if (payload.result.response && payload.result.response.body) {
+        delete payload.result.response.body
+      }
+    }
+  }
+
+  return payload
 }

@@ -24,8 +24,7 @@ module.exports = (server) => {
   /**
    * get a single job information
    */
-  server.get(
-    '/:customer/job/:job',
+  server.get('/:customer/job/:job',
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'job', required: true }),
@@ -35,8 +34,7 @@ module.exports = (server) => {
   /**
    * fetch many jobs information
    */
-  server.get(
-    '/:customer/job',
+  server.get('/:customer/job',
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.hostnameToHost(),
@@ -49,8 +47,7 @@ module.exports = (server) => {
     }
   )
 
-  server.put(
-    '/:customer/job/:job',
+  server.put('/:customer/job/:job',
     middlewares,
     router.requireCredential('agent', { exactMatch: true }),
     router.resolve.idToEntity({ param: 'job', required: true }),
@@ -58,8 +55,7 @@ module.exports = (server) => {
     afterFinishJobHook
   )
 
-  server.post(
-    '/:customer/job',
+  server.post('/:customer/job',
     middlewares,
     router.requireCredential('user'),
     router.resolve.idToEntity({param:'task', required:true}),
@@ -68,8 +64,7 @@ module.exports = (server) => {
     //audit.afterCreate('job',{ display: 'name' })
   )
 
-  server.post(
-    '/job',
+  server.post('/job',
     middlewares,
     router.requireCredential('user'),
     router.resolve.idToEntity({param:'task',required:true}),
@@ -79,8 +74,7 @@ module.exports = (server) => {
   )
 
   // create job using task secret key
-  server.post(
-    '/job/secret/:secret',
+  server.post('/job/secret/:secret',
     router.resolve.customerNameToEntity({ required: true }),
     router.resolve.idToEntity({ param: 'task', required: true }),
     router.requireSecret('task'),
@@ -120,7 +114,7 @@ const controller = {
         let jobs = []
         if (job) {
           jobs.push(job.publish('agent'))
-          App.jobDispatcher.scheduleJobTimeoutVerification(job)
+          App.scheduler.scheduleJobTimeoutVerification(job)
         }
 
         res.send(200, { jobs })
@@ -231,6 +225,7 @@ const afterFinishJobHook = (req, res, next) => {
             organization_id: req.customer._id,
             operation: Constants.UPDATE,
             model_type: host._type,
+            model_id: host._id,
             model: {
               id: host._id,
               integrations: { ngrok: host.integrations.ngrok }

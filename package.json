@@ -47,7 +47,7 @@
     "restify": "~8.5.1",
     "stream-buffers": "~2.2.0",
     "underscore": "~1.8.3",
-    "uuid": "3.1.0",
+    "uuid": "~8.3.0",
     "validator": "8.2.0"
   },
   "devDependencies": {

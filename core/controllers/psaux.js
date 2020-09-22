@@ -51,8 +51,9 @@ const create = async (req, res, next) => {
         App.notifications.generateSystemNotification({
           topic: TopicsConstants.host.processes,
           data: {
+            model_id: psaux._id,
             model_type: 'HostStats',
-            model: psaux,
+            //model: psaux,
             hostname: host.hostname,
             organization: host.customer_name,
             operation: Constants.CREATE
@@ -72,8 +73,9 @@ const create = async (req, res, next) => {
       App.notifications.generateSystemNotification({
         topic: TopicsConstants.host.processes,
         data: {
+          model_id: psaux._id,
           model_type: 'HostStats',
-          model: psaux,
+          //model: psaux,
           hostname: host.hostname,
           organization_id: host.customer_id,
           organization: host.customer_name,

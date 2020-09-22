@@ -1,15 +1,19 @@
-const Job = require('../entity/job')
-const Task = require('../entity/task')
-const Monitor = require('../entity/monitor')
 const Customer = require('../entity/customer')
-const Host = require('../entity/host').Host
+const File = require('../entity/file')
+const Host = require('../entity/host')
+const Job = require('../entity/job')
+const Monitor = require('../entity/monitor')
+const Task = require('../entity/task')
+const Workflow = require('../entity/workflow')
 
 module.exports = {
   Models: {
-    Monitor,
     Customer,
+    File,
     Host,
     Job,
-    Task
+    Monitor,
+    Task,
+    Workflow
   }
 }

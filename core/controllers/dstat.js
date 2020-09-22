@@ -64,6 +64,7 @@ const create = (req, res, next) => {
       hostname: host.hostname,
       organization: customer.name,
       organization_id: customer._id,
+      model_id: dstat._id,
       model_type: 'HostStats',
       operation: (dstat !== null ? Constants.REPLACE : Constants.CREATE),
     }

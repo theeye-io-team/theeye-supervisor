@@ -172,6 +172,7 @@ const controller = {
     App.notifications.generateSystemNotification({
       topic: TopicsConstants.webhook.triggered,
       data: {
+        model_id: webhook._id,
         model_type: 'Webhook',
         model: webhook,
         organization: req.customer.name,

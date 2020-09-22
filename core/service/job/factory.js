@@ -191,6 +191,12 @@ const createJob = (input, next) => {
 
   const setupJobBasicProperties = (job) => {
     if (task.workflow_id) {
+
+      if (!vars.workflow_job_id) {
+        logger.error('%o', task)
+        return next( new Error('missing workflow job') )
+      }
+
       job.workflow = task.workflow_id
       job.workflow_id = task.workflow_id
       job.workflow_job = vars.workflow_job_id
@@ -291,7 +297,6 @@ const createJob = (input, next) => {
         }
         task.execution_count += 1
         task.save(err => {})
-
         done(null, job)
       })
     }

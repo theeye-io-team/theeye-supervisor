@@ -22,16 +22,6 @@ module.exports = {
         operation: Constants.UPDATE
       })
 
-      //NotificationService.generateSystemNotification({
-      //  topic: topic,
-      //  data: {
-      //    hostname: model.hostname,
-      //    organization: model.customer_name,
-      //    operation: Constants.UPDATE,
-      //    model_type: model._type,
-      //    model: model
-      //  }
-      //})
 
       next()
     }
@@ -53,16 +43,6 @@ module.exports = {
         operation: Constants.REPLACE
       })
 
-      //NotificationService.generateSystemNotification({
-      //  topic: topic,
-      //  data: {
-      //    hostname: model.hostname,
-      //    organization: model.customer_name,
-      //    operation: Constants.REPLACE,
-      //    model_type: model._type,
-      //    model: model
-      //  }
-      //})
 
       next()
     }
@@ -84,16 +64,6 @@ module.exports = {
         operation: Constants.DELETE
       })
 
-      //NotificationService.generateSystemNotification({
-      //  topic: topic,
-      //  data: {
-      //    hostname: model.hostname,
-      //    organization: model.customer_name,
-      //    operation: Constants.DELETE,
-      //    model_type: model._type,
-      //    model: model
-      //  }
-      //})
 
       next()
     }
@@ -115,16 +85,6 @@ module.exports = {
         operation: Constants.CREATE
       })
 
-      //NotificationService.generateSystemNotification({
-      //  topic: topic,
-      //  data: {
-      //    hostname: model.hostname,
-      //    organization: model.customer_name,
-      //    operation: Constants.CREATE,
-      //    model_type: model._type,
-      //    model: model
-      //  }
-      //})
 
       next()
     }

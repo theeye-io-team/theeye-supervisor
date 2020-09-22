@@ -76,9 +76,7 @@ module.exports = {
     updates.template_id = null
     delete updates._id // if set
 
-    if (updates.workflow_id) {
-      delete updates.acl
-    }
+    if (updates.workflow_id) { delete updates.acl }
 
     task.set(updates)
 

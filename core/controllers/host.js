@@ -191,6 +191,7 @@ const registerHostname = (req, done) => {
           data: {
             model_type:'Host',
             model: host,
+            model_id: host._id,
             hostname,
             organization: customer.name,
             organization_id: customer._id,

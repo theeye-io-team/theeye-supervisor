@@ -1,8 +1,7 @@
-const App = require('../../app');
+const App = require('../../app')
 const logger = require('../../lib/logger')('controller:task:scheduler')
 const router = require('../../router')
 const JobConstants = require('../../constants/jobs')
-
 const resolver = router.resolve
 
 module.exports = function (server) {
@@ -17,35 +16,37 @@ module.exports = function (server) {
   server.post(
     '/:customer/task/:task/schedule',
     middlewares,
+    // @TODO-DEPRECATED_REMOVE
+    // backward compatibility middleware
+    // remove 2021-01-01
+    (req, res, next) => {
+      if (req.body && req.body.scheduleData) {
+        let data = req.body.scheduleData
+        req.body.runDate = data.runDate
+        req.body.repeatEvery = data.repeatEvery
+      }
+      next()
+    },
     controller.create
   )
 
-  server.get(
-    '/:customer/task/:task/schedule',
-    middlewares,
-    controller.fetch
-  )
+  server.get('/:customer/task/:task/schedule', middlewares, controller.fetch)
 
-  server.del(
-    '/:customer/task/:task/schedule/:schedule',
-    middlewares,
-    controller.remove
-  )
-
-  // this is for the email cancelation
-  // authenticate with a secret token
-  // only valid for this action
-  server.get('/:customer/task/:task/schedule/:schedule/secret/:secret',[
-    resolver.idToEntity({param:'task',required:true}),
-    router.requireSecret('task'),
-    resolver.customerNameToEntity({required:true}),
-  ], controller.remove)
+  ///**
+  // * this is for the email cancelation
+  // * authenticate with a secret token
+  // * only valid for this action
+  // */
+  //server.get('/:customer/task/:task/schedule/:schedule/secret/:secret',[
+  //  resolver.idToEntity({param:'task',required:true}),
+  //  router.requireSecret('task'),
+  //  resolver.customerNameToEntity({required:true}),
+  //], controller.remove)
 }
 
 const controller = {
   /**
    * Gets schedule data for a task
-   * @author cg
    * @method GET
    * @route /:customer/task/:task/schedule
    * @param {String} :task , mongo ObjectId
@@ -65,39 +66,18 @@ const controller = {
     })
   },
   /**
-   *
-   * @method DELETE
-   * @route /:customer/task/:task/schedule/:schedule
-   *
-   */
-  remove (req, res, next) {
-    const task = req.task
-    const scheduleId = req.params.schedule
-    if (!scheduleId) { res.send(400,'schedule id required') }
-
-    App.scheduler.cancelTaskSchedule(task, scheduleId, function (err, qtyRemoved) {
-      if (err) {
-        logger.error('Scheduler had an error canceling schedule %s',scheduleId);
-        logger.error(err);
-        return res.send(500);
-      }
-      else res.send(200,{})
-    })
-  },
-  /**
-   *
-   * @author cg
    * @method POST
    * @route /:customer/task/:task/schedule
-   *
    */
   create (req, res, next) {
-    var task = req.task
-    var user = req.user
-    var customer = req.customer
+    const task = req.task
+    const user = req.user
+    const customer = req.customer
 
-    if (!req.body.scheduleData||!req.body.scheduleData.runDate) {
-      return res.send(400,json.error('Must have a date'))
+    const { runDate, repeatEvery } = req.body
+
+    if (!runDate) {
+      return res.send(400, 'runDate required')
     }
 
     App.scheduler.scheduleTask({
@@ -105,8 +85,8 @@ const controller = {
       task: task,
       customer: customer,
       user: user,
-      schedule: req.body.scheduleData
-    }, function (err, schedule) {
+      schedule: { runDate, repeatEvery }
+    }, (err, schedule) => {
       if (err) {
         logger.error(err)
         return res.send(500, err)

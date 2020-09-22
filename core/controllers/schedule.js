@@ -1,34 +1,32 @@
-"use strict";
+const App = require('../app')
+const logger = require('../lib/logger')('eye:supervisor:controller:schedule')
+const Scheduler = require('../service/scheduler')
+const router = require('../router')
+const { ClientError } = require('../lib/error-handler')
 
-var logger = require('../lib/logger')('eye:supervisor:controller:schedule');
-var Scheduler = require('../service/scheduler');
-var router = require('../router');
-
-module.exports = function(server){
-  var middlewares = [
+module.exports = (server) => {
+  const middlewares = [
     server.auth.bearerMiddleware,
     router.requireCredential('admin'),
-    router.resolve.customerNameToEntity({required:true}),
+    router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer
-  ];
+  ]
 
-  server.get('/:customer/schedule',middlewares,controller.fetch);
-};
+  server.del('/:customer/scheduler/:schedule', middlewares, remove)
+}
 
-var controller = {
-  /**
-   * @author cg
-   * @method GET
-   * @route /:customer/schedule
-   */
-  fetch (req, res, next) {
-    Scheduler.getSchedules(req.customer._id, function(err, schedules){
-      if(err) {
-        logger.error('Scheduler got an error retrieving data for customer %s',req.customer._id);
-        logger.error(err);
-        return res.send(500);
-      }
-      else res.send(200, schedules);
-    });
+const remove = async (req, res, next) => {
+  try {
+    const scheduleId = req.params.schedule
+
+    if (!scheduleId) {
+      throw new ClientError('schedule id required')
+    }
+
+    let numRemoved = await App.scheduler.cancelSchedule(scheduleId)
+    res.send(200, { numRemoved })
+  } catch (err) {
+    logger.error('%o', err)
+    return res.send(500)
   }
-};
+}

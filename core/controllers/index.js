@@ -3,16 +3,11 @@ const os = require('os')
 const exec = require('child_process').exec
 
 module.exports = (server) => {
-  server.get('/', (req, res, next) => {
+  server.get('/api', (req, res, next) => {
     res.send(200, `Hi, I am ok. Thanks for asking`)
   })
 
-  server.get(
-    '/status',
-    //server.auth.bearerMiddleware,
-    //router.requireCredential('root'),
-    nodeStatus
-  )
+  server.get('/api/status', nodeStatus)
 }
 
 const nodeStatus = async (req, res, next) => {

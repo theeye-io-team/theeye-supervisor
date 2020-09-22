@@ -167,7 +167,7 @@ module.exports = {
 
       await JobModels.Job.deleteOne({ host_id })
 
-      const host = await App.Models.Host.findById(host_id).exec()
+      const host = await App.Models.Host.Entity.findById(host_id).exec()
       if (!host) { throw new Error('Host not found') }
 
       const job = new JobModels.AgentUpdate()
@@ -236,6 +236,10 @@ module.exports = {
       }
     )
   },
+  /**
+   *
+   *
+   */
   async createByWorkflow (input) {
     const { workflow, user, customer } = input
 
@@ -263,8 +267,9 @@ module.exports = {
     )
     await wJob.save()
 
-    // send before creating the first task job
-    submitWorkflowJobNotification({ wJob, user, customer })
+    // send and wait before creating the job of the first task
+    // to ensure dispatching events in order
+    await WorkflowJobCreatedNotification({ wJob, user, customer })
 
     // create first task job
     this.create(
@@ -358,8 +363,14 @@ module.exports = {
 
       process.nextTick(() => {
         RegisterOperation(Constants.UPDATE, TopicsConstants.task.result, { job })
-        this.cancelScheduledTimeoutVerificationJob(job)
+        App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
         dispatchFinishedTaskExecutionEvent(job, job.trigger_name)
+
+        if (!job.task) {
+          logger.log(`No task available for job ${job.name}`)
+        } else {
+          TaskCompletedNotification({ task: job.task, job })
+        }
       })
     } catch (err) {
       logger.error(err)
@@ -504,14 +515,14 @@ module.exports = {
    * @param {String} job_id
    * @return {Promise}
    */
-  async jobExecutionTimedOut (job_id) {
+  async jobExecutionTimedOutCheck (job_id) {
     let job = await JobModels.Job.findById(job_id).exec()
     if (!job) {
-      // finished/removed/canceled
-      return
+      // finished / removed / canceled
+      return null
     }
 
-    // still assigned
+    // is still assigned and waiting execution result
     if (job.lifecycle === LifecycleConstants.ASSIGNED) {
       let elapsed = (job.timeout + (60 * 1000)) / 1000
       let elapsedText
@@ -523,40 +534,22 @@ module.exports = {
         elapsedText = `${elapsed.toFixed(2)} seconds`
       }
 
-      App.jobDispatcher.cancel({
-        job,
-        state: StateConstants.TIMEOUT,
-        result: {
-          killed: true,
-          output: [{ message: `The task was terminated after ${elapsedText} due to execution timeout.` }]
-        }
+      return new Promise( (resolve, reject) => {
+        this.cancel({
+          job,
+          state: StateConstants.TIMEOUT,
+          result: {
+            killed: true,
+            output: [{ message: `The task was terminated after ${elapsedText} due to execution timeout.` }]
+          }
+        }, err => {
+          if (err) reject(err)
+          else resolve()
+        })
       })
     }
 
-    return
-  },
-  /**
-   * @param {Job} job
-   * @return {Promise}
-   */
-  async scheduleJobTimeoutVerification (job) {
-    let defaultTimeout = (10 * 60 * 1000) // 10 minutes in milliseconds
-    let timeout = ( job.timeout || defaultTimeout ) + (60 * 1000)
-    let now = new Date()
-    let when = new Date(now.getTime() + timeout)
-    App.scheduler.schedule(when, 'job-timeout', { job_id: job._id.toString() }, null, () => {})
-  },
-  /**
-   * @param {Job} job
-   * @return {Promise}
-   */
-  cancelScheduledTimeoutVerificationJob (job) {
-    return App.scheduler.agenda.cancel({
-      $and: [
-        { name: 'job-timeout' },
-        { 'data.job_id': job._id.toString() }
-      ]
-    })
+    return null // undefined
   }
 }
 
@@ -655,7 +648,7 @@ const createJob = (input) => {
   return new Promise((resolve, reject) => {
     const { task } = input
 
-    JobFactory.create(task, input, (err, job) => {
+    JobFactory.create(task, input, async (err, job) => {
       if (err) { return reject(err) }
 
       if (job.constructor.name === 'model') {
@@ -668,31 +661,27 @@ const createJob = (input) => {
         return reject(err)
       }
 
-      RegisterOperation(
-        Constants.CREATE,
-        TopicsConstants.task.execution,
-        { job },
-        () => {
-          if (task.type === TaskConstants.TYPE_DUMMY) {
-            if (job.lifecycle !== LifecycleConstants.ONHOLD) {
-              App.jobDispatcher.finishDummyJob(job, input).then(resolve).catch(reject)
-            } else {
-              resolve(job)
-            }
-          } else if (TaskConstants.TYPE_NOTIFICATION === task.type) {
-            App.jobDispatcher.finish(Object.assign({}, input, {
-              job,
-              result: {},
-              state: StateConstants.SUCCESS
-            }), (err) => {
-              if (err) reject(err)
-              else resolve(job)
-            })
-          } else {
-            resolve(job)
-          }
+      // await notification and system log generation
+      await RegisterOperation(Constants.CREATE, TopicsConstants.task.execution, { job })
+
+      if (task.type === TaskConstants.TYPE_DUMMY) {
+        if (job.lifecycle !== LifecycleConstants.ONHOLD) {
+          App.jobDispatcher.finishDummyJob(job, input).then(resolve).catch(reject)
+        } else {
+          resolve(job)
         }
-      )
+      } else if (TaskConstants.TYPE_NOTIFICATION === task.type) {
+        App.jobDispatcher.finish(Object.assign({}, input, {
+          job,
+          result: {},
+          state: StateConstants.SUCCESS
+        }), (err) => {
+          if (err) reject(err)
+          else resolve(job)
+        })
+      } else {
+        resolve(job)
+      }
     })
   })
 }
@@ -708,6 +697,7 @@ const createScheduledJob = async (input) => {
       organization: customer.name,
       organization_id: customer._id,
       operation: Constants.CREATE,
+      model_id: job._id,
       model_type: job._type,
       model: job,
       approvers: (job.task && job.task.approvers) || undefined
@@ -984,22 +974,37 @@ const isObject = (value) => {
   return Object.prototype.toString.call(value) === '[object Object]'
 }
 
-const submitWorkflowJobNotification = ({ wJob, user, customer }) => {
-  //let data = wJob.toObject()
-  //data.user = {
-  //  id: user.id,
-  //  username: user.username,
-  //  email: user.email
-  //}
-
-  App.notifications.generateSystemNotification({
+/**
+ * @return {Promise}
+ */
+const WorkflowJobCreatedNotification = ({ wJob, user, customer }) => {
+  return App.notifications.generateSystemNotification({
     topic: TopicsConstants.job.crud,
     data: {
+      operation: Constants.CREATE,
       organization: customer.name,
       organization_id: customer._id,
-      operation: Constants.CREATE,
+      model_id: wJob._id,
       model_type: wJob._type,
       model: wJob
+    }
+  })
+}
+
+/**
+ * @return {Promise}
+ */
+const TaskCompletedNotification = ({ task, job }) => {
+  // async call
+  return App.notifications.generateSystemNotification({
+    topic: TopicsConstants.task.completed,
+    data: {
+      operation: Constants.UPDATE,
+      organization: task.customer_name,
+      organization_id: task.customer_id,
+      model_id: (task._id || task.id), // @TODO improve/fix
+      model_type: task._type,
+      job_id: job._id
     }
   })
 }

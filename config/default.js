@@ -2,7 +2,7 @@ const join = require('path').join
 
 module.exports = {
   server: {
-    name: "TheEye",
+    name: "TheEye Core",
     version: process.env.VERSION || undefined,
     port: process.env.PORT || 60080
   },

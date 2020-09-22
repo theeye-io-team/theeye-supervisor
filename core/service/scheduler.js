@@ -5,14 +5,10 @@ const EventEmitter = require('events').EventEmitter
 const util = require('util')
 
 const App = require('../app')
-
 const logger = require('../lib/logger')(':scheduler')
 const mongodb = require('../lib/mongodb').connection.db
-const Host = require('../entity/host').Entity
-const Task = require('../entity/task').Entity
-const Script = require('../entity/file').Script
-const Customer = require('../entity/customer').Entity
 
+const SchedulerConstants = require('../constants/scheduler')
 const JobConstants = require('../constants/jobs')
 const LifecycleConstants = require('../constants/lifecycle')
 
@@ -68,11 +64,7 @@ Scheduler.prototype = {
 
       const data = {
         task_id: task._id,
-        name: task.name,
-        user_id: App.user.id,
-        customer_id: customer.id,
-        customer_name: customer.name,
-        lifecycle: LifecycleConstants.READY,
+        customer_id: customer._id,
         notify: input.notify || false,
         scheduleData: schedule,
         origin: input.origin
@@ -80,29 +72,45 @@ Scheduler.prototype = {
 
       // runDate is miliseconds
       let date = new Date(schedule.runDate)
-      let frequency = schedule.repeatEvery || false
-      let job = await this.schedule(date, 'task', data, frequency)
+      let job = await this.createSchedulerJob({
+        name: SchedulerConstants.AGENDA_TASK,
+        starting: date,
+        data,
+        interval: schedule.repeatEvery
+      })
       return done(null, job)
     } catch (err) {
       return done(err)
     }
   },
   /**
-   * Schedules a job for its starting date and parsing its properties
+   * Schedule a Workflow
    *
-   * @return {Promise}
+   * @param {Object}
+   * @property {String} origin
+   * @property {Workflow} workflow
+   * @property {User} user
+   * @property {Customer} customer
+   * @property {Date} runDate
+   * @property {String} repeatEvery
+   * @property {Boolean} notify
+   * @return {Promise} agenda job schedule promise
    */
-  schedule (starting, jobName, data, interval) {
-    let agendaJob = this.agenda.create(jobName, data)
-    logger.log("agendaJob.schedule %s", starting)
-
-    if (interval) {
-      logger.log("repeatEvery %s", interval)
-      agendaJob.repeatEvery(interval)
+  scheduleWorkflow ({ origin, workflow, customer, runDate, repeatEvery, notify = false }) {
+    const data = {
+      workflow_id: workflow._id,
+      customer_id: customer._id,
+      notify,
+      scheduleData: { runDate, repeatEvery },
+      origin
     }
 
-    agendaJob.schedule(starting)
-    return agendaJob.save()
+    return this.createSchedulerJob({
+      name: SchedulerConstants.AGENDA_WORKFLOW,
+      starting: new Date(runDate),
+      data,
+      interval: repeatEvery
+    })
   },
   async getTaskSchedule (taskId, callback) {
     if (!taskId) {
@@ -123,24 +131,27 @@ Scheduler.prototype = {
       callback(err)
     }
   },
-  async getSchedules (customerId, callback) {
-    if (!customerId) {
-      let err = new Error('customer id must be provided')
-      return callback(err)
+  /**
+   * @param {Object} query
+   * @return {Promise}
+   */
+  getSchedules (schedule, data) {
+    let query = {}
+
+    if (!data.customer_id) {
+      throw new Error('invalid query customer')
     }
 
-    try {
-      let jobs = await this.agenda.jobs({
-        $and: [
-          { name: 'task' },
-          { 'data.customer_id': customerId }
-        ]
-      })
-
-      callback(null, jobs)
-    } catch (err) {
-      callback(err)
+    if (!schedule.name) {
+      throw new Error('invalid query name')
     }
+
+    query.name = schedule.name // jobs in this group
+    for (let prop in data) {
+      query[ `data.${prop}` ] = data[prop]
+    }
+
+    return this.agenda.jobs(query)
   },
   // Counts schedules for the given task
   // @param callback: Function (err, schedulesCount)
@@ -149,24 +160,13 @@ Scheduler.prototype = {
       return callback(err, err ? 0 : schedules.length)
     })
   },
-  //Cancels a specific scheduleId. Task is provided for further processing
-  async cancelTaskSchedule (task, scheduleId, callback) {
-    if (!scheduleId) {
-      let err = new Error('schedule id must be provided')
-      return callback(err)
-    }
-
-    try {
-      let numRemoved = await this.agenda.cancel({
-        $and: [
-          { name: 'task' },
-          { _id: new ObjectId(scheduleId) }
-        ]
-      })
-      callback(null, numRemoved)
-    } catch (err) {
-      callback(err)
-    }
+  /**
+   * Cancels a specific scheduleId
+   *
+   * @return {Promise}
+   */
+  cancelSchedule (scheduleId) {
+    return this.agenda.cancel({ _id: new ObjectId(scheduleId) })
   },
   // deletes ALL schedules for a given task
   unscheduleTask (task) {
@@ -176,23 +176,83 @@ Scheduler.prototype = {
         { 'data.task_id': task._id }
       ]
     })
+  },
+  /**
+   * @param {Job} job
+   * @return {Promise}
+   */
+  cancelScheduledTimeoutVerificationJob (job) {
+    this.agenda.cancel({
+      $and: [
+        { name: 'job-timeout' },
+        { 'data.job_id': job._id.toString() }
+      ]
+    })
+  },
+  /**
+   * @param {Job} job
+   * @return {Promise}
+   */
+  scheduleJobTimeoutVerification (job) {
+    let defaultTimeout = (10 * 60 * 1000) // 10 minutes in milliseconds
+    let timeout = (job.timeout || defaultTimeout) + (60 * 1000)
+    let now = new Date()
+
+    return this.createSchedulerJob({
+      name: SchedulerConstants.AGENDA_TIMEOUT_JOB,
+      starting: new Date(now.getTime() + timeout),
+      data: { job_id: job._id.toString() },
+      interval: null
+    })
+  },
+  /**
+   * Schedules a job for its starting date and parsing its properties
+   *
+   * @param {Date} starting first execution
+   * @param {String} name
+   * @param {Object} data
+   * @param {String} interval human format or cron
+   * @return {Promise}
+   */
+  createSchedulerJob ({ name, starting, data, interval }) {
+    let agendaJob = this.agenda.create(name, data)
+    logger.log("agendaJob.schedule %s", starting)
+
+    if (interval) {
+      logger.log("repeat interval is %s", interval)
+      agendaJob.repeatEvery(interval)
+    }
+
+    agendaJob.schedule(starting)
+    return agendaJob.save()
   }
 }
 
 const setupAgendaJobs = (agenda) => {
   /**
    *
-   * task execution handler. cron.
-   *
-   * handle scheduled task creation
+   * handle scheduled task execution
    *
    */
-  agenda.define('task', async job => {
+  agenda.define(SchedulerConstants.AGENDA_TASK, job => {
     logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
-    logger.log('||  Agenda Job Processor: task event         ||')
+    logger.log('||  Agenda Job Processor: Task Job')
     logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
 
-    return await taskProcessor(job)
+    return TaskJobProcessor(job)
+  })
+
+  /**
+   *
+   * handle scheduled workflow execution
+   *
+   */
+  agenda.define(SchedulerConstants.AGENDA_WORKFLOW, job => {
+    logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
+    logger.log('||  Agenda Job Processor: Workflow Job')
+    logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
+
+    return WorkflowJobProcessor(job)
   })
 
   /**
@@ -202,36 +262,24 @@ const setupAgendaJobs = (agenda) => {
    * check lifecycle of jobs under execution
    *
    */
-  agenda.define('job-timeout', async function (agendaJob, done) {
-    try {
-      logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
-      logger.log('||  Agenda Job Processor: job-timeout event  ||')
-      logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
-      let jobData = agendaJob.attrs.data
-      await App.jobDispatcher.jobExecutionTimedOut(jobData.job_id)
-      await agendaJob.remove()
-    } catch (err) {
-      agendaJob.fail(err)
-      await agendaJob.save()
-    }
-    done()
+  agenda.define(SchedulerConstants.AGENDA_TIMEOUT_JOB, async agendaJob => {
+    logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
+    logger.log('||  Agenda Job Processor: job-timeout event')
+    logger.log('|||||||||||||||||||||||||||||||||||||||||||||||')
+
+    const jobData = agendaJob.attrs.data
+    await App.jobDispatcher.jobExecutionTimedOutCheck(jobData.job_id)
+    await agendaJob.remove()
   })
 
-  agenda.on('start', (job) => {
-    logger.log('job %s started', job.attrs.name)
-  })
-
-  agenda.on('complete', (job) => {
-    logger.log('job %s completed', job.attrs.name)
-    //TODO nice place to check for schedules and ensure tag
-  })
-
-  agenda.on('error', (err, job) => {
-    logger.log('job %s error %j', job.name, err.stack)
-  })
+  //agenda.on('start', (job) => { })
+  //agenda.on('complete', (job) => { })
+  //agenda.on('success', (job) => { })
 
   agenda.on('fail', (err, job) => {
-    logger.log('job %s failed %j', job.name, err.stack)
+    logger.log('job %s failed %j', job.attrs.name, err.stack)
+    job.disable()
+    job.save()
   })
 
   // Unlock agenda events when process finishes
@@ -245,59 +293,85 @@ const setupAgendaJobs = (agenda) => {
   process.on('SIGINT', graceful)
 }
 
-const taskProcessor = async (agendaJob) => {
-  try {
-    const { task_id } = agendaJob.attrs.data
-    const task = await Task.findById(task_id)
+const TaskJobProcessor = async (agendaJob) => {
+  const data = agendaJob.attrs.data
+  const task = await App.Models.Task.Entity
+    .findById(data.task_id)
+    .populate('customer')
+    .exec()
 
-    if (!task) {
-      throw new Error('task %s is no longer available', task_id)
-    }
-
-    const [ customer ] = await verifyTask(task)
-
-    let payload = {
-      task,
-      customer,
-      user: App.user,
-      notify: true,
-      origin: JobConstants.ORIGIN_SCHEDULER
-    }
-
-    return await App.jobDispatcher.create(payload)
-  } catch (err) {
-    logger.error(err)
-    agendaJob.fail(err)
-    return await agendaJob.save()
+  if (!task) {
+    throw new Error(`task ${data.task_id} is no longer available`)
   }
+
+  if (!task.customer) {
+    throw new Error(`customer ${data.task_id} is no longer available`)
+  }
+
+  return App.jobDispatcher.create({
+    task,
+    customer: task.customer,
+    user: App.user,
+    origin: JobConstants.ORIGIN_SCHEDULER,
+    task_arguments_values: data.task_arguments_values || null,
+    notify: data.notify || true,
+  })
+}
+
+const WorkflowJobProcessor = async (agendaJob) => {
+  const data = agendaJob.attrs.data
+  const workflow = await App.Models.Workflow.Workflow
+    .findById(data.workflow_id)
+    .populate('customer')
+    .exec()
+
+  if (!workflow) {
+    throw new Error(`workflow ${data.workflow_id} is no longer available`)
+  }
+
+  if (!workflow.customer) {
+    throw new Error(`customer ${workflow.customer} is no longer available`)
+  }
+
+  await workflow.execPopulate()
+
+  return App.jobDispatcher.createByWorkflow({
+    workflow,
+    customer: workflow.customer,
+    user: App.user,
+    origin: JobConstants.ORIGIN_SCHEDULER,
+    task_arguments_values: data.task_arguments_values || null,
+    notify: data.notify || true,
+  })
 }
 
 /**
  * @return {Array}
  */
-const verifyTask = async (task, done) => {
-  let customer = Customer.findById(task.customer_id)
-  let host = Host.findById(task.host_id)
-  let script
-  if (task.type === 'script') {
-    script = Script.findById(task.script_id)
-  }
-
-  let data = await Promise.all([ customer, host, script ])
-
-  if (!data[0]) {
-    throw new Error(`customer ${task.customer_id} is no longer available`)
-  }
-
-  if (!data[1]) {
-    throw new Error(`host ${task.host_id} is no longer available`)
-  }
-
-  if (task.type === 'script' && ! data[2]) {
-    throw new Error(`script ${task.script_id} is no longer available`)
-  }
-
-  return data
-}
+//const verifyTask = async (task, done) => {
+//  let customer = App.Models.Customer.Entity.findById(task.customer_id)
+//  let host = App.Models.Host.Entity.findById(task.host_id)
+//  let script
+//
+//  if (task.type === 'script') {
+//    script = App.Models.File.Script.findById(task.script_id)
+//  }
+//
+//  let data = await Promise.all([ customer, host, script ])
+//
+//  if (!data[0]) {
+//    throw new Error(`customer ${task.customer_id} is no longer available`)
+//  }
+//
+//  if (!data[1]) {
+//    throw new Error(`host ${task.host_id} is no longer available`)
+//  }
+//
+//  if (task.type === 'script' && ! data[2]) {
+//    throw new Error(`script ${task.script_id} is no longer available`)
+//  }
+//
+//  return data
+//}
 
 module.exports = new Scheduler()

@@ -62,6 +62,7 @@ function Service (resource) {
     let payload = {
       model_type: 'Resource',
       model: resource,
+      model_id: resource._id,
       hostname: resource.hostname,
       organization: resource.customer_name,
       organization_id: resource.customer_id,

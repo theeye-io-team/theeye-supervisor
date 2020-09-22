@@ -89,7 +89,6 @@ module.exports = {
         } else {
           req.user = profile
           req.params.customer = profile.current_customer.name
-          //req.customer = profile.current_customer
           next()
         }
       }, { session: false })(req, res, next)

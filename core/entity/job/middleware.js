@@ -7,17 +7,5 @@ const Constants = require('../../constants')
 module.exports = {
   //postSave: (job) => {
   //  logger.debug('job %s saved. sending system event', job._id)
-  //    const topic = TopicsConstants.job.crud
-  //    elastic.submit(job.customer_name, topic, job) // topic = topics.job.crud
-  //    NotificationService.generateSystemNotification({
-  //      topic: topic,
-  //      data: {
-  //        hostname: job.hostname,
-  //        organization: job.customer_name,
-  //        //operation: isNew ?
-  //        model_type: job._type,
-  //        model: job
-  //      }
-  //  })
   //}
 }
