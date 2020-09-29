@@ -88,6 +88,7 @@ module.exports = {
           //next(null, false)
         } else {
           req.user = profile
+          // get customer for the session
           req.params.customer = profile.current_customer.name
           next()
         }

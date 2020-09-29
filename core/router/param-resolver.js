@@ -1,15 +1,7 @@
-var logger = require('../lib/logger')(':router:middleware:params-resolver');
-var Host = require('../entity/host').Entity;
-var Customer = require('../entity/customer').Entity;
-var isMongoId = require('validator/lib/isMongoId')
-
-function firstToUpper(string) {
-  return string.charAt(0).toUpperCase() + string.slice(1);
-}
-
-const isObject = (value) => {
-  return Object.prototype.toString.call(value) == '[object Object]'
-}
+const logger = require('../lib/logger')(':router:middleware:params-resolver')
+const Host = require('../entity/host').Entity
+const Customer = require('../entity/customer').Entity
+const isMongoId = require('validator/lib/isMongoId')
 
 module.exports = {
   idToEntity (options) {
@@ -174,5 +166,79 @@ module.exports = {
         next()
       })
     }
+  },
+  /**
+   * Use customer name or customer id to resolve.
+   *
+   * NOTE: this middleware ignores path params
+   *
+   * Values must be provided using body or query via property name "customer"
+   * This middleware creates the property req.customer with resolved model
+   * 
+   * @param {Object} options
+   * @prop {Object} options.required if true abort request with status 403 / 404
+   * @return {Function}
+   */
+  customerToEntity (options) {
+    options || (options={})
+
+    return function (req, res, next) {
+
+      if (req.params.customer) {
+        logger.error('***** customerToEntity middleware must not be used when "customer" is defined as path parameter')
+      }
+
+      const value = (
+        (req.body && req.body.customer) ||
+        (req.query && req.query.customer)
+      )
+
+      if (!value) {
+        if (options.required === true) {
+          return res.send(403, 'organization is required')
+        }
+
+        logger.debug('no customer')
+        req.customer = null
+        return next()
+      }
+
+      logger.debug('resolving customer by value "%s"', value)
+
+      let query
+      if (isMongoId(value)) {
+        query = { _id: value }
+      } else {
+        query = { name: value }
+      }
+
+      Customer
+        .findOne(query)
+        .then(customer => {
+          if (!customer) {
+            if (options.required) {
+              return res.send(404, 'organization not found')
+            }
+
+            req.customer = null
+            return next()
+          }
+
+          req.customer = customer
+          next()
+        })
+        .catch(err => {
+          logger.error(err)
+          return next(err)
+        })
+    }
   }
+}
+
+function firstToUpper (string) {
+  return string.charAt(0).toUpperCase() + string.slice(1)
+}
+
+const isObject = (value) => {
+  return Object.prototype.toString.call(value) == '[object Object]'
 }

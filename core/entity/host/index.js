@@ -1,4 +1,3 @@
-'use strict'
 
 const mongodb = require('../../lib/mongodb')
 const BaseSchema = require('./schema')

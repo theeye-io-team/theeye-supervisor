@@ -258,7 +258,7 @@ function Service (resource) {
     if (resource.state != MonitorConstants.RESOURCE_FAILURE) {
       // it is time to start sending failure alerts
       if (resource.fails_count >= failure_threshold) {
-        logger.log('resource "%s" state failure', resource.name);
+        logger.log('resource "%s" state failure', resource.name)
 
         input.event_name = MonitorConstants.RESOURCE_FAILURE
         input.custom_event = input.event
@@ -304,6 +304,7 @@ function Service (resource) {
       }
     }
 
+    resource.recovery_count++
     resource.fails_count = 0
     resource.state = MonitorConstants.RESOURCE_NORMAL
 
@@ -620,6 +621,7 @@ Service.update = async (input, next) => {
   delete updates.type
   delete updates._type
   delete updates.fails_count
+  delete updates.recovery_count
 
   // remove monitor from template
   updates.template = null

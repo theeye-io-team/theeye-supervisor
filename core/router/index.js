@@ -43,10 +43,8 @@ module.exports = {
     require('../controllers/webhook')(server)
     require('../controllers/workflow')(server)
     require('../controllers/integrations')(server)
+    require('../controllers/usage')(server)
     // DEPRECATED - In Progress
     require('../controllers/auth')(server)
-    //require('../controllers/customer')(server)
-    //require('../controllers/user')(server)
-    //require('../controllers/member')(server)
   }
 }

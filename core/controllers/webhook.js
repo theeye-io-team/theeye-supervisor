@@ -1,5 +1,4 @@
 
-const extend = require('lodash/assign');
 const dbFilter = require('../lib/db-filter');
 const logger = require('../lib/logger')('eye:controller:webhook');
 const audit = require('../lib/audit');
@@ -17,10 +16,13 @@ module.exports = function (server) {
     router.ensureCustomer
   ]
 
+  server.get('/:customer/webhook', middlewares, controller.fetch)
+
   server.get(
-    '/:customer/webhook',
+    '/:customer/webhook/:webhook',
     middlewares,
-    controller.fetch
+    router.resolve.idToEntity({ param:'webhook', required:true }),
+    controller.get
   )
 
   server.post(
@@ -29,13 +31,6 @@ module.exports = function (server) {
     router.requireCredential('admin'),
     controller.create,
     audit.afterCreate('webhook',{display:'name'})
-  )
-
-  server.get(
-    '/:customer/webhook/:webhook',
-    middlewares,
-    router.resolve.idToEntity({ param:'webhook', required:true }),
-    controller.get
   )
 
   server.put(
@@ -87,12 +82,12 @@ const controller = {
    */
   fetch (req, res, next) {
     var filter = dbFilter(
-      extend( (req.query||{}) , {
+      Object.assign({}, (req.query||{}) , {
         where:{
           customer: req.customer._id
         }
       })
-    );
+    )
 
     Webhook
       .find(filter.where)
@@ -109,12 +104,12 @@ const controller = {
    * @method POST
    */
   create (req, res, next) {
-    var input = extend({},req.body,{
+    const input = Object.assign({},req.body,{
       customer: req.customer,
       customer_id: req.customer._id
     });
 
-    var webhook = new Webhook(input);
+    const webhook = new Webhook(input)
     webhook.save(err => {
       if(err){
         if( err.name == 'ValidationError' )
@@ -130,19 +125,18 @@ const controller = {
    * @method PUT
    */
   update (req, res, next) {
-    var webhook = req.webhook;
-    var input = extend({},req.body,{
+    const webhook = req.webhook
+
+    Object.assign(webhook, req.body, {
       customer_id: req.customer._id,
       customer: req.customer
-    });
-
-    extend(webhook,input);
+    })
 
     webhook.save(err => {
-      if(err) return res.send(500);
-      res.send(200, webhook);
-      next();
-    });
+      if(err) return res.send(500)
+      res.send(200, webhook)
+      next()
+    })
   },
   /**
    * @method GET
@@ -165,39 +159,48 @@ const controller = {
   /**
    * @method POST
    */
-  trigger (req, res, next) {
-    const webhook = req.webhook
-    const body = req.body
+  async trigger (req, res, next) {
+    try {
+      const webhook = req.webhook
+      const body = req.body
 
-    App.notifications.generateSystemNotification({
-      topic: TopicsConstants.webhook.triggered,
-      data: {
-        model_id: webhook._id,
-        model_type: 'Webhook',
-        model: webhook,
-        organization: req.customer.name,
-        organization_id: req.customer._id,
-        operation: Constants.TRIGGER
+      const triggerEvent = await WebhookEvent.findOne({
+        emitter_id: webhook._id,
+        enable: true,
+        name: 'trigger'
+      })
+
+      if (!triggerEvent) {
+        return res.send(500, 'webhook events are missing.')
       }
-    })
 
-    WebhookEvent.findOne({
-      emitter_id: webhook._id,
-      enable: true,
-      name: 'trigger'
-    }, (err, event) => {
-      if (err) { return res.send(500, err) }
-      if (!event) { return res.send(500, 'webhook events are missing.') }
+      App.notifications.generateSystemNotification({
+        topic: TopicsConstants.webhook.triggered,
+        data: {
+          model_id: webhook._id,
+          model_type: 'Webhook',
+          model: webhook,
+          organization: req.customer.name,
+          organization_id: req.customer._id,
+          operation: Constants.TRIGGER
+        }
+      })
 
-      let output = App.jobDispatcher.parseOutputParameters(body)
+      const output = App.jobDispatcher.parseOutputParameters(body)
       App.eventDispatcher.dispatch({
         topic: TopicsConstants.webhook.triggered,
-        event,
+        event: triggerEvent,
         output
       })
 
+      webhook.trigger_count++
+      webhook.save()
+
       res.send(200, { message: 'success' })
       next()
-    })
+    } catch (err) {
+      logger.error(err)
+      res.send(500, err)
+    }
   }
 }

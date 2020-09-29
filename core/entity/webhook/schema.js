@@ -11,11 +11,12 @@ function BaseSchema (specs) {
     this,
     Object.assign({
       name: { type: String, required:true },
-      creation_date: { type: Date, 'default': Date.now },
-      last_update: { type: Date, 'default': null },
-      enable: { type: Boolean, 'default': true },
+      creation_date: { type: Date, default: Date.now },
+      last_update: { type: Date, default: null },
+      enable: { type: Boolean, default: true },
       customer_id: { type: Schema.Types.ObjectId },
       customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
+      trigger_count: { type: Number, default: 0 },
       // one way hash
       secret: { type: String, 'default': randomSecret }
     }, specs), {

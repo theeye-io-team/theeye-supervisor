@@ -9,6 +9,7 @@ const ResourceSchema = new BaseSchema({
   template_id: { type: ObjectId },
   hostname: { type: String },
   fails_count: { type: Number, default: 0 },
+  recovery_count: { type: Number, default: 0 },
   state: { type: String, default: INITIAL_STATE },
   enable: { type: Boolean, default: true },
   last_event: { type: Object, default: () => { return {} } },

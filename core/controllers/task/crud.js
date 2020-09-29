@@ -1,11 +1,10 @@
 const isMongoId = require('validator/lib/isMongoId')
 const App = require('../../app')
-const logger = require('../../lib/logger')('controller:task');
-const json = require('../../lib/jsonresponse');
-const router = require('../../router');
-const dbFilter = require('../../lib/db-filter');
-const ACL = require('../../lib/acl');
-const ErrorHandler = require('../../lib/error-handler');
+const logger = require('../../lib/logger')('controller:task')
+const router = require('../../router')
+const dbFilter = require('../../lib/db-filter')
+const ACL = require('../../lib/acl')
+const ErrorHandler = require('../../lib/error-handler')
 const audit = require('../../lib/audit')
 const TaskConstants = require('../../constants/task')
 
@@ -18,14 +17,14 @@ module.exports = (server) => {
     router.resolve.idToEntity({ param: 'host', required: false })
   ], controller.fetch)
 
-  server.get('/:customer/task/:task' , [
+  server.get('/:customer/task/:task', [
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'task', required: true }),
     router.ensureAllowed({ entity: { name: 'task' } })
-  ] , controller.get)
+  ], controller.get)
 
   var middlewares = [
     server.auth.bearerMiddleware,
@@ -41,40 +40,39 @@ module.exports = (server) => {
       router.resolve.idToEntity({ param: 'host' })
     ]),
     controller.create,
-    audit.afterCreate('task',{ display: 'name' })
+    audit.afterCreate('task', { display: 'name' })
   )
 
   const mws = middlewares.concat(
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'task', required: true }),
     router.resolve.idToEntity({ param: 'host_id', entity: 'host', into: 'host' })
-  );
+  )
   server.patch(
     '/:customer/task/:task',
     mws,
-    controller.update,
-    audit.afterUpdate('task',{ display: 'name' })
+    controller.replace,
+    audit.afterUpdate('task', { display: 'name' })
   )
   server.put(
     '/:customer/task/:task',
     mws,
     router.resolve.idToEntity({ param: 'script', entity: 'file' }),
-    controller.update,
-    audit.afterReplace('task',{ display: 'name' })
+    controller.replace,
+    audit.afterReplace('task', { display: 'name' })
   )
   server.del(
     '/:customer/task/:task',
     mws,
     controller.remove,
-    audit.afterRemove('task',{ display: 'name' })
+    audit.afterRemove('task', { display: 'name' })
   )
-
 }
 
 const controller = {
   create (req, res, next) {
     const errors = new ErrorHandler()
-    const input = Object.assign({},req.body,{
+    const input = Object.assign({}, req.body, {
       customer: req.customer,
       customer_id: req.customer._id,
       user: req.user,
@@ -89,7 +87,7 @@ const controller = {
       input.type === TaskConstants.TYPE_SCRAPER
     ) {
       if (!req.host) {
-        errors[!req.body.host?'required':'invalid']('host', req.host)
+        errors[!req.body.host ? 'required' : 'invalid']('host', req.host)
       } else {
         input.host = req.host._id
         input.host_id = req.host._id
@@ -104,12 +102,12 @@ const controller = {
 
     if (input.type === TaskConstants.TYPE_SCRIPT) {
       if (!req.script) {
-        errors[!req.body.script?'required':'invalid']('script', req.script)
+        errors[!req.body.script ? 'required' : 'invalid']('script', req.script)
       }
       input.script = req.script
 
       if (!input.script_runas) {
-        errors['required']('script_runas', input.script_runas)
+        errors.required('script_runas', input.script_runas)
       }
     }
 
@@ -117,14 +115,14 @@ const controller = {
     if (input.type === TaskConstants.TYPE_DUMMY) { }
     if (input.type === TaskConstants.TYPE_NOTIFICATION) { }
     if (errors.hasErrors()) {
-      return res.send(400,errors)
+      return res.send(400, errors)
     }
 
-    App.task.create(input, async (err,task) => {
+    App.task.create(input, async (err, task) => {
       if (err) { return res.sendError(err) }
 
       try {
-        let data = await App.task.populate(task)
+        const data = await App.task.populate(task)
         res.send(200, data)
         req.task = task
         next()
@@ -146,20 +144,22 @@ const controller = {
 
     // exclude tasks with no host assigned or with invalid script/data
     if (
-      ! input.hasOwnProperty('unassigned') &&
+      !Object.prototype.hasOwnProperty.call(input, 'unassigned') &&
       input.unassigned !== true &&
       input.unassigned !== 'true'
     ) {
       // filter all unusable tasks
       filter.where.$or = [
-        { _type: { $nin: [ 'ScriptTask', 'ScraperTask' ] } },
+        { _type: { $nin: ['ScriptTask', 'ScraperTask'] } },
         {
           $and: [
             { host_id: { $ne: null, $exists: true } },
-            { $or: [
-              { _type: 'ScriptTask', script_id: { $ne: null, $exists: true } },
-              { _type: 'ScraperTask' },
-            ] }
+            {
+              $or: [
+                { _type: 'ScriptTask', script_id: { $ne: null, $exists: true } },
+                { _type: 'ScraperTask' }
+              ]
+            }
           ]
         }
       ]
@@ -169,7 +169,7 @@ const controller = {
       filter.where.host_id = req.host._id.toString()
     }
 
-    if ( !ACL.hasAccessLevel(req.user.credential,'admin') ) {
+    if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
       // find what this user can access
       filter.where.acl = req.user.email
     }
@@ -189,7 +189,7 @@ const controller = {
    */
   async get (req, res, next) {
     try {
-      let data = await App.task.populate(req.task)
+      const data = await App.task.populate(req.task)
       res.send(200, data)
     } catch (e) {
       res.send(e.statusCode, e)
@@ -203,19 +203,19 @@ const controller = {
    * @param {String} :task , mongo ObjectId
    *
    */
-  remove (req,res,next) {
-    var task = req.task;
+  remove (req, res, next) {
+    const task = req.task
 
     App.task.remove({
-      task:task,
-      user:req.user,
-      customer:req.customer,
-      done:function(){
-        res.send(200,{});
+      task: task,
+      user: req.user,
+      customer: req.customer,
+      done: function () {
+        res.send(200, {})
         next()
       },
       fail: (err) => { res.sendError(err) }
-    });
+    })
   },
   /**
    *
@@ -226,20 +226,23 @@ const controller = {
    * @param ...
    *
    */
-  update (req,res,next) {
-    var errors = new ErrorHandler()
-    var input = Object.assign({},req.body)
+  replace (req, res, next) {
+    const errors = new ErrorHandler()
+    const input = Object.assign({}, req.body)
 
     if (!req.task) return res.send(400, errors.required('task'))
     if (!input.name) return res.send(400, errors.required('name'))
 
     delete input.type
-    let type = req.task.type
+    const type = req.task.type
 
-    if (type !== TaskConstants.TYPE_APPROVAL && type !== TaskConstants.TYPE_DUMMY &&
-      type !== TaskConstants.TYPE_NOTIFICATION) {
+    if (
+      type !== TaskConstants.TYPE_APPROVAL &&
+      type !== TaskConstants.TYPE_DUMMY &&
+      type !== TaskConstants.TYPE_NOTIFICATION
+    ) {
       if (!req.host) {
-        errors[!req.body.host?'required':'invalid']('host', req.host)
+        errors[!req.body.host ? 'required' : 'invalid']('host', req.host)
       }
     }
 
@@ -249,20 +252,19 @@ const controller = {
       }
     }
 
-    if (req.task.type===TaskConstants.TYPE_SCRIPT) {
+    if (req.task.type === TaskConstants.TYPE_SCRIPT) {
       if (!req.script) {
-        errors[!req.body.script?'required':'invalid']('script', req.script)
+        errors[!req.body.script ? 'required' : 'invalid']('script', req.script)
       }
       input.script = req.script
     }
+
     if (type === TaskConstants.TYPE_SCRAPER) { }
-
     if (type === TaskConstants.TYPE_DUMMY) { }
-
     if (type === TaskConstants.TYPE_NOTIFICATION) { }
 
-    if (errors.hasErrors()){
-      return res.send(400,errors)
+    if (errors.hasErrors()) {
+      return res.send(400, errors)
     }
 
     logger.log('updating task %j', input)
@@ -276,7 +278,7 @@ const controller = {
         next()
       },
       fail: function (err) {
-        logger.error('%o',err)
+        logger.error('%o', err)
         res.sendError(err)
       }
     })
@@ -290,7 +292,7 @@ const validIdsArray = (value) => {
     if (!Array.isArray(value)) {
       return false
     } else {
-      let invalid = value.find(_id => !isMongoId(_id))
+      const invalid = value.find(_id => !isMongoId(_id))
       if (invalid) {
         return false
       }

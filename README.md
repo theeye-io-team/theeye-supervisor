@@ -35,3 +35,6 @@ Components Control. Can be configured to do one o more things (or nothing)
 | API_DISABLED | disable rest api |
 | SCHEDULER_JOBS_DISABLED | disable internal scheduler execution. scheduler-jobs will be created using the rest api but task will never be executed. theeye-jobs execution timeout will be never checked. |
 
+### Start development sample
+
+`DEBUG=*eye* NODE_ENV=localdev MONITORING_DISABLED= SCHEDULER_JOBS_DISABLED= npx nodemon --inspect $PWD/core/main.js`
