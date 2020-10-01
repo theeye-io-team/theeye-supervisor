@@ -9,6 +9,9 @@
 const READY = 'ready'
 const ASSIGNED = 'assigned'
 const ONHOLD = 'onhold'
+const SYNCING = 'syncing'
+const LOCKED = 'locked'
+
 // FINISHED LIFECYCLE
 const FINISHED = 'finished'
 const TERMINATED = 'terminated'
@@ -19,6 +22,8 @@ const COMPLETED = 'completed'
 exports.READY = READY
 exports.ASSIGNED = ASSIGNED
 exports.ONHOLD = ONHOLD
+exports.SYNCING = SYNCING
+exports.LOCKED = LOCKED
 exports.FINISHED = FINISHED
 exports.TERMINATED = TERMINATED
 exports.CANCELED = CANCELED
@@ -29,6 +34,8 @@ exports.VALUES = [
   READY,
   ASSIGNED,
   ONHOLD,
+  SYNCING,
+  LOCKED,
   FINISHED,
   TERMINATED,
   CANCELED,

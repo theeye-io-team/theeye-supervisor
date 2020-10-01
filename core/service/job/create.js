@@ -1,6 +1,7 @@
 const App = require('../../app')
 const logger = require('../../lib/logger')('service:job:create')
 const JobConstants = require('../../constants/jobs')
+const LifecycleConstants = require('../../constants/lifecycle')
 const jobArgumentsValidateMiddleware = require('./arguments-validation')
 
 /**
@@ -24,6 +25,19 @@ module.exports = async (req, res, next) => {
       notify: true,
       origin: (req.origin || JobConstants.ORIGIN_USER),
       task_arguments_values: args 
+    }
+
+    const lifecycle = (req.body && req.body.lifecycle)
+    // allow to control only following lifecycles
+    if (
+      lifecycle &&
+      (
+        lifecycle === LifecycleConstants.ONHOLD ||
+        lifecycle === LifecycleConstants.SYNCING ||
+        lifecycle === LifecycleConstants.LOCKED
+      )
+    ) {
+      inputs.lifecycle = lifecycle
     }
 
     const job = await App.jobDispatcher.create(inputs)

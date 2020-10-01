@@ -208,7 +208,7 @@ module.exports = {
     })
   },
   jobInputsReplenish (job, input, done) {
-    let { task, user, customer } = input
+    const { task, user, customer } = input
 
     JobFactory.prepareTaskArgumentsValues(
       task.task_arguments,
@@ -235,6 +235,20 @@ module.exports = {
         })
       }
     )
+  },
+  /**
+   *
+   * Change job lifecycle from syncing to ready.
+   *
+   * @param {Job} job
+   * @return {Promise<Job>}
+   */
+  async syncingToReady (job) {
+    job.lifecycle = LifecycleConstants.READY
+    job.state = StateConstants.IN_PROGRESS
+    await job.save()
+    RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
+    return job
   },
   /**
    *
@@ -366,11 +380,8 @@ module.exports = {
         App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
         dispatchFinishedTaskExecutionEvent(job, job.trigger_name)
 
-        if (!job.task) {
-          logger.log(`No task available for job ${job.name}`)
-        } else {
-          TaskCompletedNotification({ task: job.task, job })
-        }
+
+        emitJobFinishedNotification({ job })
       })
     } catch (err) {
       logger.error(err)
@@ -393,7 +404,7 @@ module.exports = {
     const job = input.job
     const result = (input.result || {})
 
-    let lifecycle = cancelJobNextLifecycle(job)
+    const lifecycle = cancelJobNextLifecycle(job)
     if (!lifecycle) {
       let err = new Error(`cannot cancel job. current state lifecycle "${job.lifecycle}" does not allow the transition`)
       err.statusCode = 400
@@ -992,19 +1003,21 @@ const WorkflowJobCreatedNotification = ({ wJob, user, customer }) => {
 }
 
 /**
+ * Emit the event "job finished execution" after all possible outcomes.
+ *
  * @return {Promise}
  */
-const TaskCompletedNotification = ({ task, job }) => {
+const emitJobFinishedNotification = ({ job }) => {
   // async call
   return App.notifications.generateSystemNotification({
-    topic: TopicsConstants.task.completed,
+    topic: TopicsConstants.job.finished,
     data: {
       operation: Constants.UPDATE,
-      organization: task.customer_name,
-      organization_id: task.customer_id,
-      model_id: (task._id || task.id), // @TODO improve/fix
-      model_type: task._type,
-      job_id: job._id
+      organization: job.customer_name,
+      organization_id: job.customer_id,
+      model_id: job._id,
+      model_type: job._type
+      //task_id: job.task_id
     }
   })
 }

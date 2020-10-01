@@ -39,19 +39,22 @@ exports.task = {
   result: 'task-result', // job result updated
   cancelation: 'task-cancelation', // job canceled
   terminate: 'task-terminate', // job terminate
-  completed: 'task-completed', // job execution completed
   notification: 'notification-task'
 }
+
 exports.workflow = {
   execution: 'workflow-execution'
 }
+
 exports.job = {
   crud: 'job-crud',
+  finished: 'job-finished',
   scheduler: {
     crud: 'job-scheduler-crud'
   }
   //onhold: 'job-onhold'
 }
+
 exports.webhook = {
   crud: 'webhook-crud',
   triggered: 'webhook-triggered'

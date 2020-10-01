@@ -3,6 +3,7 @@ const logger = require('../../lib/logger')('controller:job-lifecycle')
 const router = require('../../router')
 const StateConstants = require('../../constants/states')
 const JobConstants = require('../../constants/jobs')
+const LifecycleConstants = require('../../constants/lifecycle')
 
 /**
  * @summary Job.lifecycle property CRUD
@@ -25,8 +26,28 @@ module.exports = (server) => {
     controller.get
   )
 
-  server.put(
-    '/:customer/job/:job/cancel',
+  server.put('/job/:job/synced',
+    middlewares,
+    router.requireCredential('user'),
+    router.resolve.idToEntity({param: 'job', required: true}),
+    async (req, res, next) => {
+      try {
+        const job = req.job
+        if (job.lifecycle !== LifecycleConstants.SYNCING) {
+          res.send(400, `job lifecycle must be syncing. ${job.lifecycle} is set`)
+          return
+        }
+
+        await App.jobDispatcher.syncingToReady(job)
+        res.send(200, "ok")
+      } catch (err) {
+        logger.error(err)
+        res.send(500, 'Internal Server Error')
+      }
+    }
+  )
+
+  server.put('/:customer/job/:job/cancel',
     middlewares,
     router.requireCredential('user'),
     router.resolve.idToEntity({param: 'job', required: true}),
@@ -181,12 +202,12 @@ const controller = {
 }
 
 const submitJobInputs = (req) => {
-  const args = (req.body.args || [])
+  const args = (req.body && req.body.args)
   const job = req.job
   return new Promise((resolve, reject) => {
     App.jobDispatcher.jobInputsReplenish(job, {
       task: job.task,
-      task_arguments_values: args,
+      task_arguments_values: (args || []),
       user: req.user,
       customer: req.customer
     }, (err) => {
