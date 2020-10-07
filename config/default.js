@@ -146,7 +146,12 @@ module.exports = {
     api: {
       timeout: 5000,
       host: '127.0.0.1',
-      port: '6080'
+      port: '6080',
+      path: {
+        verify: '/api/session/verify',
+        profile: '/api/session/profile',
+        login: '/api/auth/login/local'
+      }
     }
   },
   /**

@@ -41,8 +41,12 @@ const controller = {
     const task = req.task
     const query = req.query || {}
 
+    const options = {
+      backup: (query.backup === true || query.backup === "true")
+    }
+
     const data = {}
-    data.task = task.templateProperties({ backup: (query.backup === true || query.backup === "true") })
+    data.task = task.templateProperties(options)
 
     // only script task has a file so far
     if (task._type === 'ScriptTask') {

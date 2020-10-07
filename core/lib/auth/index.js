@@ -102,7 +102,7 @@ module.exports = {
 const fetchProfile = (token) => {
   return new Promise((resolve, reject) => {
     let reqOpts = Object.assign({
-      path: `/api/session/profile?access_token=${token}`,
+      path: `${config.api.path.profile}?access_token=${token}`,
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -128,7 +128,7 @@ const createSession = (user, pass) => {
   return new Promise((resolve, reject) => {
     const creds = Buffer.from(`${user}:${pass}`).toString('base64')
     let reqOpts = Object.assign({
-      path: `/api/auth/login`,
+      path: config.api.path.login,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -153,7 +153,7 @@ const createSession = (user, pass) => {
 const sessionVerify = (token) => {
   return new Promise((resolve, reject) => {
     let reqOpts = Object.assign({
-      path: `/api/session/verify?access_token=${token}`,
+      path: `${config.api.path.verify}?access_token=${token}`,
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

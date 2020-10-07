@@ -20,7 +20,8 @@ module.exports = ScriptSchema
 
 const templateProperties = ScriptSchema.methods.templateProperties
 
-ScriptSchema.methods.templateProperties = function ({ backup }) {
+ScriptSchema.methods.templateProperties = function (options) {
+  let backup = (options && options.backup)
   if (backup === true) {
     return this.toObject()
   }
