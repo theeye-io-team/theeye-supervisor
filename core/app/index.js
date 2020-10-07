@@ -37,7 +37,6 @@ App.boot = async (config) => {
 
     App.eventDispatcher = Events.createDispatcher() 
     App.jobDispatcher = require('../service/job')
-    //App.customer = require('../service/customer')
     App.resource = require('../service/resource')
     App.task = require('../service/task')
     App.file = require('../service/file')

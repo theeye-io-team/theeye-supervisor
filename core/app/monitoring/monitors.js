@@ -2,7 +2,6 @@ const after = require('lodash/after')
 const { performance } = require('perf_hooks') // node > 8 required
 
 const App = require('../../app')
-const CustomerService = require('../../service/customer')
 const ResourceService = require('../../service/resource')
 const MonitorConstants = require('../../constants/monitors')
 const ResourceMonitor = require('../../entity/monitor').Entity
