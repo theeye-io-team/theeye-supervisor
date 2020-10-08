@@ -1,8 +1,6 @@
-'use strict'
 
 const systemConfig = require('config').system
 const async = require('async')
-const extend = require('util')._extend
 const MONITORS = require('../constants/monitors')
 
 var json = require('../lib/jsonresponse');
@@ -33,13 +31,6 @@ module.exports = function (server) {
     router.ensureCustomer,
     router.resolve.hostnameToHost({})
   ], controller.config)
-
-  //server.get('/:customer/agent/credentials', [
-  //  server.auth.bearerMiddleware,
-  //  router.requireCredential('admin'),
-  //  router.resolve.customerNameToEntity({}),
-  //  router.ensureCustomer,
-  //], controller.credentials)
 }
 
 const controller = {
@@ -109,7 +100,9 @@ const controller = {
       host_id: host._id,
       customer_id: customer._id
     }, function(error, monitors){
-      if (error) return res.send(500);
+      if (error) {
+        return res.send(500)
+      }
 
       generateAgentConfig(monitors, function(err, config){
         if (err) return next(err);
@@ -121,31 +114,12 @@ const controller = {
 
         res.send(200,config);
         next();
-      });
+      })
     })
-  },
-  //credentials (req, res, next) {
-  //  const customer = req.customer
-  //  User.findOne({
-  //    credential: 'agent',
-  //    'customers.name': customer.name
-  //  }).exec((err, agent) => {
-  //    if (err) return next(err)
-  //    if (agent===null) return res.send(404,'agent not found')
-  //    const baseConfig = {
-  //      supervisor: {
-  //        api_url: systemConfig.base_url,
-  //        client_id: agent.client_id,
-  //        client_secret: agent.client_secret,
-  //        client_customer: customer.name
-  //      }
-  //    }
-  //    return res.send(200, baseConfig)
-  //  })
-  //}
+  }
 }
 
-const generateAgentConfig = (monitors,next) => {
+const generateAgentConfig = (monitors, next) => {
   var workers = [];
   async.each(monitors,function(monitor,doneIteration){
     var config = {
@@ -170,7 +144,7 @@ const generateAgentConfig = (monitors,next) => {
             } else {
               monitor.publish({},(err,m) => {
                 file.publish((err,f) => {
-                  config = extend(config, m.config);
+                  config = Object.assign(config, m.config)
                   config.file = f;
                   configDone(null,config);
                 });
@@ -179,7 +153,7 @@ const generateAgentConfig = (monitors,next) => {
           });
           break;
         case 'scraper':
-          config = extend(config,monitor.config);
+          config = Object.assign(config,monitor.config)
           configDone(null, config);
           break;
         case 'process':
@@ -206,17 +180,24 @@ const generateAgentConfig = (monitors,next) => {
           });
           break;
         case 'dstat':
-          config.limit = monitor.config.limit;
-          configDone(null, config);
+          config.limit = monitor.config.limit
+          configDone(null, config)
           break;
         case 'psaux':
-          configDone(null, config);
+          configDone(null, config)
           break;
         case 'host':
-          configDone();
+          configDone()
+          //// jobs listener
+          //config.type = 'ping'
+          //configDone(null, Object.assign(config, monitor.config))
+          break;
+        case 'listener':
+          config.type = 'listener'
+          configDone(null, Object.assign(config, monitor.config))
           break;
         case 'nested':
-          configDone();
+          configDone()
           break;
         default:
           let msg=`unhandled monitor type ${monitor.type}`

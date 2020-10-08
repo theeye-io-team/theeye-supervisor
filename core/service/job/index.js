@@ -155,35 +155,35 @@ module.exports = {
     return job
   },
   async createAgentUpdateJob (host_id) {
-    try {
-      // check if there are update jobs already created for this host
-      const jobs = await JobModels.Job.find({
-        host_id,
-        lifecycle: LifecycleConstants.READY
-      }).exec()
-
-      // return any job
-      if (jobs.length !== 0) { return jobs[0] }
-
-      await JobModels.Job.deleteOne({ host_id })
-
-      const host = await App.Models.Host.Entity.findById(host_id).exec()
-      if (!host) { throw new Error('Host not found') }
-
-      const job = new JobModels.AgentUpdate()
-      job.host_id = host_id // enforce host_id, just in case
-      job.host = host_id // enforce host_id, just in case
-      job.customer = host.customer_id
-      job.customer_id = host.customer_id
-      job.customer_name = host.customer_name
-      await job.save()
-
-      logger.log('agent update job created')
-      return job
-    } catch (err) {
-      logger.error(err)
-      return err
+    const host = await App.Models.Host.Entity.findById(host_id).exec()
+    if (!host) {
+      throw new Error('Host not found')
     }
+
+    // check if there are update jobs already created for this host
+    const jobs = await App.Models.Job.AgentUpdate.find({
+      name: JobConstants.AGENT_UPDATE,
+      host_id,
+      lifecycle: LifecycleConstants.READY
+    })
+
+    // return any job
+    if (jobs.length !== 0) {
+      return jobs[0]
+    }
+
+    await App.Models.Job.AgentUpdate.deleteMany({ host_id, name: JobConstants.AGENT_UPDATE })
+
+    const job = new App.Models.Job.AgentUpdate()
+    job.host_id = host_id // enforce host_id, just in case
+    job.host = host_id // enforce host_id, just in case
+    job.customer = host.customer_id
+    job.customer_id = host.customer_id
+    job.customer_name = host.customer_name
+    await job.save()
+
+    logger.log('agent update job created')
+    return job
   },
   finishDummyJob (job, input) {
     return new Promise((resolve, reject) => {

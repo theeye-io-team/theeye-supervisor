@@ -19,10 +19,9 @@ module.exports = function (server) {
     router.ensureCustomer,
   ]
 
-  server.get( '/:customer/host', middlewares, controller.fetch)
+  server.get('/:customer/host', middlewares, controller.fetch)
 
-  server.get(
-    '/:customer/host/:host',
+  server.get('/:customer/host/:host',
     middlewares,
     router.resolve.idToEntity({ param: 'host', required: true }),
     controller.get
@@ -31,8 +30,7 @@ module.exports = function (server) {
   /**
    * NEW ROUTES WITH CUSTOMER , TO KEEP IT GENERIC
    */
-  server.post(
-    '/:customer/host/:hostname',
+  server.post('/:customer/host/:hostname',
     middlewares,
     router.requireCredential('agent',{exactMatch:true}), // only agents can create hosts
     controller.create
@@ -43,22 +41,38 @@ module.exports = function (server) {
    *
    * AGENTS VERSION <= v0.9.1
    */
-  server.post(
-    '/host/:hostname',
+  server.post('/host/:hostname',
     middlewares,
     router.requireCredential('agent', { exactMatch: true }), // only agents can create hosts
     controller.create
   )
+
+  server.put('/:customer/host/:host/reconfigure',
+    middlewares,
+    router.resolve.idToEntity({ param: 'host', required: true }),
+    router.requireCredential('admin'),
+    controller.reconfigure
+  )
 }
 
 const controller = {
+  async reconfigure (req, res, next) {
+    try {
+      const host = req.host
+      const job = await App.jobDispatcher.createAgentUpdateJob(host._id)
+      res.send(204)
+      next()
+    } catch (err) {
+      logger.error(err)
+      res.send(500, 'Internal Server Error')
+    }
+  },
   /**
    *
    *
    */
   get (req,res,next) {
-    var host = req.host
-    res.send(200, host.toObject())
+    res.send(200, req.host.toObject())
   },
   /**
    *

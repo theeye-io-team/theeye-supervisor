@@ -202,8 +202,12 @@ module.exports = {
         data.monitors = filteredMonitors
         break;
 
-      case MonitorConstants.RESOURCE_TYPE_PSAUX: break;
-      case MonitorConstants.RESOURCE_TYPE_HOST: break;
+      case MonitorConstants.RESOURCE_TYPE_HOST:
+        break;
+
+      case MonitorConstants.RESOURCE_TYPE_PSAUX:
+        break;
+
       default:
         errors.invalid('type', type);
         break;

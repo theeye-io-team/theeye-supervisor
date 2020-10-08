@@ -264,19 +264,23 @@ const replace = async (req, res, next) => {
     const body = req.body
     body.host = req.host
 
-    const params = App.resourceMonitor.validateData(body)
+    const params = App.resourceMonitor.validateData(Object.assign({}, body))
     if (params.errors && params.errors.hasErrors()) {
       return res.send(400, params.errors)
     }
 
-    let updates = {}
-    if (resource.type !== MonitorConstants.RESOURCE_TYPE_HOST) {
-      updates = params.data
+    const updates = {}
+    if (resource.type === MonitorConstants.RESOURCE_TYPE_HOST) {
+      updates.looptime = body.looptime
+      updates.description = body.description
+      updates.tags = body.tags
+      updates.acl = req.acl
+      updates.failure_severity = body.failure_severity
+    } else {
+      Object.assign(updates, params.data, { acl: req.acl })
     }
 
-    Object.assign(updates, { acl: req.acl, tags: body.tags })
     await updateResource(resource, updates)
-
     res.send(200, resource)
     next()
   } catch (e) {
