@@ -2,7 +2,6 @@ const App = require('../../app')
 const logger = require('../../lib/logger')('controller:integrations:ngrok')
 const router = require('../../router')
 const Host = require('../../entity/host').Entity
-const merge = require('lodash/merge')
 const IntegrationConstants = require('../../constants/integrations')
 
 module.exports = (server) => {
@@ -70,7 +69,7 @@ const controller = {
       return res.send(400, 'already started')
     }
 
-    let config = merge({}, customer.config.ngrok)
+    let config = Object.assign({}, customer.config.ngrok)
     startNgrok({ host, config }, (err, job) => {
       if (err) return res.send(err.statusCode||500, err.message)
       delete job.authtoken
@@ -88,7 +87,7 @@ const controller = {
       return res.send(400, 'already stopped')
     }
 
-    let config = merge({}, customer.config.ngrok)
+    let config = Object.assign({}, customer.config.ngrok)
     stopNgrok({ host, config }, (err, job) => {
       if (err) return res.send(err.statusCode||500, err.message)
       delete job.authtoken
@@ -134,7 +133,7 @@ const postCreateNgrokIntegrationJob = (req, res, next) => {
   ngrok.last_job = job._id
   ngrok.last_job_id = job._id
   ngrok.last_update = new Date()
-  let integrations = merge({}, host.integrations, { ngrok })
+  let integrations = Object.assign({}, host.integrations, { ngrok })
   Host.update(
     { _id: host._id },
     {

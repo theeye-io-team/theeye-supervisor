@@ -1,4 +1,3 @@
-const extend = require('lodash/assign')
 const App = require('../../app')
 const audit = require('../../lib/audit')
 const router = require('../../router')
@@ -134,7 +133,7 @@ const controller = {
    */
   fetch (req, res, next) {
     var filter = dbFilter(
-      extend( (req.query||{}) , {
+      Object.assign({}, (req.query||{}) , {
         where: {
           customer: req.customer._id
         }
@@ -217,7 +216,7 @@ const controller = {
       return res.send(400, 'title is invalid')
     }
 
-    const input = extend({}, body, {
+    const input = Object.assign({}, body, {
       customer: req.customer,
       customer_id: req.customer._id,
       customer_name: req.customer.name,

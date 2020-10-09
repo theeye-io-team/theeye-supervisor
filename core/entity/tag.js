@@ -3,7 +3,7 @@
 const mongodb = require("../lib/mongodb");
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
-const lodash = require('lodash');
+const after = require('lodash/after')
 
 var EntitySchema = Schema({
   name: { type: String },
@@ -43,7 +43,7 @@ EntitySchema.statics.create = (tags, customer, next) => {
 
   // find or create
   var instances = []
-  var created = lodash.after(data.length, () => next(null, instances))
+  var created = after(data.length, () => next(null, instances))
   data.forEach(tag => {
     Entity.findOne(tag , (err, model) => {
       if (!model) {

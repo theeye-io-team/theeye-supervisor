@@ -21,9 +21,6 @@ module.exports = async (operation, topic, input) => {
     { path: 'workflow_job' },
   ]).execPopulate()
 
-  //sendJobNotification(job)
-  //let job = jobData
-
   // skip system notifications for this job.
   if (job.notify !== false) {
     // async call
@@ -45,7 +42,6 @@ module.exports = async (operation, topic, input) => {
   const logPayload = prepareLog(job, task)
   logPayload.operation = operation
 
-  // topic = topics.task.[execution||result] , CREATE/UPDATE
   App.logger.submit(job.customer_name, topic, logPayload)
 
   return

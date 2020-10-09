@@ -1,8 +1,6 @@
-'use strict'
 
 const App = require('../../../app')
 const after = require('lodash/after')
-const assign = require('lodash/assign')
 const config = require('config')
 const async = require('async')
 const logger = require('../../../lib/logger')('service:host:group')
@@ -119,7 +117,7 @@ const Service = module.exports = {
       return hosts
     }
 
-    const values = assign({}, input, {
+    const values = Object.assign({}, input, {
       files: [],
       tasks: [],
       resources: [],

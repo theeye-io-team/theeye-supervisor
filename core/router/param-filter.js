@@ -1,7 +1,7 @@
 'use strict';
 
-var lodash = require('lodash');
-var isEmail = require('validator/lib/isEmail');
+const uniq = require('lodash/uniq');
+const isEmail = require('validator/lib/isEmail');
 
 module.exports = {
   emailArray (value) {
@@ -40,7 +40,7 @@ module.exports = {
    */
   uniq (value) {
     var isArray = Object.prototype.toString.call(value) === '[object Array]';
-    if (isArray) return lodash.uniq(value);
+    if (isArray) return uniq(value);
     else return [value]; // unique value into an array
   },
   toBoolean (value) {

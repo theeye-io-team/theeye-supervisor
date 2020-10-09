@@ -2,7 +2,6 @@ const util = require('util')
 const Schema = require('mongoose').Schema
 const ObjectId = Schema.Types.ObjectId
 const debug = require('debug')('eye:entity:monitor')
-const lodashAssign = require('lodash/assign')
 const lodashAfter = require('lodash/after')
 
 const properties = {

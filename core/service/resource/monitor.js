@@ -1,7 +1,6 @@
 const App = require('../../app')
 const isURL = require('validator/lib/isURL')
 const isMongoId = require('validator/lib/isMongoId')
-//const assign = require('lodash/assign')
 const assign = Object.assign
 
 const logger = require('../../lib/logger')('service:resource:monitor')

@@ -1,7 +1,7 @@
 'use strict'
 
 const App = require('../app')
-const lodash = require('lodash')
+const after = require('lodash/after')
 const async = require('async')
 const router = require('../router')
 const logger = require('../lib/logger')('eye:controller:hostgroup')
@@ -94,7 +94,7 @@ const controller = {
       }
 
       const result = []
-      const done = lodash.after(
+      const done = after(
         groups.length,
         () => res.send(200, result)
       )

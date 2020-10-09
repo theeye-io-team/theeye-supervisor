@@ -1,6 +1,3 @@
-const async = require('async')
-const merge = require('lodash/merge')
-const globalconfig = require('config')
 const App = require('../../app')
 const logger = require('../../lib/logger')('service:jobs')
 const Constants = require('../../constants')
@@ -430,32 +427,6 @@ module.exports = {
       RegisterOperation(Constants.UPDATE, TopicsConstants.task.terminate, { job })
     })
   },
-  // automatic job scheduled . send cancelation
-  //sendJobCancelationEmail (input) {
-  //  const cancelUrl = globalconfig.system.base_url +
-  //    '/:customer/task/:task/schedule/:schedule/secret/:secret'
-
-  //  const url = cancelUrl
-  //    .replace(':customer', input.customer_name)
-  //    .replace(':task', input.task_id)
-  //    .replace(':secret', input.task_secret)
-  //    .replace(':schedule', input.schedule_id)
-
-  //  const html = `
-  //    <h3>Task execution on ${input.hostname} <small>Cancel notification</small></h3>
-  //    The task ${input.task_name} will be executed on ${input.hostname} at ${input.date}.<br/>
-  //    If you want to cancel the task you have ${input.grace_time_mins} minutes.<br/>
-  //    <br/>
-  //    To cancel the Task <a href="${url}">press here</a> or copy/paste the following link in the browser of your preference : <br/>${url}<br/>.
-  //  `
-
-  //  App.notifications.sendEmailNotification({
-  //    customer_name: input.customer_name,
-  //    subject: `[TASK] Task ${input.task_name} execution on ${input.hostname} cancelation`,
-  //    content: html,
-  //    to: input.to
-  //  })
-  //},
   /**
    *
    * @summary create an integration job for the agent.
@@ -470,7 +441,7 @@ module.exports = {
   createIntegrationJob ({ integration, operation, host, config }, next) {
     const factoryCreate = JobModels.IntegrationsFactory.create
 
-    let props = merge(
+    let props = Object.assign(
       {
         lifecycle: LifecycleConstants.READY,
         origin: JobConstants.ORIGIN_USER,

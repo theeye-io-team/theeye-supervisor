@@ -1,10 +1,9 @@
-const after = require('underscore').after;
+const after = require('lodash/after')
 const Task = require("../entity/task").Entity;
 const logger = require('../lib/logger')('service:file');
 const storage = require('../lib/storage').get();
 const FileHandler = require('../lib/file')
 const asyncMap = require('async/map')
-const lodashAssign = require('lodash/assign')
 const crypto = require('crypto')
 
 const FileModel = require('../entity/file')
@@ -107,7 +106,7 @@ module.exports = {
     }
 
     logger.log('creating file from template %j', template)
-    let data = lodashAssign({}, templateData, {
+    let data = Object.assign({}, templateData, {
       customer: customer._id,
       customer_id: customer._id,
       customer_name: customer.name,
