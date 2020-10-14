@@ -193,6 +193,7 @@ const controller = {
       res.send(200, job)
       return next()
     } catch (err) {
+      logger.error(err)
       if (err.statusCode) {
         return res.send(err.statusCode, err.message)
       }
@@ -201,19 +202,19 @@ const controller = {
   }
 }
 
+/**
+ *
+ * @return {Promise<Job>}
+ *
+ */
 const submitJobInputs = (req) => {
   const args = (req.body && req.body.args)
   const job = req.job
-  return new Promise((resolve, reject) => {
-    App.jobDispatcher.jobInputsReplenish(job, {
-      task: job.task,
-      task_arguments_values: (args || []),
-      user: req.user,
-      customer: req.customer
-    }, (err) => {
-      if (err) reject(err)
-      else resolve(job)
-    })
+  return App.jobDispatcher.jobInputsReplenish(job, {
+    task: job.task,
+    task_arguments_values: (args || []),
+    user: req.user,
+    customer: req.customer
   })
 }
 

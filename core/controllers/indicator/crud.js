@@ -10,7 +10,7 @@ const Constants = require('../../constants')
 const Acl = require('../../lib/acl')
 
 module.exports = function (server) {
-  var middlewares = [
+  const middlewares = [
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer

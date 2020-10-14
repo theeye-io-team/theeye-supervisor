@@ -190,7 +190,9 @@ module.exports = {
         task.task_arguments,
         input.task_arguments_values,
         (err, args) => {
-          if (err) reject(err)
+          if (err) {
+            return reject(err)
+          }
 
           App.jobDispatcher.finish(Object.assign({}, input, {
             job,
@@ -204,34 +206,43 @@ module.exports = {
       )
     })
   },
-  jobInputsReplenish (job, input, done) {
+  /**
+   * @return {Promise<Job>}
+   */
+  async jobInputsReplenish (job, input) {
     const { task, user, customer } = input
 
-    JobFactory.prepareTaskArgumentsValues(
-      task.task_arguments,
-      input.task_arguments_values,
-      (err, args) => {
-        if (err) {
-          err.statusCode = 400 // input error
-          logger.log('%o', err)
-          return done(err)
-        }
-
-        job.task_arguments_values = args
-        job.lifecycle = LifecycleConstants.READY
-        job.state = StateConstants.IN_PROGRESS
-        job.save(err => {
+    const args = await new Promise( (resolve, reject) => {
+      JobFactory.prepareTaskArgumentsValues(
+        task.task_arguments,
+        input.task_arguments_values,
+        (err, args) => {
           if (err) {
             logger.log('%o', err)
-            return done(err, job)
+            err.statusCode = 400 // input error
+            return reject(err)
           }
 
-          done(null, job) // continue process in paralell
-
-          RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
+          resolve(args)
         })
-      }
-    )
+    })
+
+    job.env = Object.assign({}, job.env, {
+      THEEYE_JOB_USER: JSON.stringify({
+        id: user.id,
+        email: user.email
+      })
+    })
+
+    job.task_arguments_values = args
+    job.lifecycle = input.lifecycle || LifecycleConstants.READY
+    job.state = input.state || StateConstants.IN_PROGRESS
+    await job.save()
+
+    // everything ok
+    RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
+
+    return job
   },
   /**
    *
