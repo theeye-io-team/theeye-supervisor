@@ -26,7 +26,7 @@ function MongoDBConnection () {
 
       _db.once('connected', () => {
         debug('MongoDB connected')
-        resolve()
+        resolve(_db)
       })
     })
   }
