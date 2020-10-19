@@ -4,6 +4,8 @@ const router = require('../../router')
 const StateConstants = require('../../constants/states')
 const JobConstants = require('../../constants/jobs')
 const LifecycleConstants = require('../../constants/lifecycle')
+const argumentsValidateMiddleware = require('../../service/job/arguments-validation')
+const { ClientError } = require('../../lib/error-handler')
 
 /**
  * @summary Job.lifecycle property CRUD
@@ -68,7 +70,7 @@ module.exports = (server) => {
       return res.send(403, 'unauthorized approver')
     }
 
-    if (job.lifecycle !== 'onhold') {
+    if (job.lifecycle !== LifecycleConstants.ONHOLD) {
       return res.send(409, 'approval request no longer available')
     }
 
@@ -93,27 +95,75 @@ module.exports = (server) => {
     controller.reject
   )
 
-  const verifyInputMiddleware = (req, res, next) => {
-    const job = req.job
-    const inputJob = [
-      JobConstants.DUMMY_TYPE,
-      JobConstants.SCRIPT_TYPE
-    ]
-
-    if (inputJob.indexOf(job._type) === -1) {
-      return res.send(400, 'job type not allowed')
-    }
-
-    return next()
-  }
-
   server.put(
     '/:customer/job/:job/input',
     middlewares,
     router.requireCredential('user'),
     router.resolve.idToEntity({ param: 'job', required: true }),
-    verifyInputMiddleware,
+    // verify input job
+    (req, res, next) => {
+      const job = req.job
+      const inputJob = [
+        JobConstants.DUMMY_TYPE,
+        JobConstants.SCRIPT_TYPE
+      ]
+
+      if (inputJob.indexOf(job._type) === -1) {
+        return res.send(400, 'job type not allowed')
+      }
+
+      if (
+        JobConstants.SCRIPT_TYPE === job._type && 
+        job.lifecycle !== LifecycleConstants.ONHOLD
+      ) {
+        return res.send(400, 'only holded jobs allowed')
+      }
+
+      return next()
+    },
     controller.submitInput
+  )
+
+  server.put(
+    '/:customer/job/:job/restart',
+    middlewares,
+    router.requireCredential('user'),
+    router.resolve.idToEntity({ param: 'job', required: true }),
+    // verify input job
+    (req, res, next) => {
+      try {
+        const job = req.job
+
+        if (!job.isCompleted()) {
+          throw new ClientError('Only completed jobs allowed')
+        }
+
+        return next()
+      } catch (err) {
+        logger.error(err)
+        res.send(err.status, err.message)
+      }
+    },
+    async (req, res, next) => {
+      try {
+        const job = req.job
+        //await job.populate('task').execPopulate()
+        req.task = job.task
+        const args = argumentsValidateMiddleware(req)
+
+        await App.jobDispatcher.restart({
+          user: req.user,
+          customer: req.customer,
+          job,
+          task: job.task,
+          task_arguments_values: ( args || [] )
+        })
+        res.send(200, job)
+      } catch (err) {
+        logger.error(err)
+        res.send(500, 'Internal Server Error')
+      }
+    }
   )
 }
 
@@ -210,7 +260,8 @@ const controller = {
 const submitJobInputs = (req) => {
   const args = (req.body && req.body.args)
   const job = req.job
-  return App.jobDispatcher.jobInputsReplenish(job, {
+  return App.jobDispatcher.jobInputsReplenish({
+    job,
     task: job.task,
     task_arguments_values: (args || []),
     user: req.user,

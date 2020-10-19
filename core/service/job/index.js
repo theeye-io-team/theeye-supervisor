@@ -209,8 +209,20 @@ module.exports = {
   /**
    * @return {Promise<Job>}
    */
-  async jobInputsReplenish (job, input) {
-    const { task, user, customer } = input
+  restart (input) {
+    const { job } = input
+
+    job.trigger_name = null
+    job.result = {}
+    job.output = {}
+
+    return this.jobInputsReplenish(input)
+  },
+  /**
+   * @return {Promise<Job>}
+   */
+  async jobInputsReplenish (input) {
+    const { job, task, user, customer } = input
 
     const args = await new Promise( (resolve, reject) => {
       JobFactory.prepareTaskArgumentsValues(
@@ -235,8 +247,9 @@ module.exports = {
     })
 
     job.task_arguments_values = args
-    job.lifecycle = input.lifecycle || LifecycleConstants.READY
-    job.state = input.state || StateConstants.IN_PROGRESS
+    job.lifecycle = LifecycleConstants.READY
+    job.state = StateConstants.IN_PROGRESS
+
     await job.save()
 
     // everything ok
@@ -381,14 +394,12 @@ module.exports = {
       }
 
       await job.save()
-      done(null, job) // continue process in paralell
+      done(null, job) // continue processing in paralell
 
       process.nextTick(() => {
         RegisterOperation(Constants.UPDATE, TopicsConstants.task.result, { job })
         App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
         dispatchFinishedTaskExecutionEvent(job, job.trigger_name)
-
-
         emitJobFinishedNotification({ job })
       })
     } catch (err) {

@@ -14,10 +14,10 @@ const LOCKED = 'locked'
 
 // FINISHED LIFECYCLE
 const FINISHED = 'finished'
-const TERMINATED = 'terminated'
 const CANCELED = 'canceled'
 const EXPIRED = 'expired'
 const COMPLETED = 'completed'
+const TERMINATED = 'terminated'
 
 exports.READY = READY
 exports.ASSIGNED = ASSIGNED

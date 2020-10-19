@@ -3,6 +3,7 @@ const util = require('util');
 const Schema = require('mongoose').Schema;
 const FetchBy = require('../../lib/fetch-by');
 const baseProperties = require('./schema-properties.js')
+const LifecycleConstants = require('../../constants/lifecycle')
 
 function BaseSchema (props) {
 
@@ -40,6 +41,27 @@ function BaseSchema (props) {
    */
   this.methods.isIntegrationJob = function () {
     return ( /IntegrationJob/.test(this._type) === true )
+  }
+
+  this.methods.inProgress = function () {
+    const inProgress = (
+      job.lifecycle === LifecycleConstants.READY ||
+      job.lifecycle === LifecycleConstants.ASSIGNED ||
+      job.lifecycle === LifecycleConstants.ONHOLD
+    )
+    return inProgress
+  }
+
+  this.methods.isCompleted = function () {
+    const completed = [
+      LifecycleConstants.FINISHED,
+      LifecycleConstants.CANCELED,
+      LifecycleConstants.EXPIRED, // it takes to much to complete
+      LifecycleConstants.COMPLETED,
+      LifecycleConstants.TERMINATED // abruptly
+    ].indexOf(this.lifecycle) !== -1
+
+    return completed
   }
 
   this.methods.publish = function (scope) {
