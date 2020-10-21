@@ -346,7 +346,7 @@ const findByTitleMiddleware = (options = {}) => {
     const title = req.params.title
     const customer = req.customer
 
-    App.Model.Indicator.Indicator.findOne({
+    App.Models.Indicator.Indicator.findOne({
       title,
       customer_id: customer._id
     }, (err, indicator) => {
