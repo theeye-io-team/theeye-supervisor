@@ -1,4 +1,5 @@
 
+const IndicatorConstants = require('../../constants/indicator')
 const mongodb = require('../../lib/mongodb').db
 const BaseSchema = require('./schema')
 
@@ -22,15 +23,22 @@ const TextSchema = new BaseSchema({
   type: { type: String, default: 'text' }
 })
 
+const ChartSchema = new BaseSchema({
+  value: { type: Object, default: () => { return {} } },
+  type: { type: String, default: 'chart' }
+})
+
 const Indicator = mongodb.model('Indicator', IndicatorSchema)
 const ProgressIndicator = Indicator.discriminator('ProgressIndicator', ProgressSchema)
 const TextIndicator = Indicator.discriminator('TextIndicator', TextSchema)
 const CounterIndicator = Indicator.discriminator('CounterIndicator', CounterSchema)
+const ChartIndicator = Indicator.discriminator('ChartIndicator', ChartSchema)
 
 Indicator.ensureIndexes()
 CounterIndicator.ensureIndexes()
 ProgressIndicator.ensureIndexes()
 TextIndicator.ensureIndexes()
+ChartIndicator.ensureIndexes()
 
 // called for both inserts and updates
 Indicator.on('afterSave', function (model) {
@@ -39,13 +47,16 @@ Indicator.on('afterSave', function (model) {
 })
 
 const IndicatorFactory = function (attrs) {
-  if (attrs.type === 'progress') {
+  if (attrs.type === IndicatorConstants.SHORT_TYPE_CHART) {
+    return new ChartIndicator(attrs)
+  }
+  if (attrs.type === IndicatorConstants.SHORT_TYPE_PROGRESS) {
     return new ProgressIndicator(attrs)
   }
-  if (attrs.type === 'text') {
+  if (attrs.type === IndicatorConstants.SHORT_TYPE_TEXT) {
     return new TextIndicator(attrs)
   }
-  if (attrs.type === 'counter') {
+  if (attrs.type === IndicatorConstants.SHORT_TYPE_COUNTER) {
     return new CounterIndicator(attrs)
   }
   return new Indicator(attrs)
@@ -56,3 +67,4 @@ exports.Indicator = Indicator
 exports.Progress = ProgressIndicator
 exports.Counter = CounterIndicator
 exports.Text = TextIndicator
+exports.Chart = ChartIndicator

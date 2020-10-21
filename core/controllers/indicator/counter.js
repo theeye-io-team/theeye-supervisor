@@ -12,8 +12,7 @@ module.exports = function (server) {
     router.ensureCustomer
   ]
 
-  server.patch(
-    '/indicator/:indicator/increase',
+  server.patch( '/indicator/:indicator/increase',
     middlewares,
     router.requireCredential('agent'),
     router.resolve.idToEntity({ param:'indicator', required: true }),
@@ -23,8 +22,7 @@ module.exports = function (server) {
     notifyEvent({ operation: Constants.UPDATE })
   )
 
-  server.patch(
-    '/indicator/:indicator/decrease',
+  server.patch( '/indicator/:indicator/decrease',
     middlewares,
     router.requireCredential('agent'),
     router.resolve.idToEntity({ param:'indicator', required: true }),
@@ -34,8 +32,7 @@ module.exports = function (server) {
     notifyEvent({ operation: Constants.UPDATE })
   )
 
-  server.patch(
-    '/indicator/:indicator/restart',
+  server.patch( '/indicator/:indicator/restart',
     middlewares,
     router.requireCredential('agent'),
     router.resolve.idToEntity({ param:'indicator', required: true }),

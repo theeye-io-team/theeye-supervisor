@@ -2,8 +2,92 @@ const logger = require('../lib/logger')(':router:middleware:params-resolver')
 const Host = require('../entity/host').Entity
 const Customer = require('../entity/customer').Entity
 const isMongoId = require('validator/lib/isMongoId')
+const { ClientError, ServerError } = require('../lib/error-handler')
 
 module.exports = {
+  idToEntityByCustomer (options) {
+    options||(options={})
+
+    if (!options.param) {
+      throw new Error('param name is required')
+    }
+
+    const paramName = options.param
+    const entityName = (options.entity||options.param)
+    const targetName = (options.into||paramName)
+
+    return async function (req, res, next) {
+      try {
+        const customer = req.customer
+        const _id = (
+          req.params[paramName] ||
+          (req.body && req.body[paramName]) ||
+          req.query[paramName]
+        )
+
+        if (isObject(_id)) {
+          _id = ( _id._id || _id.id || undefined )
+        } else if (typeof _id !== 'string') {
+          _id = undefined
+        }
+
+        if (!_id) {
+          if (options.required) {
+            throw new ClientError(`${options.param} is required`)
+          }
+
+          req[targetName] = null
+          return next()
+        }
+
+        if (!isMongoId(_id)) {
+          if (options.required) {
+            throw new ClientError(`${options.param} invalid value`)
+          }
+
+          req[targetName] = null
+          return next()
+        }
+
+        logger.debug('resolving "%s" with id "%s"', targetName, _id)
+
+        const EntityModule = require('../entity/' + entityName)
+        const Entity = (
+          EntityModule.Entity || 
+          EntityModule[ firstToUpper(entityName) ] || 
+          EntityModule
+        )
+
+        // filter by customer
+        const dbDoc = await Entity.findOne({
+          _id, 
+          $or: [
+            { customer: customer._id },
+            { customer_id: customer._id.toString() },
+            { customer_id: customer._id },
+            { customer_name: customer.name }
+          ]
+        })
+
+        if (!dbDoc) {
+          if (options.required) {
+            throw new ClientError(`${options.param } not found`, { statusCode: 404 })
+          }
+
+          req[targetName] = null
+          next()
+        }
+
+
+        logger.debug('instances of "%s" found', options.param)
+        req[targetName] = dbDoc
+        next()
+      } catch (err) {
+        logger.error(err)
+        res.send(err.status, err.message)
+      }
+    }
+  },
   idToEntity (options) {
     options||(options={})
 
@@ -11,9 +95,9 @@ module.exports = {
       throw new Error('param name is required')
     }
 
-    var paramName = options.param
-    var entityName = (options.entity||options.param)
-    var targetName = (options.into||paramName)
+    const paramName = options.param
+    const entityName = (options.entity||options.param)
+    const targetName = (options.into||paramName)
 
     return function (req, res, next) {
       let _id = (

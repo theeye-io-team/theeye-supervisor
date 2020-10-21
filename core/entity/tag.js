@@ -1,11 +1,10 @@
-"use strict";
 
 const mongodb = require("../lib/mongodb");
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const after = require('lodash/after')
 
-var EntitySchema = Schema({
+const EntitySchema = Schema({
   name: { type: String },
   creation_date: { type: Date, 'default': new Date() },
   customer_id: { type: Schema.Types.ObjectId, ref: 'Customer' },
@@ -62,7 +61,8 @@ EntitySchema.statics.create = (tags, customer, next) => {
 
 EntitySchema.index({ name: 1, customer: 1 },{ unique: true });
 
-var Entity = mongodb.db.model('Tag', EntitySchema);
-Entity.ensureIndexes();
+const Entity = mongodb.db.model('Tag', EntitySchema)
+Entity.ensureIndexes()
 
-exports.Entity = Entity;
+exports.Entity = Entity
+exports.Tag = Entity

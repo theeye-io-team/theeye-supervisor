@@ -2,8 +2,8 @@ const App = require('../../app')
 const audit = require('../../lib/audit')
 const router = require('../../router')
 const dbFilter = require('../../lib/db-filter')
-const IndicatorModels = require('../../entity/indicator')
-const Tag = require('../../entity/tag').Entity
+//const IndicatorModels = require('../../entity/indicator')
+//const Tag = require('../../entity/tag').Entity
 const logger = require('../../lib/logger')('eye:controller:indicator:crud')
 const TopicsConstants = require('../../constants/topics')
 const Constants = require('../../constants')
@@ -18,15 +18,13 @@ module.exports = function (server) {
 
   server.get('/indicator', middlewares, controller.fetch)
 
-  server.get(
-    '/indicator/:indicator',
+  server.get('/indicator/:indicator',
     middlewares,
-    router.resolve.idToEntity({ param:'indicator', required:true }),
+    router.resolve.idToEntityByCustomer({ param:'indicator', required:true }),
     controller.get
   )
 
-  server.get(
-    '/indicator/title/:title',
+  server.get('/indicator/title/:title',
     middlewares,
     findByTitleMiddleware(),
     controller.get
@@ -38,12 +36,11 @@ module.exports = function (server) {
 
     let tags = indicator.tags
     if (tags && Array.isArray(tags) && tags.length > 0) {
-      Tag.create(tags, customer)
+      App.Models.Tag.Tag.create(tags, customer)
     }
   }
 
-  server.post(
-    '/indicator',
+  server.post('/indicator',
     middlewares,
     router.requireCredential('admin'),
     controller.create,
@@ -52,19 +49,17 @@ module.exports = function (server) {
     createTags,
   )
 
-  server.put(
-    '/indicator/:indicator',
+  server.put('/indicator/:indicator',
     middlewares,
     router.requireCredential('admin'),
-    router.resolve.idToEntity({ param: 'indicator' }),
+    router.resolve.idToEntityByCustomer({ param:'indicator', required:true }),
     controller.replace,
     audit.afterReplace('indicator', { display: 'title' }),
     notifyEvent({ operation: Constants.REPLACE }),
     createTags,
   )
 
-  server.put(
-    '/indicator/title/:title',
+  server.put('/indicator/title/:title',
     middlewares,
     router.requireCredential('admin'),
     findByTitleMiddleware({ required: false }),
@@ -74,8 +69,7 @@ module.exports = function (server) {
     createTags,
   )
 
-  server.patch(
-    '/indicator/title/:title',
+  server.patch('/indicator/title/:title',
     middlewares,
     router.requireCredential('admin'),
     findByTitleMiddleware(),
@@ -85,39 +79,35 @@ module.exports = function (server) {
     createTags,
   )
 
-  server.patch(
-    '/indicator/:indicator',
+  server.patch('/indicator/:indicator',
     middlewares,
     router.requireCredential('admin'),
-    router.resolve.idToEntity({ param:'indicator', required: true }),
+    router.resolve.idToEntityByCustomer({ param:'indicator', required: true }),
     controller.update,
     audit.afterUpdate('indicator', { display: 'title' }),
     notifyEvent({ operation: Constants.UPDATE }),
     createTags,
   )
 
-  server.patch(
-    '/indicator/:indicator/state',
+  server.patch('/indicator/:indicator/state',
     middlewares,
     router.requireCredential('agent'),
-    router.resolve.idToEntity({ param:'indicator', required: true }),
+    router.resolve.idToEntityByCustomer({ param:'indicator', required: true }),
     controller.updateState,
     audit.afterUpdate('indicator', { display: 'title' }),
     notifyEvent({ operation: Constants.UPDATE })
   )
 
-  server.del(
-    '/indicator/:indicator',
+  server.del('/indicator/:indicator',
     middlewares,
     router.requireCredential('admin'),
-    router.resolve.idToEntity({ param:'indicator', required: true }),
+    router.resolve.idToEntityByCustomer({ param:'indicator', required: true }),
     controller.remove,
     audit.afterRemove('indicator', { display: 'title' }),
     notifyEvent({ operation: Constants.DELETE })
   )
 
-  server.del(
-    '/indicator/title/:title',
+  server.del('/indicator/title/:title',
     middlewares,
     router.requireCredential('admin'),
     findByTitleMiddleware(),
@@ -145,8 +135,7 @@ const controller = {
       filter.where.acl = req.user.email
     }
 
-    IndicatorModels
-      .Indicator
+    App.Models.Indicator.Indicator
       .find(filter.where)
       .exec((err, models) => {
         if (err) {
@@ -224,7 +213,7 @@ const controller = {
       user_id: req.user._id
     })
 
-    var indicator = new IndicatorModels.Factory(input)
+    const indicator = new App.Models.Indicator.Factory(input)
     indicator.save((err, model) => {
       if (err) {
         if (err.name == 'ValidationError') {
@@ -288,31 +277,31 @@ const controller = {
     res.send(200, req.indicator)
     next()
   },
-  updateState (req, res, next) {
-    let indicator = req.indicator
-    let body = req.body
+  async updateState (req, res, next) {
+    try {
+      const indicator = req.indicator
+      const body = req.body
 
-    if (!body.state && !body.value) {
-      return res.send(400, 'provide the state changes. value and/or state are required')
-    }
-
-    let state = body.state
-    if (state === 'success') { state = 'normal' }
-
-    if (body.state) { indicator.state = state }
-    if (body.value) { indicator.value = body.value }
-    indicator.save(err => {
-      if (err) {
-        if (err.name == 'ValidationError') {
-          return res.send(400, err.name)
-        } else {
-          return res.send(500, err)
-        }
+      if (!body || (!body.state && !body.value)) {
+        return res.send(400, 'provide the state changes. value and/or state are required')
       }
 
-      res.send(200)
+      let state = body.state
+      if (state === 'success') { state = 'normal' }
+      if (body.state) { indicator.state = state }
+      if (body.value) { indicator.value = body.value }
+
+      await indicator.save()
+
+      res.send(200, indicator)
       return next()
-    })
+    } catch (err) {
+      if (err.name == 'ValidationError') {
+        return res.send(400, err.name)
+      } else {
+        return res.send(500, err)
+      }
+    }
   }
 }
 
@@ -357,7 +346,7 @@ const findByTitleMiddleware = (options = {}) => {
     const title = req.params.title
     const customer = req.customer
 
-    IndicatorModels.Indicator.findOne({
+    App.Model.Indicator.Indicator.findOne({
       title,
       customer_id: customer._id
     }, (err, indicator) => {
