@@ -47,7 +47,6 @@ module.exports = {
    *
    */
   getNextPendingJob (input, next) {
-    var topic
     if (!input.host) { return next(new Error('host is required')) }
 
     /**
@@ -56,6 +55,7 @@ module.exports = {
      * cannot use job.save since jobs are not mongoose document
      *
      */
+    //let jobs = []
     const dispatchJobExecutionRecursive = (
       idx, jobs, terminateRecursion
     ) => {
@@ -93,16 +93,27 @@ module.exports = {
       //})
     }
 
-    let jobs = []
     JobModels.Job.aggregate([
       {
-        $match: {
-          host_id: input.host._id.toString(),
-          lifecycle: LifecycleConstants.READY
+        '$match': {
+          'host_id': input.host._id.toString(),
+          'lifecycle': LifecycleConstants.READY
         }
       },
-      { $sort: { 'task_id': 1, 'creation_date': 1 } },
-      { $group: { _id: '$task_id', nextJob: { $first: '$$ROOT' } } }
+      {
+        '$sort': {
+          'task_id': 1,
+          'creation_date': 1
+        }
+      },
+      {
+        '$group': {
+          '_id': '$task_id',
+          'nextJob': {
+            '$first': '$$ROOT'
+          }
+        }
+      }
     ]).exec((err, groups) => {
       if (err) {
         logger.error('%o',err)

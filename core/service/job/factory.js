@@ -147,8 +147,14 @@ const JobsFactory = {
             if (found === undefined) {
               errors.required(def.label, null, 'task argument is required.')
             } else {
-              if (!found) value = found // null
-              else value = (found.value || found)
+              if (!found) { // null
+                value = found
+              } else {
+                value = (found.value || found)
+                if (typeof value !== 'string') {
+                  value = JSON.stringify(value)
+                }
+              }
             }
           }
         } else {
