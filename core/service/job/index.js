@@ -73,7 +73,8 @@ module.exports = {
             dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
           })
 
-          RegisterOperation(Constants.UPDATE, TopicsConstants.task.cancelation, { job })
+          //RegisterOperation(Constants.UPDATE, TopicsConstants.task.cancelation, { job })
+          RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
         } else {
           allowedMultitasking(job, (err, allowed) => {
             if (!allowed) {
@@ -86,7 +87,8 @@ module.exports = {
                 terminateRecursion(err, job)
               })
 
-              RegisterOperation(Constants.UPDATE, TopicsConstants.task.assigned, { job })
+              //RegisterOperation(Constants.UPDATE, TopicsConstants.task.assigned, { job })
+              RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
             }
           })
         }
@@ -95,23 +97,21 @@ module.exports = {
 
     JobModels.Job.aggregate([
       {
-        '$match': {
-          'host_id': input.host._id.toString(),
-          'lifecycle': LifecycleConstants.READY
+        $match: {
+          host_id: input.host._id.toString(),
+          lifecycle: LifecycleConstants.READY
         }
       },
       {
-        '$sort': {
-          'task_id': 1,
-          'creation_date': 1
+        $sort: {
+          task_id: 1,
+          creation_date: 1
         }
       },
       {
-        '$group': {
-          '_id': '$task_id',
-          'nextJob': {
-            '$first': '$$ROOT'
-          }
+        $group: {
+          _id: '$task_id',
+          nextJob: { $first: '$$ROOT' }
         }
       }
     ]).exec((err, groups) => {
@@ -141,7 +141,7 @@ module.exports = {
    * @property {Workflow} input.workflow optional
    */
   async create (input) {
-    let { task } = input
+    const { task } = input
     let job
 
     if (!task) { throw new Error('task is required') }
@@ -155,7 +155,7 @@ module.exports = {
         input.origin === JobConstants.ORIGIN_TRIGGER_BY
       )
     ) {
-      job = await createScheduledJob(input) // agenda job
+      job = await scheduleJob(input) // agenda job
     } else {
       job = await createJob(input)
     }
@@ -264,7 +264,7 @@ module.exports = {
     await job.save()
 
     // everything ok
-    RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
+    RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
 
     return job
   },
@@ -318,7 +318,7 @@ module.exports = {
     await WorkflowJobCreatedNotification({ wJob, user, customer })
 
     // create first task job
-    this.create(
+    await this.create(
       Object.assign({}, input, {
         task,
         workflow: input.workflow, // explicit
@@ -358,8 +358,8 @@ module.exports = {
    */
   async finish (input, done) {
     try {
-      const job = input.job
-      const result = input.result || {}
+      const { job, user } = input
+      const result = (input.result ||{})
 
       let state, lifecycle, trigger_name
       if (result.killed === true) {
@@ -408,7 +408,8 @@ module.exports = {
       done(null, job) // continue processing in paralell
 
       process.nextTick(() => {
-        RegisterOperation(Constants.UPDATE, TopicsConstants.task.result, { job })
+        //RegisterOperation(Constants.UPDATE, TopicsConstants.task.result, { job })
+        RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
         App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
         dispatchFinishedTaskExecutionEvent(job, job.trigger_name)
         emitJobFinishedNotification({ job })
@@ -431,8 +432,8 @@ module.exports = {
   cancel (input, next) {
     next || (next=()=>{})
 
-    const job = input.job
-    const result = (input.result || {})
+    const { job, user, state } = input
+    const result = (input.result ||{})
 
     const lifecycle = cancelJobNextLifecycle(job)
     if (!lifecycle) {
@@ -444,7 +445,7 @@ module.exports = {
     job.lifecycle = lifecycle
     job.result = result
     job.output = this.parseOutputParameters(result.output)
-    job.state = input.state || StateConstants.CANCELED
+    job.state = (state || StateConstants.CANCELED)
     job.save(err => {
       if (err) {
         logger.error('fail to cancel job %s', job._id)
@@ -457,7 +458,8 @@ module.exports = {
 
       logger.log('job %s terminated', job._id)
 
-      RegisterOperation(Constants.UPDATE, TopicsConstants.task.terminate, { job })
+      //RegisterOperation(Constants.UPDATE, TopicsConstants.task.terminate, { job })
+      RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
     })
   },
   /**
@@ -659,65 +661,78 @@ const removeExceededJobsCount = (task, workflow) => {
   })
 }
 
-const createJob = (input) => {
-  return new Promise((resolve, reject) => {
-    const { task } = input
+const createJob = async (input) => {
+  const { task, user } = input
 
+  const job = await new Promise((resolve, reject) => {
     JobFactory.create(task, input, async (err, job) => {
       if (err) { return reject(err) }
 
-      if (job.constructor.name === 'model') {
-        logger.log('job created.')
-      } else {
-        logger.error('invalid job returned.')
-        logger.error('%o', job)
-        let err = new Error('invalid job returned')
+      if (job.constructor.name !== 'model') {
+        const err = new Error('Invalid job returned')
         err.job = job
         return reject(err)
       }
 
-      // await notification and system log generation
-      await RegisterOperation(Constants.CREATE, TopicsConstants.task.execution, { job })
-
-      if (task.type === TaskConstants.TYPE_DUMMY) {
-        if (job.lifecycle !== LifecycleConstants.ONHOLD) {
-          App.jobDispatcher.finishDummyJob(job, input).then(resolve).catch(reject)
-        } else {
-          resolve(job)
-        }
-      } else if (TaskConstants.TYPE_NOTIFICATION === task.type) {
-        App.jobDispatcher.finish(Object.assign({}, input, {
-          job,
-          result: {},
-          state: StateConstants.SUCCESS
-        }), (err) => {
-          if (err) reject(err)
-          else resolve(job)
-        })
-      } else {
-        resolve(job)
-      }
+      logger.log('job created.')
+      resolve(job)
     })
   })
+
+  // await notification and system log generation
+  await RegisterOperation(Constants.CREATE, TopicsConstants.job.crud, { job, user })
+
+  if (task.type === TaskConstants.TYPE_DUMMY) {
+    if (job.lifecycle !== LifecycleConstants.ONHOLD) {
+      await App.jobDispatcher.finishDummyJob(job, input)
+    }
+  } else if (TaskConstants.TYPE_NOTIFICATION === task.type) {
+    await new Promise((resolve, reject) => {
+      App.jobDispatcher.finish(Object.assign({}, input, {
+        job,
+        result: {},
+        state: StateConstants.SUCCESS
+      }), (err) => {
+        if (err) reject(err)
+        else resolve(job)
+      })
+    })
+  }
+
+  return job
 }
 
-const createScheduledJob = async (input) => {
-  const { customer } = input
+const scheduleJob = async (input) => {
+  const { customer, user } = input
   const job = await JobFactory.createScheduledJob(input)
 
+  const topic = TopicsConstants.schedule.crud
+  const operation = Constants.CREATE
+  //await RegisterOperation(Constants.CREATE, topic, { job, user })
+
   App.notifications.generateSystemNotification({
-    topic: TopicsConstants.job.scheduler.crud,
+    topic,
     data: {
-      hostname: (job.host && job.host.hostname) || job.host_id,
+      operation,
       organization: customer.name,
       organization_id: customer._id,
-      operation: Constants.CREATE,
-      model_id: job._id,
-      model_type: job._type,
-      model: job,
-      approvers: (job.task && job.task.approvers) || undefined
+      model: job
+      //model_id: job._id,
+      //model_type: job._type,
     }
   })
+
+  const payload = {
+    operation,
+    organization: customer.name,
+    organization_id: customer._id,
+    model: job,
+    user_id: user.id,
+    user_email: user.email,
+    user_name: user.username
+  }
+
+  App.logger.submit(customer.name, topic, payload)
 
   return job
 }

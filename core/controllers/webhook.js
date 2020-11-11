@@ -51,6 +51,24 @@ module.exports = function (server) {
     audit.afterRemove('webhook',{display:'name'})
   )
 
+  const auditTrigger = (req, res, next) => {
+    const { user, customer, webhook } = req
+
+    const payload = {
+      operation: Constants.TRIGGER,
+      user_id: user && (user._id || user.id),
+      user_name: user && user.name,
+      user_email: user && user.email,
+      model_id: webhook._id,
+      model_type: 'Webhook',
+      model_name: webhook.name,
+      organization: req.customer.name,
+      organization_id: req.customer._id,
+    }
+
+    App.logger.submit(customer.name, TopicsConstants.webhook.triggered, payload)
+  }
+
   /**
    *
    * trigger webhook event
@@ -62,7 +80,8 @@ module.exports = function (server) {
     router.requireCredential('user'),
     router.resolve.idToEntity({ param:'webhook', required:true }),
     router.ensureAllowed({ entity:{name:'webhook'} }),
-    controller.trigger
+    controller.trigger,
+    auditTrigger
   )
 
   // use custom middleware.
@@ -72,7 +91,8 @@ module.exports = function (server) {
     router.resolve.customerNameToEntity({ required: true }),
     router.resolve.idToEntity({ param:'webhook', required: true }),
     router.requireSecret('webhook'),
-    controller.trigger
+    controller.trigger,
+    auditTrigger
   )
 }
 

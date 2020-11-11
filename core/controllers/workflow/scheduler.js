@@ -1,23 +1,30 @@
 const App = require('../../app')
 const logger = require('../../lib/logger')('controller:workflow:scheduler')
-const router = require('../../router')
-const resolver = router.resolve
+const Router = require('../../router')
 const JobConstants = require('../../constants/jobs')
+const Constants = require('../../constants')
 const SchedulerConstants = require('../../constants/scheduler')
+const Audit = require('../../lib/audit')
 const { ClientError } = require('../../lib/error-handler')
 
 module.exports = (server) => {
   const middlewares = [
     server.auth.bearerMiddleware,
-    router.requireCredential('admin'),
-    resolver.customerNameToEntity({ required: true }),
-    router.ensureCustomer,
-    resolver.idToEntity({ param:'workflow', required: true })
+    Router.requireCredential('admin'),
+    Router.resolve.customerNameToEntity({ required: true }),
+    Router.ensureCustomer,
+    Router.resolve.idToEntity({ param:'workflow', required: true })
   ]
 
   server.get('/workflows/:workflow/schedule', middlewares, fetch)
 
-  server.post('/workflows/:workflow/schedule', middlewares, create)
+  server.post(
+    '/workflows/:workflow/schedule',
+    middlewares,
+    create,
+    Audit.afterCreate('schedule', { display: 'name' }),
+    Router.notify({ name: 'schedule', operation: Constants.CREATE })
+  )
 }
 
 const create = async (req, res, next) => {
@@ -41,7 +48,9 @@ const create = async (req, res, next) => {
       repeatEvery
     })
 
+    req.schedule = schedule.attrs
     res.send(200, schedule)
+    next()
   } catch (err) {
     logger.error(err)
     return res.send(err.statusCode || 500, err.message)

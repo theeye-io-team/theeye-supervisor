@@ -48,12 +48,14 @@ module.exports = (server) => {
     router.resolve.idToEntity({ param: 'task', required: true }),
     router.resolve.idToEntity({ param: 'host_id', entity: 'host', into: 'host' })
   )
+
   server.patch(
     '/:customer/task/:task',
     mws,
     controller.replace,
     audit.afterUpdate('task', { display: 'name' })
   )
+
   server.put(
     '/:customer/task/:task',
     mws,
@@ -61,6 +63,7 @@ module.exports = (server) => {
     controller.replace,
     audit.afterReplace('task', { display: 'name' })
   )
+
   server.del(
     '/:customer/task/:task',
     mws,

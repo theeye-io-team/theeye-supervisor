@@ -66,14 +66,18 @@ const JobsFactory = {
       }
     )
   },
+  /**
+   *
+   * @return {Promise<AgendaJob>}
+   *
+   */
   createScheduledJob (input) {
     return new Promise( (resolve, reject) => {
       const task = input.task
       const customer = input.customer
 
       const runDate =  Date.now() + task.grace_time * 1000
-
-      let data = {
+      const data = {
         schedule: { runDate },
         task,
         customer,
@@ -89,21 +93,6 @@ const JobsFactory = {
 
           return reject(err)
         }
-
-        // @TODO: DEPRECATED - MOVE TO NOTIFICATION API
-        //App.customer.getAlertEmails(customer.name, (err, emails) => {
-        //  App.jobDispatcher.sendJobCancelationEmail({
-        //    task_secret: task.secret,
-        //    task_id: task.id,
-        //    schedule_id: agendaJob.attrs._id,
-        //    task_name: task.name,
-        //    hostname: task.host.hostname,
-        //    date: new Date(runDate).toISOString(),
-        //    grace_time_mins: task.grace_time / 60,
-        //    customer_name: customer.name,
-        //    to: emails.join(',')
-        //  })
-        //})
 
         return resolve(agendaJob)
       })

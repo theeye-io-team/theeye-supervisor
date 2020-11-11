@@ -1,22 +1,23 @@
 const App = require('../../app')
 const logger = require('../../lib/logger')('controller:task:scheduler')
-const router = require('../../router')
+const Router = require('../../router')
 const JobConstants = require('../../constants/jobs')
-const resolver = router.resolve
+const Constants = require('../../constants')
+const Audit = require('../../lib/audit')
 
 module.exports = function (server) {
   const middlewares = [
     server.auth.bearerMiddleware,
-    router.requireCredential('admin'),
-    resolver.customerNameToEntity({ required: true }),
-    router.ensureCustomer,
-    resolver.idToEntity({ param:'task', required: true })
+    Router.requireCredential('admin'),
+    Router.resolve.customerNameToEntity({ required: true }),
+    Router.ensureCustomer,
+    Router.resolve.idToEntity({ param:'task', required: true })
   ]
 
   server.post(
     '/:customer/task/:task/schedule',
     middlewares,
-    // @TODO-DEPRECATED_REMOVE
+    // @TODO-DEPRECATED_REMOVE Middleware
     // backward compatibility middleware
     // remove 2021-01-01
     (req, res, next) => {
@@ -27,7 +28,9 @@ module.exports = function (server) {
       }
       next()
     },
-    controller.create
+    controller.create,
+    Audit.afterCreate('schedule', { display: 'name' }),
+    Router.notify({ name: 'schedule', operation: Constants.CREATE })
   )
 
   server.get('/:customer/task/:task/schedule', middlewares, controller.fetch)
@@ -38,9 +41,9 @@ module.exports = function (server) {
   // * only valid for this action
   // */
   //server.get('/:customer/task/:task/schedule/:schedule/secret/:secret',[
-  //  resolver.idToEntity({param:'task',required:true}),
-  //  router.requireSecret('task'),
-  //  resolver.customerNameToEntity({required:true}),
+  //  Router.resolve.idToEntity({param:'task',required:true}),
+  //  Router.requireSecret('task'),
+  //  Router.resolve.customerNameToEntity({required:true}),
   //], controller.remove)
 }
 
@@ -91,7 +94,9 @@ const controller = {
         logger.error(err)
         return res.send(500, err)
       }
+      req.schedule = schedule.attrs
       res.send(200, schedule)
+      next()
     })
   }
 }

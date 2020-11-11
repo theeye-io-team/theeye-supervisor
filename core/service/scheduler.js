@@ -153,6 +153,10 @@ Scheduler.prototype = {
 
     return this.agenda.jobs(query)
   },
+  async getSchedule (scheduleId) {
+    const jobs = await this.agenda.jobs({ _id: ObjectId(scheduleId) })
+    return jobs[0]
+  },
   // Counts schedules for the given task
   // @param callback: Function (err, schedulesCount)
   taskSchedulesCount (task, callback) {

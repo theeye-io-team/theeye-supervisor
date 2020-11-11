@@ -8,6 +8,7 @@ const auth = require('../lib/auth')
  *
  */
 module.exports = {
+  notify: require('./notify-middleware'),
   resolve: require('./param-resolver'),
   filter: require('./param-filter'),
   requireCredential: require('./require-credential'),
@@ -21,7 +22,7 @@ module.exports = {
 
     server.auth = auth.initialize()
 
-    // avoiding dynamic linker
+    // @TODO avoiding dynamic linker
     require('../controllers/indicator')(server)
     require('../controllers/index')(server)
     require('../controllers/agent')(server)

@@ -49,10 +49,14 @@ exports.workflow = {
 exports.job = {
   crud: 'job-crud',
   finished: 'job-finished',
-  scheduler: {
-    crud: 'job-scheduler-crud'
-  }
+  //scheduler: {
+  //  crud: 'job-schedule-crud'
+  //}
   //onhold: 'job-onhold'
+}
+
+exports.schedule = {
+  crud: 'schedule-crud'
 }
 
 exports.webhook = {

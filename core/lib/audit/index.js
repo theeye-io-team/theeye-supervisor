@@ -1,9 +1,7 @@
-'use strict'
-
 const App = require('../../app')
 const Constants = require('../../constants')
 const TopicsConstants = require('../../constants/topics')
-const NotificationService = require('../../service/notification')
+//const NotificationService = require('../../service/notification')
 
 module.exports = {
   afterUpdate (name, specs) {
@@ -22,11 +20,9 @@ module.exports = {
         operation: Constants.UPDATE
       })
 
-
       next()
     }
   },
-
   afterReplace (name, specs) {
     const topic = specs.topic || TopicsConstants[name].crud
     return function (req, res, next) {
@@ -47,11 +43,10 @@ module.exports = {
       next()
     }
   },
-
   afterRemove (name, specs) {
-    var topic = specs.topic || TopicsConstants[name].crud
+    const topic = specs.topic || TopicsConstants[name].crud
     return function (req, res, next) {
-      var model = req[name]
+      const model = req[name]
       App.logger.submit(req.customer.name, topic, { // topic = topics[name].crud , DELETE
         hostname: model.hostname || 'undefined',
         model_id: model._id,
@@ -64,16 +59,14 @@ module.exports = {
         operation: Constants.DELETE
       })
 
-
       next()
     }
   },
-
   afterCreate (name, specs) {
-    var topic = specs.topic || TopicsConstants[name].crud
+    const topic = specs.topic || TopicsConstants[name].crud
     return function (req, res, next) {
-      var model = req[name]
-      App.logger.submit(req.customer.name, topic, { // topic = topics[name].crud , CREATE
+      const model = req[name]
+      App.logger.submit(req.customer.name, topic, { // topic = topics[name].crud === CREATE
         hostname: model.hostname || 'undefined',
         model_id: model._id,
         model_name: model[ specs.display ],
@@ -84,9 +77,7 @@ module.exports = {
         user_email: req.user.email,
         operation: Constants.CREATE
       })
-
-
       next()
     }
-  },
+  }
 }

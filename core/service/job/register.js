@@ -13,7 +13,7 @@ const logger = require('../../lib/logger')('service:jobs')
  * @return {Promise}
  */
 module.exports = async (operation, topic, input) => {
-  const { job } = input
+  const { job, user } = input
   const task = (job.task || {})
 
   await job.populate([
@@ -21,16 +21,20 @@ module.exports = async (operation, topic, input) => {
     { path: 'workflow_job' },
   ]).execPopulate()
 
+  const payload = prepareLog({ job, task, user })
+  payload.operation = operation
+  App.logger.submit(job.customer_name, topic, payload)
+
   // skip system notifications for this job.
   if (job.notify !== false) {
     // async call
     App.notifications.generateSystemNotification({
-      topic: TopicsConstants.job.crud,
+      topic,
       data: {
+        operation,
         hostname: (job.host && job.host.hostname) || job.host_id,
         organization: job.customer_name,
         organization_id: job.customer_id,
-        operation,
         model_id: job._id,
         model_type: job._type,
         model: job.toObject(),
@@ -39,25 +43,28 @@ module.exports = async (operation, topic, input) => {
     })
   }
 
-  const logPayload = prepareLog(job, task)
-  logPayload.operation = operation
-
-  App.logger.submit(job.customer_name, topic, logPayload)
-
   return
 }
 
-const prepareLog = (job, task) => {
+const prepareLog = ({ job, task, user }) => {
   const payload = {
     operation: null,
+    hostname: (job.host && job.host.hostname) || job.host_id,
     task_id: task._id,
     task_name: task.name,
     task_type: task.type,
+    approvers: (task && task.approvers) || undefined,
     state: job.state,
     lifecycle: job.lifecycle,
     organization: job.customer_name,
     organization_id: job.customer_id,
     job_type: job._type
+  }
+
+  if (user) {
+    payload.user_id = (user._id || user.id)
+    payload.user_email = user.email
+    payload.user_name = user.username
   }
 
   if (
@@ -77,10 +84,10 @@ const prepareLog = (job, task) => {
   }
 
   if (job._type === JobConstants.SCRAPER_TYPE) {
-    payload.url = task.url
-    payload.method = task.method
-    payload.statuscode = task.status_code
-    payload.pattern = task.pattern
+    //payload.url = task.url
+    //payload.method = task.method
+    //payload.statuscode = task.status_code
+    //payload.pattern = task.pattern
   } else if (job._type == JobConstants.SCRIPT_TYPE) {
     if (!job.script) {
       const msg = `job ${job._id}/${job._type} script is not valid or undefined`
