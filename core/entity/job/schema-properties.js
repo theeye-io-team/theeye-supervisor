@@ -3,7 +3,7 @@ const ObjectId = Schema.Types.ObjectId;
 
 module.exports = {
   task_id: { type: String },
-  task: { type: Object }, // embedded
+  task: { type: ObjectId, ref: 'Task' }, // embedded
   workflow_id: { type: String }, // job belongs to a specific workflow
   workflow: { type: ObjectId, ref: 'Workflow' },
   workflow_job_id: { type: String }, // job belongs to an instance of the workflow

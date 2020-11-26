@@ -152,7 +152,7 @@ const controller = {
    */
   finish (req, res, next) {
     const job = req.job
-    var payload = req.body.result || {}
+    const payload = (req.body.result || {})
     const user = req.user
 
     logger.log(`job "${job.name}(${job._id})" finished`)
