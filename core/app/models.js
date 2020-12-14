@@ -9,10 +9,12 @@ const Tag = require('../entity/tag')
 const Task = require('../entity/task')
 const Webhook = require('../entity/webhook')
 const Workflow = require('../entity/workflow')
+const Event = require('../entity/event')
 
 module.exports = {
   Models: {
     Customer,
+    Event,
     File,
     Host,
     Indicator,

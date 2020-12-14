@@ -1,35 +1,22 @@
-"use strict";
 
-var mongodb = require('../core/lib/mongodb');
-var assert = require('chai').assert;
-var mongoose = require('mongoose');
+const WS = require('../workspace/workspace')
+const assert = require('chai').assert
 
-describe('Event Dispatcher',function(){
-  var Dispatcher, Event
+WS().then(async App => {
+  const eventId = process.argv[2]
+  const jobId = process.argv[3]
 
-  before(function(done){
-    mongodb.connect(function(){
-      Dispatcher = require('../core/service/events')
-      Event = require('../core/entity/event').Event
-      done()
-    })
-  })
+  const event = await App.Models.Event.Event.findById(eventId)
+  const job = await App.Models.Job.Job.findById(jobId)
 
-  after(function(done){
-    done()
-  })
+  const payload = {
+    topic: "workflow-execution",
+    data: ["arg1","arg2","arg3","arg4"],
+    event,
+    job
+  }
 
-  it('dispatch an event', function(done){
-    let query = Event.findOne()
-    query.exec( (err,event) => {
-      assert.ifError(err)
-      assert.isNotNull(event, 'event not found')
-      Dispatcher.initialize( () => {
-        Dispatcher.dispatch( event, {}, (err, tasks) => {
-          assert.ifError(err)
-          done()
-        })
-      })
-    })
-  })
+  await App.eventDispatcher.dispatch(payload)
+
+  //await App.db.close()
 })

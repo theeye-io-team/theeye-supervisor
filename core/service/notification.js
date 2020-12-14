@@ -44,13 +44,7 @@ module.exports = {
    */
   async generateSystemNotification (payload) {
     try {
-      let url = config.notifications.api.url
-      if (config.notifications.api.secret) {
-        url += '?secret=' + config.notifications.api.secret
-      }
-
-      //if (!url || !isURL(url)) return logger.error('notification event aborted. invalid url %o', url)
-      if (!url) { return logger.error('notification event aborted. invalid url %o', url) }
+      if (!config.notifications.api.url) { return logger.error('notification event aborted. url required') }
       if (!payload) { return logger.error('notification event aborted. invalid payload %o', payload) }
       if (!payload.topic) { return logger.error('notification event aborted. invalid payload topic %o', payload) }
       if (!payload.data) { return logger.error('notification event aborted. invalid payload data %o', payload) }
@@ -79,11 +73,14 @@ module.exports = {
 
       payload.id = uuidv1()
 
-      let res = await got.post(url, {
+      const res = await got.post(config.notifications.api.url, {
         headers: {
           'content-type': 'application/json'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        searchParams: {
+          secret: config.gateway.secret
+        }
       })
 
       if (res.statusCode != 200) {

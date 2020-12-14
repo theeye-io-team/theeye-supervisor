@@ -9,7 +9,7 @@ module.exports = App
 App.boot = async (config) => {
 
   App.config = config
-  await MongoDB.connect(config.mongo)
+  App.db = await MongoDB.connect(config.mongo)
 
   const Models = require('./models')
   const Events = require('../service/events')
@@ -31,10 +31,8 @@ App.boot = async (config) => {
 
   const StartServices = async () => {
     logger.log('initializing scheduler')
-
     App.scheduler = require('../service/scheduler')
     await App.scheduler.initialize(config.scheduler)
-
     App.eventDispatcher = Events.createDispatcher() 
     App.jobDispatcher = require('../service/job')
     App.resource = require('../service/resource')
@@ -45,6 +43,9 @@ App.boot = async (config) => {
     App.hostTemplate = require('../service/host/group')
     App.notifications = require('../service/notification')
     App.resourceMonitor = require('../service/resource/monitor')
+
+    const Gateway = require('../service/gateway')
+    App.gateway = new Gateway()
   }
 
   const Api = require('./api')

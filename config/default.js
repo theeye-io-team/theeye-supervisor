@@ -2,19 +2,19 @@ const join = require('path').join
 
 module.exports = {
   server: {
-    name: "TheEye Core",
+    name: 'TheEye Core',
     version: process.env.VERSION || undefined,
     port: process.env.PORT || 60080
   },
   system: {
-    base_url: "http://127.0.0.1:60080",
-    web_url: "http://127.0.0.1:6080",
+    base_url: 'http://127.0.0.1:60080',
+    web_url: 'http://127.0.0.1:6080',
     file_upload_folder: join(__dirname , '..', 'uploads'),
-    view_teamplates_path: __dirname + "/../core/view/template",
-    secret: "b28d9f2a4d52ace6e5d3ac1dd3e5c2a0e7e66472ec7276ca501b8c4fa1f07679",
+    view_teamplates_path: __dirname + '/../core/view/template',
+    secret: 'b28d9f2a4d52ace6e5d3ac1dd3e5c2a0e7e66472ec7276ca501b8c4fa1f07679',
     user: {
-      username: "theeye-automatic",
-      email: "info@theeye.io",
+      username: 'theeye-automatic',
+      email: 'info@theeye.io',
       enabled: true,
       client_id: null,
       client_secret: null,
@@ -24,7 +24,7 @@ module.exports = {
   agent: {
     core_workers: {
       host_ping: {
-        type: "keepAlive",
+        type: 'keepAlive',
         looptime: 30000
       }
     }
@@ -35,24 +35,24 @@ module.exports = {
    *
    */
   storage: {
-    driver: "s3"
+    driver: 's3'
   },
   /**
    *
    * mongo database configuration
    *
-   * "user":"",
-   * "password":"",
-   * "hosts": "localhost:27017",
-   * "database": "theeye",
-   * "replicaSet": "replica_set_name" // >> will concat '?replicaSet="replica_set_name"' to the end of the connection string
+   * 'user':'',
+   * 'password':'',
+   * 'hosts': 'localhost:27017',
+   * 'database': 'theeye',
+   * 'replicaSet': 'replica_set_name' // >> will concat '?replicaSet='replica_set_name'' to the end of the connection string
    * // options are passed directly to the mongo-native driver
-   * "options": {
-   *   "replset": {
-   *     "socketOptions": {
-   *       "keepAlive": 30*1000,
-   *       "connectTimeoutMS": 60*1000,
-   *       "socketTimeoutMS": 60*1000
+   * 'options': {
+   *   'replset': {
+   *     'socketOptions': {
+   *       'keepAlive': 30*1000,
+   *       'connectTimeoutMS': 60*1000,
+   *       'socketTimeoutMS': 60*1000
    *     }
    *   }
    * },
@@ -60,10 +60,10 @@ module.exports = {
    */
   mongo: {
     debug: false,
-    user: "",
-    password: "",
-    hosts: "127.0.0.1:27017",
-    database: "theeye",
+    user: '',
+    password: '',
+    hosts: '127.0.0.1:27017',
+    database: 'theeye',
     // sample uri
     // uri: mongodb+srv://<user>:<password>@<host>/<db>?retryWrites=true&w=majority
     // options are passed directly to the mongo-native driver
@@ -93,13 +93,13 @@ module.exports = {
    *
    */
   mailer: {
-    from: "The Eye %customer% <%customer%@theeye.io>",
-    reply_to: "Info <info@theeye.io>",
+    from: 'The Eye %customer% <%customer%@theeye.io>',
+    reply_to: 'Info <info@theeye.io>',
     only_support: false,
     include_support_bcc: false,
-    support: [ "facugon@theeye.io" ],
+    support: [ 'facugon@theeye.io' ],
     transport: {
-      type: "sendmail",
+      type: 'sendmail',
       options: { }
     }
   },
@@ -136,7 +136,7 @@ module.exports = {
       // outgoing requests secret passphrase
       secret: '77E0EAF3B83DD7A7A4004602626446EADED31BF794956FC9BBAD051FA5A25038',
       timeout: 5000,
-      url: process.env.CONFIG_NOTIFICATIONS_API_URL || "http://127.0.0.1:6080/api/notification"
+      url: process.env.CONFIG_NOTIFICATIONS_API_URL || 'http://127.0.0.1:6080/api/notification'
     }
   },
   authentication: {
@@ -154,6 +154,15 @@ module.exports = {
       }
     }
   },
+  gateway: {
+    secret: '77E0EAF3B83DD7A7A4004602626446EADED31BF794956FC9BBAD051FA5A25038',
+    user: {
+      url: process.env.CONFIG_USER_API_URL || 'http://127.0.0.1:6080/api/internal/user/fetch'
+    },
+    //member: {
+    //  url: process.env.CONFIG_MEMBER_API_URL || 'http://127.0.0.1:6080/api/internal/member/fetch'
+    //}
+  },
   /**
    *
    * integration configurations
@@ -164,13 +173,13 @@ module.exports = {
     aws: {
       enabled: true,
       config: {
-        username: "",
-        accessKeyId: "",
-        secretAccessKey: "",
-        region: ""
+        username: '',
+        accessKeyId: '',
+        secretAccessKey: '',
+        region: ''
       },
       s3: {
-        bucket: "theeye.scripts"
+        bucket: 'theeye.scripts'
       }
     }
   }

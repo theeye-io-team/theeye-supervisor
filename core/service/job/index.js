@@ -144,7 +144,9 @@ module.exports = {
     const { task } = input
     let job
 
-    if (!task) { throw new Error('task is required') }
+    if (!task) {
+      throw new Error('task is required')
+    }
 
     verifyTaskBeforeExecution(task)
     await removeExceededJobsCount(task, input.workflow)
@@ -284,6 +286,11 @@ module.exports = {
   },
   /**
    *
+   * @param Object input
+   * @prop Workflow
+   * @prop User
+   * @prop Customer
+   * @prop Task
    *
    */
   async createByWorkflow (input) {
@@ -311,6 +318,7 @@ module.exports = {
         name: workflow.name
       })
     )
+
     await wJob.save()
 
     // send and wait before creating the job of the first task
@@ -399,6 +407,9 @@ module.exports = {
           if (jsonLastline.components) {
             job.result.components = jsonLastline.components
           }
+          if (jsonLastline.next) {
+            job.result.next = jsonLastline.next
+          }
         }
       } catch (err) {
         //logger.log(err)
@@ -411,7 +422,7 @@ module.exports = {
         //RegisterOperation(Constants.UPDATE, TopicsConstants.task.result, { job })
         RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
         App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
-        dispatchFinishedTaskExecutionEvent(job, job.trigger_name)
+        dispatchFinishedTaskExecutionEvent(job)
         emitJobFinishedNotification({ job })
       })
     } catch (err) {
@@ -661,6 +672,10 @@ const removeExceededJobsCount = (task, workflow) => {
   })
 }
 
+/**
+ * Invoke Job Factory (immediate execution)
+ * @param {Object} input
+ */
 const createJob = async (input) => {
   const { task, user } = input
 
@@ -702,6 +717,10 @@ const createJob = async (input) => {
   return job
 }
 
+/**
+ * Invoke Job Factory (scheduler, delayed execution)
+ * @param {Object} input
+ */
 const scheduleJob = async (input) => {
   const { customer, user } = input
   const job = await JobFactory.createScheduledJob(input)
@@ -917,26 +936,26 @@ const cancelJobNextLifecycle = (job) => {
  *
  * @summary The task execution is finished.
  * @param {Job} job
- * @param {String} trigger triggered event name
  * @param {Object} data
+ * @return {Promise}
  *
  */
-const dispatchFinishedTaskExecutionEvent = (job, trigger) => {
-  let { task_id, output } = job
-  let topic
+const dispatchFinishedTaskExecutionEvent = async (job) => {
+  try {
+    const { task_id, trigger_name } = job
+    let topic
 
-  // cannot trigger a workflow event without a task
-  if (!task_id) { return }
+    // cannot trigger a workflow event without a task
+    if (!task_id) { return }
 
-  TaskEvent.findOne({
-    emitter_id: task_id,
-    enable: true,
-    name: trigger
-  }, (err, event) => {
-    if (err) { return logger.error(err) }
+    const event = await TaskEvent.findOne({
+      emitter_id: task_id,
+      enable: true,
+      name: trigger_name
+    })
 
     if (!event) {
-      let warn = `no handler defined for event named ${trigger} of task ${task_id}`
+      let warn = `no handler defined for event named ${trigger_name} of task ${task_id}`
       return logger.error(warn)
     }
 
@@ -950,26 +969,13 @@ const dispatchFinishedTaskExecutionEvent = (job, trigger) => {
     App.eventDispatcher.dispatch({
       topic,
       event,
-      workflow_job_id: job.workflow_job_id, // current workflow execution
-      workflow_id: job.workflow_id,
-      output
+      data: job.output,
+      job
     })
-  })
+  } catch (err) {
+    if (err) { return logger.error(err) }
+  }
 }
-
-//const getFirstTask = (workflow, next) => {
-//  let taskId = workflow.start_task_id
-//  TaskModel.findById(taskId, (err, task) => {
-//    if (err) {
-//      return next(err)
-//    }
-//    if (!task) {
-//      return next(new Error('workflow first task not found'))
-//    }
-//
-//    return next(null, task)
-//  })
-//}
 
 const parseOutputStringAsJSON = (output) => {
   let result

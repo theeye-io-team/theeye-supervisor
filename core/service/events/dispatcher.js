@@ -1,4 +1,3 @@
-'use strict';
 
 const EventEmitter = require('events').EventEmitter
 const logger = require('../../lib/logger')(':events:dispatcher')
@@ -25,4 +24,3 @@ class Dispatcher extends EventEmitter {
 }
 
 module.exports = Dispatcher
-

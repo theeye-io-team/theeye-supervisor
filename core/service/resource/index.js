@@ -117,10 +117,7 @@ function Service (resource) {
           topic: TopicsConstants.monitor.state,
           event,
           resource,
-          output: (
-            resource.last_event.output ||
-            resource.last_event.data
-          )
+          data: (resource.last_event.output || resource.last_event.data)
         })
       })
     })

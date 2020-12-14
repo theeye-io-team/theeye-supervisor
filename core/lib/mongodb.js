@@ -51,6 +51,9 @@ function MongoDBConnection () {
 
 module.exports = new MongoDBConnection()
 
+/**
+ * @return Promise
+ */
 const connect = (config) => {
   let connectionString
 
@@ -87,6 +90,8 @@ const connect = (config) => {
   if (config.debug) {
     mongoose.set("debug", true)
   }
+
+  debug('creating connection %s', connectionString)
 
   return mongoose.createConnection(connectionString, (config.options||{}))
 }

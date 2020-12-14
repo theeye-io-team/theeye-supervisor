@@ -12,116 +12,111 @@ const graphlib = require('graphlib')
  * @param {Object} payload
  * @property {String} payload.topic
  * @property {Event} payload.event entity to process
- * @property {Object} payload.output event output
- * @property {String} payload.workflow_id
- * @property {String} payload.workflow_job_id
+ * @property {Object} payload.data event data
  *
  */
-module.exports = function (payload) {
-  if (payload.topic === TopicConstants.workflow.execution) {
-    if (payload.workflow_job_id) {
-      // a task belonging to a workflow has finished
-      handleWorkflowEvent(payload)
+module.exports = async function (payload) {
+  try {
+    if (payload.topic === TopicConstants.workflow.execution) {
+      if (payload.job.workflow_job_id) {
+        // a task belonging to a workflow has finished
+        logger.log('This is a workflow event')
+        await handleWorkflowEvent(payload)
+      }
     }
-  }
 
-  if (
-    payload.topic === TopicConstants.task.execution ||
-    payload.topic === TopicConstants.monitor.state ||
-    payload.topic === TopicConstants.webhook.triggered ||
-    payload.topic === TopicConstants.workflow.execution // a task inside a workflow can trigger tasks outside the workflow
-  ) {
-    // workflow trigger has occur
-    triggerWorkflowByEvent(payload)
+    if (
+      payload.topic === TopicConstants.task.execution ||
+      payload.topic === TopicConstants.monitor.state ||
+      payload.topic === TopicConstants.webhook.triggered ||
+      payload.topic === TopicConstants.workflow.execution // a task inside a workflow can trigger tasks outside the workflow
+    ) {
+      // workflow trigger has occur
+      await triggerWorkflowByEvent(payload)
+    }
+  } catch (err) {
+    logger.error(err)
   }
 }
 
 /**
  * @param {Event} event entity to process
- * @param {String} workflow_id
- * @param {String} workflow_job_id
- * @param {Mixed} output event output
+ * @param {Job} job the job that generates the event
+ * @param {Mixed} data event data, this is the job.output
  */
-const handleWorkflowEvent = ({ event, workflow_id, workflow_job_id, output }) => {
+const handleWorkflowEvent = async ({ event, data, job }) => {
+  const { workflow_id, workflow_job_id } = job
   // search workflow step by generated event
-  let query = Workflow.findById(workflow_id)
-  query.exec((err, workflow) => {
-    if (err) {
-      logger.error(err)
-      return
-    }
-
-    if (!workflow) { return }
-
-    executeWorkflowStep(workflow, workflow_job_id, event, output)
-  })
+  const workflow = await Workflow.findById(workflow_id)
+  if (!workflow) { return }
+  await executeWorkflowStep(workflow, workflow_job_id, event, data, job)
 }
 
-const executeWorkflowStep = (workflow, workflow_job_id, event, argsValues) => {
-  var graph = new graphlib.json.read(workflow.graph)
-  var nodes = graph.successors(event._id.toString()) // should return tasks nodes
-  if (!nodes) return
-  if (nodes.length === 0) return
+const executeWorkflowStep = async (workflow, workflow_job_id, event, argsValues, job) => {
+  const graph = new graphlib.json.read(workflow.graph)
+  const nodes = graph.successors(event._id.toString()) // should return tasks nodes
+  if (!nodes) { return }
+  if (nodes.length === 0) { return }
 
-  Task
-    .find({ '_id': { $in: nodes } })
-    .exec((err, tasks) => {
-      if (err) {
-        logger.error(err)
-        return
-      }
+  logger.log('workflow next step is %j', nodes)
 
-      if (tasks.length == 0) { return }
+  const tasks = await Task.find({ '_id': { $in: nodes } })
+  if (tasks.length == 0) {
+    logger.error('workflow steps not found %j', nodes)
+    return
+  }
 
-      for (var i=0; i<tasks.length; i++) {
-        createJob({
-          user: App.user,
-          task: tasks[i],
-          task_arguments_values: argsValues,
-          workflow,
-          workflow_job_id,
-          origin: JobConstants.ORIGIN_WORKFLOW
-        })
-      }
+  const promises = []
+  for (let i = 0; i < tasks.length; i++) {
+    const createPromise = createJob({
+      user: App.user,
+      task: tasks[i],
+      task_arguments_values: argsValues,
+      task_optionals: (job.result && job.result.next),
+      workflow,
+      workflow_job_id,
+      origin: JobConstants.ORIGIN_WORKFLOW
     })
+
+    createPromise.catch(err => { return err })
+    promises.push(createPromise)
+  }
+
+  return Promise.all(promises)
 }
 
 /**
  * @param {Event} event entity to process
- * @param {Mixed} output event output
+ * @param {Job} job the job that generates the event
+ * @param {Mixed} data event data, this is the job.output
  */
-const triggerWorkflowByEvent = ({ event, output }) => {
-  let query = Workflow.find({ triggers: event._id })
-  query.exec((err, workflows) => {
-    if (err) {
-      logger.error(err)
-      return
-    }
-    if (workflows.length===0) { return }
+const triggerWorkflowByEvent = async ({ event, data, job }) => {
+  const workflows = await Workflow.find({ triggers: event._id })
+  if (workflows.length===0) { return }
 
-    for (var i=0; i<workflows.length; i++) {
-      executeWorkflow(workflows[i], output)
-    }
-  })
+  const promises = []
+  for (var i=0; i<workflows.length; i++) {
+    const execPromise = executeWorkflow(workflows[i], data, job)
+    execPromise.catch(err => { return err })
+    promises.push(createPromise)
+  }
+  return Promise.all(promises)
 }
 
-const executeWorkflow = (workflow, argsValues) => {
-  workflow.populate([{ path: 'customer' }], (err) => {
-    if (err) {
-      return logger.error(err)
-    }
+const executeWorkflow = async (workflow, argsValues, job) => {
+  await workflow.populate([{ path: 'customer' }])
 
-    if (!workflow.customer) {
-      return logger.error('FATAL. Workflow %s does not has a customer', workflow._id)
-    }
+  if (!workflow.customer) {
+    return logger.error('FATAL. Workflow %s does not has a customer', workflow._id)
+  }
 
-    App.jobDispatcher.createByWorkflow({
-      workflow,
-      customer: workflow.customer,
-      task_arguments_values: argsValues,
-      user: App.user,
-      notify: true,
-      origin: JobConstants.ORIGIN_TRIGGER_BY
-    })
+  return App.jobDispatcher.createByWorkflow({
+    customer: workflow.customer,
+    task_arguments_values: argsValues,
+    task_optionals: (job.result && job.result.next),
+    workflow,
+    user: App.user,
+    notify: true,
+    origin: JobConstants.ORIGIN_TRIGGER_BY
   })
 }

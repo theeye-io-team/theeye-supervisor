@@ -9,7 +9,8 @@ const ScraperSchema = require('./scraper')
 const JobSchema = new BaseSchema({
   _type: { type: String, default: 'Job' }
 })
-const ApprovalSchema = new BaseSchema()
+//const ApprovalSchema = new BaseSchema()
+const ApprovalSchema = require('./approval')
 const DummySchema = new BaseSchema()
 const NotificationSchema = new BaseSchema()
 

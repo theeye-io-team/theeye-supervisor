@@ -11,8 +11,9 @@ const logger = require('../../lib/logger')('service:jobs:factory')
 const JobsFactory = {
   /**
    *
-   * @param {Task} task
+   * @param {Task} task task model
    * @param {Object} input
+   * @property {Object} input.task_optionals
    * @property {User} input.user
    * @property {Customer} input.customer
    * @param {Function} next
@@ -29,7 +30,11 @@ const JobsFactory = {
       // a user must enter the arguments values
       input.lifecycle = LifecycleConstants.ONHOLD
       let argsValues = []
-      return createJob({ task, vars: input, argsValues: [] }, next)
+      createJob({ task, vars: input, argsValues: [] })
+        .then(job => next(null, job))
+        .catch(err => next(err))
+
+      return
     }
 
     /**
@@ -49,10 +54,10 @@ const JobsFactory = {
           task,
           vars: input,
           argsValues,
-          beforeSave: (job, saveCb) => {
+          beforeSave: (job, callback) => {
             // notification task arguments should not be validated
             if (TaskConstants.TYPE_NOTIFICATION === task.type || !argsErr) {
-              return saveCb()
+              return callback()
             }
 
             // abort execution
@@ -60,9 +65,9 @@ const JobsFactory = {
             job.output = JSON.stringify(argsErr.errors)
             job.state = StateConstants.ERROR
             job.lifecycle = LifecycleConstants.TERMINATED
-            saveCb()
+            callback()
           }
-        }, next)
+        }).then(job => next(null, job)).catch(err => next(err))
       }
     )
   },
@@ -102,7 +107,7 @@ const JobsFactory = {
    *
    * @param {Object[]} argumentsDefinition stored definition
    * @param {Object{}} argumentsValues user provided values
-   * @param {Function} next callback
+   * @param {Function} next
    *
    */
   prepareTaskArgumentsValues (argumentsDefinition, argumentsValues, next) {
@@ -171,22 +176,67 @@ const JobsFactory = {
 
 module.exports = JobsFactory
 
+class AbstractJob {
+  constructor (input) {
+    this.input = input
+    this.task = input.task
+    this.vars = input.vars
+    this.argsValues = input.argsValues
+    this.beforeSave = input.beforeSave
+    this.job = null
+  }
 
-/**
- *
- * @param {Object} input controlled internal input
- * @property {Object} input.vars request/process provided arguments
- * @property {Task} input.task
- * @property {Array} input.argsValues task arguments values
- *
- */
-const createJob = (input, next) => {
-  let { task, vars, argsValues } = input
-  let beforeSave = input.beforeSave
+  /**
+   * @return Promise
+   */
+  async create () {
+    try {
+      await this.build()
+    } catch (err) {
+      await this.terminateBuild(err)
+    }
+    return this.job
+  }
 
-  const setupJobBasicProperties = (job) => {
+  /*
+   * create Job and terminate. cannot execute with errors
+   */
+  async terminateBuild (err) {
+    const job = this.job
+    job.state = StateConstants.ERROR
+    job.lifecycle = LifecycleConstants.TERMINATED
+    job.result = { log: JSON.stringify(err.message) }
+    job.output = JSON.stringify(err.message)
+    await job.save()
+  }
+
+  async build () {
+    throw new Error('Abstract Method Called')
+  }
+
+  async saveJob (job) {
+    const beforeSave = this.beforeSave
+    if (beforeSave && typeof beforeSave === 'function') {
+      await new Promise((resolve, reject) => {
+        beforeSave.call(beforeSave, job, (err) => {
+          if (err) { reject(err) }
+          else { resolve() }
+        })
+      })
+    }
+
+    await job.save()
+
+    this.task.execution_count += 1
+    await this.task.save()
+
+    return job
+  }
+
+  setupJobBasicProperties (job) {
+    const { task, vars, argsValues } = this
+
     if (task.workflow_id) {
-
       if (!vars.workflow_job_id) {
         logger.error('%o', task)
         return next( new Error('missing workflow job') )
@@ -214,137 +264,162 @@ const createJob = (input, next) => {
     job.lifecycle = (vars.lifecycle || LifecycleConstants.READY)
     job.customer_id = vars.customer._id
     job.customer_name = vars.customer.name
-    job.user_id = (vars.user&&vars.user.id)
-    //job.user = vars.user._id
+    job.user_id = (vars.user && vars.user.id)
     job.notify = vars.notify
     job.origin = vars.origin
+    //job.user = vars.user._id
     //job.event = vars.event || null
     //job.event_data = vars.event_data || {}
     //job.event_id = vars.event_id || null
     return job
   }
+}
 
-  const createScraperJob = (done) => {
-    const job = new JobModels.Scraper()
-    setupJobBasicProperties(job)
-    job.timeout = task.timeout
-    return saveJob(job, done)
+class ApprovalJob extends AbstractJob {
+  constructor (input) {
+    super(input)
+    this.job = new JobModels.Approval()
   }
 
-  const createScriptJob = (done) => {
-    prepareScript(task.script_id, (err,script) => {
-      if (err) { return done (err) }
-      const job = new JobModels.Script()
-      setupJobBasicProperties(job)
-      job.script = script.toObject() // >>> add .id  / embedded
-      job.script_id = script._id
-      job.script_arguments = argsValues
-      job.script_runas = task.script_runas
-
-      job.timeout = task.timeout
-      job.env = Object.assign({
-        THEEYE_JOB: JSON.stringify({
-          id: job._id,
-          task_id: task._id
-        }),
-        THEEYE_JOB_USER: JSON.stringify({
-          id: vars.user.id,
-          email: vars.user.email
-        }),
-        THEEYE_JOB_WORKFLOW: JSON.stringify({
-          job_id: (vars.workflow_job_id || null),
-          id: (vars.workflow_id || null)
-        }),
-        THEEYE_ORGANIZATION_NAME: JSON.stringify(vars.customer.name),
-        THEEYE_API_URL: JSON.stringify(App.config.system.base_url)
-      }, task.env)
-
-      return saveJob(job, done)
-    })
-  }
-
-  const createApprovalJob = (done) => {
-    /** approval job is created onhold , waiting approver decision **/
-    const job = new JobModels.Approval()
-    setupJobBasicProperties(job)
+  async build () {
+    /** approval job is created onhold , waiting approvers decision **/
+    const job = this.job
+    this.setupJobBasicProperties(job)
+    await this.setDynamicProperties(job)
     job.lifecycle = LifecycleConstants.ONHOLD
-    return saveJob(job, done)
+    return this.saveJob(job)
   }
 
-  const createDummyJob = (done) => {
-    const job = new JobModels.Dummy()
-    setupJobBasicProperties(job)
-    return saveJob(job, done)
-  }
+  async setDynamicProperties (job) {
+    const dynamicSettings = [
+      'approvers',
+      'success_label',
+      'failure_label',
+      'cancel_label',
+      'ignore_label'
+    ]
 
-  const createNotificationJob = (done) => {
-    const job = new JobModels.Notification()
-    setupJobBasicProperties(job)
-    return saveJob(job, done)
-  }
+    let dynamic = this.vars.task_optionals
+    if (dynamic) {
+      let settings = dynamic[ TaskConstants.TYPE_APPROVAL ]
+      if (settings) {
+        for (let prop of dynamicSettings) {
+          if (settings[prop]) {
+            let value = settings[prop]
+            if (prop === 'approvers') {
+              // should validate
+              value = await App.gateway.user.emailToObjectID(value)
+            }
 
-  const saveJob = (job, done) => {
-    const saveDb = () => {
-      job.save(err => {
-        if (err) {
-          logger.error('%o',err)
-          return done(err)
+            job[prop] = value
+          }
         }
-        task.execution_count += 1
-        task.save(err => {})
-        done(null, job)
-      })
+      }
     }
-
-    if (beforeSave && typeof beforeSave === 'function') {
-      beforeSave.call(beforeSave, job, saveDb)
-    } else {
-      saveDb()
-    }
-  }
-
-  switch (task.type) {
-    case TaskConstants.TYPE_SCRIPT:
-      createScriptJob(next);
-      break;
-    case TaskConstants.TYPE_SCRAPER:
-      createScraperJob(next);
-      break;
-    case TaskConstants.TYPE_APPROVAL:
-      createApprovalJob(next);
-      break;
-    case TaskConstants.TYPE_DUMMY:
-      createDummyJob(next)
-      break;
-    case TaskConstants.TYPE_NOTIFICATION:
-      createNotificationJob(next)
-      break;
-    default:
-      const err = new Error(`invalid or undefined task type ${task.type}`)
-      return next(err)
-      break;
   }
 }
 
-const prepareScript = (script_id, next) =>  {
-  const query = Script.findById(script_id)
-  query.exec((err, script) => {
-    if (err) {
-      logger.error('%o',err)
-      err.statusCode = 500
-      return next(err)
-    }
+class ScriptJob extends AbstractJob {
+  constructor (input) {
+    super(input)
+    this.job = new JobModels.Script()
+  }
+
+  async build () {
+    const job = this.job
+    const { task, argsValues, vars } = this
+    const script = await Script.findById(task.script_id)
 
     if (!script) {
-      let msg = 'cannot create job. script is no longer available'
+      const msg = 'cannot create job. script is no longer available'
       logger.error(msg)
-      let err = new Error(msg)
-      err.statusCode = 404
-      return next(err)
+
+      const Err = new Error(msg)
+      Err.statusCode = 404
+      throw Err
     }
 
-    next(null,script)
-  })
+    this.setupJobBasicProperties(job)
+
+    job.script = script.toObject() // >>> add .id  / embedded
+    job.script_id = script._id
+    job.script_arguments = argsValues
+    job.script_runas = task.script_runas
+    job.timeout = task.timeout
+    job.env = Object.assign({
+      THEEYE_JOB: JSON.stringify({
+        id: job._id,
+        task_id: task._id
+      }),
+      THEEYE_JOB_USER: JSON.stringify({
+        id: vars.user.id,
+        email: vars.user.email
+      }),
+      THEEYE_JOB_WORKFLOW: JSON.stringify({
+        job_id: (vars.workflow_job_id || null),
+        id: (vars.workflow_id || null)
+      }),
+      THEEYE_ORGANIZATION_NAME: JSON.stringify(vars.customer.name),
+      THEEYE_API_URL: JSON.stringify(App.config.system.base_url)
+    }, task.env)
+
+    return this.saveJob(job)
+  }
+}
+
+class ScraperJob extends AbstractJob {
+  async build () {
+    const job = new JobModels.Scraper()
+    this.setupJobBasicProperties(job)
+    job.timeout = this.task.timeout
+    return this.saveJob(job)
+  }
+}
+
+class DummyJob extends AbstractJob {
+  async build () {
+    const job = new JobModels.Dummy()
+    this.setupJobBasicProperties(job)
+    return this.saveJob(job)
+  }
+}
+
+class NotificationJob extends AbstractJob {
+  async build () {
+    const job = new JobModels.Notification()
+    this.setupJobBasicProperties(job)
+    return this.saveJob(job)
+  }
+}
+
+const JobsBuilderMap = {}
+JobsBuilderMap[ TaskConstants.TYPE_SCRIPT ] = ScriptJob
+JobsBuilderMap[ TaskConstants.TYPE_SCRAPER ] = ScraperJob
+JobsBuilderMap[ TaskConstants.TYPE_APPROVAL ] = ApprovalJob
+JobsBuilderMap[ TaskConstants.TYPE_DUMMY ] = DummyJob
+JobsBuilderMap[ TaskConstants.TYPE_NOTIFICATION ] = NotificationJob
+
+/**
+ *
+ * @param {Object} input controlled internal input
+ * @property {Object} input.vars request/process provided arguments
+ * @property {Task} input.task
+ * @property {Object} input.taskOptionals
+ * @property {Array} input.argsValues task arguments values
+ *
+ * @return Promise
+ *
+ */
+const createJob = (input) => {
+  //(vars.task_optionals || {})
+  const { task } = input
+
+  if ( ! JobsBuilderMap[ task.type ] ) {
+    throw new Error(`Invalid or undefined task type ${task.type}`)
+  }
+
+  const builder = new JobsBuilderMap[ task.type ]( input )
+  return builder.create()
 }
 
 const searchInputArgumentValueByOrder = (values, searchOrder) => {

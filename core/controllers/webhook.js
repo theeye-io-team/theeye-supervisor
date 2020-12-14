@@ -206,11 +206,11 @@ const controller = {
         }
       })
 
-      const output = App.jobDispatcher.parseOutputParameters(body)
+      const params = App.jobDispatcher.parseOutputParameters(body)
       App.eventDispatcher.dispatch({
         topic: TopicsConstants.webhook.triggered,
         event: triggerEvent,
-        output
+        data: params
       })
 
       webhook.trigger_count++
