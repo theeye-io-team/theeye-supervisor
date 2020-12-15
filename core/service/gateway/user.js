@@ -12,9 +12,14 @@ class GatewayUser {
       throw new Error('Invalid data format. Array required')
     }
 
-    for (let value of emails) {
-      if (!isEmail(value)) {
-        throw new Error('Invalid email value')
+    if (emails.length === 0) {
+      throw new Error('Invalid approvers. Need at least one')
+    }
+
+    for (let index = 0; index < emails.length; index++) {
+      let value = emails[index]
+      if (typeof value !== 'string' || !isEmail(value)) {
+        throw new Error(`Invalid email value ${value}`)
       }
     }
 
