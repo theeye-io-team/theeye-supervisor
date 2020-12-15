@@ -59,6 +59,7 @@ const triggeredTaskByEvent = async ({ event, data, job }) => {
   const promises = []
   for (var i=0; i<tasks.length; i++) {
     const createPromise = createJob({
+      event,
       user: App.user,
       task: tasks[i],
       task_arguments_values: data,

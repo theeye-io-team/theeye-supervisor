@@ -96,14 +96,14 @@ const triggerWorkflowByEvent = async ({ event, data, job }) => {
 
   const promises = []
   for (var i=0; i<workflows.length; i++) {
-    const execPromise = executeWorkflow(workflows[i], data, job)
+    const execPromise = executeWorkflow(workflows[i], data, job, event)
     execPromise.catch(err => { return err })
     promises.push(createPromise)
   }
   return Promise.all(promises)
 }
 
-const executeWorkflow = async (workflow, argsValues, job) => {
+const executeWorkflow = async (workflow, argsValues, job, event) => {
   await workflow.populate([{ path: 'customer' }])
 
   if (!workflow.customer) {
@@ -115,6 +115,7 @@ const executeWorkflow = async (workflow, argsValues, job) => {
     task_arguments_values: argsValues,
     task_optionals: (job.result && job.result.next),
     workflow,
+    event,
     user: App.user,
     notify: true,
     origin: JobConstants.ORIGIN_TRIGGER_BY

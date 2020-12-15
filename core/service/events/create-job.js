@@ -8,6 +8,7 @@ const logger = require('../../lib/logger')(':events:create-job')
  * @property {Array} input.task_arguments_values array
  * @property {String} input.origin job creation origin
  * @property {User} input.user
+ * @property {Event} input.event
  * @property {Job} input.previous_job trigger
  * @access private
  * @return {Promise}

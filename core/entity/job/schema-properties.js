@@ -47,8 +47,6 @@ module.exports = {
   creation_date: { type: Date, default: Date.now },
   last_update: { type: Date, default: Date.now },
   trigger_name: { type: String }, // final state success or failure. always success by default
-  //event: { type: ObjectId, ref: 'Event' }, // last workflow event
-  //event_id: { type: ObjectId },
-  //event_data: { type: Object, default: () => { return {} } },
+  triggered_by: { type: ObjectId, ref: 'Event' },
   origin: { type: String }
 }

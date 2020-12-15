@@ -267,10 +267,7 @@ class AbstractJob {
     job.user_id = (vars.user && vars.user.id)
     job.notify = vars.notify
     job.origin = vars.origin
-    //job.user = vars.user._id
-    //job.event = vars.event || null
-    //job.event_data = vars.event_data || {}
-    //job.event_id = vars.event_id || null
+    job.triggered_by = (vars.event && vars.event._id) || null
     return job
   }
 }
