@@ -313,12 +313,13 @@ class ApprovalJob extends AbstractJob {
         }
       }
     } else {
+      const task = job.task
       // set default properties
-      job.approvers     = task.approvers    
+      job.approvers = task.approvers    
       job.success_label = task.success_label
       job.failure_label = task.failure_label
-      job.cancel_label  = task.cancel_label
-      job.ignore_label  = task.ignore_label
+      job.cancel_label = task.cancel_label
+      job.ignore_label = task.ignore_label
     }
   }
 }

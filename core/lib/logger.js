@@ -16,23 +16,23 @@ function Logger (name) {
   const dwarn  = debug(message.replace('%LEVEL%','warn'))
   const derror = debug(message.replace('%LEVEL%','error'))
 
-  self.log = function flog(){
+  self.log = function flog () {
     dlog.apply(self, arguments)
   }
 
-  self.error = function ferror(){
+  self.error = function ferror () {
     derror.apply(self, arguments)
   }
 
-  self.warn = function fwarn(){
+  self.warn = function fwarn () {
     dwarn.apply(self, arguments)
   }
 
-  self.data = function fdata(){
+  self.data = function fdata () {
     ddata.apply(self, arguments)
   }
 
-  self.debug = function fdebug(){
+  self.debug = function fdebug () {
     ddebug.apply(self, arguments)
   }
 

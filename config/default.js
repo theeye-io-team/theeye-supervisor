@@ -7,6 +7,7 @@ module.exports = {
     port: process.env.PORT || 60080
   },
   system: {
+    logs: `${__dirname}/../logs`,
     base_url: 'http://127.0.0.1:60080',
     web_url: 'http://127.0.0.1:6080',
     file_upload_folder: join(__dirname , '..', 'uploads'),
