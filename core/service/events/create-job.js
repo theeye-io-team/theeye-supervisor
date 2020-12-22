@@ -20,7 +20,7 @@ module.exports = async (input) => {
   await task.populate([
     { path: 'customer' },
     { path: 'host' }
-  ])
+  ]).execPopulate()
 
   if (!task.customer) {
     logger.error('FATAL. Task %s does not has a customer', task._id)
@@ -42,6 +42,6 @@ module.exports = async (input) => {
     notify: true,
   })
 
-  const job = await App.jobDispatcher.create(data)
-  logger.log('job created by workflow')
+  logger.log('creating job')
+  return App.jobDispatcher.create(data)
 }

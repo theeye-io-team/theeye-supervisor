@@ -66,13 +66,21 @@ const executeWorkflowStep = async (workflow, workflow_job_id, event, argsValues,
     return
   }
 
+  // if the event is emitted by a job
+  let task_optionals
+  if (job) {
+    if (job.result && job.result.next) {
+      task_optionals = job.result.next
+    }
+  }
+
   const promises = []
   for (let i = 0; i < tasks.length; i++) {
     const createPromise = createJob({
       user: App.user,
       task: tasks[i],
       task_arguments_values: argsValues,
-      task_optionals: (job.result && job.result.next),
+      task_optionals,
       workflow,
       workflow_job_id,
       origin: JobConstants.ORIGIN_WORKFLOW
@@ -98,22 +106,30 @@ const triggerWorkflowByEvent = async ({ event, data, job }) => {
   for (var i=0; i<workflows.length; i++) {
     const execPromise = executeWorkflow(workflows[i], data, job, event)
     execPromise.catch(err => { return err })
-    promises.push(createPromise)
+    promises.push(execPromise)
   }
   return Promise.all(promises)
 }
 
 const executeWorkflow = async (workflow, argsValues, job, event) => {
-  await workflow.populate([{ path: 'customer' }])
+  await workflow.populate([{ path: 'customer' }]).execPopulate()
 
   if (!workflow.customer) {
     return logger.error('FATAL. Workflow %s does not has a customer', workflow._id)
   }
 
+  // if the event is emitted by a job
+  let task_optionals
+  if (job) {
+    if (job.result && job.result.next) {
+      task_optionals = job.result.next
+    }
+  }
+
   return App.jobDispatcher.createByWorkflow({
     customer: workflow.customer,
     task_arguments_values: argsValues,
-    task_optionals: (job.result && job.result.next),
+    task_optionals,
     workflow,
     event,
     user: App.user,

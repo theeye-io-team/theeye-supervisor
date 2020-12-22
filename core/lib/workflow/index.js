@@ -32,21 +32,22 @@ function Workflow () {
         let a = event.emitter
         let b = event
 
-        if (!a) {
-          throw new Error(`event id ${event._id} named ${event.name} has no valid emitter`)
-        }
+        if (a) {
+          if (!g.node(a._id)) { g.setNode(a._id, a) }
+          if (!g.node(b._id)) { g.setNode(b._id, b) }
+          g.setEdge(a._id, b._id)
 
-        if (!g.node(a._id)) { g.setNode(a._id, a) }
-        if (!g.node(b._id)) { g.setNode(b._id, b) }
-        g.setEdge(a._id, b._id)
-
-        if (Array.isArray(a.triggers) && a.triggers.length > 0) {
-          // triggers is an array of event ids
-          a.triggers.forEach( trigger => {
-            g.setEdge(trigger, a._id)
-          })
+          if (Array.isArray(a.triggers) && a.triggers.length > 0) {
+            // triggers is an array of event ids
+            a.triggers.forEach( trigger => {
+              g.setEdge(trigger, a._id)
+            })
+          }
+        } else {
+          logger.error('event emitter has been lost')
         }
       } else {
+        logger.error('event information is missing')
         // event is undefined
       }
     }

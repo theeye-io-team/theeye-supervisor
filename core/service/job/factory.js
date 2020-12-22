@@ -176,6 +176,42 @@ const JobsFactory = {
 
 module.exports = JobsFactory
 
+/**
+ *
+ * @param {Object} input controlled internal input
+ * @property {Object} input.vars request/process provided arguments
+ * @property {Task} input.task
+ * @property {Object} input.taskOptionals
+ * @property {Array} input.argsValues task arguments values
+ *
+ * @return Promise
+ *
+ */
+const createJob = (input) => {
+  const { task } = input
+
+  if ( ! JobsBuilderMap[ task.type ] ) {
+    throw new Error(`Invalid or undefined task type ${task.type}`)
+  }
+
+  const builder = new JobsBuilderMap[ task.type ]( input )
+  return builder.create()
+}
+
+const searchInputArgumentValueByOrder = (values, searchOrder) => {
+  if (!values || !Array.isArray(values)) { return undefined }
+
+  return values.find((arg, idx) => {
+    let order
+    if (!arg || !arg.order) {
+      order = idx
+    } else {
+      order = arg.order
+    }
+    return (order === searchOrder)
+  })
+}
+
 class AbstractJob {
   constructor (input) {
     this.input = input
@@ -211,7 +247,9 @@ class AbstractJob {
   }
 
   async build () {
-    throw new Error('Abstract Method Called')
+    const job = this.job
+    this.setupJobBasicProperties(job)
+    return this.saveJob(job)
   }
 
   async saveJob (job) {
@@ -262,6 +300,7 @@ class AbstractJob {
     job.name = task.name
     job.state = (vars.state || StateConstants.IN_PROGRESS)
     job.lifecycle = (vars.lifecycle || LifecycleConstants.READY)
+    job.customer = vars.customer._id
     job.customer_id = vars.customer._id
     job.customer_name = vars.customer.name
     job.user_id = (vars.user && vars.user.id)
@@ -282,8 +321,10 @@ class ApprovalJob extends AbstractJob {
     /** approval job is created onhold , waiting approvers decision **/
     const job = this.job
     this.setupJobBasicProperties(job)
+
     await this.setDynamicProperties(job)
     job.lifecycle = LifecycleConstants.ONHOLD
+
     return this.saveJob(job)
   }
 
@@ -373,27 +414,32 @@ class ScriptJob extends AbstractJob {
 }
 
 class ScraperJob extends AbstractJob {
+  constructor (input) {
+    super(input)
+    this.job = new JobModels.Scraper()
+  }
+
   async build () {
-    const job = new JobModels.Scraper()
+    const job = this.job
     this.setupJobBasicProperties(job)
+
     job.timeout = this.task.timeout
+
     return this.saveJob(job)
   }
 }
 
 class DummyJob extends AbstractJob {
-  async build () {
-    const job = new JobModels.Dummy()
-    this.setupJobBasicProperties(job)
-    return this.saveJob(job)
+  constructor (input) {
+    super(input)
+    this.job = new JobModels.Dummy()
   }
 }
 
 class NotificationJob extends AbstractJob {
-  async build () {
-    const job = new JobModels.Notification()
-    this.setupJobBasicProperties(job)
-    return this.saveJob(job)
+  constructor (input) {
+    super(input)
+    this.job = new JobModels.Notification()
   }
 }
 
@@ -403,40 +449,3 @@ JobsBuilderMap[ TaskConstants.TYPE_SCRAPER ] = ScraperJob
 JobsBuilderMap[ TaskConstants.TYPE_APPROVAL ] = ApprovalJob
 JobsBuilderMap[ TaskConstants.TYPE_DUMMY ] = DummyJob
 JobsBuilderMap[ TaskConstants.TYPE_NOTIFICATION ] = NotificationJob
-
-/**
- *
- * @param {Object} input controlled internal input
- * @property {Object} input.vars request/process provided arguments
- * @property {Task} input.task
- * @property {Object} input.taskOptionals
- * @property {Array} input.argsValues task arguments values
- *
- * @return Promise
- *
- */
-const createJob = (input) => {
-  //(vars.task_optionals || {})
-  const { task } = input
-
-  if ( ! JobsBuilderMap[ task.type ] ) {
-    throw new Error(`Invalid or undefined task type ${task.type}`)
-  }
-
-  const builder = new JobsBuilderMap[ task.type ]( input )
-  return builder.create()
-}
-
-const searchInputArgumentValueByOrder = (values, searchOrder) => {
-  if (!values || !Array.isArray(values)) { return undefined }
-
-  return values.find((arg, idx) => {
-    let order
-    if (!arg || !arg.order) {
-      order = idx
-    } else {
-      order = arg.order
-    }
-    return (order === searchOrder)
-  })
-}

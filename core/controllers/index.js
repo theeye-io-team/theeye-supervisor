@@ -19,6 +19,7 @@ const nodeStatus = async (req, res, next) => {
     message.process_uptime = new Date(Date.now() - process.uptime()*1000)
     message.theeye_version = (await getVersion()).trim()
     message.load_average = os.loadavg()
+    message.env = process.env.NODE_ENV
 
     res.send(200, message)
     next()

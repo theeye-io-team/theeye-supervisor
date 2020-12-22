@@ -83,7 +83,7 @@ module.exports = {
             } else {
               job.lifecycle = LifecycleConstants.ASSIGNED
               job.save(err => {
-                if (err) { logger.error('%o', err) }
+                if (err) { logger.error('%s', err) }
                 terminateRecursion(err, job)
               })
 
@@ -682,6 +682,11 @@ const createJob = async (input) => {
   const job = await new Promise((resolve, reject) => {
     JobFactory.create(task, input, async (err, job) => {
       if (err) { return reject(err) }
+
+      if (!job) {
+        const err = new Error('Job was not created')
+        return reject(err)
+      }
 
       if (job.constructor.name !== 'model') {
         const err = new Error('Invalid job returned')

@@ -424,7 +424,6 @@ function Service (resource) {
 module.exports = Service;
 
 Service.populate = function (resource,done) {
-  //return resource.populate({},done)
   MonitorModel
     .findOne({ resource_id: resource._id })
     .exec((err, monitor) => {
@@ -713,38 +712,37 @@ Service.remove = function (input, done) {
 
   logger.log('removing resource "%s" monitors', resource.name)
 
-  resource
-    .populate('monitor', (err) => {
-      if (err) {
-        logger.error(err)
-        return done(err)
-      }
-      let monitor = resource.monitor
-      if (!monitor) {
-        logger.error('monitor not found.')
-        resource.remove(done)
-      } else {
-        monitor.remove(err => {
-          if (err) {
-            logger.error('cannot remove monitor %s', monitor.name)
-            logger.error(err)
-            return done(err)
-          }
+  resource.populate('monitor', (err) => {
+    if (err) {
+      logger.error(err)
+      return done(err)
+    }
+    let monitor = resource.monitor
+    if (!monitor) {
+      logger.error('monitor not found.')
+      resource.remove(done)
+    } else {
+      monitor.remove(err => {
+        if (err) {
+          logger.error('cannot remove monitor %s', monitor.name)
+          logger.error(err)
+          return done(err)
+        }
 
-          logger.log('monitor %s removed', monitor.name)
+        logger.log('monitor %s removed', monitor.name)
 
-          MonitorEvent.remove({ emitter_id: monitor._id }, (err) => {
-            if (err) logger.error(err)
-          })
-
-          if (input.notifyAgents) {
-            App.jobDispatcher.createAgentUpdateJob(monitor.host_id)
-          }
-
-          resource.remove(done)
+        MonitorEvent.remove({ emitter_id: monitor._id }, (err) => {
+          if (err) logger.error(err)
         })
-      }
-    })
+
+        if (input.notifyAgents) {
+          App.jobDispatcher.createAgentUpdateJob(monitor.host_id)
+        }
+
+        resource.remove(done)
+      })
+    }
+  })
 }
 
 Service.disableResourcesByCustomer = function(customer, doneFn){
