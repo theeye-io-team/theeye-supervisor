@@ -251,6 +251,7 @@ const Monitors = {
           creation_date: 1,
           state: "$resource.state",
           recovery_count: { $sum: "$resource.recovery_count" },
+          looptime: "$looptime",
           query_count: {
             $ceil: {
               $divide: [
