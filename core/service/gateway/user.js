@@ -5,40 +5,31 @@ const isEmail = require('validator/lib/isEmail')
 
 class GatewayUser {
   /**
-   * @param {Array<String>} emails
+   * @param {Array<String>} values can be email or username
    */
-  async emailToObjectID (emails) {
-    if (!Array.isArray(emails)) {
+  async userToObjectID (values) {
+    if (!Array.isArray(values)) {
       throw new Error('Invalid data format. Array required')
     }
 
-    if (emails.length === 0) {
+    if (values.length === 0) {
       throw new Error('Invalid approvers. Need at least one')
-    }
-
-    for (let index = 0; index < emails.length; index++) {
-      let value = emails[index]
-      if (typeof value !== 'string' || !isEmail(value)) {
-        throw new Error(`Invalid email value ${value}`)
-      }
     }
 
     let url = config.gateway.user.url
     url += '?' + qs.stringify({
+      where: { users: values },
       secret: config.gateway.secret,
-      where: {
-        email: { $in: emails }
-      },
-      include: { email: 1 }
+      include: { email: 1, username: 1 }
     })
 
     const res = await got(url, {
+      retry: { limit: 0 },
       headers: { 'content-type': 'application/json' },
       responseType: 'json'
     })
 
     const users = res.body
-
     return users.map(user => user.id)
   }
 }

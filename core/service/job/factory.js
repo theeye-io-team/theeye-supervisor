@@ -346,7 +346,13 @@ class ApprovalJob extends AbstractJob {
             let value = settings[prop]
             if (prop === 'approvers') {
               // should validate
-              value = await App.gateway.user.emailToObjectID(value)
+              let users = await App.gateway.user.userToObjectID(value)
+              // if not found users , leave undefined
+              if (users.length === 0) {
+                value = undefined
+                throw new Error(`Cannot determine approvers ${JSON.stringify(settings.approvers)}`)
+              }
+              value = users
             }
 
             job[prop] = value

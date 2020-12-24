@@ -158,7 +158,7 @@ module.exports = {
   gateway: {
     secret: '77E0EAF3B83DD7A7A4004602626446EADED31BF794956FC9BBAD051FA5A25038',
     user: {
-      url: process.env.CONFIG_USER_API_URL || 'http://127.0.0.1:6080/api/internal/user/fetch'
+      url: process.env.CONFIG_USER_API_URL || 'http://127.0.0.1:6080/api/internal/user/resolve/ids'
     },
     //member: {
     //  url: process.env.CONFIG_MEMBER_API_URL || 'http://127.0.0.1:6080/api/internal/member/fetch'
