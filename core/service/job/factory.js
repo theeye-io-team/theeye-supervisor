@@ -346,7 +346,7 @@ class ApprovalJob extends AbstractJob {
             let value = settings[prop]
             if (prop === 'approvers') {
               // should validate
-              let users = await App.gateway.user.userToObjectID(value)
+              let users = await App.gateway.user.toObjectID(value, { customer_id: job.customer_id })
               // if not found users , leave undefined
               if (users.length === 0) {
                 value = undefined

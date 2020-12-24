@@ -3,11 +3,14 @@ const qs = require('qs')
 const config = require('config')
 const isEmail = require('validator/lib/isEmail')
 
+const jwt = require('jsonwebtoken')
+
 class GatewayUser {
   /**
    * @param {Array<String>} values can be email or username
+   * @param {Object} context information about inprogress request
    */
-  async userToObjectID (values) {
+  async toObjectID (values, context) {
     if (!Array.isArray(values)) {
       throw new Error('Invalid data format. Array required')
     }
@@ -19,8 +22,7 @@ class GatewayUser {
     let url = config.gateway.user.url
     url += '?' + qs.stringify({
       where: { users: values },
-      secret: config.gateway.secret,
-      include: { email: 1, username: 1 }
+      gateway_token: createGatewayToken(context)
     })
 
     const res = await got(url, {
@@ -33,5 +35,15 @@ class GatewayUser {
     return users.map(user => user.id)
   }
 }
+
+const createGatewayToken = (context) => {                                             
+  return jwt.sign(                                                                             
+    { context },                                                                                   
+    config.gateway.secret, // our Private Key                                                  
+    {                                                                                          
+      expiresIn: 60 // seconds                                                                 
+    }                                                                                          
+  )                                                                                            
+}                                                                                              
 
 module.exports = GatewayUser
