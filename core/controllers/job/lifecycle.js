@@ -109,14 +109,14 @@ module.exports = (server) => {
       ]
 
       if (inputJob.indexOf(job._type) === -1) {
-        return res.send(400, 'job type not allowed')
+        return res.send(400, 'job type not allowed. script and dummy')
       }
 
       if (
         JobConstants.SCRIPT_TYPE === job._type && 
         job.lifecycle !== LifecycleConstants.ONHOLD
       ) {
-        return res.send(400, 'only holded jobs allowed')
+        return res.send(400, 'only on hold jobs allowed')
       }
 
       return next()

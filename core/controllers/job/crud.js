@@ -151,9 +151,13 @@ const controller = {
    *
    */
   finish (req, res, next) {
-    const job = req.job
-    var payload = req.body.result || {}
-    const user = req.user
+    const { user, job } = req
+    const payload = req.body.result || {}
+
+    // prevent canceled job to be updated
+    if (job.lifecycle !== LifecycleConstants.ASSIGNED) {
+      return res.send(200)
+    }
 
     logger.log(`job "${job.name}(${job._id})" finished`)
     logger.data(payload)
@@ -167,7 +171,9 @@ const controller = {
       user,
       customer: req.customer
     }, (err, job) => {
-      if (err) { return res.send(500) }
+      if (err) {
+        return res.send(500)
+      }
       res.send(200, job)
       next()
     })

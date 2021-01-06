@@ -5,6 +5,7 @@ const JobConstants = require('../../constants/jobs')
 const LifecycleConstants = require('../../constants/lifecycle')
 const Job = require('../../entity/job').Job
 const jobArgumentsValidateMiddleware = require('../../service/job/arguments-validation')
+const { ClientError } = require('../../lib/error-handler')
 
 module.exports = (server) => {
   const middlewares = [
@@ -31,8 +32,7 @@ module.exports = (server) => {
   }
 
   // create a new workflow-job instance
-  server.post(
-    '/workflows/:workflow/job',
+  server.post('/workflows/:workflow/job',
     middlewares,
     router.requireCredential('user'),
     router.resolve.idToEntity({ param: 'workflow', required: true }),
@@ -44,8 +44,7 @@ module.exports = (server) => {
   )
 
   // create job using task secret key
-  server.post(
-    '/workflows/:workflow/secret/:secret/job',
+  server.post('/workflows/:workflow/secret/:secret/job',
     router.resolve.customerNameToEntity({ required: true }),
     router.resolve.idToEntity({ param: 'workflow', required: true }),
     router.resolve.idToEntity({ param: 'task' }),
@@ -60,8 +59,7 @@ module.exports = (server) => {
     controller.create
   )
 
-  server.del(
-    '/workflows/:workflow/job',
+  server.del('/workflows/:workflow/job',
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'workflow', required: true }),
@@ -72,16 +70,40 @@ module.exports = (server) => {
   /**
    * fetch many jobs information
    */
-  server.get(
-    '/workflows/:workflow/job',
+  server.get('/workflows/:workflow/job',
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'workflow', required: true }),
     controller.fetch
   )
+
+  server.put('/workflows/:workflow/job/:job/cancel',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
+    controller.cancel
+  )
 }
 
 const controller = {
+  async cancel (req, res, next) {
+    try {
+      const job = req.job
+
+      if (job._type !== JobConstants.WORKFLOW_TYPE) {
+        throw new ClientError('parent workflow job required')
+      }
+
+      await cancelWorkflowJobs(req)
+
+      res.send(200)
+    } catch (err) {
+      logger.error(err)
+      res.send(err.status, err.message)
+    }
+  },
   async create (req, res, next) {
     try {
       const { workflow, user, customer, task } = req
@@ -206,4 +228,42 @@ const controller = {
       next()
     })
   },
+}
+
+
+/**
+ * To cancel a workflow we need to cancel the last job in progress.
+ *
+ * @return {Promise}
+ */
+const cancelWorkflowJobs = ({ job, user, customer }) => {
+  return new Promise((resolve, reject) => {
+    App.Models.Job.Job
+      .find({ workflow_job_id: job._id })
+      .sort({ _id: -1 })
+      .limit(1)
+      .exec()
+      .then(jobs => {
+        if (!Array.isArray(jobs) || jobs.length === 0) {
+          return reject( new Error('Workflow is not in executing') )
+        }
+
+        App.jobDispatcher.cancel({
+          result: {
+            user: { email: user.email, id: user.id },
+          },
+          job: jobs[0],
+          user,
+          customer
+        }, err => {
+          if (err) { reject(err) }
+          else {
+            job.lifecycle = LifecycleConstants.TERMINATED
+            job.state = LifecycleConstants.CANCELED
+            job.save().then(resolve).catch(reject)
+          }
+        })
+      })
+      .catch(reject)
+  })
 }

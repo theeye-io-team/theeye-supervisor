@@ -1,6 +1,5 @@
 module.exports = function (req, res, next) {
-  const customer = req.customer
-  const user = req.user
+  const { customer, user, session } = req
 
   if (!customer) {
     var err = new Error('unauthorized. customer required')
@@ -16,6 +15,16 @@ module.exports = function (req, res, next) {
 
   if (user.credential === 'root') {
     return next()
+  }
+
+  if (session && session.customer) {
+    if (session.customer === customer.name) {
+      return next()
+    } else {
+      const err = new Error('Incorrect Organizations. Session conflict')
+      err.statusCode = 409
+      return next(err)
+    }
   }
 
   let idx = user.customers

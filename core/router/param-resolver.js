@@ -19,7 +19,7 @@ module.exports = {
     return async function (req, res, next) {
       try {
         const customer = req.customer
-        const _id = (
+        let _id = (
           req.params[paramName] ||
           (req.body && req.body[paramName]) ||
           req.query[paramName]
@@ -208,6 +208,37 @@ module.exports = {
       })
     }
   },
+  customerSessionToEntity (options) {
+    return (req, res, next) => {
+      if (!req.session) {
+        throw new Error('authentication middleware must go first')
+      }
+
+      const name = req.session.customer
+      if (!name) {
+        return res.send(403, 'session organization is not set')
+      }
+
+      logger.debug('resolving customer with name "%s"', name);
+
+      const query = { name }
+      Customer.findOne(query, (err, customer) => {
+        if (err) {
+          logger.error(err)
+          return next(err)
+        }
+
+        if (!customer) {
+          const message = `${name} organization not found`
+          logger.error(message)
+          return res.send(404, message)
+        }
+
+        req.customer = customer
+        next()
+      })
+    }
+  },
   customerNameToEntity (options) {
     options || (options={})
 
@@ -215,7 +246,8 @@ module.exports = {
       const name = (
         req.params.customer ||
         (req.body && req.body.customer) ||
-        req.query.customer
+        (req.query && req.query.customer) ||
+        (req.session && req.session.customer)
       )
 
       if (!name) {
@@ -230,7 +262,7 @@ module.exports = {
 
       logger.debug('resolving customer with name "%s"', name);
 
-      var query = { name }
+      const query = { name }
       Customer.findOne(query, (err, customer) => {
         if (err) {
           logger.error(err)
@@ -274,7 +306,8 @@ module.exports = {
 
       const value = (
         (req.body && req.body.customer) ||
-        (req.query && req.query.customer)
+        (req.query && req.query.customer) ||
+        (req.session && req.session.customer)
       )
 
       if (!value) {
