@@ -10,6 +10,19 @@ const logger = require('../../lib/logger')('service:jobs:factory')
 
 const JobsFactory = {
   /**
+   * @param Object params
+   * @prop Job
+   * @prop User
+   * @prop Customer
+   * @prop Object task_arguments_values
+   * @return Promise
+   */
+  async restart (params) {
+    const { job, user, task_arguments_values } = params
+    const builder = new JobsBuilderMap[ job.task.type ]({ job })
+    return builder.rebuild(user, task_arguments_values)
+  },
+  /**
    *
    * @param {Task} task task model
    * @param {Object} input
@@ -248,7 +261,7 @@ class AbstractJob {
 
   async build () {
     const job = this.job
-    this.setupJobBasicProperties(job)
+    await this.setupJobBasicProperties(job)
     return this.saveJob(job)
   }
 
@@ -271,19 +284,30 @@ class AbstractJob {
     return job
   }
 
-  setupJobBasicProperties (job) {
+  async setupJobBasicProperties (job) {
     const { task, vars, argsValues } = this
+    let acl = (vars.acl || task.acl)
 
     if (task.workflow_id) {
       if (!vars.workflow_job_id) {
         logger.error('%o', task)
-        return next( new Error('missing workflow job') )
+        throw new Error('missing workflow job')
       }
+
+      const wfjob = await App.Models.Job.Workflow.findById(vars.workflow_job_id)
+      if (!wfjob) {
+        throw new Error('Internal Error. Workflow job not found')
+      }
+
+      acl = wfjob.acl
 
       job.workflow = task.workflow_id
       job.workflow_id = task.workflow_id
+
+      // workflow job instance
       job.workflow_job = vars.workflow_job_id
       job.workflow_job_id = vars.workflow_job_id
+
     }
 
     // copy embedded task object
@@ -307,6 +331,7 @@ class AbstractJob {
     job.notify = vars.notify
     job.origin = vars.origin
     job.triggered_by = (vars.event && vars.event._id) || null
+    job.acl = acl
     return job
   }
 }
@@ -320,7 +345,7 @@ class ApprovalJob extends AbstractJob {
   async build () {
     /** approval job is created onhold , waiting approvers decision **/
     const job = this.job
-    this.setupJobBasicProperties(job)
+    await this.setupJobBasicProperties(job)
 
     await this.setDynamicProperties(job)
     job.lifecycle = LifecycleConstants.ONHOLD
@@ -337,25 +362,33 @@ class ApprovalJob extends AbstractJob {
       'ignore_label'
     ]
 
-    let dynamic = this.vars.task_optionals
+    const dynamic = this.vars.task_optionals
     if (dynamic) {
-      let settings = dynamic[ TaskConstants.TYPE_APPROVAL ]
+      const settings = dynamic[ TaskConstants.TYPE_APPROVAL ]
       if (settings) {
         for (let prop of dynamicSettings) {
           if (settings[prop]) {
             let value = settings[prop]
             if (prop === 'approvers') {
               // should validate
-              let users = await App.gateway.user.toObjectID(value, { customer_id: job.customer_id })
+              if (!Array.isArray(value)) {
+                throw new Error('Invalid approvers format. Array required')
+              }
+              if (value.length === 0) {
+                throw new Error('Invalid approvers. Need at least one')
+              }
+
+              let users = await App.gateway.user.fetch(value, { customer_id: job.customer_id })
               // if not found users , leave undefined
               if (users.length === 0) {
                 value = undefined
                 throw new Error(`Cannot determine approvers ${JSON.stringify(settings.approvers)}`)
               }
-              value = users
-            }
 
-            job[prop] = value
+              job['approvers'] = users.map(u => u.id)
+            } else {
+              job[prop] = value
+            }
           }
         }
       }
@@ -374,7 +407,50 @@ class ApprovalJob extends AbstractJob {
 class ScriptJob extends AbstractJob {
   constructor (input) {
     super(input)
-    this.job = new JobModels.Script()
+    this.job = (input.job || new JobModels.Script())
+  }
+
+  async rebuild (user, inputArgs) {
+    const job = this.job
+
+    const [ task, script ] = await Promise.all([
+      App.Models.Task.ScriptTask.findById(job.task_id),
+      App.Models.File.Script.findById(job.script_id)
+    ])
+
+    const argsValues = await new Promise( (resolve, reject) => {
+      JobsFactory.prepareTaskArgumentsValues(
+        task.task_arguments,
+        inputArgs,
+        (err, args) => {
+          if (err) {
+            logger.log('%o', err)
+            err.statusCode = 400 // input error
+            return reject(err)
+          }
+
+          resolve(args)
+        })
+    })
+
+    job.env = Object.assign({}, job.env, {
+      THEEYE_JOB_USER: JSON.stringify({
+        id: user.id,
+        email: user.email
+      })
+    })
+
+    // replace script with updated version
+    job.script = script.toObject()
+    job.script_id = script._id
+    job.script_runas = task.script_runas
+    job.script_arguments = argsValues
+    job.task_arguments_values = argsValues
+    job.timeout = task.timeout
+    job.lifecycle = LifecycleConstants.READY
+    job.state = StateConstants.IN_PROGRESS
+
+    await job.save()
   }
 
   async build () {
@@ -391,7 +467,7 @@ class ScriptJob extends AbstractJob {
       throw Err
     }
 
-    this.setupJobBasicProperties(job)
+    await this.setupJobBasicProperties(job)
 
     job.script = script.toObject() // >>> add .id  / embedded
     job.script_id = script._id
@@ -409,7 +485,7 @@ class ScriptJob extends AbstractJob {
       }),
       THEEYE_JOB_WORKFLOW: JSON.stringify({
         job_id: (vars.workflow_job_id || null),
-        id: (vars.workflow_id || null)
+        id: ( (vars.workflow && vars.workflow.id) || null)
       }),
       THEEYE_ORGANIZATION_NAME: JSON.stringify(vars.customer.name),
       THEEYE_API_URL: JSON.stringify(App.config.system.base_url)
@@ -427,7 +503,7 @@ class ScraperJob extends AbstractJob {
 
   async build () {
     const job = this.job
-    this.setupJobBasicProperties(job)
+    await this.setupJobBasicProperties(job)
 
     job.timeout = this.task.timeout
 

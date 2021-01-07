@@ -6,17 +6,12 @@ const Constants = require('../../constants')
 const Audit = require('../../lib/audit')
 
 module.exports = function (server) {
-  const middlewares = [
+  server.post('/:customer/task/:task/schedule',
     server.auth.bearerMiddleware,
     Router.requireCredential('admin'),
     Router.resolve.customerNameToEntity({ required: true }),
     Router.ensureCustomer,
-    Router.resolve.idToEntity({ param:'task', required: true })
-  ]
-
-  server.post(
-    '/:customer/task/:task/schedule',
-    middlewares,
+    Router.resolve.idToEntity({ param:'task', required: true }),
     // @TODO-DEPRECATED_REMOVE Middleware
     // backward compatibility middleware
     // remove 2021-01-01
@@ -33,7 +28,15 @@ module.exports = function (server) {
     Router.notify({ name: 'schedule', operation: Constants.CREATE })
   )
 
-  server.get('/:customer/task/:task/schedule', middlewares, controller.fetch)
+  server.get('/:customer/task/:task/schedule',
+    server.auth.bearerMiddleware,
+    Router.requireCredential('viewer'),
+    Router.resolve.customerNameToEntity({ required: true }),
+    Router.ensureCustomer,
+    Router.resolve.idToEntity({ param:'task', required: true }),
+    Router.ensureAllowed({ entity: { name: 'task' } }),
+    controller.fetch
+  )
 
   ///**
   // * this is for the email cancelation

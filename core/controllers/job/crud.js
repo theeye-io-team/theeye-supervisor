@@ -1,4 +1,7 @@
+const isEmail = require('validator/lib/isEmail')
+const logger = require('../../lib/logger')('controller:job')
 const App = require('../../app')
+const ACL = require('../../lib/acl')
 const audit = require('../../lib/audit')
 const Constants = require('../../constants/task')
 const createJob = require('../../service/job/create')
@@ -6,13 +9,12 @@ const dbFilter = require('../../lib/db-filter')
 const Host = require('../../entity/host').Entity
 const IntegrationConstants = require('../../constants/integrations')
 const JobConstants = require('../../constants/jobs')
-const Job = require('../../entity/job').Job
 const LifecycleConstants = require('../../constants/lifecycle')
-const logger = require('../../lib/logger')('controller:job')
 const router = require('../../router')
 const StateConstants = require('../../constants/states')
 const TaskConstants = require('../../constants/task')
 const TopicsConstants = require('../../constants/topics')
+const { ClientError, ServerError } = require('../../lib/error-handler')
 
 module.exports = (server) => {
   const middlewares = [
@@ -28,6 +30,7 @@ module.exports = (server) => {
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'job', required: true }),
+    router.ensureAllowed({ entity: { name: 'job' } }),
     controller.get
   )
 
@@ -58,8 +61,8 @@ module.exports = (server) => {
   server.post('/:customer/job',
     middlewares,
     router.requireCredential('user'),
-    router.resolve.idToEntity({param:'task', required:true}),
-    router.ensureAllowed({entity: {name: 'task'} }),
+    router.resolve.idToEntity({ param: 'task', required: true }),
+    router.ensureAllowed({ entity: { name: 'task' } }),
     createJob
     //audit.afterCreate('job',{ display: 'name' })
   )
@@ -67,8 +70,8 @@ module.exports = (server) => {
   server.post('/job',
     middlewares,
     router.requireCredential('user'),
-    router.resolve.idToEntity({param:'task',required:true}),
-    router.ensureAllowed({entity:{name:'task'}}) ,
+    router.resolve.idToEntity({ param: 'task', required: true }),
+    router.ensureAllowed({ entity: { name: 'task' }}) ,
     createJob
     //audit.afterCreate('job',{ display: 'name' })
   )
@@ -86,12 +89,18 @@ module.exports = (server) => {
     createJob
     //audit.afterCreate('job',{ display: 'name' })
   )
+
+  server.put('/job/:job/acl',
+    middlewares,
+    router.requireCredential('admin'),
+    router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
+    controller.updateAcl
+  )
 }
 
 const controller = {
   get (req,res,next) {
-    var job = req.job
-    res.send(200, job)
+    res.send(200, req.job)
   },
   /**
    * @method GET
@@ -133,10 +142,15 @@ const controller = {
 
     logger.log('querying jobs')
 
-    const filter = dbFilter(query, { /** default **/ })
-    filter.where.customer_id = customer._id.toString()
+    const filters = dbFilter(query, { /** default **/ })
+    filters.where.customer_id = customer._id.toString()
 
-    Job.fetchBy(filter, (err, jobs) => {
+    if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
+      // find what this user can access
+      filters.where.acl = req.user.email
+    }
+
+    App.Models.Job.Job.fetchBy(filters, (err, jobs) => {
       if (err) { return res.send(500, err) }
       let data = []
       jobs.forEach(job => data.push(job.publish()))
@@ -177,6 +191,41 @@ const controller = {
       res.send(200, job)
       next()
     })
+  },
+  async updateAcl (req, res, next) {
+    try {
+      const job = req.job
+      const search = req.body
+
+      if (!Array.isArray(search) || search.length === 0) {
+        throw new ClientError('invalid format')
+      }
+
+      const userPromise = []
+      for (let value of search) {
+        if (typeof value !== 'string') {
+          throw new ClientError(`invalid body payload format. wrong value ${value}`)
+        }
+      }
+
+      const users = await App.gateway.user.fetch(search, { customer_id: req.customer.id })
+      if (!users || users.length === 0) {
+        throw new ClientError('invalid members')
+      }
+
+      const acl = users.map(user => user.email)
+
+      if (job._type === JobConstants.WORKFLOW_TYPE) {
+        App.jobDispatcher.updateWorkflowJobsAcls(job, acl)
+      }
+
+      job.acl = acl
+      await job.save()
+      res.send(200, job.acl)
+    } catch (err) {
+      logger.error(err, err.status)
+      res.send(err.status || 500, err.message)
+    }
   }
 }
 

@@ -85,9 +85,55 @@ module.exports = (server) => {
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
     controller.cancel
   )
+
+  server.put('/workflows/:workflow/job/:job/acl',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
+    controller.updateAcl
+  )
 }
 
 const controller = {
+  async updateAcl (req, res, next) {
+    try {
+      const job = req.job
+      const search = req.body
+
+      if (job._type !== JobConstants.WORKFLOW_TYPE) {
+        throw new ClientError('parent workflow job required')
+      }
+
+      if (!Array.isArray(search) || search.length === 0) {
+        throw new ClientError('invalid body payload format')
+      }
+
+      const userPromise = []
+      for (let value of search) {
+        if (typeof value !== 'string') {
+          throw new ClientError(`invalid body payload format. wrong value ${value}`)
+        }
+      }
+
+      const users = await App.gateway.user.fetch(search, { customer_id: req.customer.id })
+      if (!users || users.length === 0) {
+        throw new ClientError('invalid members')
+      }
+
+      const acl = users.map(user => user.email)
+
+      App.jobDispatcher.updateWorkflowJobsAcls(job, acl)
+
+      job.acl = acl
+      await job.save()
+      res.send(200, job.acl)
+    } catch (err) {
+      logger.error(err, err.status)
+      res.send(err.status || 500, err.message)
+    }
+  },
   async cancel (req, res, next) {
     try {
       const job = req.job

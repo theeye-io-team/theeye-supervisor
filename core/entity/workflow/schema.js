@@ -15,6 +15,7 @@ function WorkflowSchema (props) {
     description: { type: String, default: '' },
     tags: { type: Array, default: [] },
     acl: [{ type: String }],
+    acl_dynamic: { type: Boolean, default: false }, // if "true" acl will be empty on creation
     triggers: [{ type: ObjectId, ref: 'Event' }],
     graph: { type: Object },
     lifecycle: { type: String },

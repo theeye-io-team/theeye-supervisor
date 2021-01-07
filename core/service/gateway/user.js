@@ -10,15 +10,7 @@ class GatewayUser {
    * @param {Array<String>} values can be email or username
    * @param {Object} context information about inprogress request
    */
-  async toObjectID (values, context) {
-    if (!Array.isArray(values)) {
-      throw new Error('Invalid data format. Array required')
-    }
-
-    if (values.length === 0) {
-      throw new Error('Invalid approvers. Need at least one')
-    }
-
+  async fetch (values, context) {
     let url = config.gateway.user.url
     url += '?' + qs.stringify({
       where: { users: values },
@@ -32,7 +24,7 @@ class GatewayUser {
     })
 
     const users = res.body
-    return users.map(user => user.id)
+    return users
   }
 }
 

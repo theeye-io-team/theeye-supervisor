@@ -147,7 +147,7 @@ const controller = {
 
     // exclude tasks with no host assigned or with invalid script/data
     if (
-      !Object.prototype.hasOwnProperty.call(input, 'unassigned') &&
+      ! Object.prototype.hasOwnProperty.call(input, 'unassigned') &&
       input.unassigned !== true &&
       input.unassigned !== 'true'
     ) {

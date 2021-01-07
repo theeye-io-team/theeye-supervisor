@@ -48,5 +48,7 @@ module.exports = {
   last_update: { type: Date, default: Date.now },
   trigger_name: { type: String }, // final state success or failure. always success by default
   triggered_by: { type: ObjectId, ref: 'Event' },
-  origin: { type: String }
+  origin: { type: String },
+  acl: [{ type: String }],
+  acl_dynamic: { type: Boolean, default: false } // if "true" acl will be empty on creation
 }

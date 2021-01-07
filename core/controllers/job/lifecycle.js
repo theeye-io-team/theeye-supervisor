@@ -64,7 +64,7 @@ module.exports = (server) => {
       return res.send(400, 'unexpected job type. only Approvals')
     }
 
-    let approver = job.task.approvers.find(_id => _id.toString() === approver_id)
+    let approver = job.approvers.find(_id => _id.toString() === approver_id)
 
     if (!approver) {
       return res.send(403, 'unauthorized approver')
@@ -138,6 +138,10 @@ module.exports = (server) => {
           throw new ClientError('Only completed jobs allowed')
         }
 
+        if (job._type !== JobConstants.SCRIPT_TYPE) {
+          throw new ClientError('Only script tasks allowed')
+        }
+
         return next()
       } catch (err) {
         logger.error(err)
@@ -147,15 +151,13 @@ module.exports = (server) => {
     async (req, res, next) => {
       try {
         const job = req.job
-        //await job.populate('task').execPopulate()
-        req.task = job.task
-        const args = argumentsValidateMiddleware(req)
+        const task = job.task
+        const args = argumentsValidateMiddleware( Object.assign({}, req, { task }) )
 
         await App.jobDispatcher.restart({
           user: req.user,
           customer: req.customer,
           job,
-          task: job.task,
           task_arguments_values: ( args || [] )
         })
         res.send(200, job)

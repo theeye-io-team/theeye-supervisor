@@ -128,73 +128,6 @@ module.exports = {
       }
     })
   },
-  /**
-   * @param {Object} input
-   * @property {Task} input.task
-   * @property {User} input.user
-   * @property {Customer} input.customer
-   * @property {Boolean} input.notify
-   * @property {String[]} input.script_arguments (will be deprecated)
-   * @property {String[]} input.task_arguments_values arguments definitions
-   * @property {ObjectId} input.workflow_job_id current workflow ejecution
-   * @property {ObjectId} input.workflow_job
-   * @property {Workflow} input.workflow optional
-   */
-  async create (input) {
-    const { task } = input
-    let job
-
-    if (!task) {
-      throw new Error('task is required')
-    }
-
-    verifyTaskBeforeExecution(task)
-    await removeExceededJobsCount(task, input.workflow)
-
-    if (
-      task.grace_time > 0 && ( // automatic origin
-        input.origin === JobConstants.ORIGIN_WORKFLOW ||
-        input.origin === JobConstants.ORIGIN_TRIGGER_BY
-      )
-    ) {
-      job = await scheduleJob(input) // agenda job
-    } else {
-      job = await createJob(input)
-    }
-
-    return job
-  },
-  async createAgentUpdateJob (host_id) {
-    const host = await App.Models.Host.Entity.findById(host_id).exec()
-    if (!host) {
-      throw new Error('Host not found')
-    }
-
-    // check if there are update jobs already created for this host
-    const jobs = await App.Models.Job.AgentUpdate.find({
-      name: JobConstants.AGENT_UPDATE,
-      host_id,
-      lifecycle: LifecycleConstants.READY
-    })
-
-    // return any job
-    if (jobs.length !== 0) {
-      return jobs[0]
-    }
-
-    await App.Models.Job.AgentUpdate.deleteMany({ host_id, name: JobConstants.AGENT_UPDATE })
-
-    const job = new App.Models.Job.AgentUpdate()
-    job.host_id = host_id // enforce host_id, just in case
-    job.host = host_id // enforce host_id, just in case
-    job.customer = host.customer_id
-    job.customer_id = host.customer_id
-    job.customer_name = host.customer_name
-    await job.save()
-
-    logger.log('agent update job created')
-    return job
-  },
   finishDummyJob (job, input) {
     return new Promise((resolve, reject) => {
       let { task } = input
@@ -235,35 +168,13 @@ module.exports = {
    * @return {Promise<Job>}
    */
   async jobInputsReplenish (input) {
-    const { job, task, user, customer } = input
+    const { job, user } = input
 
-    const args = await new Promise( (resolve, reject) => {
-      JobFactory.prepareTaskArgumentsValues(
-        task.task_arguments,
-        input.task_arguments_values,
-        (err, args) => {
-          if (err) {
-            logger.log('%o', err)
-            err.statusCode = 400 // input error
-            return reject(err)
-          }
+    if (job._type !== JobConstants.SCRIPT_TYPE) {
+      throw new Error('only script tasks allowed')
+    }
 
-          resolve(args)
-        })
-    })
-
-    job.env = Object.assign({}, job.env, {
-      THEEYE_JOB_USER: JSON.stringify({
-        id: user.id,
-        email: user.email
-      })
-    })
-
-    job.task_arguments_values = args
-    job.lifecycle = LifecycleConstants.READY
-    job.state = StateConstants.IN_PROGRESS
-
-    await job.save()
+    await JobFactory.restart(input)
 
     // everything ok
     RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
@@ -282,6 +193,42 @@ module.exports = {
     job.state = StateConstants.IN_PROGRESS
     await job.save()
     RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
+    return job
+  },
+  /**
+   * @param {Object} input
+   * @property {Task} input.task
+   * @property {User} input.user
+   * @property {Customer} input.customer
+   * @property {Boolean} input.notify
+   * @property {String[]} input.script_arguments (will be deprecated)
+   * @property {String[]} input.task_arguments_values arguments definitions
+   * @property {ObjectId} input.workflow_job_id current workflow ejecution
+   * @property {ObjectId} input.workflow_job
+   * @property {Workflow} input.workflow optional
+   */
+  async create (input) {
+    const { task } = input
+    let job
+
+    if (!task) {
+      throw new Error('task is required')
+    }
+
+    verifyTaskBeforeExecution(task)
+    await removeExceededJobsCount(task, input.workflow)
+
+    if (
+      task.grace_time > 0 && ( // automatic origin
+        input.origin === JobConstants.ORIGIN_WORKFLOW ||
+        input.origin === JobConstants.ORIGIN_TRIGGER_BY
+      )
+    ) {
+      job = await scheduleJob(input) // agenda job
+    } else {
+      job = await createJob(input)
+    }
+
     return job
   },
   /**
@@ -306,8 +253,12 @@ module.exports = {
       }
     }
 
+    // started the workflow with empty acl, shall be updated later
+    const acl = (workflow.acl_dynamic !== true) ? workflow.acl : []
     const wJob = new JobModels.Workflow(
       Object.assign({}, input, {
+        acl,
+        acl_dynamic: workflow.acl_dynamic,
         customer,
         customer_id: customer._id.toString(),
         customer_name: customer.name,
@@ -336,6 +287,37 @@ module.exports = {
     )
 
     return wJob
+  },
+  async createAgentUpdateJob (host_id) {
+    const host = await App.Models.Host.Entity.findById(host_id).exec()
+    if (!host) {
+      throw new Error('Host not found')
+    }
+
+    // check if there are update jobs already created for this host
+    const jobs = await App.Models.Job.AgentUpdate.find({
+      name: JobConstants.AGENT_UPDATE,
+      host_id,
+      lifecycle: LifecycleConstants.READY
+    })
+
+    // return any job
+    if (jobs.length !== 0) {
+      return jobs[0]
+    }
+
+    await App.Models.Job.AgentUpdate.deleteMany({ host_id, name: JobConstants.AGENT_UPDATE })
+
+    const job = new App.Models.Job.AgentUpdate()
+    job.host_id = host_id // enforce host_id, just in case
+    job.host = host_id // enforce host_id, just in case
+    job.customer = host.customer_id
+    job.customer_id = host.customer_id
+    job.customer_name = host.customer_name
+    await job.save()
+
+    logger.log('agent update job created')
+    return job
   },
   /**
    *
@@ -578,6 +560,32 @@ module.exports = {
     }
 
     return null // undefined
+  },
+  updateWorkflowJobsAcls (wfJob, acl) {
+    const promise = App.Models.Job.Job
+      .find({ workflow_job_id: wfJob._id })
+      .then(jobs => {
+
+        const savePromises = []
+        if (jobs.length > 0) {
+          for (let job of jobs) {
+            job.acl = acl
+            savePromises.push(job.save())
+          }
+        }
+
+        return Promise.all(savePromises)
+      })
+      .then(saved => {
+        logger.log(`${saved.length} jobs updated`)
+        return saved
+      })
+      .catch(err => {
+        logger.error(err)
+        return err
+      })
+
+    return promise
   }
 }
 

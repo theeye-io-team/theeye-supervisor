@@ -8,19 +8,22 @@ const Audit = require('../../lib/audit')
 const { ClientError } = require('../../lib/error-handler')
 
 module.exports = (server) => {
-  const middlewares = [
+  server.get('/workflows/:workflow/schedule',
+    server.auth.bearerMiddleware,
+    Router.requireCredential('viewer'),
+    Router.resolve.customerNameToEntity({ required: true }),
+    Router.ensureCustomer,
+    Router.resolve.idToEntity({ param:'workflow', required: true }),
+    Router.ensureAllowed({ entity: { name: 'workflow' } }),
+    fetch
+  )
+
+  server.post('/workflows/:workflow/schedule',
     server.auth.bearerMiddleware,
     Router.requireCredential('admin'),
     Router.resolve.customerNameToEntity({ required: true }),
     Router.ensureCustomer,
-    Router.resolve.idToEntity({ param:'workflow', required: true })
-  ]
-
-  server.get('/workflows/:workflow/schedule', middlewares, fetch)
-
-  server.post(
-    '/workflows/:workflow/schedule',
-    middlewares,
+    Router.resolve.idToEntity({ param:'workflow', required: true }),
     create,
     Audit.afterCreate('schedule', { display: 'name' }),
     Router.notify({ name: 'schedule', operation: Constants.CREATE })
