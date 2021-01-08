@@ -16,6 +16,7 @@ module.exports = {
   grace_time: { type: Number, default: 0 },
   timeout: { type: Number },
   task_arguments: { type: Array }, // input parameters
+  arguments_type: { type: String, default: 'legacy' },
   output_parameters: { type: Array }, // output parameters
   workflow_id: { type: ObjectId },
   workflow: { type: ObjectId, ref: 'Workflow' },

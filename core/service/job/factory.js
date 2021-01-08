@@ -60,6 +60,7 @@ const JobsFactory = {
     let inputArgsValues = (input.task_arguments_values || input.script_arguments)
 
     this.prepareTaskArgumentsValues(
+      task.arguments_type,
       argsDefinition,
       inputArgsValues,
       (argsErr, argsValues) => {
@@ -118,12 +119,13 @@ const JobsFactory = {
   },
   /**
    *
+   * @param {String} argumentsType type and formatter
    * @param {Object[]} argumentsDefinition stored definition
    * @param {Object{}} argumentsValues user provided values
    * @param {Function} next
    *
    */
-  prepareTaskArgumentsValues (argumentsDefinition, argumentsValues, next) {
+  prepareTaskArgumentsValues (argumentsType, argumentsDefinition, argumentsValues, next) {
     let errors = new ErrorHandler()
     let filteredArguments = []
 
@@ -147,16 +149,16 @@ const JobsFactory = {
           if (def.type === TaskConstants.ARGUMENT_TYPE_FIXED) {
             value = def.value
           } else {
-            // user input required
+            // arguments payload is required
             let found = searchInputArgumentValueByOrder(argumentsValues, def.order)
-            if (def.required === false || def.version === '2.4.0-2021-01') {
-              value = parseArgumentV2(found)
+            if (found === undefined) {
+              errors.required(def.label, null, 'Task argument not found in payload.')
+            }
+
+            if (argumentsType === 'json') {
+              value = parseArgumentJson(found)
             } else {
-              if (found === undefined) {
-                errors.required(def.label, null, 'task argument is required.')
-              } else {
-                value = parseArgumentV1(found)
-              }
+              value = parseArgumentLegacy(found)
             }
           }
         } else {
@@ -190,7 +192,7 @@ module.exports = JobsFactory
  * @param {Mixed} found
  *
  **/
-const parseArgumentV1 = (found) => {
+const parseArgumentLegacy = (found) => {
   let value
   // the argument is not present within the provided request arguments
   if (!found) { // null, empty string, false, 0
@@ -206,14 +208,18 @@ const parseArgumentV1 = (found) => {
 
 /**
  *
- * Version enabled when argument is not required.
+ * Version enabled when argument is not required or new version.
+ * All arguments are treated as JSON strings. 
+ * Formatter allows to recontruct the values using an SDK in high level languajes.
+ *
+ * Arguments content-type: application/json 
  *
  * @version 2021-01-07
  * @param {Mixed} found
  * @return {String} JSON.stringify value
  *
  **/
-const parseArgumentV2 = (found) => {
+const parseArgumentJson = (found) => {
   let value
   if (found === undefined) { // was not found in input payload
     return JSON.stringify(undefined)
@@ -458,6 +464,7 @@ class ScriptJob extends AbstractJob {
 
     const argsValues = await new Promise( (resolve, reject) => {
       JobsFactory.prepareTaskArgumentsValues(
+        task.arguments_type,
         task.task_arguments,
         inputArgs,
         (err, args) => {

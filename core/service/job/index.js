@@ -133,6 +133,7 @@ module.exports = {
       let { task } = input
 
       JobFactory.prepareTaskArgumentsValues(
+        task.arguments_type,
         task.task_arguments,
         input.task_arguments_values,
         (err, args) => {
