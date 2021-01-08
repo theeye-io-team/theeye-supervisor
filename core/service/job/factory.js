@@ -149,18 +149,13 @@ const JobsFactory = {
           } else {
             // user input required
             let found = searchInputArgumentValueByOrder(argumentsValues, def.order)
-
-            // the argument is not present within the provided request arguments
-            if (found === undefined) {
-              errors.required(def.label, null, 'task argument is required.')
+            if (def.required === false || def.version === '2.4.0-2021-01') {
+              value = parseArgumentV2(found)
             } else {
-              if (!found) { // null
-                value = found
+              if (found === undefined) {
+                errors.required(def.label, null, 'task argument is required.')
               } else {
-                value = (found.value || found)
-                if (typeof value !== 'string') {
-                  value = JSON.stringify(value)
-                }
+                value = parseArgumentV1(found)
               }
             }
           }
@@ -188,6 +183,49 @@ const JobsFactory = {
 }
 
 module.exports = JobsFactory
+
+/**
+ *
+ * @version original
+ * @param {Mixed} found
+ *
+ **/
+const parseArgumentV1 = (found) => {
+  let value
+  // the argument is not present within the provided request arguments
+  if (!found) { // null, empty string, false, 0
+    value = found
+  } else {
+    value = (found.value || found)
+    if (typeof value !== 'string') {
+      value = JSON.stringify(value)
+    }
+  }
+  return value
+}
+
+/**
+ *
+ * Version enabled when argument is not required.
+ *
+ * @version 2021-01-07
+ * @param {Mixed} found
+ * @return {String} JSON.stringify value
+ *
+ **/
+const parseArgumentV2 = (found) => {
+  let value
+  if (found === undefined) { // was not found in input payload
+    return JSON.stringify(undefined)
+  }
+  if (found === null) { // was found and value is null
+    return JSON.stringify(null)
+  }
+  if (Object.prototype.hasOwnProperty.call(found, 'value')) {
+    return JSON.stringify(found.value)
+  }
+  return JSON.stringify(found) // whatever it is convert to string
+}
 
 /**
  *
