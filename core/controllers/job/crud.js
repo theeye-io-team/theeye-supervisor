@@ -96,6 +96,15 @@ module.exports = (server) => {
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
     controller.updateAcl
   )
+
+  server.put('/job/:job/assignee',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
+    controller.updateAssignee
+  )
 }
 
 const controller = {
@@ -201,7 +210,6 @@ const controller = {
         throw new ClientError('invalid format')
       }
 
-      const userPromise = []
       for (let value of search) {
         if (typeof value !== 'string') {
           throw new ClientError(`invalid body payload format. wrong value ${value}`)
@@ -222,6 +230,34 @@ const controller = {
       job.acl = acl
       await job.save()
       res.send(200, job.acl)
+    } catch (err) {
+      logger.error(err, err.status)
+      res.send(err.status || 500, err.message)
+    }
+  },
+  async updateAssignee (req, res, next) {
+    try {
+      const job = req.job
+      const search = req.body
+
+      if (!Array.isArray(search) || search.length === 0) {
+        throw new ClientError('invalid format')
+      }
+
+      for (let value of search) {
+        if (typeof value !== 'string') {
+          throw new ClientError(`invalid body payload format. wrong value ${value}`)
+        }
+      }
+
+      const members = await App.gateway.member.fetch(search, { customer_id: req.customer.id })
+      if (!members || members.length === 0) {
+        throw new ClientError('invalid members')
+      }
+
+      job.user_inputs_members = members.map(member => member.id)
+      await job.save()
+      res.send(200, job.user_inputs_members)
     } catch (err) {
       logger.error(err, err.status)
       res.send(err.status || 500, err.message)

@@ -15,17 +15,6 @@ const mongoose = require('mongoose')
 const RegisterOperation = require('./register')
 
 module.exports = {
-  ///**
-  // * @param {Object} input
-  // * @param {Function} next
-  // */
-  //fetchBy (input,next) {
-  //  const query = {}
-  //  if (input.host) query.host_id = input.host._id
-  //  if (input.state) query.state = input.state
-  //  if (input.lifecycle) query.lifecycle = input.lifecycle
-  //  JobModels.Job.find(query,next)
-  //},
   fetchBy (filter, next) {
     return JobModels.Job.fetchBy(filter, (err, jobs) => {
       if (err) {

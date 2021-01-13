@@ -49,6 +49,8 @@ module.exports = {
   trigger_name: { type: String }, // final state success or failure. always success by default
   triggered_by: { type: ObjectId, ref: 'Event' },
   origin: { type: String },
+  user_inputs: { type: Boolean, default: false },
+  user_inputs_members: [{ type: String }],
   acl: [{ type: String }],
   acl_dynamic: { type: Boolean, default: false } // if "true" acl will be empty on creation
 }

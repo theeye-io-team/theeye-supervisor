@@ -76,16 +76,16 @@ module.exports = (options) => {
       }
 
       try {
-        let ids = monitor.config.monitors
-        let nestedResources = []
+        const ids = monitor.config.monitors
+        const nestedResources = []
 
         for (let id of ids) {
           let nested = await Resource.findById(id).exec()
           nestedResources.push(nested)
         }
 
-        let states = nestedResources.map(nested => nested.state)
-        let manager = new ResourceService(resource)
+        const states = nestedResources.map(nested => nested && nested.state)
+        const manager = new ResourceService(resource)
 
         if (states.find(state => state === MonitorConstants.RESOURCE_NORMAL) === undefined) {
           // all failing and already in failure state. stop checking

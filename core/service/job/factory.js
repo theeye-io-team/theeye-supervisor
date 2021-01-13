@@ -32,58 +32,68 @@ const JobsFactory = {
    * @param {Function} next
    *
    */
-  create (task, input, next) {
-    next || (next = () => {})
+  async create (task, input, next) {
+    try {
+      if ( ! JobsBuilderMap[ task.type ] ) {
+        throw new Error(`Invalid or undefined task type ${task.type}`)
+      }
 
-    if (
-      input.origin !== JobConstants.ORIGIN_USER &&
-      task.user_inputs === true
-    ) {
-      // we don't care about automatic arguments,
-      // a user must enter the arguments values
-      input.lifecycle = LifecycleConstants.ONHOLD
-      let argsValues = []
-      createJob({ task, vars: input, argsValues: [] })
-        .then(job => next(null, job))
-        .catch(err => next(err))
-
-      return
+      const builder = new JobsBuilderMap[ task.type ]({ task, vars: input })
+      const job = await builder.create()
+      next(null, job)
+    } catch (err) {
+      next(err)
     }
 
-    /**
-     *
-     * @todo remove script_arguments when all agents are version 0.14.1 or higher
-     * @todo upgrade templates on db. replace property script_arguments wuth task_arguments
-     *
-     */
-    let argsDefinition = (task.task_arguments || task.script_arguments)
-    let inputArgsValues = (input.task_arguments_values || input.script_arguments)
+    //if (
+    //  input.origin !== JobConstants.ORIGIN_USER &&
+    //  task.user_inputs === true
+    //) {
+    //  // we don't care about automatic arguments,
+    //  // a user must enter the arguments values
+    //  job.lifecycle = LifecycleConstants.ONHOLD
+    //  let argsValues = []
+    //  createJob({ task, vars: input, argsValues: [] })
+    //    .then(job => next(null, job))
+    //    .catch(err => next(err))
 
-    this.prepareTaskArgumentsValues(
-      task.arguments_type,
-      argsDefinition,
-      inputArgsValues,
-      (argsErr, argsValues) => {
-        createJob({
-          task,
-          vars: input,
-          argsValues,
-          beforeSave: (job, callback) => {
-            // notification task arguments should not be validated
-            if (TaskConstants.TYPE_NOTIFICATION === task.type || !argsErr) {
-              return callback()
-            }
+    //  return
+    //}
 
-            // abort execution
-            job.result = { log: JSON.stringify(argsErr) }
-            job.output = JSON.stringify(argsErr.errors)
-            job.state = StateConstants.ERROR
-            job.lifecycle = LifecycleConstants.TERMINATED
-            callback()
-          }
-        }).then(job => next(null, job)).catch(err => next(err))
-      }
-    )
+    ///**
+    // *
+    // * @todo remove script_arguments when all agents are version 0.14.1 or higher
+    // * @todo upgrade templates on db. replace property script_arguments wuth task_arguments
+    // *
+    // */
+    //let argsDefinition = (task.task_arguments || task.script_arguments)
+    //let inputArgsValues = (input.task_arguments_values || input.script_arguments)
+
+    //this.prepareTaskArgumentsValues(
+    //  task.arguments_type,
+    //  argsDefinition,
+    //  inputArgsValues,
+    //  (argsErr, argsValues) => {
+    //    createJob({
+    //      task,
+    //      vars: input,
+    //      argsValues,
+    //      beforeSave: (job, callback) => {
+    //        // notification task arguments should not be validated
+    //        if (TaskConstants.TYPE_NOTIFICATION === task.type || !argsErr) {
+    //          return callback()
+    //        }
+
+    //        // abort execution
+    //        job.result = { log: JSON.stringify(argsErr) }
+    //        job.output = JSON.stringify(argsErr.errors)
+    //        job.state = StateConstants.ERROR
+    //        job.lifecycle = LifecycleConstants.TERMINATED
+    //        callback()
+    //      }
+    //    }).then(job => next(null, job)).catch(err => next(err))
+    //  }
+    //)
   },
   /**
    *
@@ -239,21 +249,20 @@ const parseArgumentJson = (found) => {
  * @property {Object} input.vars request/process provided arguments
  * @property {Task} input.task
  * @property {Object} input.taskOptionals
- * @property {Array} input.argsValues task arguments values
  *
  * @return Promise
  *
  */
-const createJob = (input) => {
-  const { task } = input
-
-  if ( ! JobsBuilderMap[ task.type ] ) {
-    throw new Error(`Invalid or undefined task type ${task.type}`)
-  }
-
-  const builder = new JobsBuilderMap[ task.type ]( input )
-  return builder.create()
-}
+//const createJob = (input) => {
+//  const { task } = input
+//
+//  if ( ! JobsBuilderMap[ task.type ] ) {
+//    throw new Error(`Invalid or undefined task type ${task.type}`)
+//  }
+//
+//  const builder = new JobsBuilderMap[ task.type ]( input )
+//  return builder.create()
+//}
 
 const searchInputArgumentValueByOrder = (values, searchOrder) => {
   if (!values || !Array.isArray(values)) { return undefined }
@@ -274,8 +283,6 @@ class AbstractJob {
     this.input = input
     this.task = input.task
     this.vars = input.vars
-    this.argsValues = input.argsValues
-    this.beforeSave = input.beforeSave
     this.job = null
   }
 
@@ -283,8 +290,13 @@ class AbstractJob {
    * @return Promise
    */
   async create () {
+    await this.setupJobBasicProperties()
+    await this.setDynamicProperties()
+
     try {
+      await this.verifyArguments()
       await this.build()
+      await this.saveJob()
     } catch (err) {
       await this.terminateBuild(err)
     }
@@ -304,32 +316,95 @@ class AbstractJob {
   }
 
   async build () {
-    const job = this.job
-    await this.setupJobBasicProperties(job)
-    return this.saveJob(job)
   }
 
-  async saveJob (job) {
-    const beforeSave = this.beforeSave
-    if (beforeSave && typeof beforeSave === 'function') {
-      await new Promise((resolve, reject) => {
-        beforeSave.call(beforeSave, job, (err) => {
-          if (err) { reject(err) }
-          else { resolve() }
-        })
-      })
-    }
+  async setDynamicProperties () {
+    const job = this.job
+    const dynamicSettings = [
+      'user_inputs',
+      'user_inputs_members'
+    ]
 
+    const dynamic = this.vars.task_optionals
+    if (dynamic) {
+      for (let prop of dynamicSettings) {
+        if (dynamic[prop]) {
+          let value = dynamic[prop]
+          if (prop === 'user_inputs_members') {
+            if (!Array.isArray(value)) {
+              throw new Error('Invalid members format. Array required')
+            }
+            if (value.length === 0) {
+              throw new Error('Need at least one member')
+            }
+
+            const members = await App.gateway.member.fetch(value, { customer_id: job.customer_id })
+            if (!members || members.length === 0) {
+              throw new Error('Invalid members')
+            }
+
+            job['user_inputs_members'] = members.map(u => u.id)
+          } else {
+            job[prop] = value
+          }
+        }
+      }
+    }
+  }
+
+  async verifyArguments () {
+    const { job, task, vars } = this
+
+    if (
+      vars.origin !== JobConstants.ORIGIN_USER &&
+      job.user_inputs === true
+    ) {
+      // we don't care about automatic arguments,
+      // a user must enter the arguments values
+      job.lifecycle = LifecycleConstants.ONHOLD
+      job.task_arguments_values = []
+    } else {
+      const argsDefinition = (task.task_arguments || task.script_arguments)
+      const inputArgsValues = (vars.task_arguments_values || vars.script_arguments)
+
+      try {
+        const values = await new Promise( (resolve, reject) => {
+          JobsFactory.prepareTaskArgumentsValues(
+            task.arguments_type,
+            argsDefinition,
+            inputArgsValues,
+            (err, values) => {
+              if (err) {
+                logger.log('%o', err)
+                err.statusCode = 400 // input error
+                return reject(err)
+              }
+
+              resolve(values)
+            }
+          )
+        })
+        job.task_arguments_values = values
+      } catch (err) {
+        if (TaskConstants.TYPE_NOTIFICATION !== task.type) {
+          job.task_arguments_values = inputArgsValues
+          await this.terminateBuild(err)
+        }
+      }
+    }
+  }
+
+  async saveJob () {
+    const job = this.job
     await job.save()
 
     this.task.execution_count += 1
     await this.task.save()
-
-    return job
+    return this
   }
 
-  async setupJobBasicProperties (job) {
-    const { task, vars, argsValues } = this
+  async setupJobBasicProperties () {
+    const { task, vars, job } = this
     let acl = (vars.acl || task.acl)
 
     if (task.workflow_id) {
@@ -351,7 +426,6 @@ class AbstractJob {
       // workflow job instance
       job.workflow_job = vars.workflow_job_id
       job.workflow_job_id = vars.workflow_job_id
-
     }
 
     // copy embedded task object
@@ -362,7 +436,6 @@ class AbstractJob {
 
     job.logging = (task.logging || false)
     job.task_id = task._id
-    job.task_arguments_values = argsValues
     job.host_id = task.host_id
     job.host = task.host_id
     job.name = task.name
@@ -376,6 +449,8 @@ class AbstractJob {
     job.origin = vars.origin
     job.triggered_by = (vars.event && vars.event._id) || null
     job.acl = acl
+    job.user_inputs = task.user_inputs
+    job.user_inputs_members = task.user_inputs_members
     return job
   }
 }
@@ -389,15 +464,14 @@ class ApprovalJob extends AbstractJob {
   async build () {
     /** approval job is created onhold , waiting approvers decision **/
     const job = this.job
-    await this.setupJobBasicProperties(job)
 
-    await this.setDynamicProperties(job)
+    await this.setDynamicProperties()
     job.lifecycle = LifecycleConstants.ONHOLD
-
-    return this.saveJob(job)
   }
 
-  async setDynamicProperties (job) {
+  async setDynamicProperties () {
+    const job = this.job
+
     const dynamicSettings = [
       'approvers',
       'success_label',
@@ -422,7 +496,7 @@ class ApprovalJob extends AbstractJob {
                 throw new Error('Invalid approvers. Need at least one')
               }
 
-              let users = await App.gateway.user.fetch(value, { customer_id: job.customer_id })
+              const users = await App.gateway.user.fetch(value, { customer_id: job.customer_id })
               // if not found users , leave undefined
               if (users.length === 0) {
                 value = undefined
@@ -500,7 +574,7 @@ class ScriptJob extends AbstractJob {
 
   async build () {
     const job = this.job
-    const { task, argsValues, vars } = this
+    const { task, vars } = this
     const script = await Script.findById(task.script_id)
 
     if (!script) {
@@ -512,11 +586,10 @@ class ScriptJob extends AbstractJob {
       throw Err
     }
 
-    await this.setupJobBasicProperties(job)
 
     job.script = script.toObject() // >>> add .id  / embedded
     job.script_id = script._id
-    job.script_arguments = argsValues
+    job.script_arguments = job.task_arguments_values
     job.script_runas = task.script_runas
     job.timeout = task.timeout
     job.env = Object.assign({
@@ -535,8 +608,6 @@ class ScriptJob extends AbstractJob {
       THEEYE_ORGANIZATION_NAME: JSON.stringify(vars.customer.name),
       THEEYE_API_URL: JSON.stringify(App.config.system.base_url)
     }, task.env)
-
-    return this.saveJob(job)
   }
 }
 
@@ -548,11 +619,8 @@ class ScraperJob extends AbstractJob {
 
   async build () {
     const job = this.job
-    await this.setupJobBasicProperties(job)
 
     job.timeout = this.task.timeout
-
-    return this.saveJob(job)
   }
 }
 

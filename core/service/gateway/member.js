@@ -4,13 +4,13 @@ const config = require('config')
 const isEmail = require('validator/lib/isEmail')
 const Token = require('./token')
 
-class GatewayUser {
+class GatewayMember {
   /**
    * @param {Array<String>} values can be email or username
    * @param {Object} context information about inprogress request
    */
   async fetch (values, context) {
-    let url = config.gateway.user.url
+    let url = config.gateway.member.url
     url += '?' + qs.stringify({
       where: { users: values },
       gateway_token: Token.create(context)
@@ -26,4 +26,4 @@ class GatewayUser {
   }
 }
 
-module.exports = GatewayUser
+module.exports = GatewayMember
