@@ -51,8 +51,8 @@ module.exports = (server) => {
 
   server.put('/:customer/job/:job/cancel',
     middlewares,
-    router.requireCredential('user'),
-    router.resolve.idToEntity({param: 'job', required: true}),
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param: 'job', required: true }),
     controller.cancel
   )
 
@@ -98,7 +98,7 @@ module.exports = (server) => {
   server.put(
     '/:customer/job/:job/input',
     middlewares,
-    router.requireCredential('user'),
+    router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'job', required: true }),
     // verify input job
     (req, res, next) => {
