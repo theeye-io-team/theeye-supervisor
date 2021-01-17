@@ -129,6 +129,20 @@ const controller = {
       })
     })
   },
+  //async acl (req, res, next) {
+  //  try {
+  //    const workflow = req.workflow
+  //    // validate acl
+  //    workflow.acl = req.body
+  //    assignWorkflowAclToTasks(workflow, (err) => {
+  //      if (err) {
+  //        return res.send(err.statusCode || 500, err)
+  //      }
+  //      res.send(200, workflow)
+  //    })
+  //  } catch (err) {
+  //  }
+  //},
   /**
    *
    * @method POST

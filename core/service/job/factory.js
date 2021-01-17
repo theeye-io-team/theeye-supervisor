@@ -555,7 +555,8 @@ class ScriptJob extends AbstractJob {
     job.env = Object.assign({}, job.env, {
       THEEYE_JOB_USER: JSON.stringify({
         id: user.id,
-        email: user.email
+        email: user.email,
+        username: user.username,
       })
     })
 
@@ -599,7 +600,8 @@ class ScriptJob extends AbstractJob {
       }),
       THEEYE_JOB_USER: JSON.stringify({
         id: vars.user.id,
-        email: vars.user.email
+        email: vars.user.email,
+        username: vars.user.username
       }),
       THEEYE_JOB_WORKFLOW: JSON.stringify({
         job_id: (vars.workflow_job_id || null),

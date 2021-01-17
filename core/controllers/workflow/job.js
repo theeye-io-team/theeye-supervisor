@@ -1,6 +1,7 @@
 const App = require('../../app')
 const router = require('../../router')
 const logger = require('../../lib/logger')('controller:workflow:job')
+const dbFilter = require('../../lib/db-filter')
 const JobConstants = require('../../constants/jobs')
 const LifecycleConstants = require('../../constants/lifecycle')
 const Job = require('../../entity/job').Job
@@ -67,30 +68,85 @@ module.exports = (server) => {
     controller.remove
   )
 
-  /**
-   * fetch many jobs information
-   */
-  server.get('/workflows/:workflow/job',
-    middlewares,
+  server.get('/workflows/:workflow/job/:job',
+    server.auth.bearerMiddleware,
     router.requireCredential('viewer'),
-    router.resolve.idToEntity({ param: 'workflow', required: true }),
-    controller.fetch
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.resolve.idToEntityByCustomer({ param: 'workflow', required: true }),
+    router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
+    async (req, res, next) => {
+      try {
+        const customer = req.customer
+        const workflow = req.workflow
+        const job = req.job
+
+        if (!job.workflow_id || job.workflow_id.toString() !== workflow._id.toString()) {
+          throw new ClientError('Job does not belong to the Workflow')
+        }
+
+        res.send(200, job.publish())
+        next()
+      } catch (err) {
+        return res.send(500, err)
+      }
+    }
+  )
+
+  /**
+   * fetch many workflow job information
+   */
+  server.get('/workflows/:workflow/job/:job/jobs',
+    server.auth.bearerMiddleware,
+    router.requireCredential('viewer'),
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.resolve.idToEntityByCustomer({ param: 'workflow', required: true }),
+    router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
+    async (req, res, next) => {
+      try {
+        const customer = req.customer
+        const workflow = req.workflow
+        const job = req.job
+
+        if (!job.workflow_id || job.workflow_id.toString() !== workflow._id.toString()) {
+          throw new ClientError('Job does not belong to the Workflow')
+        }
+
+        const filter = dbFilter({})
+        filter.where.workflow_job_id = job._id.toString()
+        filter.where.customer_id = customer._id.toString()
+        filter.where.workflow_id = workflow._id.toString()
+
+        const jobs = await new Promise( (resolve, reject) => {
+          App.Models.Job.Job.fetchBy(filter, (err, jobs) => {
+            if (err) reject(err)
+            else resolve(jobs)
+          })
+        })
+
+        res.send(200, jobs.map(job => job.publish()))
+        next()
+      } catch (err) {
+        return res.send(500, err)
+      }
+    }
   )
 
   server.put('/workflows/:workflow/job/:job/cancel',
     server.auth.bearerMiddleware,
+    router.requireCredential('admin'),
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
-    router.requireCredential('admin'),
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
     controller.cancel
   )
 
   server.put('/workflows/:workflow/job/:job/acl',
     server.auth.bearerMiddleware,
+    router.requireCredential('admin'),
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
-    router.requireCredential('admin'),
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
     controller.updateAcl
   )
@@ -252,28 +308,7 @@ const controller = {
         }
       })
     })
-  },
-  fetch (req, res, next) {
-    throw new Error('in progress !!!')
-
-    const customer = req.customer
-    const user = req.user
-    const query = req.query
-
-    logger.log('querying jobs')
-
-    const filter = dbFilter(query, { /** default **/ })
-    filter.where.customer_id = customer._id.toString()
-    filter.populate = 'user'
-
-    Job.fetchBy(filter, (err, jobs) => {
-      if (err) { return res.send(500, err) }
-      let data = []
-      jobs.forEach(job => data.push(job.publish()))
-      res.send(200, data)
-      next()
-    })
-  },
+  }
 }
 
 

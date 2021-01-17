@@ -77,8 +77,7 @@ module.exports = (server) => {
     return next()
   }
 
-  server.put(
-    '/:customer/job/:job/approve',
+  server.put('/:customer/job/:job/approve',
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'job', required: true }),
@@ -86,8 +85,7 @@ module.exports = (server) => {
     controller.approve
   )
 
-  server.put(
-    '/:customer/job/:job/reject',
+  server.put('/:customer/job/:job/reject',
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'job', required: true }),
@@ -95,8 +93,7 @@ module.exports = (server) => {
     controller.reject
   )
 
-  server.put(
-    '/:customer/job/:job/input',
+  server.put('/:customer/job/:job/input',
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'job', required: true }),
@@ -124,8 +121,7 @@ module.exports = (server) => {
     controller.submitInput
   )
 
-  server.put(
-    '/:customer/job/:job/restart',
+  server.put('/:customer/job/:job/restart',
     middlewares,
     router.requireCredential('user'),
     router.resolve.idToEntity({ param: 'job', required: true }),
@@ -179,7 +175,11 @@ const controller = {
 
     App.jobDispatcher.cancel({
       result: {
-        user: { email: user.email, id: user.id },
+        user: {
+          email: user.email,
+          id: user.id,
+          username: user.username
+        },
       },
       job,
       user: req.user,
@@ -200,7 +200,11 @@ const controller = {
 
     App.jobDispatcher.finish({
       result: {
-        user: { email: user.email, id: user.id },
+        user: {
+          email: user.email,
+          id: user.id,
+          username: user.username
+        },
         output: job.task_arguments_values
       },
       state: StateConstants.SUCCESS,
@@ -219,7 +223,11 @@ const controller = {
 
     App.jobDispatcher.finish({
       result: {
-        user: { email: user.email, id: user.id },
+        user: {
+          email: user.email,
+          id: user.id,
+          username: user.username
+        },
         output: job.task_arguments_values
       },
       state: StateConstants.FAILURE,
