@@ -40,37 +40,29 @@ module.exports = {
       }
     })
 
-    const bearerStrategy = new BearerStrategy((token, done) => {
-      logger.log('new connection [bearer]')
-      /**
-       * verify incomming json web token validity
-       */
-      //let decoded = jwt.verify(token, config.secret, {}, (err, decoded) => {
-      //  if (err) {
-      //    logger.error(err)
-      //    err.status = 401
-      //    return done(err)
-      //  } else {
-          //sessionVerify(token).then(profile => {})
-          fetchProfile(token)
-            .then(response => {
-              if (response.statusCode === 200) {
-                let profile = JSON.parse(response.rawBody)
-                return done(null, profile)
-              } else {
-                logger.error(response.rawBody, response.statusCode)
-                let err = new Error(`authentication failed`)
-                err.name = 'authentication failed'
-                err.body = response.rawBody
-                err.statusCode = response.statusCode || 500
-                throw err
-              }
-            })
-            .catch(err => {
-              done(err)
-            })
-      //  }
-      //})
+    const bearerStrategy = new BearerStrategy(async (token, done) => {
+      try {
+        logger.log('new connection [bearer]')
+        //let decoded = verifyToken(token)
+        //if (decoded) {
+        //}
+
+        //sessionVerify(token).then(profile => {})
+        const response = await fetchProfile(token)
+        if (response.statusCode === 200) {
+          let profile = JSON.parse(response.rawBody)
+          return done(null, profile)
+        } else {
+          logger.error(response.rawBody, response.statusCode)
+          let err = new Error(`authentication failed`)
+          err.name = 'authentication failed'
+          err.body = response.rawBody
+          err.statusCode = response.statusCode || 500
+          throw err
+        }
+      } catch (err) {
+        done(err)
+      }
     })
 
     passport.use(basicStrategy)
@@ -97,6 +89,17 @@ module.exports = {
 
     return { bearerMiddleware }
   }
+}
+
+const verifyToken = (token) => {
+  let decoded
+  try {
+    decoded = jwt.verify(token, config.secret, {})
+  } catch (jwtErr) {
+    logger.log(jwtErr)
+  }
+  logger.log(decoded)
+  return decoded
 }
 
 const fetchProfile = (token) => {

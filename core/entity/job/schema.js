@@ -13,8 +13,12 @@ function BaseSchema (props) {
     discriminatorKey: '_type'
   })
 
-  this.statics.fetchBy = function (filter, next) {
-    FetchBy.call(this,filter,next)
+  this.statics.fetchBy = function (filter, next = null) {
+    if (next !== null) {
+      return FetchBy.call(this, filter, next)
+    }
+
+    return util.promisify(FetchBy).call(this, filter)
   }
 
   // Duplicate the ID field.

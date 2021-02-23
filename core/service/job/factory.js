@@ -290,12 +290,11 @@ class AbstractJob {
    * @return Promise
    */
   async create () {
-    await this.setupJobBasicProperties()
-    await this.setDynamicProperties()
-
     try {
+      await this.setupJobBasicProperties()
       await this.verifyArguments()
       await this.build()
+      await this.setDynamicProperties()
       await this.saveJob()
     } catch (err) {
       await this.terminateBuild(err)
@@ -464,8 +463,6 @@ class ApprovalJob extends AbstractJob {
   async build () {
     /** approval job is created onhold , waiting approvers decision **/
     const job = this.job
-
-    await this.setDynamicProperties()
     job.lifecycle = LifecycleConstants.ONHOLD
   }
 
@@ -621,7 +618,6 @@ class ScraperJob extends AbstractJob {
 
   async build () {
     const job = this.job
-
     job.timeout = this.task.timeout
   }
 }

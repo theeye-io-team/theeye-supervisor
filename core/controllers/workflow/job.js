@@ -7,6 +7,7 @@ const LifecycleConstants = require('../../constants/lifecycle')
 const Job = require('../../entity/job').Job
 const jobArgumentsValidateMiddleware = require('../../service/job/arguments-validation')
 const { ClientError } = require('../../lib/error-handler')
+const ACL = require('../../lib/acl')
 
 module.exports = (server) => {
   const middlewares = [
@@ -103,33 +104,60 @@ module.exports = (server) => {
     router.ensureCustomer,
     router.resolve.idToEntityByCustomer({ param: 'workflow', required: true }),
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
-    async (req, res, next) => {
-      try {
-        const customer = req.customer
-        const workflow = req.workflow
-        const job = req.job
+    (req, res, next) => {
+      const customer = req.customer
+      const workflow = req.workflow
+      const job = req.job
 
-        if (!job.workflow_id || job.workflow_id.toString() !== workflow._id.toString()) {
-          throw new ClientError('Job does not belong to the Workflow')
-        }
-
-        const filter = dbFilter({})
-        filter.where.workflow_job_id = job._id.toString()
-        filter.where.customer_id = customer._id.toString()
-        filter.where.workflow_id = workflow._id.toString()
-
-        const jobs = await new Promise( (resolve, reject) => {
-          App.Models.Job.Job.fetchBy(filter, (err, jobs) => {
-            if (err) reject(err)
-            else resolve(jobs)
-          })
-        })
-
-        res.send(200, jobs.map(job => job.publish()))
-        next()
-      } catch (err) {
-        return res.send(500, err)
+      if (!job.workflow_id || job.workflow_id.toString() !== workflow._id.toString()) {
+        throw new ClientError('Job does not belong to the Workflow')
       }
+
+      const filter = dbFilter({})
+      filter.where.workflow_job_id = job._id.toString()
+      filter.where.customer_id = customer._id.toString()
+      filter.where.workflow_id = workflow._id.toString()
+
+      if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
+        // find what this user can access
+        filter.where.acl = req.user.email
+      }
+
+      App.Models.Job.Job.fetchBy(filter)
+        .then(jobs => {
+          res.send(200, jobs.map(job => job.publish()))
+          next()
+        }).catch(err => {
+          logger.error(err, err.status)
+          res.send(err.status || 500, err.message)
+        })
+    }
+  )
+
+  server.get('/workflows/:workflow/job',
+    server.auth.bearerMiddleware,
+    router.requireCredential('admin'),
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.resolve.idToEntityByCustomer({ param: 'workflow', required: true }),
+    router.ensureCustomerBelongs('workflow'),
+    async (req, res, next) => {
+      const workflow = req.workflow
+      const customer = req.customer
+
+      const filter = dbFilter(req.query, { })
+      filter.where.customer_id = customer.id
+      filter.where.workflow_id = workflow._id.toString()
+
+      App.Models.Job.Job.fetchBy(filter)
+        .then(jobs => {
+          res.send(200, jobs)
+          next()
+        })
+        .catch(err => {
+          logger.error(err, err.status)
+          res.send(err.status || 500, err.message)
+        })
     }
   )
 
