@@ -1,5 +1,5 @@
 
-export DEBUG="*eye*error*"
+export DEBUG="*eye*"
 export NODE_ENV="localdev"
 export MONITORING_DISABLED=""
 export SCHEDULER_JOBS_DISABLED=""
