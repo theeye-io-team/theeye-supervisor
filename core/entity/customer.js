@@ -11,6 +11,7 @@ function Schema () {
       required: true,
       dropDups: true
     },
+    display_name: { type: String, default: '' },
     description: { type: String, default: '' },
     owner_id: { type: mongoose.Schema.Types.ObjectId },
     //owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
