@@ -434,15 +434,14 @@ module.exports = {
       }
 
       task.acl = workflow.acl
-
       task.save(err => {
         if (err) {
           logger.error(err)
           return next(err)
-        } else {
-          sendTaskUpdatedEventNotification(task)
-          return next()
         }
+
+        sendTaskUpdatedEventNotification(task)
+        return next()
       })
     })
   },

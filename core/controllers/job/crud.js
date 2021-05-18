@@ -94,7 +94,7 @@ module.exports = (server) => {
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
-    controller.updateAcl
+    controller.replaceAcl
   )
 
   server.put('/job/:job/assignee',
@@ -201,24 +201,24 @@ const controller = {
       next()
     })
   },
-  async updateAcl (req, res, next) {
+  async replaceAcl (req, res, next) {
     try {
       const job = req.job
       const search = req.body
 
       if (!Array.isArray(search) || search.length === 0) {
-        throw new ClientError('invalid format')
+        throw new ClientError('Invalid acl format')
       }
 
       for (let value of search) {
         if (typeof value !== 'string') {
-          throw new ClientError(`invalid body payload format. wrong value ${value}`)
+          throw new ClientError(`Invalid acl format. Value ${value} must be string`)
         }
       }
 
       const users = await App.gateway.user.fetch(search, { customer_id: req.customer.id })
       if (!users || users.length === 0) {
-        throw new ClientError('invalid members')
+        throw new ClientError('Invalid members')
       }
 
       const acl = users.map(user => user.email)

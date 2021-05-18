@@ -26,7 +26,7 @@ module.exports = (server) => {
     router.ensureAllowed({ entity: { name: 'task' } })
   ], controller.get)
 
-  var middlewares = [
+  const middlewares = [
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer
@@ -49,23 +49,20 @@ module.exports = (server) => {
     router.resolve.idToEntity({ param: 'host_id', entity: 'host', into: 'host' })
   )
 
-  server.patch(
-    '/:customer/task/:task',
+  server.patch('/:customer/task/:task',
     mws,
     controller.replace,
     audit.afterUpdate('task', { display: 'name' })
   )
 
-  server.put(
-    '/:customer/task/:task',
+  server.put('/:customer/task/:task',
     mws,
     router.resolve.idToEntity({ param: 'script', entity: 'file' }),
     controller.replace,
     audit.afterReplace('task', { display: 'name' })
   )
 
-  server.del(
-    '/:customer/task/:task',
+  server.del('/:customer/task/:task',
     mws,
     controller.remove,
     audit.afterRemove('task', { display: 'name' })
