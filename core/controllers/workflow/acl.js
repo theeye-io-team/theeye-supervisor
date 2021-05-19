@@ -7,7 +7,7 @@ const logger = require('../../lib/logger')('controller:workflow:acl')
 
 module.exports = (server) => {
 
-  server.get('/workflow/:workflow/acl',
+  server.get('/workflows/:workflow/acl',
     server.auth.bearerMiddleware,
     router.requireCredential('manager'),
     router.resolve.customerSessionToEntity(),
@@ -17,7 +17,7 @@ module.exports = (server) => {
     controller.get
   )
 
-  server.put('/workflow/:workflow/acl',
+  server.put('/workflows/:workflow/acl',
     server.auth.bearerMiddleware,
     router.requireCredential('manager'),
     router.resolve.customerSessionToEntity(),
@@ -28,7 +28,7 @@ module.exports = (server) => {
     audit.afterUpdate('workflow', { display: 'name' })
   )
 
-  server.patch('/workflow/:workflow/acl',
+  server.patch('/workflows/:workflow/acl',
     server.auth.bearerMiddleware,
     router.requireCredential('manager'),
     router.resolve.customerSessionToEntity(),
@@ -39,7 +39,7 @@ module.exports = (server) => {
     audit.afterUpdate('workflow', { display: 'name' })
   )
 
-  server.del('/workflow/:workflow/acl',
+  server.del('/workflows/:workflow/acl',
     server.auth.bearerMiddleware,
     router.requireCredential('manager'),
     router.resolve.customerSessionToEntity(),
