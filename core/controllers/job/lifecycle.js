@@ -51,7 +51,7 @@ module.exports = (server) => {
 
   server.put('/:customer/job/:job/cancel',
     middlewares,
-    router.requireCredential('admin'),
+    router.requireCredential('user'),
     router.resolve.idToEntity({ param: 'job', required: true }),
     controller.cancel
   )
