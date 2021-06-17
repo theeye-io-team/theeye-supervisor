@@ -13,7 +13,25 @@ module.exports = {
     fails_count_alert: 1
   },
   mailer: {
-    from: "The Eye Development %customer% <%customer%@theeye.io>"
+    from: '%customer% TheEye.io Dev <support@theeye.io>',
+    replyTo: 'Support <support@theeye.io>',
+    only_support: false,
+    include_support_bcc: false,
+    support: ['facugon@theeye.io'],
+    invitation: 'contact@theeye.io',
+    transport: {
+      type: 'smtp',
+      // options are passed directly to nodemailer transport contructor
+      options: {
+        port: 6025,
+        secure: false,
+        //tls: {
+        //  // do not fail on invalid certs
+        //  rejectUnauthorized: false
+        //},
+        ignoreTLS: true
+      }
+    }
   },
   notifications: {
     api: {

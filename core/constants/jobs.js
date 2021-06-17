@@ -12,6 +12,7 @@ exports.AGENT_UPDATE_TYPE = 'AgentUpdateJob'
 exports.NGROK_INTEGRATION_TYPE = 'NgrokIntegrationJob'
 
 exports.ORIGIN_SECRET = 'secret'
+exports.ORIGIN_API = 'api'
 exports.ORIGIN_USER = 'user'
 exports.ORIGIN_WORKFLOW = 'workflow'
 exports.ORIGIN_TRIGGER_BY = 'trigger_by'

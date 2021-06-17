@@ -14,8 +14,6 @@ function WorkflowSchema (props) {
     name: { type: String, required: true },
     description: { type: String, default: '' },
     tags: { type: Array, default: [] },
-    acl: [{ type: String }],
-    acl_dynamic: { type: Boolean, default: false }, // if "true" acl will be empty on creation
     triggers: [{ type: ObjectId, ref: 'Event' }],
     graph: { type: Object },
     lifecycle: { type: String },
@@ -28,6 +26,26 @@ function WorkflowSchema (props) {
     end_task: { type: ObjectId, ref: 'Task', required: false },
     secret: { type: String, default: randomSecret }, // one way hash
     table_view: { type: Boolean, default: false },
+
+    // users that will interact with this workflows
+    assigned_users: [{ type: String }],
+    // which users members are going to interact with this workflow execution
+    // keep it backward compatible.
+    user_inputs_members: [{ type: String }],
+    // user access control list. who can execute, observe, interact with the workflow and the jobs
+    acl: [{ type: String }],
+    // Apply to the workflow-jobs created from this workflow, and the task jobs that belongs to the workflow-jobs,
+    // will be only visible to the user/owner and the assigned_users.
+    // if "true" acl will be empty on creation
+    empty_viewers: { type: Boolean, default: false },
+
+    // jobs behaviour can change during run time
+    allows_dynamic_settings: { type: Boolean, default: false },
+
+    // @TODO REMOVE
+    acl_dynamic: { type: Boolean, default: false },
+
+    // default schema type
     _type: {
       type: String,
       default: 'Workflow'

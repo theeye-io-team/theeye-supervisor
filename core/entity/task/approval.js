@@ -10,7 +10,8 @@ const ApprovalSchema = new BaseSchema({
   failure_enabled: { type: Boolean, 'default': true },
   cancel_enabled: { type: Boolean, 'default': true },
   ignore_enabled: { type: Boolean, 'default': true },
-  approvers: [{ type: ObjectId }],
+  approvals_target: { type: String }, // who approves
+  approvers: [{ type: ObjectId }], // if approval_assignee is "members" , "approvers" must be a list of users/members
   template_id: { type: ObjectId },
   template: { type: ObjectId, ref: 'ApprovalTaskTemplate' },
   type: { type: String, default: 'approval' },

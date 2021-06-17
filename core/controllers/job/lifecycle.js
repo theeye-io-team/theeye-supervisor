@@ -19,43 +19,6 @@ module.exports = (server) => {
     router.ensureCustomer
   ]
 
-  // obtain job current lifecycle
-  server.get(
-    '/:customer/job/:job/lifecycle',
-    middlewares,
-    router.requireCredential('user'),
-    router.resolve.idToEntity({param: 'job', required: true}),
-    controller.get
-  )
-
-  server.put('/job/:job/synced',
-    middlewares,
-    router.requireCredential('user'),
-    router.resolve.idToEntity({param: 'job', required: true}),
-    async (req, res, next) => {
-      try {
-        const job = req.job
-        if (job.lifecycle !== LifecycleConstants.SYNCING) {
-          res.send(400, `job lifecycle must be syncing. ${job.lifecycle} is set`)
-          return
-        }
-
-        await App.jobDispatcher.syncingToReady(job)
-        res.send(200, "ok")
-      } catch (err) {
-        logger.error(err)
-        res.send(500, 'Internal Server Error')
-      }
-    }
-  )
-
-  server.put('/:customer/job/:job/cancel',
-    middlewares,
-    router.requireCredential('user'),
-    router.resolve.idToEntity({ param: 'job', required: true }),
-    controller.cancel
-  )
-
   const verifyApprovalMiddleware = (req, res, next) => {
     const approver_id = req.user.id
     const job = req.job
@@ -77,10 +40,51 @@ module.exports = (server) => {
     return next()
   }
 
+  // obtain job current lifecycle
+  server.get(
+    '/:customer/job/:job/lifecycle',
+    middlewares,
+    router.requireCredential('user'),
+    router.resolve.idToEntity({param: 'job', required: true}),
+    router.ensureAllowed({ entity: { name: 'job' } }),
+    controller.get
+  )
+
+  server.put('/job/:job/synced',
+    middlewares,
+    router.requireCredential('user'),
+    router.resolve.idToEntity({param: 'job', required: true}),
+    router.ensureAllowed({ entity: { name: 'job' } }),
+    async (req, res, next) => {
+      try {
+        const job = req.job
+        if (job.lifecycle !== LifecycleConstants.SYNCING) {
+          res.send(400, `job lifecycle must be syncing. ${job.lifecycle} is set`)
+          return
+        }
+
+        await App.jobDispatcher.syncingToReady(job)
+        res.send(200, "ok")
+      } catch (err) {
+        logger.error(err)
+        res.send(500, 'Internal Server Error')
+      }
+    }
+  )
+
+  server.put('/:customer/job/:job/cancel',
+    middlewares,
+    router.requireCredential('viewer'),
+    router.resolve.idToEntity({ param: 'job', required: true }),
+    router.ensureAllowed({ entity: { name: 'job' } }),
+    controller.cancel
+  )
+
   server.put('/:customer/job/:job/approve',
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'job', required: true }),
+    router.ensureAllowed({ entity: { name: 'job' } }),
     verifyApprovalMiddleware,
     controller.approve
   )
@@ -89,6 +93,7 @@ module.exports = (server) => {
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'job', required: true }),
+    router.ensureAllowed({ entity: { name: 'job' } }),
     verifyApprovalMiddleware,
     controller.reject
   )
@@ -97,6 +102,7 @@ module.exports = (server) => {
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'job', required: true }),
+    router.ensureAllowed({ entity: { name: 'job' } }),
     // verify input job
     (req, res, next) => {
       const job = req.job
@@ -125,6 +131,7 @@ module.exports = (server) => {
     middlewares,
     router.requireCredential('user'),
     router.resolve.idToEntity({ param: 'job', required: true }),
+    router.ensureAllowed({ entity: { name: 'job' } }),
     // verify input job
     (req, res, next) => {
       try {

@@ -6,23 +6,25 @@ module.exports = ({ task, body, query }) => {
 
   if (dynamicTaskArgs.length > 0) {
     if (!body && !query) {
-      throw new Error(`Task arguments required`)
+      throw new ClientError(`Task arguments required`)
     }
 
     body || (body={})
     query || (query={})
+
+    const argumentsLengthError = new ClientError(`Invalid Task Arguments. An array of length ${dynamicTaskArgs.length} is required. Optionals must be null`)
 
     args = (body.task_arguments || query.task_arguments)
     if (!args) {
       if (Array.isArray(body)) {
         args = body
       } else {
-        throw new ClientError(`Invalid arguments length. ${dynamicTaskArgs.length} arguments required`)
+        throw argumentsLengthError
       }
     }
 
     if (!Array.isArray(args) || args.length < dynamicTaskArgs.length) {
-      throw new ClientError('invalid task arguments length')
+      throw argumentsLengthError
     }
   }
 

@@ -6,7 +6,7 @@ const Token = require('./token')
 
 class GatewayMember {
   /**
-   * @param {Array<String>} values can be email or username
+   * @param {Array<String>} values can be user emails, usernames or ids
    * @param {Object} context information about inprogress request
    */
   async fetch (values, context) {
@@ -20,6 +20,8 @@ class GatewayMember {
       retry: { limit: 0 },
       headers: { 'content-type': 'application/json' },
       responseType: 'json'
+    }).catch(err => {
+      return err
     })
 
     return res.body

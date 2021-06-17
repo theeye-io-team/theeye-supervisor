@@ -94,8 +94,8 @@ module.exports = {
    *
    */
   mailer: {
-    from: 'The Eye %customer% <%customer%@theeye.io>',
-    reply_to: 'Info <info@theeye.io>',
+    from: '%customer% TheEye.io <support@theeye.io>',
+    reply_to: 'Support <support@theeye.io>',
     only_support: false,
     include_support_bcc: false,
     support: [ 'facugon@theeye.io' ],

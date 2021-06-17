@@ -8,9 +8,10 @@ const TopicsConstants = require('../constants/topics')
 module.exports = {
   sendEmailNotification (options) {
     if (!options.to && !options.bcc) {
-      logger.error('failed to send email')
-      logger.error(new Error('no recipients'))
+      const err = new Error('no recipients')
+      logger.error('failed to send email. %s', err.message)
       return
+      //throw err
     }
 
     const setup = {

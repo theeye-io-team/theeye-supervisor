@@ -1,6 +1,6 @@
 
 const mongoose = require('mongoose')
-const debug = require('debug')('eye:lib:mongodb')
+const debug = require('debug')('theeye:lib:mongodb')
 const format = require('util').format
 
 function MongoDBConnection () {

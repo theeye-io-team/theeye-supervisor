@@ -23,14 +23,42 @@ module.exports = (server) => {
 
   server.post(
     '/:customer/task/:task/secret/:secret/job',
-    router.resolve.customerNameToEntity({ required: true }),
     router.resolve.idToEntity({ param: 'task', required: true }),
-    router.ensureCustomerBelongs('task'),
     router.requireSecret('task'),
     (req, res, next) => {
-      req.user = App.user
-      req.origin = JobConstants.ORIGIN_SECRET
-      next()
+      req.task
+        .populate('customer')
+        .execPopulate()
+        .then(() => {
+          req.customer = req.task.customer
+          req.user = App.user
+          req.origin = JobConstants.ORIGIN_SECRET
+          next()
+        })
+        .catch(err => {
+          return res.send(500, err.message)
+        })
+    },
+    createJob
+  )
+
+  server.post(
+    '/task/:task/secret/:secret/job',
+    router.resolve.idToEntity({ param: 'task', required: true }),
+    router.requireSecret('task'),
+    (req, res, next) => {
+      req.task
+        .populate('customer')
+        .execPopulate()
+        .then(() => {
+          req.customer = req.task.customer
+          req.user = App.user
+          req.origin = JobConstants.ORIGIN_SECRET
+          next()
+        })
+        .catch(err => {
+          return res.send(500, err.message)
+        })
     },
     createJob
   )

@@ -5,7 +5,7 @@ const dbFilter = require('../../lib/db-filter')
 const JobConstants = require('../../constants/jobs')
 const LifecycleConstants = require('../../constants/lifecycle')
 const Job = require('../../entity/job').Job
-const jobArgumentsValidateMiddleware = require('../../service/job/arguments-validation')
+const jobPayloadValidationMiddleware = require('../../service/job//payload-validation')
 const { ClientError } = require('../../lib/error-handler')
 const ACL = require('../../lib/acl')
 
@@ -35,7 +35,9 @@ module.exports = (server) => {
 
   // create a new workflow-job instance
   server.post('/workflows/:workflow/job',
-    middlewares,
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     router.requireCredential('user'),
     router.resolve.idToEntity({ param: 'workflow', required: true }),
     router.resolve.idToEntity({ param: 'task' }),
@@ -47,15 +49,22 @@ module.exports = (server) => {
 
   // create job using task secret key
   server.post('/workflows/:workflow/secret/:secret/job',
-    router.resolve.customerNameToEntity({ required: true }),
     router.resolve.idToEntity({ param: 'workflow', required: true }),
     router.resolve.idToEntity({ param: 'task' }),
-    router.ensureCustomerBelongs('workflow'),
     router.requireSecret('workflow'),
     (req, res, next) => {
-      req.user = App.user
-      req.origin = JobConstants.ORIGIN_SECRET
-      next()
+      req.workflow
+        .populate('customer')
+        .execPopulate()
+        .then(() => {
+          req.customer = req.workflow.customer
+          req.user = App.user
+          req.origin = JobConstants.ORIGIN_SECRET
+          next()
+        })
+        .catch(err => {
+          return res.send(500, err.message)
+        })
     },
     verifyStartingTask,
     controller.create
@@ -176,32 +185,50 @@ module.exports = (server) => {
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
-    controller.updateAcl
+    (req, res, next) => {
+      try {
+        if (req.job._type !== JobConstants.WORKFLOW_TYPE) {
+          throw new ClientError('parent workflow job required')
+        }
+
+        if (!Array.isArray(req.body) || req.body.length === 0) {
+          throw new ClientError('invalid body payload format')
+        }
+
+        if (
+          req.job.allows_dynamic_settings === false ||
+          req.job.allows_dynamic_settings !== true
+        ) {
+          throw new ClientError('Dynamic settings not allowed', { statusCode: 403 })
+        }
+
+        for (let value of req.body) {
+          if (typeof value !== 'string') {
+            throw new ClientError(`invalid body payload format. wrong value ${value}`)
+          }
+        }
+
+        next()
+      } catch (err) {
+        if (err.statusCode < 500) {
+          res.send(err.statusCode, err.message)
+        } else {
+          logger.error(err)
+          res.send(500, 'Internal Server Error')
+        }
+      }
+    },
+    controller.replaceAcl
   )
 }
 
 const controller = {
-  async updateAcl (req, res, next) {
+  async replaceAcl (req, res, next) {
     try {
       const job = req.job
-      const search = req.body
-
-      if (job._type !== JobConstants.WORKFLOW_TYPE) {
-        throw new ClientError('parent workflow job required')
-      }
-
-      if (!Array.isArray(search) || search.length === 0) {
-        throw new ClientError('invalid body payload format')
-      }
 
       const userPromise = []
-      for (let value of search) {
-        if (typeof value !== 'string') {
-          throw new ClientError(`invalid body payload format. wrong value ${value}`)
-        }
-      }
-
-      const users = await App.gateway.user.fetch(search, { customer_id: req.customer.id })
+      const users = await App.gateway.user.fetch(req.body, { customer_id: req.customer.id })
       if (!users || users.length === 0) {
         throw new ClientError('invalid members')
       }
@@ -236,20 +263,11 @@ const controller = {
   },
   async create (req, res, next) {
     try {
-      const { workflow, user, customer, task } = req
-      const args = jobArgumentsValidateMiddleware(req)
+      const { user } = req
+      const payload = await jobPayloadValidationMiddleware(req)
+      const wJob = await App.jobDispatcher.createByWorkflow(payload)
 
-      const wJob = await App.jobDispatcher.createByWorkflow({
-        task,
-        workflow,
-        user,
-        customer,
-        notify: true,
-        task_arguments_values: args,
-        origin: (req.origin || JobConstants.ORIGIN_USER)
-      })
-
-      let data = wJob.publish()
+      const data = wJob.publish()
       data.user = {
         id: user.id,
         username: user.username,

@@ -76,6 +76,24 @@ module.exports = (server) => {
     //audit.afterCreate('job',{ display: 'name' })
   )
 
+  server.put('/job/:job/assignee',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
+    controller.updateAssignee
+  )
+
+  server.get('/job/:job/participants',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('viewer'),
+    router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
+    controller.participants
+  )
+
   // create job using task secret key
   server.post('/job/secret/:secret',
     router.resolve.customerNameToEntity({ required: true }),
@@ -88,22 +106,6 @@ module.exports = (server) => {
     },
     createJob
     //audit.afterCreate('job',{ display: 'name' })
-  )
-
-  server.put('/job/:job/acl',
-    middlewares,
-    router.requireCredential('admin'),
-    router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
-    controller.replaceAcl
-  )
-
-  server.put('/job/:job/assignee',
-    server.auth.bearerMiddleware,
-    router.resolve.customerSessionToEntity(),
-    router.ensureCustomer,
-    router.requireCredential('admin'),
-    router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
-    controller.updateAssignee
   )
 }
 
@@ -201,40 +203,6 @@ const controller = {
       next()
     })
   },
-  async replaceAcl (req, res, next) {
-    try {
-      const job = req.job
-      const search = req.body
-
-      if (!Array.isArray(search) || search.length === 0) {
-        throw new ClientError('Invalid acl format')
-      }
-
-      for (let value of search) {
-        if (typeof value !== 'string') {
-          throw new ClientError(`Invalid acl format. Value ${value} must be string`)
-        }
-      }
-
-      const users = await App.gateway.user.fetch(search, { customer_id: req.customer.id })
-      if (!users || users.length === 0) {
-        throw new ClientError('Invalid members')
-      }
-
-      const acl = users.map(user => user.email)
-
-      if (job._type === JobConstants.WORKFLOW_TYPE) {
-        App.jobDispatcher.updateWorkflowJobsAcls(job, acl)
-      }
-
-      job.acl = acl
-      await job.save()
-      res.send(200, job.acl)
-    } catch (err) {
-      logger.error(err, err.status)
-      res.send(err.status || 500, err.message)
-    }
-  },
   async updateAssignee (req, res, next) {
     try {
       const job = req.job
@@ -255,14 +223,140 @@ const controller = {
         throw new ClientError('invalid members')
       }
 
+      // job acl
+      for (let member of members) {
+        if (member.user_id && member.user.email) {
+          ACL.ensureAllowed({
+            email: member.user.email,
+            credential: member.credential,
+            model: job
+          })
+        }
+      }
+
       job.user_inputs_members = members.map(member => member.id)
       await job.save()
       res.send(200, job.user_inputs_members)
     } catch (err) {
-      logger.error(err, err.status)
-      res.send(err.status || 500, err.message)
+      res.sendError(err)
+    }
+  },
+  async participants (req, res, next) {
+    try {
+      const job = req.job
+
+      let search = []
+      search.push(job.user_id)
+
+      if (
+        job.assigned_users.length > 1 || 
+        job.assigned_users.length === 1 && job.assigned_users[0] !== job.user_id
+      ) {
+        search = search.concat(job.assigned_users)
+      }
+
+      if (job.acl.length >= 1) {
+        search = search.concat(job.acl)
+      }
+
+      const members = await App.gateway.member.fetch(search, { customer_id: req.customer.id })
+
+      const users = membersToUsers(members)
+      const participants = {
+        owner: users.find(user => user.id === job.user_id),
+        assignee: searchUsers(users, job.assigned_users),
+        observers: searchUsers(users, job.acl)
+      }
+
+      res.send(200, participants)
+    } catch (err) {
+      res.sendError(err)
     }
   }
+  /**
+  async participants (req, res, next) {
+    try {
+      const job = req.job
+
+      const fetch = []
+      if (job.user_id) {
+        const owner = App.gateway.member.fetch(
+          [ job.user_id ],
+          { customer_id: req.customer.id }
+        )
+        fetch.push(owner)
+      } else {
+        fetch.push(null)
+      }
+
+      if (
+        job.assigned_users.length > 1 || 
+        job.assigned_users.length === 1 && job.assigned_users[0] !== job.user_id
+      ) {
+        const assignee = App.gateway.member.fetch(
+          job.assigned_users,
+          { customer_id: req.customer.id }
+        )
+        fetch.push(assignee)
+      } else {
+        fetch.push(null)
+      }
+
+      if (job.acl.length >= 1) {
+        const observers = App.gateway.member.fetch(
+          job.acl,
+          { customer_id: req.customer.id }
+        )
+        fetch.push(observers)
+      } else {
+        fetch.push(null)
+      }
+
+      const result = await Promise.all(fetch)
+
+      const participants = {
+        owner: membersToUsers(result[0]),
+        assignee: membersToUsers(result[1]),
+        observers: membersToUsers(result[2])
+      }
+
+      res.send(200, participants)
+    } catch (err) {
+      res.sendError(err)
+    }
+  }
+  */
+}
+
+const searchUsers = (users, search) => {
+  const results = []
+  for (let value of search) {
+    const matched = users.find(user => {
+      return (
+        user.id === value ||
+        user.email === value ||
+        user.username === value
+      )
+    })
+
+    if (matched !== undefined) {
+      results.push(matched)
+    }
+  }
+  return results
+}
+
+const membersToUsers = (members) => {
+  const users = []
+
+  if (!members || members.length === 0) {
+    return []
+  }
+  for (let member of members) {
+    users.push(member.user)
+  }
+
+  return users
 }
 
 const afterFinishJobHook = (req, res, next) => {

@@ -11,7 +11,6 @@ module.exports = {
   tags: { type: Array },
   description : { type: String },
   triggers: [{ type: ObjectId, ref: 'Event' }],
-  acl: [{ type: String }],
   secret: { type: String, default: randomSecret }, // one way hash
   grace_time: { type: Number, default: 0 },
   timeout: { type: Number },
@@ -23,7 +22,22 @@ module.exports = {
   register_body: { type: Boolean, default: false },
   execution_count: { type: Number, default: 0 },
   multitasking: { type: Boolean, default: true },
+  show_result: { type: Boolean, default: false }, // popup
+
+  // users that will interact with this task
+  assigned_users: [{ type: String }],
+  // this task requieres input (forced). will not accept input via triggers. users action is required.
   user_inputs: { type: Boolean, default: false },
+  // which users members are going to interact with the workflow execution. keep it for backward compatibility.
   user_inputs_members: [{ type: String }],
-  show_result: { type: Boolean, default: false }
+  // user access control list. who can execute, observe, interact with the task and the jobs
+  acl: [{ type: String }],
+
+  // jobs behaviour can change during run time
+  allows_dynamic_settings: { type: Boolean, default: false },
+
+  // Apply to the jobs created from this task,
+  // will be only visible to the user/owner and the assigned_users.
+  // if "true" acl will be empty on creation
+  empty_viewers: { type: Boolean, default: false },
 }

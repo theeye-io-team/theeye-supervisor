@@ -60,14 +60,27 @@ class ErrorHandler {
     return this.errors.length > 0
   }
 
-	sendExceptionAlert (error) {
+	sendExceptionAlert (error, req = null) {
 		this.errors.push(error)
+
+    let content = this.toHtml()
+
+    if (req) {
+      let customer = (req.customer && req.customer.name)
+      content += `
+        <h3>Request</h3>
+        <div>URL ${req.url}</div>
+        <div>Customer ${customer}</div>
+      `
+    }
+
 		notification.sendEmailNotification({
-			customer_name: 'TheEye',
+			customer_name: `TheEye`,
 			subject: 'Supervisor Exception',
 			to: config.mailer.support.join(','),
-			content: this.toHtml()
+			content
 		})
+
 		return this.errors.length > 0
 	}
 
@@ -112,7 +125,7 @@ class ClientError extends ExtendedError {
     options||(options={})
     this.name = this.constructor.name
     this.code = options.code || ''
-    this.status = options.statusCode || 400
+    this.statusCode = this.status = options.statusCode || 400
   }
 }
 
@@ -122,7 +135,7 @@ class ServerError extends ExtendedError {
     options||(options={})
     this.name = this.constructor.name
     this.code = options.code || ''
-    this.status = options.statusCode || 500
+    this.statusCode = this.status = options.statusCode || 500
   }
 }
 

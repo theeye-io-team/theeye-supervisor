@@ -5,6 +5,8 @@ const TopicConstants = require('../../constants/topics')
 const JobConstants = require('../../constants/jobs')
 const createJob = require('./create-job')
 
+const ObjectId = require('mongoose').Schema.Types.ObjectId
+
 /**
  *
  * @param {Object} payload
@@ -16,7 +18,7 @@ const createJob = require('./create-job')
  */
 module.exports = async function (payload) {
   try {
-    // a task completed its execution and triggered an event
+    // a task has completed its execution and triggered an event
     // or a monitor has changed its state
     if (
       payload.topic === TopicConstants.task.execution ||
@@ -48,22 +50,32 @@ const triggeredTaskByEvent = async ({ event, data, job }) => {
 
   if (tasks.length == 0) { return }
 
-  // if the event is emitted by a job
-  let task_optionals
+  
+  let dynamic_settings // if the event was emitted by a job
   if (job) {
     if (job.result && job.result.next) {
-      task_optionals = job.result.next
+      dynamic_settings = job.result.next
     }
   }
 
+  let user // the owner of the execution
+  if (job && job.user_id) {
+    user = {
+      id: job.user_id,
+      _id: new ObjectId(job.user_id)
+    }
+  } else {
+    user = App.user
+  }
+
   const promises = []
-  for (var i=0; i<tasks.length; i++) {
+  for (let i=0; i<tasks.length; i++) {
     const createPromise = createJob({
       event,
-      user: App.user,
+      user,
       task: tasks[i],
       task_arguments_values: data,
-      task_optionals,
+      dynamic_settings,
       origin: JobConstants.ORIGIN_TRIGGER_BY
     })
     createPromise.catch(err => { return err })

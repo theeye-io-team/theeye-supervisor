@@ -26,7 +26,7 @@ const JobsFactory = {
    *
    * @param {Task} task task model
    * @param {Object} input
-   * @property {Object} input.task_optionals
+   * @property {Object} input.dynamic_settings
    * @property {User} input.user
    * @property {Customer} input.customer
    * @param {Function} next
@@ -44,56 +44,6 @@ const JobsFactory = {
     } catch (err) {
       next(err)
     }
-
-    //if (
-    //  input.origin !== JobConstants.ORIGIN_USER &&
-    //  task.user_inputs === true
-    //) {
-    //  // we don't care about automatic arguments,
-    //  // a user must enter the arguments values
-    //  job.lifecycle = LifecycleConstants.ONHOLD
-    //  let argsValues = []
-    //  createJob({ task, vars: input, argsValues: [] })
-    //    .then(job => next(null, job))
-    //    .catch(err => next(err))
-
-    //  return
-    //}
-
-    ///**
-    // *
-    // * @todo remove script_arguments when all agents are version 0.14.1 or higher
-    // * @todo upgrade templates on db. replace property script_arguments wuth task_arguments
-    // *
-    // */
-    //let argsDefinition = (task.task_arguments || task.script_arguments)
-    //let inputArgsValues = (input.task_arguments_values || input.script_arguments)
-
-    //this.prepareTaskArgumentsValues(
-    //  task.arguments_type,
-    //  argsDefinition,
-    //  inputArgsValues,
-    //  (argsErr, argsValues) => {
-    //    createJob({
-    //      task,
-    //      vars: input,
-    //      argsValues,
-    //      beforeSave: (job, callback) => {
-    //        // notification task arguments should not be validated
-    //        if (TaskConstants.TYPE_NOTIFICATION === task.type || !argsErr) {
-    //          return callback()
-    //        }
-
-    //        // abort execution
-    //        job.result = { log: JSON.stringify(argsErr) }
-    //        job.output = JSON.stringify(argsErr.errors)
-    //        job.state = StateConstants.ERROR
-    //        job.lifecycle = LifecycleConstants.TERMINATED
-    //        callback()
-    //      }
-    //    }).then(job => next(null, job)).catch(err => next(err))
-    //  }
-    //)
   },
   /**
    *
@@ -283,6 +233,7 @@ class AbstractJob {
     this.input = input
     this.task = input.task
     this.vars = input.vars
+    this.workflowJob = null
     this.job = null
   }
 
@@ -291,15 +242,81 @@ class AbstractJob {
    */
   async create () {
     try {
+      await this.getWorkflow()
       await this.setupJobBasicProperties()
-      await this.verifyArguments()
       await this.build()
-      await this.setDynamicProperties()
+      await this.verifyArguments()
+
+      // it is trying to change the job predefined behaviour
+      if (this.vars.dynamic_settings) {
+        if (
+          // backward compatibility, if the property was not properly set
+          this.job.allows_dynamic_settings === true ||
+          this.job.allows_dynamic_settings !== false
+        ) {
+          await this.setDynamicProperties()
+        } else {
+          // notify
+          App.notifications.sendEmailNotification({
+            customer_name: this.job.customer_name,
+            subject: 'Dynamic Settings Forbidden',
+            to: App.config.mailer.support.join(','),
+            content: `
+              <div>Job information</div>
+              <table>
+                <tr>
+                  <td>Job ID</td>
+                  <td>${this.job._id}</td>
+                </tr>
+                <tr>
+                  <td>Name</td>
+                  <td>${this.job.name}</td>
+                </tr>
+                <tr>
+                  <td>Task ID</td>
+                  <td>${this.job.task_id}</td>
+                </tr>
+                <tr>
+                  <td>WF ID</td>
+                  <td>${this.job.workflow_id}</td>
+                </tr>
+                <tr>
+                  <td>WF Job ID</td>
+                  <td>${this.job.workflow_job_id}</td>
+                </tr>
+                <tr>
+                  <td>WF Name</td>
+                  <td>${this.workflowJob.name}</td>
+                </tr>
+              </table>
+            `
+          })
+        }
+      }
+
       await this.saveJob()
     } catch (err) {
+      logger.error(err)
       await this.terminateBuild(err)
     }
     return this.job
+  }
+
+  async getWorkflow () {
+    const { task, vars, job } = this
+    if (task.workflow_id) {
+      if (!vars.workflow_job_id) {
+        logger.error('%o', task)
+        throw new Error('missing workflow job')
+      }
+
+      // verify workflows exists
+      const workflowJob = await App.Models.Job.Workflow.findById(vars.workflow_job_id)
+      if (!workflowJob) {
+        throw new Error('Internal Error. Workflow job not found')
+      }
+      this.workflowJob = workflowJob
+    }
   }
 
   /*
@@ -324,7 +341,7 @@ class AbstractJob {
       'user_inputs_members'
     ]
 
-    const dynamic = this.vars.task_optionals
+    const dynamic = this.vars.dynamic_settings
     if (dynamic) {
       for (let prop of dynamicSettings) {
         if (dynamic[prop]) {
@@ -404,30 +421,9 @@ class AbstractJob {
 
   async setupJobBasicProperties () {
     const { task, vars, job } = this
-    let acl = (vars.acl || task.acl)
-
-    if (task.workflow_id) {
-      if (!vars.workflow_job_id) {
-        logger.error('%o', task)
-        throw new Error('missing workflow job')
-      }
-
-      const wfjob = await App.Models.Job.Workflow.findById(vars.workflow_job_id)
-      if (!wfjob) {
-        throw new Error('Internal Error. Workflow job not found')
-      }
-
-      acl = wfjob.acl
-
-      job.workflow = task.workflow_id
-      job.workflow_id = task.workflow_id
-
-      // workflow job instance
-      job.workflow_job = vars.workflow_job_id
-      job.workflow_job_id = vars.workflow_job_id
-    }
 
     // copy embedded task object
+    // pre-defined settings
     job.task = Object.assign({}, task.toObject(), {
       customer: null,
       host: null
@@ -438,19 +434,64 @@ class AbstractJob {
     job.host_id = task.host_id
     job.host = task.host_id
     job.name = task.name
-    job.state = (vars.state || StateConstants.IN_PROGRESS)
-    job.lifecycle = (vars.lifecycle || LifecycleConstants.READY)
+    job.allows_dynamic_settings = task.allows_dynamic_settings
+
     job.customer = vars.customer._id
     job.customer_id = vars.customer._id
     job.customer_name = vars.customer.name
-    job.user_id = (vars.user && vars.user.id)
-    job.notify = vars.notify
-    job.origin = vars.origin
+
+    // initialize dynamic settings
+    job.state = (vars.state || StateConstants.IN_PROGRESS)
+    job.lifecycle = (vars.lifecycle || LifecycleConstants.READY)
+    job.user_id = (vars.user && vars.user.id) // the user that executes the task/wokflow
+    job.notify = vars.notify || null
+    job.origin = vars.origin || null
     job.triggered_by = (vars.event && vars.event._id) || null
-    job.acl = acl
-    job.user_inputs = task.user_inputs
-    job.user_inputs_members = task.user_inputs_members
+
+    if (this.workflowJob) {
+      // replace job & task properties, with global workflow properties
+      this.setupJobWorkflowProperties()
+    }
+
+    this.setupUsersInteraction()
+
     return job
+  }
+
+  setupJobWorkflowProperties () {
+    const { task, job, workflowJob } = this
+    if (workflowJob) {
+      job.workflow = task.workflow_id
+      job.workflow_id = task.workflow_id
+
+      // workflow job instance
+      job.workflow_job = workflowJob.id
+      job.workflow_job_id = workflowJob.id
+
+      // reject dynamic settings when the workflow global settings reject it
+      if (workflowJob.allows_dynamic_settings === false) {
+        job.allows_dynamic_settings = workflowJob.allows_dynamic_settings
+      }
+    }
+  }
+
+  setupUsersInteraction () {
+    const { task, vars, job, workflowJob } = this
+
+    // users interaction
+    job.user_inputs = (vars.user_inputs || task.user_inputs)
+
+    if (workflowJob) {
+      job.acl = workflowJob.acl.toObject()
+      job.assigned_users = workflowJob.assigned_users.toObject()
+      job.user_inputs_members = workflowJob.user_inputs_members.toObject()
+    } else {
+      Object.assign(job, {
+        acl: (vars.acl || task.acl.toObject()),
+        assigned_users: (vars.assigned_users || task.assigned_users.toObject()),
+        user_inputs_members: (vars.user_inputs_members || task.user_inputs_members.toObject())
+      })
+    }
   }
 }
 
@@ -462,13 +503,27 @@ class ApprovalJob extends AbstractJob {
 
   async build () {
     /** approval job is created onhold , waiting approvers decision **/
-    const job = this.job
+    const { job, task } = this
     job.lifecycle = LifecycleConstants.ONHOLD
+    job.approvals_target = task.approvals_target
+
+    // set default properties
+    job.success_label = task.success_label
+    job.failure_label = task.failure_label
+    job.cancel_label = task.cancel_label
+    job.ignore_label = task.ignore_label
+
+    if (job.approvals_target === TaskConstants.APPROVALS_TARGET_INITIATOR) {
+      job.approvers = [ job.user_id ]
+    } else if (job.approvals_target === TaskConstants.APPROVALS_TARGET_ASSIGNEES) {
+      job.approvers = job.assigned_users
+    } else if (!job.approvals_target || job.approvals_target === TaskConstants.APPROVALS_TARGET_FIXED) {
+      job.approvers = task.approvers
+    }
   }
 
   async setDynamicProperties () {
     const job = this.job
-
     const dynamicSettings = [
       'approvers',
       'success_label',
@@ -477,7 +532,7 @@ class ApprovalJob extends AbstractJob {
       'ignore_label'
     ]
 
-    const dynamic = this.vars.task_optionals
+    const dynamic = this.vars.dynamic_settings
     if (dynamic) {
       const settings = dynamic[ TaskConstants.TYPE_APPROVAL ]
       if (settings) {
@@ -501,20 +556,13 @@ class ApprovalJob extends AbstractJob {
               }
 
               job['approvers'] = users.map(u => u.id)
+              job.approvals_target = TaskConstants.APPROVALS_TARGET_ASSIGNEES
             } else {
               job[prop] = value
             }
           }
         }
       }
-    } else {
-      const task = job.task
-      // set default properties
-      job.approvers = task.approvers    
-      job.success_label = task.success_label
-      job.failure_label = task.failure_label
-      job.cancel_label = task.cancel_label
-      job.ignore_label = task.ignore_label
     }
   }
 }

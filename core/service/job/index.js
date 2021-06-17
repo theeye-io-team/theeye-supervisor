@@ -1,5 +1,6 @@
 const App = require('../../app')
 const logger = require('../../lib/logger')('service:jobs')
+const ACL = require('../../lib/acl')
 const Constants = require('../../constants')
 const LifecycleConstants = require('../../constants/lifecycle')
 const JobConstants = require('../../constants/jobs')
@@ -198,7 +199,7 @@ module.exports = {
    * @property {Workflow} input.workflow optional
    */
   async create (input) {
-    const { task } = input
+    const { task, workflow } = input
     let job
 
     if (!task) {
@@ -206,7 +207,7 @@ module.exports = {
     }
 
     verifyTaskBeforeExecution(task)
-    await removeExceededJobsCount(task, input.workflow)
+    await removeExceededJobsCount(task, workflow)
 
     if (
       task.grace_time > 0 && ( // automatic origin
@@ -243,22 +244,67 @@ module.exports = {
       }
     }
 
-    // started the workflow with empty acl, shall be updated later
-    const acl = (workflow.acl_dynamic !== true) ? workflow.acl : []
     const wJob = new JobModels.Workflow(
-      Object.assign({}, input, {
-        acl,
-        acl_dynamic: workflow.acl_dynamic,
-        customer,
-        customer_id: customer._id.toString(),
-        customer_name: customer.name,
-        workflow_id: workflow._id,
-        workflow: workflow._id,
-        user_id: user.id,
-        task_arguments_values: null,
-        name: workflow.name
-      })
+      Object.assign(
+        /* VARIABLE parameters, depends on the CONTEXT */
+        input,
+        {
+          /* FIXED parameters */
+          workflow_id: workflow._id,
+          workflow: workflow._id,
+          name: workflow.name,
+          allows_dynamic_settings: workflow.allows_dynamic_settings,
+          customer,
+          customer_id: customer._id.toString(),
+          customer_name: customer.name,
+          user_id: user.id
+          //task_arguments_values: null
+        }
+      )
     )
+
+    if (input.empty_viewers === true || workflow.empty_viewers === true) {
+      wJob.acl = []
+    } else {
+      wJob.acl = workflow.acl // copy default workflow.acl
+    }
+
+    if (input.assignee) {
+      // verify that every user is a member of the organization.
+      const members = await users2members(input.assignee, customer)
+
+      // verify users are members of the organization
+      for (let member of members) {
+        if (member.user_id && member.user.email) {
+          ACL.ensureAllowed({
+            email: member.user.email,
+            credential: member.credential,
+            model: (workflow || task)
+          })
+        }
+      }
+
+      const emails = members.map(mem => mem.user.email)
+      // every job of this workflow must be visible to the assigned members
+      for (let email of emails) {
+        if (!wJob.acl.includes(email)) {
+          wJob.acl.push(email)
+        }
+      }
+
+      // users interaction version 2
+      wJob.assigned_users = members.map(mem => mem.user.id)
+      // if job.user_inputs is true this will be the list of members. also used by approval tasks
+      wJob.user_inputs_members = members.map(mem => mem.id)
+    } else {
+      //wJob.assigned_users = workflow.assigned_users
+      // every job of this workflow must be visible to the assigned member
+      if (!wJob.acl.includes(user.email)) {
+        wJob.acl.push(user.email)
+      }
+      wJob.assigned_users = [ user.id ] // the assigned user is the owner.
+      wJob.user_inputs_members = workflow.user_inputs_members
+    }
 
     await wJob.save()
 
@@ -341,27 +387,24 @@ module.exports = {
       const { job, user } = input
       const result = (input.result ||{})
 
-      let state, lifecycle, trigger_name
+      let state
+      let lifecycle
+      let trigger_name
+
       if (result.killed === true) {
         state = StateConstants.TIMEOUT
-        //trigger_name = StateConstants.TIMEOUT
-        trigger_name = StateConstants.FAILURE
         lifecycle = LifecycleConstants.TERMINATED
       } else {
         if (input.state) {
-          trigger_name = state = input.state
+          state = input.state
         } else {
           // assuming success
-          trigger_name = state = StateConstants.SUCCESS
+          state = StateConstants.SUCCESS
         }
         lifecycle = LifecycleConstants.FINISHED
       }
 
-      //@TODO: dont remove !!!
-      trigger_name = (state === StateConstants.FAILURE) ? StateConstants.FAILURE : StateConstants.SUCCESS
-
       job.state = state
-      job.trigger_name = trigger_name
       job.lifecycle = lifecycle
       job.result = result
       // parse result output
@@ -382,9 +425,18 @@ module.exports = {
           if (jsonLastline.next) {
             job.result.next = jsonLastline.next
           }
+          if (jsonLastline.event_name) {
+            job.result.event_name = jsonLastline.event_name
+          }
         }
       } catch (err) {
         //logger.log(err)
+      }
+
+      if (job.result.event_name) {
+        job.trigger_name = job.result.event_name
+      } else {
+        job.trigger_name = (state === StateConstants.FAILURE) ? StateConstants.FAILURE : StateConstants.SUCCESS
       }
 
       await job.save()
@@ -721,7 +773,8 @@ const createJob = async (input) => {
 }
 
 /**
- * Invoke Job Factory (scheduler, delayed execution)
+ * Invoke Job Factory (scheduled, delayed execution)
+ *
  * @param {Object} input
  */
 const scheduleJob = async (input) => {
@@ -1049,3 +1102,29 @@ const emitJobFinishedNotification = ({ job }) => {
     }
   })
 }
+
+const users2members = async (users, customer) => {
+  const members = await App.gateway.member.fetch(users, { customer_id: customer.id })
+  if (!members || members.length === 0) {
+    throw new ClientError(`Invalid members ${JSON.stringify(users)}`)
+  }
+
+  if (users.length !== members.length) {
+    const invalid = []
+    for (let user of users) {
+      const elem = members.find(member => {
+        return member.user.username === user || member.user.email === user
+      })
+
+      if (!elem) {
+        invalid.push(user)
+      }
+    }
+    if (invalid.length > 0) {
+      throw new ClientError(`Invalid members. ${JSON.stringify(invalid)}`)
+    }
+  }
+
+  return members
+}
+

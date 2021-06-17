@@ -38,7 +38,7 @@ module.exports = async (operation, topic, input) => {
         model_id: job._id,
         model_type: job._type,
         model: job.toObject(),
-        approvers: (task && task.approvers) || undefined
+        approvers: (job.approvers || undefined)
       }
     })
   }
@@ -53,7 +53,6 @@ const prepareLog = ({ job, task, user }) => {
     task_id: task._id,
     task_name: task.name,
     task_type: task.type,
-    approvers: (task && task.approvers) || undefined,
     state: job.state,
     lifecycle: job.lifecycle,
     organization: job.customer_name,
@@ -100,7 +99,8 @@ const prepareLog = ({ job, task, user }) => {
       payload.mimetype = script.mimetype
     }
   } else if (job._type == JobConstants.APPROVAL_TYPE) {
-    // nothing yet
+    payload.approvers = job.approvers
+    payload.approvals_target = job.approvals_target
   } else if (job._type == JobConstants.DUMMY_TYPE) {
     // nothing yet
   } else if (job._type == JobConstants.NOTIFICATION_TYPE) {

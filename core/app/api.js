@@ -2,6 +2,7 @@ const restify = require('restify')
 const config = require('config')
 const router = require('../router')
 const logger = require('../lib/logger')(':app:api')
+const ErrorHandler = require('../lib/error-handler')
 
 module.exports = function () {
   if (process.env.API_DISABLED === 'true') {
@@ -54,13 +55,18 @@ module.exports = function () {
 
   // respond with error middleware
   server.use((req, res, next) => {
-    res.sendError = (err, next) => {
-      const status = err.statusCode || 500
-      res.send(status, {
-        statusCode: status,
-        message: err.message,
-        errors: err.errors
-      })
+    res.sendError = (error, next) => {
+      if (error.statusCode < 500) {
+        res.send(error.statusCode || 400, {
+          statusCode: error.statusCode,
+          message: error.message,
+          errors: error.errors
+        })
+      } else {
+        const handler = new ErrorHandler()
+        handler.sendExceptionAlert(error, req)
+        res.send(500, 'Internal Server Error')
+      }
       if (next) { next() }
     }
     next()
@@ -78,6 +84,8 @@ module.exports = function () {
   //server.use(passport.initialize())
 
   server.on('uncaughtException', (req, res, route, error) => {
+    const handler = new ErrorHandler()
+    handler.sendExceptionAlert(error)
     logger.error('Message Error: %s', error.message)
     logger.error('Stack %s', error.stack)
     res.send(500, 'internal error')

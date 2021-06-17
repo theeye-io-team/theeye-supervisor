@@ -19,13 +19,17 @@ module.exports = function (server) {
   server.get('/indicator', middlewares, controller.fetch)
 
   server.get('/indicator/:indicator',
-    middlewares,
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     router.resolve.idToEntityByCustomer({ param:'indicator', required:true }),
     controller.get
   )
 
   server.get('/indicator/title/:title',
-    middlewares,
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     findByTitleMiddleware(),
     controller.get
   )

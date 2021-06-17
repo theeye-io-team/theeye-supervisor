@@ -2,28 +2,23 @@ const Schema = require('mongoose').Schema;
 const ObjectId = Schema.Types.ObjectId;
 
 module.exports = {
-  task_id: { type: String },
-  task: { type: Object }, // embedded
+  order: { type: Number, default: 0 },
+  creation_date: { type: Date, default: Date.now },
+  last_update: { type: Date, default: Date.now },
+  customer_id: { type: String },
+  customer: { type: ObjectId, ref: 'Customer' },
+  customer_name: { type: String },
+  name: { type: String },
+  state: { type: String }, // job state
+  lifecycle: { type: String },
+  trigger_name: { type: String }, // final event. succes/failure by default
+  triggered_by: { type: ObjectId, ref: 'Event' },
+  origin: { type: String },
   workflow_id: { type: String }, // job belongs to a specific workflow
   workflow: { type: ObjectId, ref: 'Workflow' },
   workflow_job_id: { type: String }, // job belongs to an instance of the workflow
   workflow_job: { type: ObjectId, ref: 'WorkflowJob' },
-  host_id: { type: String },
-  host: { type: ObjectId, ref: 'Host' },
-  user_id: { type: String },
-  customer: { type: ObjectId, ref: 'Customer' },
-  customer_id: { type: String },
-  customer_name: { type: String },
-  name: { type: String },
-  notify: { type: Boolean },
-  state: { type: String }, // job state
-  lifecycle: { type: String },
-  //task_arguments_values: [ String ], // array of task arguments
-  task_arguments_values: [ ], // array of task arguments
-  result: {
-    type: Object,
-    default: () => { return {} }
-  },
+  result: { type: Object, default: () => { return {} } },
   output: {
     type: String,
     get: function (data) {
@@ -44,13 +39,30 @@ module.exports = {
     },
     default: () => { return [] }
   },
-  creation_date: { type: Date, default: Date.now },
-  last_update: { type: Date, default: Date.now },
-  trigger_name: { type: String }, // final state success or failure. always success by default
-  triggered_by: { type: ObjectId, ref: 'Event' },
-  origin: { type: String },
+  host_id: { type: String },
+  host: { type: ObjectId, ref: 'Host' },
+  task_id: { type: String },
+  task: { type: Object }, // embedded
+  //task_arguments_values: [ String ], // array of task arguments
+  task_arguments_values: [ ], // array of task arguments
+  notify: { type: Boolean },
+  show_result: { type: Boolean, default: false }, // popup
+
+  // users that will interact with this workflows
+  assigned_users: [{ type: String }],
+  // job user owner and default interaction
+  user_id: { type: String }, // created by and default owner
+  // this task requieres input (forced). will not accept input via triggers. users action is required.
   user_inputs: { type: Boolean, default: false },
+  // which users members are going to interact with the workflow execution. keep it for backward compatibility.
   user_inputs_members: [{ type: String }],
+  // user access control list. who can execute and view the workflows and the jobs
   acl: [{ type: String }],
-  acl_dynamic: { type: Boolean, default: false } // if "true" acl will be empty on creation
+
+  // jobs behaviour can change during run time
+  allows_dynamic_settings: { type: Boolean, default: false },
+
+  // will be only visible to the user/owner and the assigned_users.
+  // if "true" acl will be empty on creation
+  empty_viewers: { type: Boolean, default: false },
 }
