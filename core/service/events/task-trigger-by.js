@@ -4,8 +4,7 @@ const Task = require('../../entity/task').Entity
 const TopicConstants = require('../../constants/topics')
 const JobConstants = require('../../constants/jobs')
 const createJob = require('./create-job')
-
-const ObjectId = require('mongoose').Schema.Types.ObjectId
+const ifTriggeredByJobSettings = require('./triggered-by-job-settings')
 
 /**
  *
@@ -50,24 +49,8 @@ const triggeredTaskByEvent = async ({ event, data, job }) => {
 
   if (tasks.length == 0) { return }
 
+  const { user, dynamic_settings } = ifTriggeredByJobSettings(job)
   
-  let dynamic_settings // if the event was emitted by a job
-  if (job) {
-    if (job.result && job.result.next) {
-      dynamic_settings = job.result.next
-    }
-  }
-
-  let user // the owner of the execution
-  if (job && job.user_id) {
-    user = {
-      id: job.user_id,
-      _id: new ObjectId(job.user_id)
-    }
-  } else {
-    user = App.user
-  }
-
   const promises = []
   for (let i=0; i<tasks.length; i++) {
     const createPromise = createJob({

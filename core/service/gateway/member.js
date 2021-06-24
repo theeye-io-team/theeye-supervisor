@@ -26,6 +26,32 @@ class GatewayMember {
 
     return res.body
   }
+
+  async fromUsers (users, customer) {
+    const members = await this.fetch(users, { customer_id: customer.id })
+    if (!members || members.length === 0) {
+      throw new ClientError(`Invalid members. ${JSON.stringify(users)}`)
+    }
+
+    if (users.length !== members.length) {
+      const invalid = []
+      for (let user of users) {
+        const elem = members.find(member => {
+          return member.user.username === user || member.user.email === user
+        })
+
+        if (!elem) {
+          invalid.push(user)
+        }
+      }
+
+      if (invalid.length > 0) {
+        throw new ClientError(`Invalid members. ${JSON.stringify(invalid)}`)
+      }
+    }
+
+    return members
+  }
 }
 
 module.exports = GatewayMember

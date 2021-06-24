@@ -6,8 +6,7 @@ const TopicConstants = require('../../constants/topics')
 const JobConstants = require('../../constants/jobs')
 const createJob = require('./create-job')
 const graphlib = require('graphlib')
-
-const ObjectId = require('mongoose').Types.ObjectId
+const ifTriggeredByJobSettings = require('./triggered-by-job-settings')
 
 /**
  *
@@ -68,22 +67,7 @@ const executeWorkflowStep = async (workflow, workflow_job_id, event, argsValues,
     return
   }
 
-  let dynamic_settings // if the event was emitted by a job
-  if (job) {
-    if (job.result && job.result.next) {
-      dynamic_settings = job.result.next
-    }
-  }
-
-  let user // the owner of the execution
-  if (job && job.user_id) {
-    user = {
-      _id: new ObjectId(job.user_id),
-      id: job.user_id.toString()
-    }
-  } else {
-    user = App.user
-  }
+  const { user, dynamic_settings } = ifTriggeredByJobSettings(job)
 
   const promises = []
   for (let i = 0; i < tasks.length; i++) {
@@ -129,22 +113,7 @@ const executeWorkflow = async (workflow, argsValues, job, event) => {
     return logger.error('FATAL. Workflow %s does not has a customer', workflow._id)
   }
 
-  let dynamic_settings // if the event was emitted by a job
-  if (job) {
-    if (job.result && job.result.next) {
-      dynamic_settings = job.result.next
-    }
-  }
-
-  let user // the owner of the execution
-  if (job && job.user_id) {
-    user = {
-      _id: new ObjectId(job.user_id),
-      id: job.user_id.toString()
-    }
-  } else {
-    user = App.user
-  }
+  const { user, dynamic_settings } = ifTriggeredByJobSettings(job)
 
   return App.jobDispatcher.createByWorkflow({
     customer: workflow.customer,

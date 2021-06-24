@@ -4,6 +4,8 @@ const router = require('../../router')
 const Host = require('../../entity/host').Entity
 const IntegrationConstants = require('../../constants/integrations')
 
+/**
+ *
 module.exports = (server) => {
 
   server.get(
@@ -47,6 +49,8 @@ module.exports = (server) => {
   )
 
 }
+
+**/
 
 const controller = {
   get (req, res, next) {

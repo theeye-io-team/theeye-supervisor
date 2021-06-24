@@ -14,6 +14,7 @@ const JobFactory = require('./factory')
 const NotificationService = require('../../service/notification')
 const mongoose = require('mongoose')
 const RegisterOperation = require('./register')
+const { ClientError, ServerError } = require('../../lib/error-handler')
 
 module.exports = {
   fetchBy (filter, next) {
@@ -269,10 +270,7 @@ module.exports = {
       wJob.acl = workflow.acl // copy default workflow.acl
     }
 
-    if (input.assignee) {
-      // verify that every user is a member of the organization.
-      const members = await users2members(input.assignee, customer)
-
+    const membersToUsers = (members) => {
       // verify users are members of the organization
       for (let member of members) {
         if (member.user_id && member.user.email) {
@@ -284,25 +282,34 @@ module.exports = {
         }
       }
 
-      const emails = members.map(mem => mem.user.email)
+      return members.map(mem => mem.user)
+    }
+
+    if (input.assignee) {
+      // verify that every user is a member of the organization.
+      const members = await App.gateway.member.fromUsers(input.assignee, customer)
+      const users = membersToUsers(members)
       // every job of this workflow must be visible to the assigned members
-      for (let email of emails) {
-        if (!wJob.acl.includes(email)) {
-          wJob.acl.push(email)
+      for (let user of users) {
+        if (!wJob.acl.includes(user.email)) {
+          wJob.acl.push(user.email)
         }
       }
-
       // users interaction version 2
-      wJob.assigned_users = members.map(mem => mem.user.id)
+      wJob.assigned_users = users.map(user => user.id)
       // if job.user_inputs is true this will be the list of members. also used by approval tasks
       wJob.user_inputs_members = members.map(mem => mem.id)
     } else {
-      //wJob.assigned_users = workflow.assigned_users
       // every job of this workflow must be visible to the assigned member
-      if (!wJob.acl.includes(user.email)) {
-        wJob.acl.push(user.email)
+      const members = await App.gateway.member.fromUsers([user.id], customer)
+      const users = membersToUsers(members)
+      // every job of this workflow must be visible to the assigned members
+      for (let user of users) {
+        if (!wJob.acl.includes(user.email)) {
+          wJob.acl.push(user.email)
+        }
       }
-      wJob.assigned_users = [ user.id ] // the assigned user is the owner.
+      //wJob.assigned_users = users.map(user => user.id) // the assigned user is the owner.
       wJob.user_inputs_members = workflow.user_inputs_members
     }
 
@@ -508,6 +515,7 @@ module.exports = {
    * @property {Object} config integration options and configuration
    *
    */
+  /**
   createIntegrationJob ({ integration, operation, host, config }, next) {
     const factoryCreate = JobModels.IntegrationsFactory.create
 
@@ -554,6 +562,7 @@ module.exports = {
         })
     })
   },
+  */
   jobMustHaveATask (job) {
     var result = (
       job._type === JobConstants.SCRAPER_TYPE ||
@@ -679,6 +688,7 @@ const allowedMultitasking = (job, next) => {
     })
 }
 
+/*
 const currentIntegrationJob = (job, next) => {
   JobModels.Job
     .findOne({
@@ -693,6 +703,7 @@ const currentIntegrationJob = (job, next) => {
       next(err, inprogressjob||null)
     })
 }
+*/
 
 /**
  *
@@ -935,6 +946,7 @@ const removeExceededJobsCountByWorkflow = (workflow_id, customer_id, next) => {
   })
 }
 
+/*
 const jobInProgress = (job) => {
   if (!job) {
     return false
@@ -946,6 +958,7 @@ const jobInProgress = (job) => {
   )
   return inProgress
 }
+*/
 
 /**
  *
@@ -1103,28 +1116,28 @@ const emitJobFinishedNotification = ({ job }) => {
   })
 }
 
-const users2members = async (users, customer) => {
-  const members = await App.gateway.member.fetch(users, { customer_id: customer.id })
-  if (!members || members.length === 0) {
-    throw new ClientError(`Invalid members ${JSON.stringify(users)}`)
-  }
-
-  if (users.length !== members.length) {
-    const invalid = []
-    for (let user of users) {
-      const elem = members.find(member => {
-        return member.user.username === user || member.user.email === user
-      })
-
-      if (!elem) {
-        invalid.push(user)
-      }
-    }
-    if (invalid.length > 0) {
-      throw new ClientError(`Invalid members. ${JSON.stringify(invalid)}`)
-    }
-  }
-
-  return members
-}
-
+//const users2members = async (users, customer) => {
+//  const members = await App.gateway.member.fetch(users, { customer_id: customer.id })
+//  if (!members || members.length === 0) {
+//    throw new ClientError(`Invalid members. ${JSON.stringify(users)}`)
+//  }
+//
+//  if (users.length !== members.length) {
+//    const invalid = []
+//    for (let user of users) {
+//      const elem = members.find(member => {
+//        return member.user.username === user || member.user.email === user
+//      })
+//
+//      if (!elem) {
+//        invalid.push(user)
+//      }
+//    }
+//
+//    if (invalid.length > 0) {
+//      throw new ClientError(`Invalid members. ${JSON.stringify(invalid)}`)
+//    }
+//  }
+//
+//  return members
+//}
