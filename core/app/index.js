@@ -3,6 +3,8 @@ const logger = require('../lib/logger')('app')
 //const User = require('../entity/user').Entity
 const App = {}
 const AWS = require('aws-sdk')
+const Orchestrator = require('./orchestrator')
+const redis = require('redis')
 
 module.exports = App
 
@@ -10,6 +12,10 @@ App.boot = async (config) => {
 
   App.config = config
   App.db = await MongoDB.connect(config.mongo)
+
+  const redisClient = redis.createClient(config.redis)
+  redisClient.on("error", logger.error)
+  App.redis = redisClient
 
   const Models = require('./models')
   const Events = require('../service/events')
@@ -24,7 +30,8 @@ App.boot = async (config) => {
 
     Api()
     Commander()
-    Monitoring()
+    //Monitoring()
+    Orchestrator(App)
 
     logger.log('App is ready')
   }

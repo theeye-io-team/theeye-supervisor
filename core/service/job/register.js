@@ -25,23 +25,29 @@ module.exports = async (operation, topic, input) => {
   payload.operation = operation
   App.logger.submit(job.customer_name, topic, payload)
 
+  const data = {
+    operation,
+    hostname: (job.host && job.host.hostname) || job.host_id,
+    organization: job.customer_name,
+    organization_id: job.customer_id,
+    model_id: job._id,
+    model_type: job._type,
+    model: job.toObject(),
+    approvers: (task && task.approvers) || undefined
+  }
+
   // skip system notifications for this job.
   if (job.notify !== false) {
     // async call
-    App.notifications.generateSystemNotification({
-      topic,
-      data: {
-        operation,
-        hostname: (job.host && job.host.hostname) || job.host_id,
-        organization: job.customer_name,
-        organization_id: job.customer_id,
-        model_id: job._id,
-        model_type: job._type,
-        model: job.toObject(),
-        approvers: (task && task.approvers) || undefined
-      }
-    })
+    App.notifications.generateSystemNotification({ topic, data })
   }
+
+  await new Promise( (resolve, reject) => {
+    App.redis.rpush('demo:jobs', JSON.stringify(data), (err, repli) => {
+      if (err) reject(err)
+      else resolve(repli)
+    })
+  })
 
   return
 }

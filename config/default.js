@@ -6,6 +6,9 @@ module.exports = {
     version: process.env.VERSION || undefined,
     port: process.env.PORT || 60080
   },
+  orchestrator: {
+    port: process.env.ORCHESTRATOR_PORT || 60081
+  },
   system: {
     logs: `${__dirname}/../logs`,
     base_url: 'http://127.0.0.1:60080',
@@ -183,5 +186,13 @@ module.exports = {
         bucket: 'theeye.scripts'
       }
     }
-  }
+  },
+  //
+  // redis options to pass directly to node redis client
+  // https://www.npmjs.com/package/redis
+  //
+  redis: {
+    host: '127.0.0.1',
+    port: 6379
+  },
 }
