@@ -208,7 +208,6 @@ module.exports = {
     }
 
     verifyTaskBeforeExecution(task)
-    await removeExceededJobsCount(task, workflow)
 
     if (
       task.grace_time > 0 && ( // automatic origin
@@ -220,6 +219,8 @@ module.exports = {
     } else {
       job = await createJob(input)
     }
+
+    await removeExceededJobsCount(task, workflow)
 
     return job
   },
