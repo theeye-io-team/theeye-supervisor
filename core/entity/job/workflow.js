@@ -49,7 +49,7 @@ const props = {
   acl_dynamic: { type: Boolean, default: false },
 
   // jobs behaviour can change during run time
-  allows_dynamic_settings: { type: Boolean, default: false },
+  allows_dynamic_settings: { type: Boolean },
 
   // the workflow-jobs created from this workflow,
   // and all the task jobs that belongs to the workflow-jobs,

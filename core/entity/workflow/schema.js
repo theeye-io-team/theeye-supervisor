@@ -40,7 +40,7 @@ function WorkflowSchema (props) {
     empty_viewers: { type: Boolean, default: false },
 
     // jobs behaviour can change during run time
-    allows_dynamic_settings: { type: Boolean, default: false },
+    allows_dynamic_settings: { type: Boolean },
 
     // @TODO REMOVE
     acl_dynamic: { type: Boolean, default: false },

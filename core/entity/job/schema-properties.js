@@ -60,7 +60,7 @@ module.exports = {
   acl: [{ type: String }],
 
   // jobs behaviour can change during run time
-  allows_dynamic_settings: { type: Boolean, default: false },
+  allows_dynamic_settings: { type: Boolean },
 
   // will be only visible to the user/owner and the assigned_users.
   // if "true" acl will be empty on creation

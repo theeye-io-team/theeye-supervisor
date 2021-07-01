@@ -71,6 +71,10 @@ exports.Factory = {
     delete input.secret
     input.customer = input.customer_id
 
+    if (input.hasOwnProperty('allows_dynamic_settings') === false) {
+      input.allows_dynamic_settings = false
+    }
+
     if (ClassesMap.hasOwnProperty(input.type)) {
       return new ClassesMap[input.type](input)
     }
