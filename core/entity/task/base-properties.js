@@ -24,6 +24,8 @@ module.exports = {
   multitasking: { type: Boolean, default: true },
   show_result: { type: Boolean, default: false }, // popup
 
+  cancel_enabled: { type: Boolean, 'default': true },
+
   // users that will interact with this task
   assigned_users: [{ type: String }],
   // this task requieres input (forced). will not accept input via triggers. users action is required.
