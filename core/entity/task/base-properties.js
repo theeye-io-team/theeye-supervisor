@@ -23,9 +23,6 @@ module.exports = {
   execution_count: { type: Number, default: 0 },
   multitasking: { type: Boolean, default: true },
   show_result: { type: Boolean, default: false }, // popup
-
-  cancel_enabled: { type: Boolean, 'default': true },
-
   // users that will interact with this task
   assigned_users: [{ type: String }],
   // this task requieres input (forced). will not accept input via triggers. users action is required.
@@ -42,4 +39,7 @@ module.exports = {
   // will be only visible to the user/owner and the assigned_users.
   // if "true" acl will be empty on creation
   empty_viewers: { type: Boolean, default: false },
+
+  // can be canceled by users
+  cancellable: { type: Boolean, 'default': true },
 }
