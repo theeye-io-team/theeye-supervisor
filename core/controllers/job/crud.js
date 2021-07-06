@@ -161,6 +161,8 @@ const controller = {
       filters.where.acl = req.user.email
     }
 
+    //filters.limit = 1
+
     App.Models.Job.Job.fetchBy(filters, (err, jobs) => {
       if (err) { return res.send(500, err) }
       let data = []

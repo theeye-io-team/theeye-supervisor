@@ -621,6 +621,7 @@ class ScriptJob extends AbstractJob {
   async build () {
     const job = this.job
     const { task, vars } = this
+    const user = (vars.user || {})
     const script = await Script.findById(task.script_id)
 
     if (!script) {
@@ -631,7 +632,6 @@ class ScriptJob extends AbstractJob {
       Err.statusCode = 404
       throw Err
     }
-
 
     job.script = script.toObject() // >>> add .id  / embedded
     job.script_id = script._id
@@ -644,13 +644,13 @@ class ScriptJob extends AbstractJob {
         task_id: task._id
       }),
       THEEYE_JOB_USER: JSON.stringify({
-        id: vars.user.id,
-        email: vars.user.email,
-        username: vars.user.username
+        id: user.id,
+        email: user.email,
+        username: user.username
       }),
       THEEYE_JOB_WORKFLOW: JSON.stringify({
-        job_id: (vars.workflow_job_id || null),
-        id: ( (vars.workflow && vars.workflow.id) || null)
+        job_id: job.workflow_job_id,
+        id: job.workflow_id
       }),
       THEEYE_ORGANIZATION_NAME: JSON.stringify(vars.customer.name),
       THEEYE_API_URL: JSON.stringify(App.config.system.base_url)
