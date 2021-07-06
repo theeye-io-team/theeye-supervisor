@@ -45,9 +45,6 @@ const props = {
   // user access control list. who can execute and view the workflows and the jobs
   acl: [{ type: String }],
 
-  // @TODO REMOVE
-  acl_dynamic: { type: Boolean, default: false },
-
   // jobs behaviour can change during run time
   allows_dynamic_settings: { type: Boolean },
 
@@ -55,7 +52,9 @@ const props = {
   // and all the task jobs that belongs to the workflow-jobs,
   // will only be visible to assigned users.
   // if "true" job acl will be empty on creation
-  empty_viewers: { type: Boolean, default: false } // if "true" acl will be empty on creation
+  empty_viewers: { type: Boolean, default: false }, // if "true" acl will be empty on creation
+  // @TODO REMOVE
+  acl_dynamic: { type: Boolean, default: false },
 }
 
 module.exports = new BaseSchema(props, { collection: 'jobs' })

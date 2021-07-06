@@ -265,7 +265,11 @@ module.exports = {
       )
     )
 
-    if (input.empty_viewers === true || workflow.empty_viewers === true) {
+    if (
+      input.empty_viewers === true ||
+      workflow.empty_viewers === true ||
+      workflow.acl_dynamic === true // @TODO remove
+    ) {
       wJob.acl = []
     } else {
       wJob.acl = workflow.acl // copy default workflow.acl
