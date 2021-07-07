@@ -305,15 +305,19 @@ module.exports = {
       // if job.user_inputs is true this will be the list of members. also used by approval tasks
       wJob.user_inputs_members = members.map(mem => mem.id)
     } else {
-      // every job of this workflow must be visible to the assigned member
-      const members = await App.gateway.member.fromUsers([user.id], customer)
-      const users = membersToUsers(members)
-      // every job of this workflow must be visible to the assigned members
-      for (let user of users) {
-        if (!wJob.acl.includes(user.email)) {
-          wJob.acl.push(user.email)
+      if (user && user.id) {
+        // every job of this workflow must be visible to the assigned/owner member
+        const members = await App.gateway.member.fromUsers([user.id], customer)
+        const users = membersToUsers(members)
+
+        // every job of this workflow must be visible to the assigned members
+        for (let user of users) {
+          if (!wJob.acl.includes(user.email)) {
+            wJob.acl.push(user.email)
+          }
         }
       }
+
       //wJob.assigned_users = users.map(user => user.id) // the assigned user is the owner.
       wJob.user_inputs_members = workflow.user_inputs_members
     }
