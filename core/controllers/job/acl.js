@@ -12,12 +12,9 @@ module.exports = (server) => {
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
     (req, res, next) => {
       try {
-        if (
-          req.job.allows_dynamic_settings === false ||
-          req.job.allows_dynamic_settings !== true
-        ) {
-          throw new ClientError('Dynamic settings not allowed', { statusCode: 403 })
-        }
+        //if (req.job.allows_dynamic_settings === false) {
+        //  throw new ClientError('Dynamic settings not allowed', { statusCode: 403 })
+        //}
 
         if (!Array.isArray(req.body) || req.body.length === 0) {
           throw new ClientError('Invalid acl format')

@@ -249,11 +249,8 @@ class AbstractJob {
 
       // it is trying to change the job predefined behaviour
       if (this.vars.dynamic_settings) {
-        if (
+        if (this.job.allows_dynamic_settings !== false) {
           // backward compatibility, if the property was not properly set
-          this.job.allows_dynamic_settings === true ||
-          this.job.allows_dynamic_settings !== false
-        ) {
           await this.setDynamicProperties()
         } else {
           // notify
