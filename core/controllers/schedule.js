@@ -44,6 +44,16 @@ module.exports = (server) => {
     Audit.afterRemove('schedule', { display: 'name' }),
     Router.notify({ name: 'schedule', operation: Constants.DELETE })
   )
+
+  //server.put(
+  //  '/:customer/scheduler/:schedule/stop',
+  //  middlewares
+  //)
+
+  //server.put(
+  //  '/:customer/scheduler/:schedule/start',
+  //  middlewares
+  //)
 }
 
 const remove = async (req, res, next) => {

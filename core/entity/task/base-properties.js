@@ -42,4 +42,6 @@ module.exports = {
 
   // can be canceled by users
   cancellable: { type: Boolean, 'default': true },
+  autoremove_completed_jobs: { type: Boolean },
+  autoremove_completed_jobs_limit: { type: Number, 'default': 5 },
 }

@@ -220,7 +220,15 @@ module.exports = {
       job = await createJob(input)
     }
 
-    await removeExceededJobsCount(task, workflow)
+    if (workflow) {
+      if (workflow.autoremove_completed_jobs !== false) {
+        //await removeExceededJobsCountByWorkflow(workflow, task)
+         removeExceededJobsCountByWorkflow(workflow, task)
+      }
+    } else if (task.autoremove_completed_jobs !== false) {
+      //await removeExceededJobsCountByTask(task)
+       removeExceededJobsCountByTask(task)
+    }
 
     return job
   },
@@ -247,9 +255,8 @@ module.exports = {
     }
 
     const wJob = new JobModels.Workflow(
-      Object.assign(
-        /* VARIABLE parameters, depends on the CONTEXT */
-        input,
+      Object.assign({},
+        input, /* VARIABLE parameters, depends on the CONTEXT */
         {
           /* FIXED parameters */
           workflow_id: workflow._id,
@@ -261,8 +268,7 @@ module.exports = {
           customer_name: customer.name,
           user_id: user.id
           //task_arguments_values: null
-        }
-      )
+        })
     )
 
     if (
@@ -697,51 +703,6 @@ const allowedMultitasking = (job, next) => {
     })
 }
 
-/*
-const currentIntegrationJob = (job, next) => {
-  JobModels.Job
-    .findOne({
-      _type: job._type,
-      host_id: job.host_id
-    })
-    .exec( (err, inprogressjob) => {
-      if (err) {
-        logger.error('Failed to fetch old jobs')
-        logger.error('%o',err)
-      }
-      next(err, inprogressjob||null)
-    })
-}
-*/
-
-/**
- *
- *
- */
-const removeExceededJobsCount = (task, workflow) => {
-  return new Promise( (resolve, reject) => {
-    if (task.workflow_id) {
-      // only remove workflow jobs when a new one is being created.
-      if (
-        workflow !== undefined &&
-        workflow.start_task_id !== undefined &&
-        task._id.toString() === workflow.start_task_id.toString()
-      ) {
-        removeExceededJobsCountByWorkflow(
-          task.workflow_id.toString(),
-          task.customer_id,
-          resolve
-        )
-      } else {
-        // is a inner workflow job is being created, ignore exceeded jobs
-        return resolve()
-      }
-    } else {
-      removeExceededJobsCountByTask(task._id.toString(), resolve)
-    }
-  })
-}
-
 /**
  * Invoke Job Factory (immediate execution)
  * @param {Object} input
@@ -832,46 +793,61 @@ const scheduleJob = async (input) => {
   return job
 }
 
-const removeExceededJobsCountByTask = (task_id, next) => {
-  const LIMIT = JobConstants.JOBS_LOG_COUNT_LIMIT - 1 // docs limit minus 1, because why are going to create the new one after removing older documents
-  const Job = JobModels.Job
-  Job.countDocuments({ task_id }, (err, count) => {
-    if (err) { return next(err) }
+const removeExceededJobsCountByTask = async (task) => {
+  const limit = (task.autoremove_completed_jobs_limit || JobConstants.JOBS_LOG_COUNT_LIMIT)
 
-    // if count > limit allowed, then search top 6
-    // and destroy the 6th and left the others
-    if (count > LIMIT) {
-      Job
-        .find({ task_id })
-        .sort({ _id: -1 })
-        .limit(LIMIT)
-        .exec((err, docs) => {
-          let lastDoc = docs[LIMIT - 1]
+  const task_id = task._id.toString()
+  const count = await JobModels.Job.countDocuments({ task_id })
 
-          // only remove finished jobs
-          Job.remove({
-            task_id,
-            _id: { $lt: lastDoc._id.toString() }, // remove older documents than last
-            $and: [
-              { lifecycle: { $ne: LifecycleConstants.READY } },
-              { lifecycle: { $ne: LifecycleConstants.ASSIGNED } },
-              { lifecycle: { $ne: LifecycleConstants.ONHOLD } }
-            ]
-          }, next)
-        })
-    } else { return next() }
-  })
+  // if count > limit allowed, then search top 6
+  // and destroy the 6th and left the others
+  if (count > limit) {
+    const jobs = await JobModels.Job
+      .find({ task_id })
+      .sort({ _id: -1 })
+      .limit(limit)
+
+    const lastDoc = jobs[limit - 1]
+
+        // only remove finished jobs
+    const result = await JobModels.Job.remove({
+      task_id,
+      _id: { $lt: lastDoc._id.toString() }, // remove older documents than last
+      $and: [
+        { lifecycle: { $ne: LifecycleConstants.READY } },
+        { lifecycle: { $ne: LifecycleConstants.ASSIGNED } },
+        { lifecycle: { $ne: LifecycleConstants.ONHOLD } }
+      ]
+    })
+
+    logger.debug('exceeded task jobs execution logs removed')
+    logger.debug(result)
+  }
 }
 
-const removeExceededJobsCountByWorkflow = (workflow_id, customer_id, next) => {
-  const LIMIT = JobConstants.JOBS_LOG_COUNT_LIMIT
-  const Job = JobModels.Job
+const removeExceededJobsCountByWorkflow = async (workflow, task) => {
 
-  let query = Job.aggregate([
+  if (task._id.toString() !== workflow.start_task_id.toString()) {
+    return
+  }
+
+  const workflow_id = workflow._id.toString()
+  const limit = (workflow.autoremove_completed_jobs_limit || JobConstants.JOBS_LOG_COUNT_LIMIT)
+
+  const count = await JobModels.Job.countDocuments({
+    workflow_id,
+    _type: JobConstants.WORKFLOW_TYPE
+  })
+
+  if (count <= limit) {
+    return
+  }
+
+  const jobs = await JobModels.Job.aggregate([
     {
       $match: {
         workflow_id,
-        customer_id
+        customer_id: workflow.customer_id.toString() // just in case
       }
     }, {
       $group: {
@@ -912,47 +888,51 @@ const removeExceededJobsCountByWorkflow = (workflow_id, customer_id, next) => {
     }
   ])
 
-  query.exec((err, jobs) => {
-    if (err) {
-      return next(err)
-    }
+  // don't wait
+  actuallyRemoveWorkflowJobs(jobs, limit)
+  return
+}
 
-    if (jobs.length > LIMIT) {
-      // detect finished tasks
-      let disposables = jobs.filter(job => job.finished === true)
+const actuallyRemoveWorkflowJobs = async (jobs, limit) => {
 
-      // finished history exceed LIMIT
-      if (disposables.length > 0) {
-        // remove exceeded items
-        let shouldDelete = (jobs.length - LIMIT)
+  if (jobs.length > limit) {
 
-        if (disposables.length <= shouldDelete) {
-          // delete whole history
-          deleteCount = disposables.length
-        } else {
-          // delete some
-          deleteCount = disposables.length - shouldDelete
-        }
+    // remove exceeded items
+    const shouldDeleteCount = (jobs.length - limit)
 
-        while (deleteCount > 0) {
-          let job = disposables[deleteCount - 1]
-          Job.remove({
-            $or: [
-              { workflow_job_id: job._id },
-              { _id: mongoose.Types.ObjectId(job._id) }
-            ]
-          }).exec(err => {
-            if (err) {
-              logger.err(err)
-            }
-          })
-          --deleteCount
-        }
+    // detect finished tasks
+    const canDelete = jobs.filter(job => job.finished === true)
+
+    // finished history exceed limit
+    if (canDelete.length > 0) {
+
+      if (canDelete.length > shouldDeleteCount) {
+        deleteCount = shouldDeleteCount
+      } else {
+        deleteCount = canDelete.length // delete all of them
       }
-    }
 
-    next()
-  })
+      const promises = []
+      while (deleteCount > 0) {
+        let job = canDelete[deleteCount - 1]
+        const promise = JobModels.Job.remove({
+          $or: [
+            { workflow_job_id: job._id },
+            { _id: mongoose.Types.ObjectId(job._id) }
+          ]
+        }).catch(err => err)
+
+        promises.push(promise)
+
+        --deleteCount
+      }
+
+      Promise.all(promises).then(result => {
+        logger.debug(`${promises.length} exceeded workflow jobs execution logs removed`)
+        logger.data(result)
+      })
+    }
+  }
 }
 
 /*
