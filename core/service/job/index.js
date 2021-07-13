@@ -266,7 +266,7 @@ module.exports = {
           customer,
           customer_id: customer._id.toString(),
           customer_name: customer.name,
-          user_id: user.id
+          user_id: (user && user.id)
           //task_arguments_values: null
         })
     )
@@ -332,7 +332,7 @@ module.exports = {
 
     // send and wait before creating the job of the first task
     // to ensure dispatching events in order
-    await WorkflowJobCreatedNotification({ wJob, user, customer })
+    await WorkflowJobCreatedNotification({ wJob, customer })
 
     // create first task job
     await this.create(
@@ -1071,7 +1071,7 @@ const isObject = (value) => {
 /**
  * @return {Promise}
  */
-const WorkflowJobCreatedNotification = ({ wJob, user, customer }) => {
+const WorkflowJobCreatedNotification = ({ wJob, customer }) => {
   return App.notifications.generateSystemNotification({
     topic: TopicsConstants.job.crud,
     data: {
