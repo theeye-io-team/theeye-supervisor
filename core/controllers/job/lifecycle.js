@@ -53,7 +53,7 @@ module.exports = (server) => {
   server.put('/job/:job/synced',
     middlewares,
     router.requireCredential('user'),
-    router.resolve.idToEntity({param: 'job', required: true}),
+    router.resolve.idToEntity({ param: 'job', required: true }),
     router.ensureAllowed({ entity: { name: 'job' } }),
     async (req, res, next) => {
       try {
@@ -77,6 +77,17 @@ module.exports = (server) => {
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'job', required: true }),
     router.ensureAllowed({ entity: { name: 'job' } }),
+    (req, res, next) => {
+      try {
+        const job = req.job
+        if (job.task && job.task.cancellable === false) {
+          throw new ClientError('Job is not cancellable', {statusCode: 403})
+        }
+        return next()
+      } catch (err) {
+        res.send(err.statusCode, err.message)
+      }
+    },
     controller.cancel
   )
 
@@ -191,7 +202,7 @@ const controller = {
       job,
       user: req.user,
       customer: req.customer
-    }, err => {
+    }, (err) => {
       if (err) {
         logger.error('Failed to cancel job')
         logger.error(err)
