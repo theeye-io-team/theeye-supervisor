@@ -228,6 +228,14 @@ const searchInputArgumentValueByOrder = (values, searchOrder) => {
   })
 }
 
+const hasDynamicSettings = (dynamics) => {
+  return (
+    dynamics &&
+    typeof dynamics == 'object' &&
+    Object.keys(dynamics) > 0
+  )
+}
+
 class AbstractJob {
   constructor (input) {
     this.input = input
@@ -248,11 +256,13 @@ class AbstractJob {
       await this.verifyArguments()
 
       // it is trying to change the job predefined behaviour
-      if (this.vars.dynamic_settings) {
+      if (hasDynamicSettings(this.vars.dynamic_settings)) {
         if (this.job.allows_dynamic_settings !== false) {
           // backward compatibility, if the property was not properly set
           await this.setDynamicProperties()
         } else {
+          const job = this.job
+          const workflowJob = this.workflowJob
           // notify
           App.notifications.sendEmailNotification({
             customer_name: this.job.customer_name,
@@ -263,27 +273,27 @@ class AbstractJob {
               <table>
                 <tr>
                   <td>Job ID</td>
-                  <td>${this.job._id}</td>
+                  <td>${job._id}</td>
                 </tr>
                 <tr>
                   <td>Name</td>
-                  <td>${this.job.name}</td>
+                  <td>${job.name}</td>
                 </tr>
                 <tr>
                   <td>Task ID</td>
-                  <td>${this.job.task_id}</td>
+                  <td>${job.task_id}</td>
                 </tr>
                 <tr>
                   <td>WF ID</td>
-                  <td>${this.job.workflow_id}</td>
+                  <td>${job.workflow_id}</td>
                 </tr>
                 <tr>
                   <td>WF Job ID</td>
-                  <td>${this.job.workflow_job_id}</td>
+                  <td>${job.workflow_job_id}</td>
                 </tr>
                 <tr>
                   <td>WF Name</td>
-                  <td>${this.workflowJob.name}</td>
+                  <td>${(workflowJob && workflowJob.name)}</td>
                 </tr>
               </table>
             `
