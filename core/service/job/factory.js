@@ -7,6 +7,7 @@ const TaskConstants = require('../../constants/task')
 const StateConstants = require('../../constants/states')
 const ErrorHandler = require('../../lib/error-handler')
 const logger = require('../../lib/logger')('service:jobs:factory')
+const isDataURL = require('valid-data-url')
 
 const JobsFactory = {
   /**
@@ -115,10 +116,16 @@ const JobsFactory = {
               errors.required(def.label, null, 'Task argument not found in payload.')
             }
 
-            if (argumentsType === 'json') {
-              value = parseArgumentJson(found)
+            if (def.type === 'file' && typeof found === 'string' && isDataURL(found)) {
+              value = found
             } else {
-              value = parseArgumentLegacy(found)
+              if (argumentsType === 'json') {
+                value = parseArgumentJson(found)
+              } else if (argumentsType === 'text') {
+                value = parseArgumentText(found)
+              } else {
+                value = parseArgumentLegacy(found)
+              }
             }
           }
         } else {
@@ -191,6 +198,39 @@ const parseArgumentJson = (found) => {
     return JSON.stringify(found.value)
   }
   return JSON.stringify(found) // whatever it is convert to string
+}
+
+/**
+ *
+ * Version enabled when argument is not required or new version.
+ * All arguments are treated as text/plan . 
+ * Formatter allows to recontruct the values using an SDK in high level languajes.
+ *
+ * Arguments content-type: text/plain 
+ *
+ * @version 2021-07-14
+ * @param {Mixed} found
+ * @return {String} value
+ *
+ **/
+const parseArgumentText = (found) => {
+  let value
+  if (found === undefined) { // was not found in input payload
+    return "undefined"
+  }
+  if (found === null) { // was found and value is null
+    return "null"
+  }
+  if (Object.prototype.hasOwnProperty.call(found, 'value')) {
+    value = found.value
+  } else {
+    value = found
+  }
+
+  if (typeof value !== 'string') {
+    return JSON.stringify(found) // whatever it is convert to string
+  }
+  return value
 }
 
 /**
