@@ -272,7 +272,7 @@ const hasDynamicSettings = (dynamics) => {
   return (
     dynamics &&
     typeof dynamics == 'object' &&
-    Object.keys(dynamics) > 0
+    Object.keys(dynamics).length > 0
   )
 }
 
