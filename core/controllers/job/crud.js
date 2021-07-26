@@ -236,7 +236,18 @@ const controller = {
         }
       }
 
-      job.user_inputs_members = members.map(member => member.id)
+      job.user_inputs_members = []
+      job.assigned_users = []
+
+      for (let member of members) {
+        const user = member.user
+        job.user_inputs_members.push(member.id)
+        job.assigned_users.push(user.id)
+        if (!job.acl.includes(user.email)) {
+          job.acl.push(user.email)
+        }
+      }
+
       await job.save()
       res.send(200, job.user_inputs_members)
     } catch (err) {

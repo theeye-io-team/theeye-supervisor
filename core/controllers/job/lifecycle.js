@@ -1,4 +1,5 @@
 const App = require('../../app')
+const ACL = require('../../lib/acl')
 const logger = require('../../lib/logger')('controller:job-lifecycle')
 const router = require('../../router')
 const StateConstants = require('../../constants/states')
@@ -80,8 +81,10 @@ module.exports = (server) => {
     (req, res, next) => {
       try {
         const job = req.job
-        if (job.task && job.task.cancellable === false) {
-          throw new ClientError('Job is not cancellable', {statusCode: 403})
+        if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
+          if (job.task && job.task.cancellable === false) {
+            throw new ClientError('Job is not cancellable', {statusCode: 403})
+          }
         }
         return next()
       } catch (err) {
