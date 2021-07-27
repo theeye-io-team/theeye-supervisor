@@ -113,33 +113,40 @@ module.exports = (server) => {
     router.ensureCustomer,
     router.resolve.idToEntityByCustomer({ param: 'workflow', required: true }),
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
-    (req, res, next) => {
-      const customer = req.customer
-      const workflow = req.workflow
-      const job = req.job
+    async (req, res, next) => {
+      try {
+        const customer = req.customer
+        const workflow = req.workflow
+        const job = req.job
 
-      if (!job.workflow_id || job.workflow_id.toString() !== workflow._id.toString()) {
-        throw new ClientError('Job does not belong to the Workflow')
+        if (job._type !== JobConstants.WORKFLOW_TYPE) {
+          throw new ClientError('A workflow job is required')
+        }
+
+        if (!job.workflow_id || job.workflow_id.toString() !== workflow._id.toString()) {
+          throw new ClientError('The job does not belong to the workflow')
+        }
+
+        const filter = dbFilter({})
+        filter.where.workflow_job_id = job._id.toString()
+        filter.where.customer_id = customer._id.toString()
+        filter.where.workflow_id = workflow._id.toString()
+
+        if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
+          // find what this user can access
+          filter.where.acl = req.user.email
+        }
+
+        const jobs = await App.Models.Job.Job.fetchBy(filter)
+        res.send(200, jobs.map(job => job.publish()))
+      } catch (err) {
+        if (err instanceof ClientError) {
+          return res.send(err.status, err.message)
+        } else {
+          logger.error(err)
+          return res.send(500, err.message)
+        }
       }
-
-      const filter = dbFilter({})
-      filter.where.workflow_job_id = job._id.toString()
-      filter.where.customer_id = customer._id.toString()
-      filter.where.workflow_id = workflow._id.toString()
-
-      if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
-        // find what this user can access
-        filter.where.acl = req.user.email
-      }
-
-      App.Models.Job.Job.fetchBy(filter)
-        .then(jobs => {
-          res.send(200, jobs.map(job => job.publish()))
-          next()
-        }).catch(err => {
-          logger.error(err, err.status)
-          res.send(err.status || 500, err.message)
-        })
     }
   )
 
@@ -188,11 +195,11 @@ module.exports = (server) => {
     (req, res, next) => {
       try {
         if (req.job._type !== JobConstants.WORKFLOW_TYPE) {
-          throw new ClientError('parent workflow job required')
+          throw new ClientError('A workflow job is required')
         }
 
         if (!Array.isArray(req.body) || req.body.length === 0) {
-          throw new ClientError('invalid body payload format')
+          throw new ClientError('Invalid body payload format')
         }
 
         //if (req.job.allows_dynamic_settings === false) {
@@ -207,8 +214,8 @@ module.exports = (server) => {
 
         next()
       } catch (err) {
-        if (err.statusCode < 500) {
-          res.send(err.statusCode, err.message)
+        if (err instanceof ClientError) {
+          res.send(err.status, err.message)
         } else {
           logger.error(err)
           res.send(500, 'Internal Server Error')
