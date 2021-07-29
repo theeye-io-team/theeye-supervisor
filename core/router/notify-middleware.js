@@ -8,7 +8,7 @@ module.exports = (specs) => {
     const customer = req.customer
     const { operation, name } = specs
     const model = req[ name ]
-    const topic = specs.topic || TopicsConstants[name].crud
+    const topic = (specs.topic || TopicsConstants[name].crud)
 
     App.notifications
       .generateSystemNotification({
