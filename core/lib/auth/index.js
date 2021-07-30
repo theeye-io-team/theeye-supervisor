@@ -3,8 +3,6 @@ const BearerStrategy = require('passport-http-bearer').Strategy
 const BasicStrategy = require('passport-http').BasicStrategy
 const jwt = require('jsonwebtoken')
 
-//var User = require('../../entity/user').Entity;
-//var moment = require('moment');
 const logger = require('../logger')(':auth')
 const http = require('http')
 const https = require('https')

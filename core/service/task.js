@@ -11,7 +11,7 @@ const Host = require('../entity/host').Entity
 const Task = require('../entity/task').Entity
 const TaskFactory = require('../entity/task').Factory
 const TaskEvent = require('../entity/event').TaskEvent
-const Script = require('../entity/file').Script
+//const Script = require('../entity/file').Script
 const Job = require('../entity/job').Job
 const Constants = require('../constants')
 const LifecycleConstants = require('../constants/lifecycle')
@@ -224,14 +224,10 @@ module.exports = {
     // only if host_id is set
     const populateHost = (task) => {
       return new Promise( (resolve, reject) => {
-        let data = {
-          host: null,
-          hostname: ''
-        }
-
         const id = task.host_id
         if (!id) { return resolve() }
 
+        const data = { host: null, hostname: '' }
         Host.findById(id, (err, host) => {
           if (err) { return reject(err) }
           if (host !== null) {
@@ -245,111 +241,51 @@ module.exports = {
     }
 
     // only task type script, and if script_id is set
-    const populateScript = (task) => {
-      return new Promise( (resolve, reject) => {
-        let data = {
-          script: null,
-          script_id: '',
-          script_name: '' 
-        }
+    const populateScript = async (task) => {
+      if (task.type !== TaskConstants.TYPE_SCRIPT) {
+        return {}
+      }
 
-        let id = task.script_id
-        if (!id) {
-          return resolve(data)
-        }
+      const data = { script: null, script_id: '', script_name: '' }
+      const id = task.script_id
+      if (!id) {
+        return data
+      }
 
-        Script.findById(id, (err, script) => {
-          if (err) { reject(err) }
-          else {
-            if (script !== null) {
-              data.script = script
-              data.script_id = script._id
-              data.script_name = script.filename
-            }
-            return resolve(data) 
-          }
-        })
-      })
-    }
+      const script = await App.Models.File.Script
+        .findById(id)
+        .select({ _id: 1, filename: 1 })
+        .exec()
 
-    const populateLastJob = (task) => {
-      return new Promise( (resolve, reject) => {
-        Job
-          .findOne({ task_id: task._id.toString() })
-          .sort({ creation_date: -1 })
-          .populate('user')
-          .exec((err, job) => {
-            if (err) { reject(err) }
-            else if (!job) { resolve([]) }
-            else { resolve([ prepareJob(job) ]) }
-          })
-      })
-    }
+      if (script !== null) {
+        data.script = script
+        data.script_id = script._id
+        data.script_name = script.filename
+      }
 
-    const populateRunningJob = async (task) => {
-      return new Promise( (resolve, reject) => {
-        const query = {
-          task_id: task._id.toString(),
-          $or: [
-            { lifecycle: LifecycleConstants.READY },
-            { lifecycle: LifecycleConstants.ASSIGNED },
-            { lifecycle: LifecycleConstants.ONHOLD }
-          ]
-        }
-
-        Job
-          .find(query)
-          .sort({ creation_date: -1 })
-          .populate('user')
-          .exec(async (err, jobs) => {
-            if (err) { reject(err) }
-            else {
-              try {
-                if (jobs.length === 0) {
-                  jobs = await populateLastJob(task)
-                } else {
-                  jobs = jobs.map(job => prepareJob(job))
-                }
-
-                resolve(jobs)
-              } catch (err) {
-                reject(err)
-              }
-            }
-          })
-      })
+      return data
     }
 
     const populateSchedules = (task) => {
       return new Promise( (resolve, reject) => {
         App.scheduler.getTaskSchedule(task._id, (err, schedules) => {
           if (err) { reject(err) }
-          else { resolve(schedules) }
+          else { resolve({ schedules }) }
         })
       })
     }
 
-    const prepareJob = (job) => {
-      let data = {
-        state: job.state,
-        lifecycle: job.lifecycle,
-        creation_date: job.creation_date,
-        id: job._id.toString(),
-        name: job.name,
-        type: job.type,
-        _type: job._type,
-        user: {
-          id: job.user_id,
-        }
-      }
+    const relations = await Promise.all([
+      await populateScript(task),
+      await populateHost(task),
+      await populateSchedules(task)
+    ])
 
-      return data
-    }
-
-    Object.assign(data, await populateScript(task), await populateHost(task))
-    data.jobs = await populateRunningJob(task)
-    data.schedules = await populateSchedules(task)
-    return data
+    return (
+      relations.reduce((accum, curr) => {
+        return Object.assign(accum, curr)
+      }, data)
+    )
   },
   /**
    *

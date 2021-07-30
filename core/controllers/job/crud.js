@@ -34,6 +34,22 @@ module.exports = (server) => {
     controller.get
   )
 
+  server.get('/job/running_count',
+    server.auth.bearerMiddleware,
+    router.requireCredential('viewer'),
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    controller.fetchRunningCounters
+  )
+
+  server.get('/job/running',
+    server.auth.bearerMiddleware,
+    router.requireCredential('viewer'),
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    controller.fetchRunning
+  )
+
   /**
    * fetch many jobs information
    */
@@ -171,6 +187,99 @@ const controller = {
       next()
     })
   },
+  fetchRunning (req, res, next) {
+    const customer = req.customer
+    const user = req.user
+    const query = req.query
+
+    logger.log('querying jobs')
+
+    const filters = dbFilter(query, { /** default **/ })
+    filters.where.customer_id = customer._id.toString()
+    filters.where.lifecycle = {
+      $in: [
+        LifecycleConstants.READY,
+        LifecycleConstants.ASSIGNED,
+        LifecycleConstants.ONHOLD,
+        LifecycleConstants.SYNCING,
+        LifecycleConstants.LOCKED
+      ]
+    }
+
+    filters.include = {
+      task_id: 1,
+      workflow_id: 1,
+      workflow_job_id: 1,
+      lifecycle: 1,
+      state: 1
+    }
+
+    if ( !ACL.hasAccessLevel(req.user.credential, 'admin') ) {
+      // find what this user can access
+      filters.where.acl = req.user.email
+    }
+
+    //filters.limit = 1
+    App.Models.Job.Job.fetchBy(filters, (err, jobs) => {
+      if (err) {
+        return res.send(500, err)
+      }
+
+      const data = []
+      jobs.forEach(job => {
+        data.push(job.publish())
+      })
+      res.send(200, data)
+      next()
+    })
+  },
+  async fetchRunningCounters (req, res, next) {
+    try {
+      const customer = req.customer
+      const user = req.user
+      const query = req.query
+
+      logger.log('querying jobs counters')
+
+      const $match = {
+        customer_id: customer._id.toString(),
+        lifecycle: {
+          $in: [
+            LifecycleConstants.READY,
+            LifecycleConstants.ASSIGNED,
+            LifecycleConstants.ONHOLD,
+            LifecycleConstants.SYNCING,
+            LifecycleConstants.LOCKED
+          ]
+        }
+      }
+
+      if ( !ACL.hasAccessLevel(req.user.credential, 'admin') ) {
+        // find what this user can access
+        $match.acl = req.user.email
+      }
+
+      const counters = await App.Models.Job.Job.aggregate([
+        { $match }, {
+          $group: {
+            _id: {
+              task_id: "$task_id",
+              workflow_id: "$workflow_id"
+            },
+            task_id: { $first: "$task_id" },
+            workflow_id: { $first: "$workflow_id" },
+            count: { $sum: 1 }
+          }
+        }
+      ])
+
+      res.send(200, counters)
+      next()
+    } catch (err) {
+      logger.error(err)
+      res.sendError(err)
+    }
+  },
   /**
    *
    * @method PUT
@@ -286,59 +395,6 @@ const controller = {
       res.sendError(err)
     }
   }
-  /**
-  async participants (req, res, next) {
-    try {
-      const job = req.job
-
-      const fetch = []
-      if (job.user_id) {
-        const owner = App.gateway.member.fetch(
-          [ job.user_id ],
-          { customer_id: req.customer.id }
-        )
-        fetch.push(owner)
-      } else {
-        fetch.push(null)
-      }
-
-      if (
-        job.assigned_users.length > 1 || 
-        job.assigned_users.length === 1 && job.assigned_users[0] !== job.user_id
-      ) {
-        const assignee = App.gateway.member.fetch(
-          job.assigned_users,
-          { customer_id: req.customer.id }
-        )
-        fetch.push(assignee)
-      } else {
-        fetch.push(null)
-      }
-
-      if (job.acl.length >= 1) {
-        const observers = App.gateway.member.fetch(
-          job.acl,
-          { customer_id: req.customer.id }
-        )
-        fetch.push(observers)
-      } else {
-        fetch.push(null)
-      }
-
-      const result = await Promise.all(fetch)
-
-      const participants = {
-        owner: membersToUsers(result[0]),
-        assignee: membersToUsers(result[1]),
-        observers: membersToUsers(result[2])
-      }
-
-      res.send(200, participants)
-    } catch (err) {
-      res.sendError(err)
-    }
-  }
-  */
 }
 
 const searchUsers = (users, search) => {
