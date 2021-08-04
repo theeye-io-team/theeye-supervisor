@@ -32,8 +32,7 @@ module.exports = (server) => {
     }
   }
 
-  server.del(
-    '/:customer/scheduler/:schedule',
+  server.del('/:customer/scheduler/:schedule',
     server.auth.bearerMiddleware,
     Router.requireCredential('admin'),
     Router.resolve.customerNameToEntity({ required: true }),
@@ -92,14 +91,20 @@ const remove = async (req, res, next) => {
 
 const start = async (req, res, next) => {
   try {
-    const schedule = req.schedule
-    schedule.enable()
-    await schedule.save()
+    const job = req.schedule
+    const nextRun = new Date(req.body.schedule)
+    if (nextRun == 'Invalid Date') {
+      throw new ClientError('Invalid Date')
+    }
+
+    job.schedule(nextRun)
+    job.enable()
+    await job.save()
+
     res.send(200, 'ok')
     next()
   } catch (err) {
-    logger.error('%o', err)
-    return res.send(500, 'Internal Server Error')
+    return res.sendError(err)
   }
 }
 
