@@ -92,12 +92,15 @@ const remove = async (req, res, next) => {
 const start = async (req, res, next) => {
   try {
     const job = req.schedule
-    const nextRun = new Date(req.body.schedule)
-    if (nextRun == 'Invalid Date') {
-      throw new ClientError('Invalid Date')
+
+    if (req.body && req.body.schedule) {
+      const nextRun = new Date(req.body.schedule)
+      if (nextRun == 'Invalid Date') {
+        throw new ClientError('Invalid Date')
+      }
+      job.schedule(nextRun)
     }
 
-    job.schedule(nextRun)
     job.enable()
     await job.save()
 
