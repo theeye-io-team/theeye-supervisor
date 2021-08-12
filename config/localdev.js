@@ -35,7 +35,17 @@ module.exports = {
   },
   notifications: {
     api: {
-      url: 'http://127.0.0.1:6080/api/notification' // the same web server
+      //url: 'http://127.0.0.1:6080/api/notification' // the same web server
+      url: 'http://localhost:8080/api/notification' // gateway
+    }
+  },
+  gateway: {
+    secret: '77E0EAF3B83DD7A7A4004602626446EADED31BF794956FC9BBAD051FA5A25038',
+    member: {
+      url: 'http://localhost:8080/api/internal/member/resolve'
+    },
+    user: {
+      url: 'http://localhost:8080/api/internal/user/resolve'
     }
   },
   integrations: {

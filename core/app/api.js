@@ -94,7 +94,9 @@ module.exports = function () {
   // Routing the controllers
   router.loadControllers(server)
 
-  server.listen(config.server.port || 60080, () => {
+  const PORT = process.env.PORT || config.server.port || 60080
+
+  server.listen(PORT, () => {
     logger.log('TheEye API started. Listening at "%s"', server.url)
   })
 }

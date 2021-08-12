@@ -206,16 +206,16 @@ const controller = {
       ]
     }
 
-    filters.include = {
-      task_id: 1,
-      workflow_id: 1,
-      workflow_job_id: 1,
-      lifecycle: 1,
-      state: 1,
-      _type: 1,
-      name: 1,
-      creation_date: 1
-    }
+    //filters.include = {
+    //  task_id: 1,
+    //  workflow_id: 1,
+    //  workflow_job_id: 1,
+    //  lifecycle: 1,
+    //  state: 1,
+    //  _type: 1,
+    //  name: 1,
+    //  creation_date: 1
+    //}
 
     if ( !ACL.hasAccessLevel(req.user.credential, 'admin') ) {
       // find what this user can access
