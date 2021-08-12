@@ -1,4 +1,4 @@
-FROM node:10
+FROM node:14
 MAINTAINER Javier Ailbirt <jailbirt@interactar.com>
 ENV destDir /src/theeye/supervisor
 # Create app directory
