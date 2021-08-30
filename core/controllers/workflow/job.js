@@ -202,9 +202,9 @@ module.exports = (server) => {
           throw new ClientError('Invalid body payload format')
         }
 
-        //if (req.job.allows_dynamic_settings === false) {
-        //  throw new ClientError('Dynamic settings not allowed', { statusCode: 403 })
-        //}
+        if (req.job.allows_dynamic_settings === false) {
+          throw new ClientError('Dynamic settings not allowed', { statusCode: 403 })
+        }
 
         for (let value of req.body) {
           if (typeof value !== 'string') {
