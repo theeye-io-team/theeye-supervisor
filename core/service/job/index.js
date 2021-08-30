@@ -1,6 +1,5 @@
 const App = require('../../app')
 const logger = require('../../lib/logger')('service:jobs')
-const ACL = require('../../lib/acl')
 const Constants = require('../../constants')
 const LifecycleConstants = require('../../constants/lifecycle')
 const JobConstants = require('../../constants/jobs')
@@ -254,87 +253,13 @@ module.exports = {
       }
     }
 
-    const wJob = new JobModels.Workflow(
-      Object.assign({},
-        input, /* VARIABLE parameters, depends on the CONTEXT */
-        {
-          /* FIXED parameters */
-          workflow_id: workflow._id,
-          workflow: workflow._id,
-          name: workflow.name,
-          allows_dynamic_settings: workflow.allows_dynamic_settings,
-          customer,
-          customer_id: customer._id.toString(),
-          customer_name: customer.name,
-          user_id: (user && user.id)
-          //task_arguments_values: null
-        })
-    )
-
-    if (
-      input.empty_viewers === true ||
-      workflow.empty_viewers === true ||
-      workflow.acl_dynamic === true // @TODO remove
-    ) {
-      wJob.acl = []
-    } else {
-      wJob.acl = workflow.acl // copy default workflow.acl
-    }
-
-    const membersToUsers = (members) => {
-      // verify users are members of the organization
-      for (let member of members) {
-        if (member.user_id && member.user.email) {
-          ACL.ensureAllowed({
-            email: member.user.email,
-            credential: member.credential,
-            model: (workflow || task)
-          })
-        }
-      }
-
-      return members.map(mem => mem.user)
-    }
-
-    if (input.assignee) {
-      // verify that every user is a member of the organization.
-      const members = await App.gateway.member.fromUsers(input.assignee, customer)
-      const users = membersToUsers(members)
-      // every job of this workflow must be visible to the assigned members
-      for (let user of users) {
-        if (!wJob.acl.includes(user.email)) {
-          wJob.acl.push(user.email)
-        }
-      }
-      // users interaction version 2
-      wJob.assigned_users = users.map(user => user.id)
-      // if job.user_inputs is true this will be the list of members. also used by approval tasks
-      wJob.user_inputs_members = members.map(mem => mem.id)
-    } else {
-      if (user && user.id) {
-        // every job of this workflow must be visible to the assigned/owner member
-        const members = await App.gateway.member.fromUsers([user.id], customer)
-        const users = membersToUsers(members)
-
-        // every job of this workflow must be visible to the assigned members
-        for (let user of users) {
-          if (!wJob.acl.includes(user.email)) {
-            wJob.acl.push(user.email)
-          }
-        }
-      }
-
-      //wJob.assigned_users = users.map(user => user.id) // the assigned user is the owner.
-      wJob.user_inputs_members = workflow.user_inputs_members
-    }
-
-    await wJob.save()
+    const wJob = await JobFactory.createWorkflow(input)
 
     // send and wait before creating the job of the first task
     // to ensure dispatching events in order
     await WorkflowJobCreatedNotification({ wJob, customer })
 
-    // create first task job
+    // create first job
     await this.create(
       Object.assign({}, input, {
         task,

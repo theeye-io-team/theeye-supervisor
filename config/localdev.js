@@ -39,6 +39,21 @@ module.exports = {
       url: 'http://localhost:8080/api/notification' // gateway
     }
   },
+  authentication: {
+    // same key must be in every internal service
+    secret: '692fc164a0c06a9fd02575cf17688c9e',
+    protocol: 'http', // http or https
+    api: {
+      timeout: 5000,
+      host: 'localhost',
+      port: '8080',
+      path: {
+        verify: '/api/session/verify',
+        profile: '/api/session/profile',
+        login: '/api/auth/login/local'
+      }
+    }
+  },
   gateway: {
     secret: '77E0EAF3B83DD7A7A4004602626446EADED31BF794956FC9BBAD051FA5A25038',
     member: {

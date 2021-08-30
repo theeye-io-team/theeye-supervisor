@@ -47,6 +47,14 @@ const JobsFactory = {
     }
   },
   /**
+   * @param {Object} input
+   * @return {Promise}
+   */
+  createWorkflow (input) {
+    const builder = new WorkflowJob(input)
+    return builder.create()
+  },
+  /**
    *
    * @return {Promise<AgendaJob>}
    *
@@ -276,6 +284,103 @@ const hasDynamicSettings = (dynamics) => {
   )
 }
 
+const ensureMembersAccess = (job, members) => {
+  // every job of this workflow must be visible to the assigned/owner member
+  const users = membersToUsers(members)
+
+  // every job of this workflow must be visible to the assigned members
+  for (let user of users) {
+    if (!job.acl.includes(user.email)) {
+      job.acl.push(user.email)
+    }
+  }
+}
+
+const membersToUsers = members => members.map(mem => mem.user)
+
+const hasParticipants = users => (Array.isArray(users) && users.length > 0)
+
+const updateAssignee = (job, members) => {
+
+  ensureMembersAccess(job, members)
+
+  const users = membersToUsers(members)
+  // users interaction version 2
+  job.assigned_users = users.map(user => user.id)
+
+  // if job.user_inputs is true this will be the list of members.
+  // also used by approval tasks
+  job.user_inputs_members = members.map(mem => mem.id)
+}
+
+const ensureObserversAccess = ({ job, empty_viewers, acl, acl_dynamic = false }) => {
+  if (
+    empty_viewers === true ||
+    acl_dynamic === true // @TODO remove
+  ) {
+    job.acl = []
+  } else {
+    job.acl = acl
+  }
+}
+
+class WorkflowJob {
+  constructor (input) {
+    this.input = input
+  }
+
+  async create () {
+    const input = this.input
+    const { workflow, user, customer } = input
+
+    const wJob = new JobModels.Workflow(
+      Object.assign({},
+        input, /* VARIABLE parameters, depends on the CONTEXT */
+        {
+          /* FIXED parameters */
+          workflow_id: workflow._id,
+          workflow: workflow._id,
+          name: workflow.name,
+          allows_dynamic_settings: workflow.allows_dynamic_settings,
+          customer,
+          customer_id: customer._id.toString(),
+          customer_name: customer.name,
+          user_id: (user?.id)
+          //task_arguments_values: null
+        })
+    )
+
+    ensureObserversAccess({
+      acl: workflow.acl,
+      job: wJob,
+      empty_viewers: (input.empty_viewers || workflow.empty_viewers),
+      acl_dynamic: workflow.acl_dynamic
+    })
+
+    //
+    // set participants (assignee, owner, observers) at workflow level
+    //
+    if (hasParticipants(input.assignee)) {
+      updateAssignee(wJob, input.assignee)
+    } else {
+      //
+      // Automatically determined by the execution context
+      //
+      if (hasParticipants(input.owners)) {
+        ensureMembersAccess(wJob, input.owners)
+      }
+
+      // default users interaction
+      //wJob.assigned_users = users.map(user => user.id) // the assigned user is the owner.
+      wJob.user_inputs_members = workflow.user_inputs_members
+    }
+
+    await wJob.save()
+
+    return wJob
+  }
+}
+
 class AbstractJob {
   constructor (input) {
     this.input = input
@@ -500,7 +605,7 @@ class AbstractJob {
       this.setupJobWorkflowProperties()
     }
 
-    this.setupUsersInteraction()
+    this.setupParticipantsInteraction()
 
     return job
   }
@@ -522,22 +627,35 @@ class AbstractJob {
     }
   }
 
-  setupUsersInteraction () {
+  setupParticipantsInteraction () {
     const { task, vars, job, workflowJob } = this
 
-    // users interaction
+    // requires users interaction
     job.user_inputs = (vars.user_inputs || task.user_inputs)
 
+    // belongs to a workflow. interaction depends on the workflow settings.
     if (workflowJob) {
       job.acl = workflowJob.acl.toObject()
       job.assigned_users = workflowJob.assigned_users.toObject()
       job.user_inputs_members = workflowJob.user_inputs_members.toObject()
     } else {
-      Object.assign(job, {
+      // single tasks execution has its own settings
+      // use default acl
+      ensureObserversAccess({
         acl: (vars.acl || task.acl.toObject()),
-        assigned_users: (vars.assigned_users || task.assigned_users.toObject()),
-        user_inputs_members: (vars.user_inputs_members || task.user_inputs_members.toObject())
+        job,
+        empty_viewers: task.empty_viewers
       })
+
+      if (hasParticipants(vars.assignee)) {
+        updateAssignee(job, vars.assignee)
+      } else {
+        // pre-defined user inputs, if any
+        Object.assign(job, {
+          assigned_users: (vars.assigned_users || task.assigned_users.toObject()),
+          user_inputs_members: (vars.user_inputs_members || task.user_inputs_members.toObject())
+        })
+      }
     }
   }
 }
@@ -737,3 +855,4 @@ JobsBuilderMap[ TaskConstants.TYPE_SCRAPER ] = ScraperJob
 JobsBuilderMap[ TaskConstants.TYPE_APPROVAL ] = ApprovalJob
 JobsBuilderMap[ TaskConstants.TYPE_DUMMY ] = DummyJob
 JobsBuilderMap[ TaskConstants.TYPE_NOTIFICATION ] = NotificationJob
+JobsBuilderMap[ TaskConstants.TYPE_WORKFLOW ] = WorkflowJob

@@ -375,7 +375,10 @@ const controller = {
 
       if (
         job.assigned_users.length > 1 || 
-        job.assigned_users.length === 1 && job.assigned_users[0] !== job.user_id
+        (
+          job.assigned_users.length === 1 &&
+          job.assigned_users[0] !== job.user_id
+        )
       ) {
         search = search.concat(job.assigned_users)
       }
