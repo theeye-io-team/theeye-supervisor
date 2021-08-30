@@ -783,9 +783,9 @@ const scheduleJob = async (input) => {
     organization: customer.name,
     organization_id: customer._id,
     model: job,
-    user_id: user.id,
-    user_email: user.email,
-    user_name: user.username
+    user_id: (user?.id||null),
+    user_email: (user?.email||null),
+    user_name: (user?.username||null)
   }
 
   App.logger.submit(customer.name, topic, payload)
