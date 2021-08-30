@@ -56,9 +56,9 @@ const JobsFactory = {
       const task = input.task
       const customer = input.customer
 
-      const runDate =  Date.now() + task.grace_time * 1000
+      const runDate = Date.now() + (task.grace_time * 1000)
       const data = {
-        schedule: { runDate },
+        runDate,
         task,
         customer,
         user: input.user,

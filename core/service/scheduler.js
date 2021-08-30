@@ -60,23 +60,23 @@ Scheduler.prototype = {
       const task = input.task
       const customer = input.customer
       const user = input.user
-      const schedule = input.schedule
+      // runDate is in miliseconds
+      const { runDate, repeatEvery, timezone } = input
 
       const data = {
         task_id: task._id,
         customer_id: customer._id,
-        notify: input.notify || false,
-        scheduleData: schedule,
+        notify: (input.notify || false),
+        scheduleData: { runDate, repeatEvery, timezone },
         origin: input.origin
       }
 
-      // runDate is miliseconds
-      let date = new Date(schedule.runDate)
-      let job = await this.createSchedulerJob({
+      const job = await this.createSchedulerJob({
         name: SchedulerConstants.AGENDA_TASK,
-        starting: date,
         data,
-        interval: schedule.repeatEvery
+        starting: new Date(runDate),
+        interval: repeatEvery,
+        timezone
       })
       return done(null, job)
     } catch (err) {
@@ -91,25 +91,26 @@ Scheduler.prototype = {
    * @property {Workflow} workflow
    * @property {User} user
    * @property {Customer} customer
-   * @property {Date} runDate
+   * @property {Date} runDate milliseconds
    * @property {String} repeatEvery
    * @property {Boolean} notify
    * @return {Promise} agenda job schedule promise
    */
-  scheduleWorkflow ({ origin, workflow, customer, runDate, repeatEvery, notify = false }) {
+  scheduleWorkflow ({ origin, workflow, customer, notify, runDate, repeatEvery, timezone }) {
     const data = {
       workflow_id: workflow._id,
       customer_id: customer._id,
-      notify,
-      scheduleData: { runDate, repeatEvery },
+      notify: (notify || false),
+      scheduleData: { runDate, repeatEvery, timezone },
       origin
     }
 
     return this.createSchedulerJob({
       name: SchedulerConstants.AGENDA_WORKFLOW,
-      starting: new Date(runDate),
       data,
-      interval: repeatEvery
+      starting: new Date(runDate),
+      interval: repeatEvery,
+      timezone
     })
   },
   async getTaskSchedule (taskId, callback) {
@@ -204,8 +205,8 @@ Scheduler.prototype = {
 
     return this.createSchedulerJob({
       name: SchedulerConstants.AGENDA_TIMEOUT_JOB,
-      starting: new Date(now.getTime() + timeout),
       data: { job_id: job._id.toString() },
+      starting: new Date(now.getTime() + timeout),
       interval: null
     })
   },
@@ -218,16 +219,23 @@ Scheduler.prototype = {
    * @param {String} interval human format or cron
    * @return {Promise}
    */
-  createSchedulerJob ({ name, starting, data, interval }) {
+  createSchedulerJob ({ name, data, starting, interval, timezone }) {
     let agendaJob = this.agenda.create(name, data)
-    logger.log("agendaJob.schedule %s", starting)
 
     if (interval) {
       logger.log("repeat interval is %s", interval)
-      agendaJob.repeatEvery(interval)
+      agendaJob.repeatEvery(interval, {
+        skipImmediate: true,
+        timezone
+      })
     }
 
-    agendaJob.schedule(starting)
+    if (starting) {
+      if (starting instanceof Date && !isNaN(starting.getTime())) {
+        logger.log("agendaJob.schedule %s", starting)
+        agendaJob.schedule(starting)
+      }
+    }
     return agendaJob.save()
   }
 }

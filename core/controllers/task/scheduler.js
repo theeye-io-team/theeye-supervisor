@@ -80,18 +80,20 @@ const controller = {
     const user = req.user
     const customer = req.customer
 
-    const { runDate, repeatEvery } = req.body
+    const { runDate, repeatEvery, timezone } = req.body
 
-    if (!runDate) {
-      return res.send(400, 'runDate required')
-    }
+    //if (!runDate) {
+    //  return res.send(400, 'runDate required')
+    //}
 
     App.scheduler.scheduleTask({
       origin: JobConstants.ORIGIN_SCHEDULER,
-      task: task,
-      customer: customer,
-      user: user,
-      schedule: { runDate, repeatEvery }
+      task,
+      customer,
+      user,
+      runDate,
+      repeatEvery,
+      timezone
     }, (err, schedule) => {
       if (err) {
         logger.error(err)

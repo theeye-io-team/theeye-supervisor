@@ -36,11 +36,11 @@ const create = async (req, res, next) => {
     const customer = req.customer
     const workflow = req.workflow
 
-    const { runDate, repeatEvery } = req.body
+    const { runDate, repeatEvery, timezone } = req.body
 
-    if (!runDate) {
-      throw new ClientError('Must have a run date')
-    }
+    //if (!runDate) {
+    //  throw new ClientError('Must have a run date')
+    //}
 
     const schedule = await App.scheduler.scheduleWorkflow({
       origin: JobConstants.ORIGIN_SCHEDULER,
@@ -48,7 +48,8 @@ const create = async (req, res, next) => {
       user,
       workflow,
       runDate,
-      repeatEvery
+      repeatEvery,
+      timezone
     })
 
     req.schedule = schedule.attrs
