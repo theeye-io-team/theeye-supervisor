@@ -106,8 +106,8 @@ const start = async (req, res, next) => {
   try {
     const job = req.schedule
 
-    if (req.body && req.body.schedule) {
-      const nextRun = new Date(req.body.schedule)
+    if (req.body && req.body.runDate) {
+      const nextRun = new Date(req.body.runDate)
       if (nextRun == 'Invalid Date') {
         throw new ClientError('Invalid Date')
       }
