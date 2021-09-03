@@ -7,7 +7,7 @@ module.exports = (specs) => {
   return (req, res, next) => {
     const customer = req.customer
     const { operation, name } = specs
-    const model = req[ name ]
+    const model = (specs.model || req[name]) // or take it from the req
     const topic = (specs.topic || TopicsConstants[name].crud)
 
     App.notifications
@@ -18,8 +18,8 @@ module.exports = (specs) => {
           organization: customer.name,
           organization_id: customer._id,
           model,
-          model_id: model._id || undefined,
-          model_type: model._type || undefined,
+          model_id: model?._id,
+          model_type: model?._type,
         }
       })
       .then(response => { })

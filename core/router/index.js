@@ -38,7 +38,7 @@ module.exports = {
     require('../controllers/script')(server)
     require('../controllers/file')(server)
     require('../controllers/recipe')(server)
-    require('../controllers/schedule')(server)
+    require('../controllers/scheduler')(server)
     require('../controllers/tags')(server)
     require('../controllers/task')(server)
     require('../controllers/webhook')(server)

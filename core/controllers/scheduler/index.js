@@ -1,10 +1,11 @@
-const App = require('../app')
-const logger = require('../lib/logger')('eye:supervisor:controller:schedule')
-const Scheduler = require('../service/scheduler')
-const Router = require('../router')
-const Audit = require('../lib/audit')
-const Constants = require('../constants')
-const { ServerError, ClientError } = require('../lib/error-handler')
+const cronParser = require('cron-parser')
+const App = require('../../app')
+const logger = require('../../lib/logger')('eye:supervisor:controller:schedule')
+const Scheduler = require('../../service/scheduler')
+const Router = require('../../router')
+const Audit = require('../../lib/audit')
+const Constants = require('../../constants')
+const { ServerError, ClientError } = require('../../lib/error-handler')
 
 module.exports = (server) => {
 
@@ -32,6 +33,18 @@ module.exports = (server) => {
     }
   }
 
+  const customNotifyMiddleware = (operation) => {
+    const fn = (req, res, next) => {
+      Router.notify({
+        name: 'schedule',
+        operation,
+        model: req.schedule.attrs
+      })(req, res, next)
+    }
+
+    return fn
+  }
+
   server.del('/:customer/scheduler/:schedule',
     server.auth.bearerMiddleware,
     Router.requireCredential('admin'),
@@ -40,7 +53,7 @@ module.exports = (server) => {
     schedulerResolver,
     remove,
     Audit.afterRemove('schedule', { display: 'name' }),
-    Router.notify({ name: 'schedule', operation: Constants.DELETE })
+    customNotifyMiddleware(Constants.DELETE)
   )
 
   server.del('/scheduler/:schedule',
@@ -51,7 +64,7 @@ module.exports = (server) => {
     schedulerResolver,
     remove,
     Audit.afterRemove('schedule', { display: 'name' }),
-    Router.notify({ name: 'schedule', operation: Constants.DELETE })
+    customNotifyMiddleware(Constants.DELETE)
   )
 
   server.put('/scheduler/:schedule/stop',
@@ -62,7 +75,7 @@ module.exports = (server) => {
     schedulerResolver,
     stop,
     Audit.afterUpdate('schedule', { display: 'name' }),
-    Router.notify({ name: 'schedule', operation: Constants.UPDATE })
+    customNotifyMiddleware(Constants.UPDATE)
   )
 
   server.put('/scheduler/:schedule/start',
@@ -73,7 +86,7 @@ module.exports = (server) => {
     schedulerResolver,
     start,
     Audit.afterUpdate('schedule', { display: 'name' }),
-    Router.notify({ name: 'schedule', operation: Constants.UPDATE })
+    customNotifyMiddleware(Constants.UPDATE)
   )
 }
 
@@ -99,6 +112,18 @@ const start = async (req, res, next) => {
         throw new ClientError('Invalid Date')
       }
       job.schedule(nextRun)
+    } else {
+      try {
+        const interval = cronParser.parseExpression(job.attrs.repeatInterval, {
+          currentDate: new Date(),
+          tz: job.attrs.repeatTimezone
+        })
+
+        const nextRun = interval.next().toDate()
+        job.schedule(nextRun)
+      } catch (err) {
+        // not a cron interval
+      }
     }
 
     job.enable()

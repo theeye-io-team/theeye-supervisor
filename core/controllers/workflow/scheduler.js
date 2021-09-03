@@ -5,9 +5,10 @@ const JobConstants = require('../../constants/jobs')
 const Constants = require('../../constants')
 const SchedulerConstants = require('../../constants/scheduler')
 const Audit = require('../../lib/audit')
-const { ClientError } = require('../../lib/error-handler')
+const payloadValidationMiddleware = require('../scheduler/payload-validation-middleware')
 
 module.exports = (server) => {
+
   server.get('/workflows/:workflow/schedule',
     server.auth.bearerMiddleware,
     Router.requireCredential('viewer'),
@@ -24,6 +25,7 @@ module.exports = (server) => {
     Router.resolve.customerNameToEntity({ required: true }),
     Router.ensureCustomer,
     Router.resolve.idToEntity({ param:'workflow', required: true }),
+    payloadValidationMiddleware,
     create,
     Audit.afterCreate('schedule', { display: 'name' }),
     Router.notify({ name: 'schedule', operation: Constants.CREATE })
@@ -32,15 +34,9 @@ module.exports = (server) => {
 
 const create = async (req, res, next) => {
   try {
-    const user = req.user
-    const customer = req.customer
-    const workflow = req.workflow
+    const { workflow, user, customer, body } = req
 
-    const { runDate, repeatEvery, timezone } = req.body
-
-    //if (!runDate) {
-    //  throw new ClientError('Must have a run date')
-    //}
+    const { runDate, repeatEvery, timezone } = body
 
     const schedule = await App.scheduler.scheduleWorkflow({
       origin: JobConstants.ORIGIN_SCHEDULER,
