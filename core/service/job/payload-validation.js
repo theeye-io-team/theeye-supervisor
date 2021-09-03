@@ -32,13 +32,15 @@ module.exports = async (req) => {
   }
 
   let owners = []
-  if (user?.id) {
-    owners = await verifyUsers({
-      users: [ user.id ],
-      customer,
-      task,
-      workflow
-    })
+  if (user?.id && user?.credential) {
+    if (user.credential !== 'integration') {
+      owners = await verifyUsers({
+        users: [ user.id ],
+        customer,
+        task,
+        workflow
+      })
+    }
   }
 
   Object.assign(payload, { owners, assignee })
@@ -61,7 +63,7 @@ module.exports = async (req) => {
 
 const paramsFilter = (req) => {
   const params = {}
-  const { body, query } = req
+  const { body={}, query={} } = req
 
   params.assignee = (body.assignee || query.assignee)
   if (params.assignee) {
@@ -87,7 +89,6 @@ const paramsFilter = (req) => {
 }
 
 const verifyUsers = async ({ users, customer, workflow, task }) => {
-
   if (!Array.isArray(users) || users.length === 0) { return }
 
   // verify that every user is a member of the organization and has acl.

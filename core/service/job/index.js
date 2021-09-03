@@ -1011,9 +1011,11 @@ const WorkflowJobCreatedNotification = ({ wJob, customer }) => {
 }
 
 /**
+ *
  * Emit the event "job finished execution" after all possible outcomes.
  *
  * @return {Promise}
+ *
  */
 const emitJobFinishedNotification = ({ job }) => {
   // async call
@@ -1023,6 +1025,10 @@ const emitJobFinishedNotification = ({ job }) => {
       operation: Constants.UPDATE,
       organization: job.customer_name,
       organization_id: job.customer_id,
+      model: {
+        _id: job._id,
+        acl: job.acl
+      },
       model_id: job._id,
       model_type: job._type
       //task_id: job.task_id
