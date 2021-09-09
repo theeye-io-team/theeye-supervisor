@@ -583,6 +583,7 @@ class AbstractJob {
 
     job.logging = (task.logging || false)
     job.task_id = task._id
+    //job.task = task._id
     job.host_id = task.host_id
     job.host = task.host_id
     job.name = task.name

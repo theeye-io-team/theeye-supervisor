@@ -43,6 +43,7 @@ module.exports = {
   host: { type: ObjectId, ref: 'Host' },
   task_id: { type: String },
   task: { type: Object }, // embedded
+  //task: { type: ObjectId, ref: 'Task' },
   //task_arguments_values: [ String ], // array of task arguments
   task_arguments_values: [ ], // array of task arguments
   notify: { type: Boolean },

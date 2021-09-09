@@ -133,30 +133,22 @@ const controller = {
    * @method GET
    * @route /:customer/job
    */
-  queue (req, res, next) {
-    const { customer, user, host } = req
+  async queue (req, res, next) {
+    try {
+      const { customer, user, host } = req
 
-    logger.log('agent querying queue')
+      logger.log('agent querying queue')
 
-    if (!host) {
-      return res.send(400, 'host is required')
-    }
-
-    App.jobDispatcher.getNextPendingJob(
-      { customer, user, host: req.host },
-      (err, job) => {
-        if (err) { return res.send(500, err.message) }
-
-        let jobs = []
-        if (job) {
-          jobs.push(job.publish('agent'))
-          App.scheduler.scheduleJobTimeoutVerification(job)
-        }
-
-        res.send(200, { jobs })
-        next()
+      if (!host) {
+        throw new ClientError('host is required')
       }
-    )
+
+      const jobs = await App.jobDispatcher.dispatchNextPendingJobs({ customer, user, host })
+      res.send(200, { jobs })
+      next()
+    } catch (err) {
+      res.sendError(err)
+    }
   },
   /**
    * @method GET
@@ -279,7 +271,6 @@ const controller = {
       res.send(200, counters)
       next()
     } catch (err) {
-      logger.error(err)
       res.sendError(err)
     }
   },

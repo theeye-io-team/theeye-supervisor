@@ -36,87 +36,23 @@ module.exports = {
    * @param {Function} next
    *
    */
-  getNextPendingJob (input, next) {
-    if (!input.host) { return next(new Error('host is required')) }
-
-    /**
-     *
-     * NOTE: jobs is an array of job data, there are NOT job models
-     * cannot use job.save since jobs are not mongoose document
-     *
-     */
-    //let jobs = []
-    const dispatchJobExecutionRecursive = (
-      idx, jobs, terminateRecursion
-    ) => {
-      if (idx===jobs.length) { return terminateRecursion() }
-      let job = JobModels.Job.hydrate(jobs[idx])
-      //job.populate('task', err => {
-        //if (err) { return terminateRecursion(err) }
-
-        // Cancel this job and process next
-        if (App.jobDispatcher.jobMustHaveATask(job) && !job.task) {
-          // cancel invalid job
-          job.lifecycle = LifecycleConstants.CANCELED
-          job.save(err => {
-            if (err) { logger.error('%o', err) }
-            dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
-          })
-
-          //RegisterOperation(Constants.UPDATE, TopicsConstants.task.cancelation, { job })
-          RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
-        } else {
-          allowedMultitasking(job, (err, allowed) => {
-            if (!allowed) {
-              // just ignore this one
-              dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
-            } else {
-              job.lifecycle = LifecycleConstants.ASSIGNED
-              job.save(err => {
-                if (err) { logger.error('%s', err) }
-                terminateRecursion(err, job)
-              })
-
-              //RegisterOperation(Constants.UPDATE, TopicsConstants.task.assigned, { job })
-              RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
-            }
-          })
-        }
-      //})
+  async dispatchNextPendingJobs (input) {
+    const { host } = input
+    if (!host) {
+      return next(new Error('host is required'))
     }
 
-    JobModels.Job.aggregate([
-      {
-        $match: {
-          host_id: input.host._id.toString(),
-          lifecycle: LifecycleConstants.READY
-        }
-      },
-      {
-        $sort: {
-          task_id: 1,
-          creation_date: 1
-        }
-      },
-      {
-        $group: {
-          _id: '$task_id',
-          nextJob: { $first: '$$ROOT' }
-        }
+    const groups = await getPendingJobsAllQueues({ host })
+    if (groups.length > 0) {
+      let idx = 0
+      const job = await getNextJobRecursive(idx, groups.map(grp => grp.nextJob))
+      if (job !== null) {
+        await dispatchJobExecution(job)
+        return [ job.publish('agent') ]
       }
-    ]).exec((err, groups) => {
-      if (err) {
-        logger.error('%o',err)
-        return next(err)
-      }
+    }
 
-      if (groups.length>0) {
-        let idx = 0
-        dispatchJobExecutionRecursive(idx, groups.map(grp => grp.nextJob), next)
-      } else {
-        next()
-      }
-    })
+    return []
   },
   finishDummyJob (job, input) {
     return new Promise((resolve, reject) => {
@@ -437,10 +373,7 @@ module.exports = {
       }
 
       next(null, job)
-
       logger.log('job %s terminated', job._id)
-
-      //RegisterOperation(Constants.UPDATE, TopicsConstants.task.terminate, { job })
       RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
     })
   },
@@ -504,7 +437,7 @@ module.exports = {
   },
   */
   jobMustHaveATask (job) {
-    var result = (
+    const result = (
       job._type === JobConstants.SCRAPER_TYPE ||
       job._type === JobConstants.SCRIPT_TYPE ||
       job._type === JobConstants.APPROVAL_TYPE ||
@@ -599,33 +532,6 @@ const taskRequireHost = (task) => {
     task.type === TaskConstants.TYPE_SCRAPER
   )
   return res
-}
-
-const allowedMultitasking = (job, next) => {
-  if (
-    job._type === JobConstants.NGROK_INTEGRATION_TYPE ||
-    job._type === JobConstants.AGENT_UPDATE_TYPE
-  ) {
-    return next(null, true)
-  }
-
-  if (job.task.multitasking !== false) { return next(null, true) }
-
-  JobModels
-    .Job
-    .findOne({
-      task_id: job.task_id,
-      _id: { $ne: job._id },
-      lifecycle: LifecycleConstants.ASSIGNED
-    })
-    .exec( (err, inprogressjob) => {
-      if (err) {
-        logger.error('Failed to fetch inprogress job')
-        return next(err)
-      }
-
-      next(null, (inprogressjob === null))
-    })
 }
 
 /**
@@ -1036,28 +942,119 @@ const emitJobFinishedNotification = ({ job }) => {
   })
 }
 
-//const users2members = async (users, customer) => {
-//  const members = await App.gateway.member.fetch(users, { customer_id: customer.id })
-//  if (!members || members.length === 0) {
-//    throw new ClientError(`Invalid members. ${JSON.stringify(users)}`)
-//  }
-//
-//  if (users.length !== members.length) {
-//    const invalid = []
-//    for (let user of users) {
-//      const elem = members.find(member => {
-//        return member.user.username === user || member.user.email === user
-//      })
-//
-//      if (!elem) {
-//        invalid.push(user)
-//      }
-//    }
-//
-//    if (invalid.length > 0) {
-//      throw new ClientError(`Invalid members. ${JSON.stringify(invalid)}`)
-//    }
-//  }
-//
-//  return members
-//}
+const getPendingJobsAllQueues = ({ host }) => {
+  const query = JobModels.Job.aggregate([
+    {
+      $match: {
+        host_id: host._id.toString(),
+        lifecycle: LifecycleConstants.READY
+      }
+    },
+    {
+      $sort: {
+        task_id: 1,
+        creation_date: 1
+      }
+    },
+    {
+      $group: {
+        _id: { "$toObjectId": "$task_id" },
+        nextJob: {
+          $first: '$$ROOT'
+        }
+      }
+    },
+    {
+      $lookup: {
+        from: 'tasks',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'task'
+      }
+    },
+    {
+      $unwind: "$task"
+    },
+    {
+      $match: {
+        "task.enabled": {
+          $ne: false
+        }
+      }
+    },
+    // Priority , FIFO
+    {
+      $sort: {
+        "task.priority": 1,
+        "nextJob.creation_date": 1
+      }
+    }
+  ])
+
+  return query
+}
+
+/**
+ *
+ * NOTE: jobs is an array of job data, there are NOT job models
+ * cannot use job.save since jobs are not mongoose document
+ *
+ */
+const getNextJobRecursive = async (idx, jobs, terminateRecursion) => {
+  if (idx === jobs.length) { return null }
+
+  const job = JobModels.Job.hydrate(jobs[idx])
+
+  // Cancel this job and process next
+  if (App.jobDispatcher.jobMustHaveATask(job) && !job.task) {
+    await cancelJobExecution(job)
+    return getNextJobRecursive(++idx, jobs)
+  } else {
+    const allowed = await allowedMultitasking(job)
+    if (!allowed) {
+      // ignore this one
+      return getNextJobRecursive(++idx, jobs)
+    }
+
+    return job
+  }
+}
+
+const allowedMultitasking = async (job) => {
+  if (
+    job._type === JobConstants.NGROK_INTEGRATION_TYPE ||
+    job._type === JobConstants.AGENT_UPDATE_TYPE
+  ) {
+    return true
+  }
+
+  if (job.task.multitasking !== false) {
+    return true
+  }
+
+  const inprogressjob = await JobModels
+    .Job
+    .findOne({
+      task_id: job.task_id,
+      _id: {
+        $ne: job._id
+      },
+      lifecycle: LifecycleConstants.ASSIGNED
+    })
+
+  return (inprogressjob === null)
+}
+
+const dispatchJobExecution = async (job) => {
+  job.lifecycle = LifecycleConstants.ASSIGNED
+  await job.save()
+  RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
+  App.scheduler.scheduleJobTimeoutVerification(job)
+}
+
+const cancelJobExecution = async (job) => {
+  job.state = LifecycleConstants.CANCELED
+  job.lifecycle = LifecycleConstants.CANCELED
+  await job.save()
+  RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
+}
