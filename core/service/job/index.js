@@ -977,8 +977,8 @@ const getPendingJobsAllQueues = ({ host }) => {
     },
     {
       $match: {
-        "task.enabled": {
-          $ne: false
+        "task.paused": {
+          $ne: true
         }
       }
     },

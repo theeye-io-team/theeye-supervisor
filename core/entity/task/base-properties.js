@@ -9,6 +9,7 @@ module.exports = {
   customer: { type: ObjectId, ref: 'Customer' },
   public: { type: Boolean, default: false },
   tags: { type: Array },
+  paused: { type: Boolean, default: false },
   description : { type: String },
   triggers: [{ type: ObjectId, ref: 'Event' }],
   secret: { type: String, default: randomSecret }, // one way hash

@@ -54,18 +54,18 @@ HostService.provision = (input) => {
 
     if (!groups || ! Array.isArray(groups) || groups.length === 0) {
       // create resources and notify agent
-      const monitorData = {
-        user,
-        customer,
-        customer_id: customer._id,
-        customer_name: customer.name,
-        host,
-        host_id: host._id.toString(),
-        hostname: host.hostname,
-        resource,
-        enabled: true,
-        description: 'Host auto-created monitor.'
-      }
+      //const monitorData = {
+      //  user,
+      //  customer,
+      //  customer_id: customer._id,
+      //  customer_name: customer.name,
+      //  host,
+      //  host_id: host._id.toString(),
+      //  hostname: host.hostname,
+      //  resource,
+      //  enable: true,
+      //  description: 'Host auto-created monitor.'
+      //}
 
       // by default add base monitors always.
       if (skip_auto_provisioning === true) { return }

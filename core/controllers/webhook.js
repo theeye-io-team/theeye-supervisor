@@ -186,7 +186,7 @@ const controller = {
 
       const triggerEvent = await WebhookEvent.findOne({
         emitter_id: webhook._id,
-        enable: true,
+        //enable: true,
         name: 'trigger'
       })
 
