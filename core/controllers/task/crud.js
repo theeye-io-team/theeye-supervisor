@@ -26,44 +26,47 @@ module.exports = (server) => {
     router.ensureAllowed({ entity: { name: 'task' } })
   ], controller.get)
 
-  const middlewares = [
+  server.post('/:customer/task',
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer
-  ]
-
-  server.post(
-    '/:customer/task',
-    middlewares.concat([
-      router.requireCredential('admin'),
-      router.resolve.idToEntity({ param: 'script', entity: 'file' }),
-      router.resolve.idToEntity({ param: 'host' })
-    ]),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param: 'script', entity: 'file' }),
+    router.resolve.idToEntity({ param: 'host' }),
     controller.create,
     audit.afterCreate('task', { display: 'name' })
   )
 
-  const mws = middlewares.concat(
+  server.patch('/:customer/task/:task',
+    server.auth.bearerMiddleware,
+    router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'task', required: true }),
-    router.resolve.idToEntity({ param: 'host_id', entity: 'host', into: 'host' })
-  )
-
-  server.patch('/:customer/task/:task',
-    mws,
+    router.resolve.idToEntity({ param: 'host_id', entity: 'host', into: 'host' }),
     controller.replace,
     audit.afterUpdate('task', { display: 'name' })
   )
 
   server.put('/:customer/task/:task',
-    mws,
+    server.auth.bearerMiddleware,
+    router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param: 'task', required: true }),
+    router.resolve.idToEntity({ param: 'host_id', entity: 'host', into: 'host' }),
     router.resolve.idToEntity({ param: 'script', entity: 'file' }),
     controller.replace,
     audit.afterReplace('task', { display: 'name' })
   )
 
   server.del('/:customer/task/:task',
-    mws,
+    server.auth.bearerMiddleware,
+    router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param: 'task', required: true }),
+    router.resolve.idToEntity({ param: 'host_id', entity: 'host', into: 'host' }),
     controller.remove,
     audit.afterRemove('task', { display: 'name' })
   )

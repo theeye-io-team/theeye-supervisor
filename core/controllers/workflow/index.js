@@ -5,6 +5,7 @@ const acl = require('./acl')
 const triggers = require('./triggers')
 const integrations = require('./integrations')
 const scheduler = require('./scheduler')
+const queue = require('./queue')
 
 module.exports = (server) => {
   job(server)
@@ -14,4 +15,5 @@ module.exports = (server) => {
   triggers(server)
   integrations(server)
   scheduler(server)
+  queue(server)
 }
