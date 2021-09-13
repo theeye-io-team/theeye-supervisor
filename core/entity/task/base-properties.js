@@ -10,6 +10,7 @@ module.exports = {
   public: { type: Boolean, default: false },
   tags: { type: Array },
   paused: { type: Boolean, default: false },
+  priority: { type: Number, default: 0 },
   description : { type: String },
   triggers: [{ type: ObjectId, ref: 'Event' }],
   secret: { type: String, default: randomSecret }, // one way hash

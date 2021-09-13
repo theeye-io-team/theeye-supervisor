@@ -12,6 +12,7 @@ function WorkflowSchema (props) {
   const specs = { collection: 'workflows' }
   const properties = {
     paused: { type: Boolean, default: false },
+    priority: { type: Number, default: 0 },
     order: { type: Number, default: 0 },
     name: { type: String, required: true },
     description: { type: String, default: '' },

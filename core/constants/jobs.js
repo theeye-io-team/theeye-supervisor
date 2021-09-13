@@ -19,3 +19,11 @@ exports.ORIGIN_TRIGGER_BY = 'trigger_by'
 exports.ORIGIN_SCHEDULER = 'scheduler'
 
 exports.JOBS_LOG_COUNT_LIMIT = 5
+
+exports.PRIORITY_LEVELS = {
+  'LOW': 21,
+  'LOW_MID': 10,
+  'NORMAL': 0,
+  'HIGH_MID': -10,
+  'HIGH': -21
+}
