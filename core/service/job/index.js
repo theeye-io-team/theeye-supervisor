@@ -947,50 +947,96 @@ const getPendingJobsAllQueues = ({ host }) => {
     {
       $match: {
         host_id: host._id.toString(),
-        lifecycle: LifecycleConstants.READY,
-        //$or: [
-        //  { workflow_id: null },
-        //  { workflow_id: { $exists: false} }
-        //]
+        lifecycle: LifecycleConstants.READY
       }
-    },
-    {
+    }, {
+      $set: {
+        workflow_id: { $ifNull: [ "$workflow_id", "$task_id" ] },
+        workflow_job_id:  { $ifNull: [ "$workflow_job_id", "$task_id" ] }
+      }
+    }, {
       $sort: {
+        creation_date: 1,
+        workflow_id: 1,
+        workflow_job_id: 1,
         task_id: 1,
-        creation_date: 1
       }
-    },
-    {
+    }, {
       $group: {
-        _id: { "$toObjectId": "$task_id" },
+        _id: {
+          task_id: { "$toObjectId": "$task_id" },
+          workflow_id: { "$toObjectId": "$workflow_id" },
+          workflow_job_id: { "$toObjectId": "$workflow_job_id" },
+          //workflow_job_id: "$workflow_job_id"
+        },
         nextJob: {
           $first: '$$ROOT'
         }
       }
-    },
-    {
+    }, {
       $lookup: {
         from: 'tasks',
-        localField: '_id',
+        localField: '_id.task_id',
         foreignField: '_id',
         as: 'task'
       }
-    },
-    {
-      $unwind: "$task"
-    },
-    {
-      $match: {
-        "task.paused": {
-          $ne: true
+    }, {
+      $unwind: {
+        path: "$task",
+        preserveNullAndEmptyArrays: true
+      }
+    }, {
+      $lookup: {
+        from: 'workflows',
+        localField: '_id.workflow_id',
+        foreignField: '_id',
+        as: 'workflow'
+      }
+    }, {
+      $unwind: {
+        path: "$workflow",
+        preserveNullAndEmptyArrays: true
+      }
+    }, {
+      $lookup: {
+        from: 'jobs',
+        localField: '_id.workflow_job_id',
+        foreignField: '_id',
+        as: 'workflow_job',
+      }
+    }, {
+      $unwind: {
+        path: "$workflow_job",
+        preserveNullAndEmptyArrays: true
+      }
+    }, {
+      $set: {
+        "creation_date": {
+          $ifNull: ["$workflow_job.creation_date", "$nextJob.creation_date"]
+        },
+        "paused": {
+          $ifNull: ["$workflow.paused", "$task.paused"]
+        },
+        "priority": {
+          $ifNull: ["$workflow.priority", "$task.priority"]
         }
       }
-    },
-    // Priority , FIFO
-    {
+    }, {
+      $match: {
+        "paused": { $ne: true }
+      }
+    },{
       $sort: {
-        "task.priority": 1,
-        "nextJob.creation_date": 1
+        "priority": 1,
+        "creation_date": 1
+      }
+    }, {
+      $project: {
+        _id: 1,
+        priority: 1,
+        creation_date: 1,
+        paused: 1,
+        nextJob: 1
       }
     }
   ])

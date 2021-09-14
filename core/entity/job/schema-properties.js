@@ -14,10 +14,10 @@ module.exports = {
   trigger_name: { type: String }, // final event. succes/failure by default
   triggered_by: { type: ObjectId, ref: 'Event' },
   origin: { type: String },
-  workflow_id: { type: String }, // job belongs to a specific workflow
-  workflow: { type: ObjectId, ref: 'Workflow' },
-  workflow_job_id: { type: String }, // job belongs to an instance of the workflow
-  workflow_job: { type: ObjectId, ref: 'WorkflowJob' },
+  workflow_id: { type: String, default: null },
+  workflow: { type: ObjectId, ref: 'Workflow', default: null },
+  workflow_job_id: { type: String, default: null },
+  workflow_job: { type: ObjectId, ref: 'WorkflowJob', default: null },
   result: { type: Object, default: () => { return {} } },
   output: {
     type: String,
