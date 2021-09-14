@@ -45,7 +45,7 @@ module.exports = {
     const groups = await getPendingJobsAllQueues({ host })
     if (groups.length > 0) {
       let idx = 0
-      const job = await getNextJobRecursive(idx, groups.map(grp => grp.nextJob))
+      const job = await getNextJobRecursive(idx, groups.map(group => group.job))
       if (job !== null) {
         await dispatchJobExecution(job)
         return [ job.publish('agent') ]
@@ -969,7 +969,7 @@ const getPendingJobsAllQueues = ({ host }) => {
           workflow_job_id: { "$toObjectId": "$workflow_job_id" },
           //workflow_job_id: "$workflow_job_id"
         },
-        nextJob: {
+        job: {
           $first: '$$ROOT'
         }
       }
@@ -1012,7 +1012,7 @@ const getPendingJobsAllQueues = ({ host }) => {
     }, {
       $set: {
         "creation_date": {
-          $ifNull: ["$workflow_job.creation_date", "$nextJob.creation_date"]
+          $ifNull: ["$workflow_job.creation_date", "$job.creation_date"]
         },
         "paused": {
           $ifNull: ["$workflow.paused", "$task.paused"]
@@ -1036,7 +1036,7 @@ const getPendingJobsAllQueues = ({ host }) => {
         priority: 1,
         creation_date: 1,
         paused: 1,
-        nextJob: 1
+        job: 1
       }
     }
   ])
