@@ -947,7 +947,11 @@ const getPendingJobsAllQueues = ({ host }) => {
     {
       $match: {
         host_id: host._id.toString(),
-        lifecycle: LifecycleConstants.READY
+        lifecycle: LifecycleConstants.READY,
+        //$or: [
+        //  { workflow_id: null },
+        //  { workflow_id: { $exists: false} }
+        //]
       }
     },
     {
