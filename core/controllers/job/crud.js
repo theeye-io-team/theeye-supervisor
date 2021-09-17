@@ -135,28 +135,31 @@ const controller = {
    */
   queue (req, res, next) {
     const { customer, user, host } = req
+    if (!host) { return res.send(400, 'host is required') }
 
-    logger.log('agent querying queue')
+    if (customer.disabled === true || host.disabled === true) {
+      App.jobDispatcher.getAgentUpdateJob(host, (err, job) => {
+        if (err) { return res.send(500) }
+        res.send(200, { jobs: [ job ] })
+      })
+    } else {
+      logger.log('agent querying queue')
+      App.jobDispatcher.getNextPendingJob(
+        { customer, user, host: req.host },
+        (err, job) => {
+          if (err) { return res.send(500, err.message) }
 
-    if (!host) {
-      return res.send(400, 'host is required')
-    }
+          let jobs = []
+          if (job) {
+            jobs.push(job.publish('agent'))
+            App.scheduler.scheduleJobTimeoutVerification(job)
+          }
 
-    App.jobDispatcher.getNextPendingJob(
-      { customer, user, host: req.host },
-      (err, job) => {
-        if (err) { return res.send(500, err.message) }
-
-        let jobs = []
-        if (job) {
-          jobs.push(job.publish('agent'))
-          App.scheduler.scheduleJobTimeoutVerification(job)
+          res.send(200, { jobs })
+          next()
         }
-
-        res.send(200, { jobs })
-        next()
-      }
-    )
+      )
+    }
   },
   /**
    * @method GET

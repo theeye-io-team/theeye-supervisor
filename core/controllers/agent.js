@@ -1,36 +1,37 @@
 
+const mongoose = require('mongoose')
+const App = require('../app')
 const systemConfig = require('config').system
 const async = require('async')
-const MONITORS = require('../constants/monitors')
+const MonitorsConstants = require('../constants/monitors')
+const { ClientError, ServerError } = require('../lib/error-handler')
 
-var json = require('../lib/jsonresponse');
-var logger = require('../lib/logger')('controller:agent');
-var router = require('../router');
-var NotificationService = require('../service/notification');
-var ResourceManager = require('../service/resource');
-var ResourceMonitorService = require('../service/resource/monitor');
+const logger = require('../lib/logger')('controller:agent')
+const router = require('../router')
+//var ResourceManager = require('../service/resource')
+//var ResourceMonitorService = require('../service/resource/monitor')
 
-const Host = require('../entity/host').Entity;
 const File = require('../entity/file').File;
 //const User = require('../entity/user').Entity
 
-
 module.exports = function (server) {
-	server.put('/:customer/agent/:hostname', [
+  server.put('/:customer/agent/:hostname',
     server.auth.bearerMiddleware,
     router.requireCredential('agent'),
-    router.resolve.customerNameToEntity({}),
+    router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer,
-    router.resolve.hostnameToHost({})
-  ], controller.update)
+    router.resolve.hostnameToHost({ required: true }),
+    controller.update
+  )
 
-  server.get('/:customer/agent/:hostname/config', [
+  server.get('/:customer/agent/:hostname/config',
     server.auth.bearerMiddleware,
     router.requireCredential('agent'),
-    router.resolve.customerNameToEntity({}),
+    router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer,
-    router.resolve.hostnameToHost({})
-  ], controller.config)
+    router.resolve.hostnameToHost({ required: true }),
+    controller.config
+  )
 }
 
 const controller = {
@@ -39,45 +40,31 @@ const controller = {
    * @path /:customer/agent/:hostname/config
    *
    */
-  update (req, res, next) {
-    var host = req.host
-    if (!host) {
-      logger.error('invalid request for %s. host not found', req.params.hostname)
-      return res.send(404,'invalid host')
-    }
-
-    logger.log('receiving agent keep alive for host "%s"', host.hostname)
-
-    host.last_update = new Date()
-    host.save(err => {
-      if (err) {
-        logger.error(err)
-        return res.send(500)
+  async update (req, res, next) {
+    try {
+      const { customer, host } = req
+      if (!host) {
+        throw new ClientError('Not Found', { statusCode: 404 })
       }
 
-      const query = { type: 'host', ensureOne: true }
-      ResourceManager.findHostResources(host, query, (err, resource) => {
-        if (err) {
+      if (customer.disabled === true || host.disabled === true) {
+        return res.send(204)
+      }
+
+      const resource = await findHostResource(host)
+
+      const manager = new App.resource(resource)
+      manager
+        .handleState({ state: MonitorsConstants.RESOURCE_NORMAL })
+        .catch(err => {
           logger.error(err)
-          return res.send(500)
-        }
-        
-        if (!resource) {
-          logger.error('host resource not found.')
-          return res.send(503)
-        }
+        })
 
-        let manager = new ResourceManager(resource)
-        manager
-          .handleState({ state: MONITORS.RESOURCE_NORMAL })
-          .catch(err => {
-            logger.error(err)
-          })
-
-        res.send(200)
-        next()
-      })
-    })
+      res.send(204)
+      next()
+    } catch (err) {
+      res.sendError(err)
+    }
   },
   /**
    *
@@ -86,136 +73,142 @@ const controller = {
    * @path /:customer/agent/:hostname/config
    *
    */
-  config (req, res, next) {
-    const user = req.user
-    const host = req.host
-    const customer = req.customer
+  async config (req, res, next) {
+    try {
+      const { user, customer } = req
 
-    if (!host) return res.send(400,'hostname required');
-    if (!customer) return res.send(400,'customer required');
-    if (!user) return res.send(400,'authentication required');
-
-    ResourceMonitorService.findBy({
-      enable: true,
-      host_id: host._id,
-      customer_id: customer._id
-    }, function(error, monitors){
-      if (error) {
-        return res.send(500)
+      const host = req.host
+      if (!host) {
+        throw new ClientError('Not Found', { statusCode: 404 })
       }
 
-      generateAgentConfig(monitors, function(err, config){
-        if (err) return next(err);
-        if (!config) {
-          var err = new Error('unexpected error');
-          err.statusCode = 500;
-          return next(err);
+      if (customer.disabled === true || host.disabled === true) {
+        const workers = generateBlockedAgentConfig()
+        return res.send(200, { workers })
+      } else {
+        const monitors = await App.Models.Monitor.Monitor.find({
+          enable: true,
+          host_id: host._id,
+          customer_id: customer._id
+        })
+
+        const workers = await generateAgentConfig(monitors)
+        if (!workers) {
+          throw new ServerError('configuration cannot be obtained')
         }
 
-        res.send(200,config);
-        next();
-      })
-    })
+        res.send(200, { workers })
+      }
+    } catch (err) {
+      logger.error(err)
+      res.sendError(err)
+    }
   }
 }
 
-const generateAgentConfig = (monitors, next) => {
-  var workers = [];
-  async.each(monitors,function(monitor,doneIteration){
-    var config = {
+const findHostResource = (host) => {
+  return new Promise((resolve, reject) => {
+    const query = { type: 'host', ensureOne: true }
+    App.resource.findHostResources(host, query, (err, resource) => {
+      if (err) {
+        logger.error(err)
+        reject (err)
+      } else if (!resource) {
+        logger.error(`Host ${host._id} resource not found`)
+        reject( new ServerError() )
+      } else {
+        resolve(resource)
+      }
+    })
+  })
+}
+
+const generateBlockedAgentConfig = () => {
+
+  return []
+
+}
+
+const generateAgentConfig = async (monitors) => {
+  const promises = []
+
+  for (let monitor of monitors) {
+    const configProm = ConfigFactory.create(monitor) 
+    promises.push( configProm )
+  }
+
+  const workers = await Promise.all(promises)
+
+  return workers.filter(worker => worker !== null)
+}
+
+const ConfigFactory = {
+  /**
+   * @return Promise
+   */
+  create (monitor) {
+    const config = {
       type: monitor.type,
       name: monitor.name,
       looptime: monitor.looptime,
       resource_id: monitor.resource_id
     }
 
-    logger.log('setting up monitor configuration');
-    (function(configDone) {
-      switch (monitor.type) {
-        case 'file':
-          var fileId = monitor.config.file;
-          File.findById(fileId,function(err,file){
-            if (err) {
-              configDone(err);
-            } else if (file===null) {
-              var err = new Error('Invalid or not present file id in worker config. File specification not available');
-              err.statusCode = 500;
-              configDone(err);
-            } else {
-              monitor.publish({},(err,m) => {
-                file.publish((err,f) => {
-                  config = Object.assign(config, m.config)
-                  config.file = f;
-                  configDone(null,config);
-                });
-              });
-            }
-          });
-          break;
-        case 'scraper':
-          config = Object.assign(config,monitor.config)
-          configDone(null, config);
-          break;
-        case 'process':
-          config.ps = monitor.config.ps;
-          configDone(null, config);
-          break;
-        case 'script':
-          File.findById(monitor.config.script_id, function(err,script){
-            if (err) {
-              return configDone(err);
-            } else if (script==null) {
-              var err = new Error('invalid script id for worker config. script not available');
-              err.statusCode = 500;
-              logger.error(err)
-              configDone(err)
-            } else {
-              script.publish(function(err,data){
-                config.script = data;
-                config.script.arguments = monitor.config.script_arguments||[];
-                config.script.runas = monitor.config.script_runas||'';
-                configDone(null, config);
-              });
-            }
-          });
-          break;
-        case 'dstat':
-          config.limit = monitor.config.limit
-          configDone(null, config)
-          break;
-        case 'psaux':
-          configDone(null, config)
-          break;
-        case 'host':
-          configDone()
-          //// jobs listener
-          //config.type = 'ping'
-          //configDone(null, Object.assign(config, monitor.config))
-          break;
-        case 'listener':
-          config.type = 'listener'
-          configDone(null, Object.assign(config, monitor.config))
-          break;
-        case 'nested':
-          configDone()
-          break;
-        default:
-          let msg=`unhandled monitor type ${monitor.type}`
-          let err = new Error(msg)
-          logger.error(err)
-          configDone(err)
-          break;
-      }
-    })(function(error, config){
-      if(!error && config) workers.push(config);
-      doneIteration();
-    });
-  },function(err){
-    logger.log('completed');
-    if (err) {
-      logger.log('some monitor produces an error. %s', err);
-      next(err);
+    if (!this.hasOwnProperty(monitor.type)) {
+      return null
     }
-    else next(null,{ workers : workers });
-  });
+
+    return this[monitor.type](config, monitor)
+  },
+  async file (config, monitor) {
+    const file = await File.findById(monitor.config.file)
+    if (file === null) {
+      throw new ServerError('File is invalid or not present in worker\'s configuration.')
+    }
+
+    return (
+      Object.assign(
+        config,
+        monitor.config,
+        { file: file.toObject() }
+      )
+    )
+  },
+  async scraper (config, monitor) {
+    return Object.assign(config, monitor.config)
+  },
+  async process (config, monitor) {
+    config.ps = monitor.config.ps
+    return config
+  },
+  async script (config, monitor) {
+    const script = await File.findById(monitor.config.script_id)
+    if (script === null) {
+      throw new ServerError('File is invalid or not present in worker\'s configuration.')
+    }
+
+    config.script = script.toObject()
+    config.script.arguments = (monitor.config.script_arguments||[])
+    config.script.runas = (monitor.config.script_runas||'')
+
+    return config
+  },
+  async dstat (config, monitor) {
+    config.limit = monitor.config.limit
+    return config
+  },
+  async listener (config, monitor) {
+    config.type = 'listener'
+    Object.assign(config, monitor.config)
+    return config
+  },
+  async psaux (config, monitor) {
+    return config
+  },
+  async host (config, monitor) {
+    return null
+  },
+  async nested (config, monitor) {
+    return null
+  }
 }

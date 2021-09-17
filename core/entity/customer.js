@@ -4,6 +4,7 @@ const util = require('util')
 
 function Schema () {
   mongoose.Schema.call(this,{
+    disabled: { type: Boolean },
     name: {
       type: String,
       index: true,
@@ -14,8 +15,7 @@ function Schema () {
     display_name: { type: String, default: '' },
     description: { type: String, default: '' },
     owner_id: { type: mongoose.Schema.Types.ObjectId },
-    //owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-    //agent: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     config: {
       type: Object,
       default: () => {

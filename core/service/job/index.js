@@ -118,6 +118,26 @@ module.exports = {
       }
     })
   },
+  getAgentUpdateJob (host, next) {
+    App.Models.Job.AgentUpdate.findOne({
+      host_id: host._id,
+      lifecycle: LifecycleConstants.READY
+    }, (err, job) => {
+      if (err) {
+        logger.error('%s', err)
+        return next(err)
+      }
+      if (!job) { return next() }
+
+      job.lifecycle = LifecycleConstants.ASSIGNED
+      job.save(err => {
+        if (err) {
+          logger.error('%s', err)
+        }
+        next(err, job)
+      })
+    })
+  },
   finishDummyJob (job, input) {
     return new Promise((resolve, reject) => {
       let { task } = input

@@ -7,6 +7,7 @@ const BaseSchema = require('../base-schema')
 
 function HostSchema () {
   const properties = {
+    disabled: { type: Boolean },
     hostname: { type: String, index: true, required: true },
     ip: { type: String },
     os_name: { type: String },
