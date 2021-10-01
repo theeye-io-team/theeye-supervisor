@@ -9,7 +9,13 @@ module.exports = (fn, options = {}) => {
       res.send(body)
       next()
     } catch (err) {
-      res.sendError(err)
+      if (err.name === 'ValidationError') {
+        const clientErr = new ClientError('Invalid Payload') 
+        clientErr.errors = err.errors
+        res.sendError(clientErr)
+      } else {
+        res.sendError(err)
+      }
     }
   }
 
