@@ -56,16 +56,17 @@ module.exports = function () {
 
   // respond with error middleware
   server.use((req, res, next) => {
-    res.sendError = (error, next) => {
-      if (error.statusCode < 500) {
-        res.send(error.statusCode || 400, {
-          statusCode: error.statusCode,
-          message: error.message,
-          errors: error.errors
+    res.sendError = (err, next) => {
+      if (err instanceof ErrorHandler.ClientError || err.statusCode < 500) {
+        res.send(err.statusCode || 400, {
+          statusCode: err.statusCode,
+          message: err.message,
+          errors: err.errors
         })
       } else {
+        logger.error(err)
         const handler = new ErrorHandler()
-        handler.sendExceptionAlert(error, req)
+        handler.sendExceptionAlert(err, req)
         res.send(500, 'Internal Server Error')
       }
       if (next) { next() }

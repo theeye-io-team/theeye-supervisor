@@ -519,7 +519,7 @@ module.exports = {
       process.nextTick(() => {
         RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
         App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
-        dispatchFinishedTaskExecutionEvent(job)
+        dispatchFinishedJobExecutionEvent(job)
         emitJobFinishedNotification({ job })
       })
     } catch (err) {
@@ -1038,7 +1038,7 @@ const cancelJobNextLifecycle = (job) => {
  * @return {Promise}
  *
  */
-const dispatchFinishedTaskExecutionEvent = async (job) => {
+const dispatchFinishedJobExecutionEvent = async (job) => {
   try {
     const { task_id, trigger_name } = job
     let topic
@@ -1053,8 +1053,8 @@ const dispatchFinishedTaskExecutionEvent = async (job) => {
     })
 
     if (!event) {
-      let warn = `no handler defined for event named ${trigger_name} of task ${task_id}`
-      return logger.error(warn)
+      const msg = `no handler defined for event named ${trigger_name} of task ${task_id}`
+      throw new Error(msg)
     }
 
     // trigger task execution event within a workflow
@@ -1071,7 +1071,9 @@ const dispatchFinishedTaskExecutionEvent = async (job) => {
       job
     })
   } catch (err) {
-    if (err) { return logger.error(err) }
+    if (err) {
+      return logger.error(err)
+    }
   }
 }
 

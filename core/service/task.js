@@ -1,4 +1,3 @@
-'use strict'
 
 const App = require('../app')
 
@@ -9,9 +8,7 @@ const asyncMap = require('async/map')
 const Tag = require('../entity/tag').Entity
 const Host = require('../entity/host').Entity
 const Task = require('../entity/task').Entity
-const TaskFactory = require('../entity/task').Factory
 const TaskEvent = require('../entity/event').TaskEvent
-//const Script = require('../entity/file').Script
 const Job = require('../entity/job').Job
 const Constants = require('../constants')
 const LifecycleConstants = require('../constants/lifecycle')
@@ -22,8 +19,25 @@ const TaskTemplate = require('../entity/task/template')
 
 // var filter = require('../router/param-filter');
 const FetchBy = require('../lib/fetch-by')
+const ErrorHandler = require('../lib/error-handler')
 
 module.exports = {
+  /**
+   * @return {Promise}
+   */
+  factory (props) {
+    validateProperties(props)
+
+    const task = App.Models.Task.Factory.create(props)
+    const errors = task.validateSync()
+    if (errors) {
+      const err = new ClientError('TaskValidationError')
+      err.errors = errors
+      throw err
+    }
+
+    return task.save()
+  },
   /**
    * @summary Remove task
    * @param {Object} options
@@ -181,8 +195,7 @@ module.exports = {
       logger.log('creating task')
       logger.data(input)
 
-      const customer = input.customer
-      const task = TaskFactory.create(input)
+      const task = App.Models.Task.Factory.create(input)
 
       let errors = task.validateSync()
       if (errors) {
@@ -194,6 +207,7 @@ module.exports = {
 
       await task.save()
 
+      const customer = input.customer
       createTags(input.tags, customer)
       createTaskEvents(task, customer)
 
@@ -477,6 +491,38 @@ module.exports = {
     } else {
       next(null, data)
     }
+  }
+}
+
+const validateProperties = (input) => {
+  const errors = new ErrorHandler()
+
+  if (!input.name) { errors.required('name', input.name) }
+  if (!input.type) { errors.required('type', input.type) }
+
+  if (
+    input.type === TaskConstants.TYPE_SCRIPT ||
+    input.type === TaskConstants.TYPE_SCRAPER
+  ) {
+    if (!input.host_id) { errors.required('host', req.host) }
+  }
+
+  if (input.type === TaskConstants.TYPE_SCRIPT) {
+    if (!input.script_id) {
+      errors.required('script', input.script_id)
+    }
+    if (!input.script_runas) {
+      errors.required('script_runas', input.script_runas)
+    }
+  }
+
+  if (input.type === TaskConstants.TYPE_APPROVAL) { }
+  if (input.type === TaskConstants.TYPE_SCRAPER) { }
+  if (input.type === TaskConstants.TYPE_DUMMY) { }
+  if (input.type === TaskConstants.TYPE_NOTIFICATION) { }
+
+  if (errors.hasErrors()) {
+    throw new ClientError(errors)
   }
 }
 
