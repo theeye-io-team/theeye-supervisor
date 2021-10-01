@@ -38,6 +38,15 @@ module.exports = {
 
     return task.save()
   },
+  async destroy (taskId) {
+    const task = await App.Models.Task.Task.findById(taskId)
+    return Promise.all([
+      task.remove(),
+      App.scheduler.unscheduleTask(task),
+      App.Models.Event.Event.deleteMany({ emitter_id: task._id }),
+      App.Models.Job.Job.deleteMany({ task_id: task._id.toString() })
+    ])
+  },
   /**
    * @summary Remove task
    * @param {Object} options
