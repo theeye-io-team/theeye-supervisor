@@ -1052,10 +1052,10 @@ const dispatchFinishedJobExecutionEvent = async (job) => {
       name: trigger_name
     })
 
-    if (!event) {
-      const msg = `no handler defined for event named ${trigger_name} of task ${task_id}`
-      throw new Error(msg)
-    }
+    //if (!event) {
+    //  const msg = `no handler defined for event named ${trigger_name} of task ${task_id}`
+    //  throw new Error(msg)
+    //}
 
     // trigger task execution event within a workflow
     if (job.workflow_id && job.workflow_job_id) {

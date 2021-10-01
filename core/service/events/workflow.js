@@ -66,6 +66,10 @@ const handleWorkflowEvent = async ({ event, data, job }) => {
  *
  */
 const executeWorkflowStep = async (workflow, workflow_job_id, event, argsValues, job) => {
+  if (!event || !event._id) {
+    return
+  }
+
   const graph = new graphlib.json.read(workflow.graph)
   const nodes = graph.successors(event._id.toString()) // should return tasks nodes
   if (!nodes) { return }
@@ -106,6 +110,11 @@ const executeWorkflowStep = async (workflow, workflow_job_id, event, argsValues,
  *
  */
 const executeWorkflowStepVersion2 = (workflow, workflow_job_id, event, argsValues, job) => {
+
+  if (!event || !event._id) {
+    return
+  }
+
   const graph = new graphlib.json.read(workflow.graph)
   const nodeV = event.emitter_id.toString()
 
@@ -152,6 +161,10 @@ const executeWorkflowStepVersion2 = (workflow, workflow_job_id, event, argsValue
  * @param {Mixed} data event data, this is the job.output
  */
 const triggerWorkflowByEvent = async ({ event, data, job }) => {
+  if (!event || !event._id) {
+    return
+  }
+
   const workflows = await Workflow.find({ triggers: event._id })
   if (workflows.length===0) { return }
 
