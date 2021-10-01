@@ -1,67 +1,70 @@
 
+const ObjectId = require('mongoose').Types.ObjectId
+const isMongoId = require('validator/lib/isMongoId')
 const graphlib = require('graphlib')
 const App = require('../../app')
 const TopicsConstants = require('../../constants/topics')
 const logger = require('../../lib/logger')('controller:workflow')
+const audit = require('../../lib/audit')
 const router = require('../../router')
 // const audit = require('../../lib/audit')
 const Workflow = require('../../entity/workflow').Workflow
 const Task = require('../../entity/task').Entity
 const Tag = require('../../entity/tag').Entity
 
-const ACL = require('../../lib/acl');
-const dbFilter = require('../../lib/db-filter');
+const ACL = require('../../lib/acl')
+const dbFilter = require('../../lib/db-filter')
+const AsyncController = require('../../lib/async-controller')
+const { ClientError, ServerError } = require('../../lib/error-handler')
 
 module.exports = function (server) {
-  // const crudTopic = TopicsConstants.workflow.crud
+  const CRUD_TOPIC = TopicsConstants.workflow.crud
 
-  // default middlewares
-  var middlewares = [
+  server.get('/workflows',
     server.auth.bearerMiddleware,
-    router.resolve.customerNameToEntity({required: true}),
-    router.ensureCustomer
-  ]
-
-  server.get(
-    '/workflows',
-    middlewares,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     router.requireCredential('viewer') ,
     controller.fetch
   )
 
-  server.get(
-    '/workflows/:workflow',
-    middlewares,
+  server.get('/workflows/:workflow',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'workflow', required: true }),
     router.ensureAllowed({ entity: { name: 'workflow' } }) ,
     controller.get
   )
 
-  server.post(
-    '/workflows',
-    middlewares,
-    router.requireCredential('admin') ,
-    controller.create
-    // audit.afterCreate('workflow',{ display: 'name' }) // cannot audit bulk creation
+  server.post('/workflows',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    AsyncController(create),
+    audit.afterCreate('workflow', { display: 'name', topic: CRUD_TOPIC })
   )
 
-  server.del(
-    '/workflows/:workflow',
-    middlewares,
+  server.del('/workflows/:workflow',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     router.requireCredential('admin'),
-    router.resolve.idToEntity({param: 'workflow', required: true}) ,
-    controller.remove
-    // audit.afterRemove('workflow',{ display: 'name', topic: crudTopic })
+    router.resolve.idToEntity({param: 'workflow', required: true}),
+    AsyncController(remove),
+    audit.afterRemove('workflow', { display: 'name', topic: CRUD_TOPIC })
   )
 
-  server.put(
-    '/workflows/:workflow',
-    middlewares,
+  server.put('/workflows/:workflow',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     router.requireCredential('admin'),
-    router.resolve.idToEntity({param: 'workflow', required: true}) ,
-    controller.replace
-    // audit.afterReplace('workflow',{ display: 'name', topic: crudTopic  })
+    router.resolve.idToEntity({ param: 'workflow', required: true }) ,
+    AsyncController(replace),
+    audit.afterReplace('workflow', { display: 'name', topic: CRUD_TOPIC })
   )
 }
 
@@ -102,33 +105,33 @@ const controller = {
    * @method DELETE
    *
    */
-  remove (req, res, next) {
-    var workflow = req.workflow
-    workflow.remove(err => {
-      if (err) return res.send(500,err)
+  //remove (req, res, next) {
+  //  var workflow = req.workflow
+  //  workflow.remove(err => {
+  //    if (err) return res.send(500,err)
 
-      unlinkWorkflowTasks(req)
-      res.send(200)
-    })
-  },
+  //    unlinkWorkflowTasks(req)
+  //    res.send(200)
+  //  })
+  //},
   /**
    *
    * @method PUT
    *
    */
-  replace (req, res, next) {
-    replaceWorkflow(req, (err, workflow) => {
-      if (err) {
-        return res.send(err.statusCode || 500, err)
-      }
+  //replace (req, res, next) {
+  //  replaceWorkflow(req, (err, workflow) => {
+  //    if (err) {
+  //      return res.send(err.statusCode || 500, err)
+  //    }
 
-      assignWorkflowAclToTasks(workflow, (err) => {
-        if (err) { return res.send(err.statusCode || 500, err) }
+  //    assignWorkflowAclToTasks(workflow, (err) => {
+  //      if (err) { return res.send(err.statusCode || 500, err) }
 
-        res.send(200, workflow)
-      })
-    })
-  },
+  //      res.send(200, workflow)
+  //    })
+  //  })
+  //},
   //async acl (req, res, next) {
   //  try {
   //    const workflow = req.workflow
@@ -148,48 +151,49 @@ const controller = {
    * @method POST
    *
    */
-  create (req, res, next) {
-    createWorkflow(req, (err, workflow) => {
-      if (err) { return res.send(err.statusCode || 500, err) }
+  //create (req, res, next) {
+  //  createWorkflow(req, (err, workflow) => {
+  //    if (err) { return res.send(err.statusCode || 500, err) }
 
-      assignTasksToWorkflow(req, (err) => {
-        if (err) { return res.send(err.statusCode || 500, err) }
+  //    assignTasksToWorkflow(req, (err) => {
+  //      if (err) { return res.send(err.statusCode || 500, err) }
 
-        return res.send(200, workflow)
-      })
-    })
-  }
+  //      return res.send(200, workflow)
+  //    })
+  //  })
+  //}
 }
 
-const createWorkflow = (req, next) => {
-  const customer = req.customer
-  const body = req.body
-  const graph = graphlib.json.read(body.graph)
+//const createWorkflow = (req, next) => {
+//  const customer = req.customer
+//  const body = req.body
+//  const graph = graphlib.json.read(body.graph)
+//
+//  validateGraph(graph, (err) => {
+//    if (err) {
+//      err.statusCode = 400
+//      return next(err)
+//    }
+//
+//    var workflow = new Workflow(
+//      Object.assign({}, body, {
+//        _type: 'Workflow',
+//        customer: customer.id,
+//        customer_id: customer.id,
+//        user: req.user.id,
+//        user_id: req.user.id
+//      })
+//    )
+//
+//    workflow.save(err => {
+//      if (err) { logger.error('%o', err) }
+//      req.workflow = workflow
+//      createTags(body.tags, customer)
+//      return next(err, workflow)
+//    })
+//  })
+//}
 
-  validateGraph(graph, (err) => {
-    if (err) {
-      err.statusCode = 400
-      return next(err)
-    }
-
-    var workflow = new Workflow(
-      Object.assign({}, body, {
-        _type: 'Workflow',
-        customer: customer.id,
-        customer_id: customer.id,
-        user: req.user.id,
-        user_id: req.user.id
-      })
-    )
-
-    workflow.save(err => {
-      if (err) { logger.error('%o', err) }
-      req.workflow = workflow
-      createTags(body.tags, customer)
-      return next(err, workflow)
-    })
-  })
-}
 
 /**
  *
@@ -210,78 +214,77 @@ const assignTasksToWorkflow = (req, next) => {
   next()
 }
 
-const unlinkWorkflowTasks = (req) => {
-  var graph = graphlib.json.read(req.workflow.graph)
-  graph.nodes().forEach(node => {
-    var data = graph.node(node)
-    if (!/Event/.test(data._type)) {
-      App.task.unlinkTaskFromWorkflow(data.id)
-    }
-  })
-}
+//const unlinkWorkflowTasks = (req) => {
+//  var graph = graphlib.json.read(req.workflow.graph)
+//  graph.nodes().forEach(node => {
+//    var data = graph.node(node)
+//    if (!/Event/.test(data._type)) {
+//      App.task.unlinkTaskFromWorkflow(data.id)
+//    }
+//  })
+//}
 
-const replaceWorkflow = (req, next) => {
-  const workflow = req.workflow
-  const body = req.body
-  const newgraph = graphlib.json.read(body.graph)
-  const oldgraph = graphlib.json.read(workflow.graph)
+//const replaceWorkflow = (req, next) => {
+//  const workflow = req.workflow
+//  const body = req.body
+//  const newgraph = graphlib.json.read(body.graph)
+//  const oldgraph = graphlib.json.read(workflow.graph)
+//
+//  validateGraph(newgraph, (err) => {
+//    if (err) {
+//      err.statusCode = 400
+//      return next(err)
+//    }
+//
+//    workflow.set(body)
+//    workflow.save(err => {
+//      if (err) {
+//        logger.error('%s, %s, errors: %o',err.name, err.message, err.errors)
+//        if (err.name === 'ValidationError') {
+//          err.statusCode = 400
+//        }
+//        return next(err)
+//      }
+//
+//      updateWorkflowGraphTasksDiferences(oldgraph, newgraph, workflow)
+//      createTags(req)
+//
+//      next(err, workflow)
+//    })
+//  })
+//}
 
-  validateGraph(newgraph, (err) => {
-    if (err) {
-      err.statusCode = 400
-      return next(err)
-    }
-
-    workflow.set(body)
-    workflow.save(err => {
-      if (err) {
-        logger.error('%s, %s, errors: %o',err.name, err.message, err.errors)
-        if (err.name === 'ValidationError') {
-          err.statusCode = 400
-        }
-        return next(err)
-      }
-
-      updateWorkflowGraphTasksDiferences(oldgraph, newgraph, workflow)
-      createTags(body.tags, req.customer)
-
-      next(err, workflow)
-    })
-  })
-}
-
-const createTags = (tags, customer) => {
+const createTags = ({ body, customer }) => {
+  const tags = body.tags
   if (tags && Array.isArray(tags)) {
     Tag.create(tags, customer)
   }
 }
 
 const validateGraph = (graph, next) => {
-  if (graph.nodes().length === 0 || graph.edges().length === 0) {
+  if (graph.nodes().length === 0) {
     return next(new Error('invalid graph definition'))
   }
   return next()
 }
 
-const updateWorkflowGraphTasksDiferences = (oldgraph, newgraph, workflow) => {
-  newgraph.nodes().forEach(id => {
-    let node = oldgraph.node(id)
-    if (!node) { // is new
-      node = newgraph.node(id)
-      if (!/Event/.test(node._type)) {
-        App.task.assignTaskToWorkflow(id, workflow)
+const updateWorkflowGraphTasksDifferences = async (workflow, graph) => {
+  const newgraph = graphlib.json.read(graph)
+  const oldgraph = graphlib.json.read(workflow.graph)
+
+  const oldNodes = oldgraph.nodes()
+
+  for (let id of oldNodes) {
+    const node = newgraph.node(id)
+    if (!node) { // is not in the workflow no more
+      const oldNode = oldgraph.node(id)
+      if (workflow.version === 2) {
+        await App.task.destroy(oldNode.id)
+      } else {
+        await App.task.unlinkTaskFromWorkflow(oldNode.id)
       }
     }
-  })
-  oldgraph.nodes().forEach(id => {
-    let node = newgraph.node(id)
-    if (!node) { // is no more in the workflow
-      node = oldgraph.node(id)
-      if (!/Event/.test(node._type)) {
-        App.task.unlinkTaskFromWorkflow(id)
-      }
-    }
-  })
+  }
 }
 
 const assignWorkflowAclToTasks = (workflow, next) => {
@@ -295,4 +298,175 @@ const assignWorkflowAclToTasks = (workflow, next) => {
   })
 
   next()
+}
+
+/**
+ *
+ * @method POST
+ *
+ */
+const create = async (req, res, next) => {
+  const { customer, user, body } = req
+
+  if (body.graph.nodes.length === 0) {
+    throw new ClientError('invalid graph definition')
+  }
+
+  const workflow = new Workflow(
+    Object.assign({}, body, {
+      _type: 'Workflow',
+      customer: customer.id,
+      customer_id: customer.id,
+      user: user.id,
+      user_id: user.id,
+      version: 2
+    })
+  )
+
+  const payload = { workflow, customer, user, body }
+  const { tasks, graph } = await createTasks(payload)
+
+  // updated grph with created tasks ids
+  workflow.graph = graph
+  await workflow.save()
+
+  //createTags(req)
+  req.workflow = workflow
+  return workflow
+}
+
+const createTaskEvent = async ({ customer_id, name, task_id }) => {
+  let tEvent = await App.Models.Event.TaskEvent.findOne({
+    name,
+    customer_id,
+    emitter_id: task_id
+  })
+  if (!tEvent) {
+    tEvent = new App.Models.Event.TaskEvent({
+      name,
+      customer: customer_id,
+      customer_id,
+      emitter: task_id,
+      emitter_id: task_id
+    })
+    await tEvent.save()
+  }
+  return tEvent
+}
+
+const createTasks = async ({ workflow, customer, user, body }) => {
+  const { tasks, graph } = body
+  const models = []
+  //const graph = graphlib.json.read(body.graph)
+
+  for (let node of graph.nodes) {
+    const props = tasks.find(task => task.id === node.value.id)
+    // is a new task
+    if (props.synchronized === false) {
+      const model = await App.task.factory(
+        Object.assign({}, props, {
+          customer_id: customer._id,
+          customer: customer,
+          user: user,
+          user_id: user.id,
+          workflow_id: workflow._id,
+          workflow: workflow,
+        })
+      )
+
+      if (props.id === body.start_task_id) {
+        workflow.start_task = model._id
+        workflow.start_task_id = model._id
+      }
+
+      // update node and edges
+      const id = model._id.toString()
+
+      // first: update the edges.
+      for (let edge of graph.edges) {
+        const eventName = edge.value
+
+        if (edge.v === node.v) {
+          edge.v = id
+
+          await createTaskEvent({
+            customer_id: customer._id,
+            name: eventName,
+            task_id: model._id
+          })
+        }
+
+        if (edge.w === node.v) {
+          edge.w = id
+
+          if (isMongoId(edge.v)) {
+            const task_id = ObjectId(edge.v)
+            await createTaskEvent({
+              customer_id: customer._id,
+              name: eventName,
+              task_id
+            })
+          }
+        }
+      }
+
+      // second: update the node.
+      node.value.id = node.v = id
+      models.push( model )
+    }
+  }
+
+  return { tasks: models, graph }
+}
+
+/**
+ *
+ * @method PUT
+ *
+ */
+const replace = async (req, res, next) => {
+  const { workflow, body } = req
+
+  if (body.graph.nodes.length === 0) {
+    throw new ClientError('invalid graph definition')
+  }
+
+  const { tasks, graph } = await createTasks(req)
+  await updateWorkflowGraphTasksDifferences(workflow, graph)
+
+  workflow.set(body)
+  await workflow.save()
+
+  createTags(req)
+  return workflow
+}
+
+const remove = async (req) => {
+  const { workflow, body } = req
+
+  await Promise.all([
+    workflow.remove(),
+    App.Models.Job.Workflow.deleteMany({ workflow_id: workflow._id.toString() }),
+    App.scheduler.unscheduleWorkflow(workflow),
+    removeWorkflowTasks(workflow, body?.keepTasks)
+  ])
+
+  return
+}
+
+const removeWorkflowTasks = (workflow, keepTasks = false) => {
+  const graph = workflow.graph
+  const promises = []
+
+  for (let node of graph.nodes) {
+    const value = node.value
+
+    if (keepTasks === true) {
+      promises.push( App.task.unlinkTaskFromWorkflow(value.id) )
+    } else {
+      promises.push( App.task.destroy(value.id) )
+    }
+  }
+
+  return Promise.all(promises)
 }
