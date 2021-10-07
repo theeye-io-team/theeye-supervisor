@@ -28,17 +28,24 @@ const ChartSchema = new BaseSchema({
   type: { type: String, default: 'chart' }
 })
 
+const FileSchema = new BaseSchema({
+  value: { type: String, default: '' },
+  type: { type: String, default: 'file' }
+})
+
 const Indicator = mongodb.model('Indicator', IndicatorSchema)
 const ProgressIndicator = Indicator.discriminator('ProgressIndicator', ProgressSchema)
 const TextIndicator = Indicator.discriminator('TextIndicator', TextSchema)
 const CounterIndicator = Indicator.discriminator('CounterIndicator', CounterSchema)
 const ChartIndicator = Indicator.discriminator('ChartIndicator', ChartSchema)
+const FileIndicator = Indicator.discriminator('FileIndicator', FileSchema)
 
 Indicator.ensureIndexes()
 CounterIndicator.ensureIndexes()
 ProgressIndicator.ensureIndexes()
 TextIndicator.ensureIndexes()
 ChartIndicator.ensureIndexes()
+FileIndicator.ensureIndexes()
 
 // called for both inserts and updates
 Indicator.on('afterSave', function (model) {
@@ -59,6 +66,9 @@ const IndicatorFactory = function (attrs) {
   if (attrs.type === IndicatorConstants.SHORT_TYPE_COUNTER) {
     return new CounterIndicator(attrs)
   }
+  if (attrs.type === IndicatorConstants.SHORT_TYPE_FILE) {
+    return new FileIndicator(attrs)
+  }
   return new Indicator(attrs)
 }
 
@@ -68,3 +78,4 @@ exports.Progress = ProgressIndicator
 exports.Counter = CounterIndicator
 exports.Text = TextIndicator
 exports.Chart = ChartIndicator
+exports.File = FileIndicator
