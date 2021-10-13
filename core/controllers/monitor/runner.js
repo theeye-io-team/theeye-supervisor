@@ -3,33 +3,34 @@ const router = require('../../router')
 const logger = require('../../lib/logger')('controller:monitor:runner')
 
 module.exports = (server) => {
-  const middlewares = [
+  server.get('/monitor/runner',
     server.auth.bearerMiddleware,
-    router.resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer
-  ]
-
-  server.get(
-    '/monitor/runner',
-    middlewares,
+    router.resolve.customerSessionToEntity(),
+    // router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'host', required: true }),
     fetch
   )
 
   // create job runner
-  server.post(
-    '/monitor/runner',
-    middlewares,
+  server.post('/monitor/runner',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    // router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'host', required: true }),
+    router.resolve.idToEntity({ param: 'task', required: true }),
     create
   )
 
   // remove runner
-  server.del(
-    '/monitor/runner/:monitor',
-    middlewares,
+  server.del('/monitor/runner/:monitor',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    // router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'monitor', required: true }),
     remove
@@ -43,23 +44,33 @@ module.exports = (server) => {
  */
 const create = async (req, res, next) => {
   try {
-    const host = req.host
-    const customer = req.customer
-    const body = req.body
+    const { customer, host, task } = req
+    const {
+      looptime = 10000,
+      name = `${host.hostname}-listener`,
+      description = 'Extra queue',
+      multitasking = true,
+      multitasking_limit = 1
+    } = req.body
 
     const payload = {
-      enable : true,
-      _type : 'ResourceMonitor',
-      customer_name : req.customer.name,
-      customer : req.customer._id,
-      customer_id : req.customer._id,
-      host : host._id,
-      host_id : host._id.toString(),
-      name : host.hostname + '-listener',
-      type : 'listener',
-      looptime : body.looptime || 10000,
-      description : 'Extra jobs listener',
-      order : 0
+      enable: true,
+      type: 'listener', // sub-type
+      _type: 'ResourceMonitor',
+      customer_name: customer.name,
+      customer: customer._id,
+      customer_id: customer._id,
+      host: host._id,
+      host_id: host._id.toString(),
+      order: 0,
+      name,
+      looptime,
+      description,
+      config: {
+        multitasking,
+        multitasking_limit, // add limit count to jobs queue query
+        task_id: task._id // bind the listener to a single task queue
+      }
     }
 
     // use insert to skip schema validations
@@ -81,7 +92,7 @@ const fetch = async (req, res, next) => {
     const customer = req.customer
 
     const runners = await App.Models.Monitor.Monitor.find({
-      type: "listener",
+      type: 'listener',
       customer: customer._id,
       host: host._id
     })

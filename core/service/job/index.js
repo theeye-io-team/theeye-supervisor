@@ -26,6 +26,43 @@ module.exports = {
       next(null, jobs)
     })
   },
+
+  getJobs (input) {
+    const { host, task, customer } = input
+    JobModels.Job.aggregate([
+      {
+        $match: {
+          host_id: input.host._id.toString(),
+          lifecycle: LifecycleConstants.READY
+        }
+      },
+      {
+        $sort: {
+          task_id: 1,
+          creation_date: 1
+        }
+      },
+      {
+        $group: {
+          _id: '$task_id',
+          nextJob: { $first: '$$ROOT' }
+        }
+      }
+    ]).exec((err, groups) => {
+      if (err) {
+        logger.error('%o',err)
+        return next(err)
+      }
+
+      if (groups.length>0) {
+        let idx = 0
+        dispatchJobExecutionRecursive(idx, groups.map(grp => grp.nextJob), next)
+      } else {
+        next()
+      }
+    })
+  },
+
   /**
    *
    * @param {Object} input
