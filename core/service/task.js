@@ -40,6 +40,11 @@ module.exports = {
   },
   async destroy (taskId) {
     const task = await App.Models.Task.Task.findById(taskId)
+    if (!task) {
+      logger.error(`Task not found ${taskId}`)
+      return
+    }
+
     return Promise.all([
       task.remove(),
       App.scheduler.unscheduleTask(task),
