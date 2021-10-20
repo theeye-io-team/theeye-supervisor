@@ -30,15 +30,16 @@ module.exports = function () {
     res.header('Access-Control-Allow-Credentials', 'true')
 
     let headers = [
-      'Origin',
       'Accept',
-      'User-Agent',
       'Accept-Charset',
-      'Cache-Control',
       'Accept-Encoding',
-      'Content-Type',
+      'Accept-Version',
       'Authorization',
+      'Cache-Control',
       'Content-Length',
+      'Content-Type',
+      'Origin',
+      'User-Agent',
       'X-Requested-With'
     ]
 
