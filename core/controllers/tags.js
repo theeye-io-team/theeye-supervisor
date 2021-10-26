@@ -1,21 +1,32 @@
-"use strict";
+const App = require('../app')
 
-var Tag = require('../entity/tag').Entity;
-var router = require('../router');
+const router = require('../router')
 
-module.exports = function(server){
-  server.get('/:customer/tag',[
+module.exports = (server) => {
+  server.get('/:customer/tag',
     server.auth.bearerMiddleware,
-    router.resolve.customerNameToEntity({required:true}),
-    router.ensureCustomer
-  ], controller.get);
+    router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
+    fetchTags
+  )
+
+  server.get('/tag',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    fetchTags
+  )
 }
 
-var controller = {
-  get (req, res, next) {
-    var customer = req.customer;
-    Tag.find({ customer: customer._id }, function(error,tags){
-      res.send(200,tags);
-    });
+const fetchTags = async (req, res, next) => {
+  try {
+    const { customer } = req
+    const tags = await App.Models.Tag.Tag
+      .find({ customer: customer._id })
+      .select({ name: 1 })
+
+    res.send(200, tags)
+  } catch (err) {
+    res.sendError(err)
   }
 }
