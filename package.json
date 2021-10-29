@@ -1,12 +1,12 @@
 {
   "name": "TheEye-Supervisor",
-  "version": "2.8.2",
+  "version": "2.8.3",
   "private": true,
   "description": "TheEye Supervisor Core Api",
   "author": "Facundo Gonzalez <facugon@theeye.io>",
   "main": "core/main.js",
   "keywords": [],
-  "license": "",
+  "license":"AGPL-3.0",
   "engines": {
     "node": ">=10.*"
   },
