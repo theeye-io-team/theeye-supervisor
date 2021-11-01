@@ -82,7 +82,6 @@ module.exports = function () {
   server.use(plugins.gzipResponse())
   server.use(plugins.queryParser())
   server.use(plugins.bodyParser())
-  //server.use(passport.initialize())
 
   server.on('uncaughtException', (req, res, route, error) => {
     const handler = new ErrorHandler()
@@ -93,7 +92,7 @@ module.exports = function () {
   })
 
   // Routing the controllers
-  router.loadControllers(server)
+  router.load(server)
 
   const PORT = process.env.PORT || config.server.port || 60080
 

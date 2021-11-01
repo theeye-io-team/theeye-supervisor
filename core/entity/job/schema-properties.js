@@ -45,8 +45,12 @@ module.exports = {
   task: { type: Object }, // embedded
   //task_arguments_values: [ String ], // array of task arguments
   task_arguments_values: [ ], // array of task arguments
-  notify: { type: Boolean },
   show_result: { type: Boolean, default: false }, // popup
+
+  // send activity to the logger system
+  logger: { type: Boolean },
+  // send activity to the notification system
+  notify: { type: Boolean },
 
   // users that will interact with this workflows
   assigned_users: [{ type: String }],

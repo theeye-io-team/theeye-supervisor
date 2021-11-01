@@ -10,7 +10,6 @@ const JobModels = require('../../entity/job')
 const TaskModel = require('../../entity/task').Entity
 const TaskEvent = require('../../entity/event').TaskEvent
 const JobFactory = require('./factory')
-const NotificationService = require('../../service/notification')
 const mongoose = require('mongoose')
 const RegisterOperation = require('./register')
 const { ClientError, ServerError } = require('../../lib/error-handler')
@@ -63,7 +62,6 @@ module.exports = {
             dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
           })
 
-          //RegisterOperation(Constants.UPDATE, TopicsConstants.task.cancelation, { job })
           RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
         } else {
           allowedMultitasking(job, (err, allowed) => {
@@ -77,7 +75,6 @@ module.exports = {
                 terminateRecursion(err, job)
               })
 
-              //RegisterOperation(Constants.UPDATE, TopicsConstants.task.assigned, { job })
               RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
             }
           })
@@ -135,6 +132,55 @@ module.exports = {
           logger.error('%s', err)
         }
         next(err, job)
+      })
+    })
+  },
+  async finishNotificationJob (job, input) {
+    return new Promise((resolve, reject) => {
+      const task = job.task
+      const args = (task?.task_arguments_values || [])
+      const subject = (args[0] || task?.subject)
+      const message = (args[1] || task?.body)
+      const recipients = (parseRecipients(args[2]) || task?.recipients)
+
+      App.notifications.generateTaskNotification({
+        topic: TopicsConstants.task.notification,
+        data: {
+          subject,
+          recipients,
+          message,
+          notificationTypes: task.notificationTypes,
+          operation: Constants.CREATE,
+          organization: job.customer_name,
+          organization_id: job.customer_id,
+          model_id: job._id,
+          model_type: job._type,
+          model: {
+            _id: job._id.toString(),
+            _type: job._type,
+            id: job._id.toString(),
+            type: job.type,
+            name: job.name,
+            user_id: job.user_id,
+            acl: job.acl,
+            workflow_id: job.workflow_id,
+            workflow_job_id: job.workflow_job_id,
+            task_id: job.task_id,
+            task: {
+              id: job.task_id.toString(),
+              _id: job.task_id.toString(),
+            }
+          }
+        }
+      })
+
+      App.jobDispatcher.finish(Object.assign({}, input, {
+        job,
+        result: {},
+        state: StateConstants.SUCCESS
+      }), (err) => {
+        if (err) reject(err)
+        else resolve(job)
       })
     })
   },
@@ -273,23 +319,24 @@ module.exports = {
       }
     }
 
-    const wJob = await JobFactory.createWorkflow(input)
+    const job = await JobFactory.createWorkflow(input)
 
     // send and wait before creating the job of the first task
     // to ensure dispatching events in order
-    await WorkflowJobCreatedNotification({ wJob, customer })
 
-    // create first job
+    await WorkflowJobCreatedNotification({ job, customer })
+
+    // create first task job
     await this.create(
       Object.assign({}, input, {
         task,
         workflow: input.workflow, // explicit
-        workflow_job_id: wJob._id,
-        workflow_job: wJob._id
+        workflow_job_id: job._id,
+        workflow_job: job._id
       })
     )
 
-    return wJob
+    return job
   },
   async createAgentUpdateJob (host_id) {
     const host = await App.Models.Host.Entity.findById(host_id).exec()
@@ -410,7 +457,6 @@ module.exports = {
       done(null, job) // continue processing in paralell
 
       process.nextTick(() => {
-        //RegisterOperation(Constants.UPDATE, TopicsConstants.task.result, { job })
         RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
         App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
         dispatchFinishedTaskExecutionEvent(job)
@@ -460,7 +506,6 @@ module.exports = {
 
       logger.log('job %s terminated', job._id)
 
-      //RegisterOperation(Constants.UPDATE, TopicsConstants.task.terminate, { job })
       RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
     })
   },
@@ -683,16 +728,7 @@ const createJob = async (input) => {
       await App.jobDispatcher.finishDummyJob(job, input)
     }
   } else if (TaskConstants.TYPE_NOTIFICATION === task.type) {
-    await new Promise((resolve, reject) => {
-      App.jobDispatcher.finish(Object.assign({}, input, {
-        job,
-        result: {},
-        state: StateConstants.SUCCESS
-      }), (err) => {
-        if (err) reject(err)
-        else resolve(job)
-      })
-    })
+    await App.jobDispatcher.finishNotificationJob(job, input)
   }
 
   return job
@@ -709,7 +745,6 @@ const scheduleJob = async (input) => {
 
   const topic = TopicsConstants.schedule.crud
   const operation = Constants.CREATE
-  //await RegisterOperation(Constants.CREATE, topic, { job, user })
 
   App.notifications.generateSystemNotification({
     topic,
@@ -1016,21 +1051,49 @@ const isObject = (value) => {
 /**
  * @return {Promise}
  */
-const WorkflowJobCreatedNotification = ({ wJob, customer }) => {
+const WorkflowJobCreatedNotification = ({ job, customer }) => {
   return App.notifications.generateSystemNotification({
     topic: TopicsConstants.job.crud,
     data: {
       operation: Constants.CREATE,
       organization: customer.name,
       organization_id: customer._id,
-      model_id: wJob._id,
-      model_type: wJob._type,
-      model: wJob
+      model_id: job._id,
+      model_type: job._type,
+      //model: job
+      model: {
+        _id: job._id.toString(),
+        _type: job._type,
+        id: job._id.toString(),
+        type: job.type,
+        name: job.name,
+        acl: job.acl,
+        lifecycle: job.lifecycle,
+        state: job.state,
+        workflow_id: job.workflow_id,
+        workflow_job_id: job.workflow_job_id,
+        creation_date: job.creation_date,
+        customer_id: job.customer_id,
+        order: job.order,
+        user_id: job.user_id,
+        user_inputs: job.user_inputs,
+        user_inputs_members: job.user_inputs_members,
+        task_id: job.task._id,
+        task: {
+          id: job.task._id.toString(),
+          _id: job.task._id.toString(),
+          type: job.task.type,
+          _type: job.task._type,
+          name: job.task.name,
+        }
+      }
     }
   })
 }
 
 /**
+ *
+ * Required by the Sync API
  *
  * Emit the event "job finished execution" after all possible outcomes.
  *
@@ -1050,11 +1113,55 @@ const emitJobFinishedNotification = ({ job }) => {
         acl: job.acl
       },
       model_id: job._id,
-      model_type: job._type
+      model_type: job._type,
+      //model: job
+      model: {
+        _id: job._id.toString(),
+        _type: job._type,
+        id: job._id.toString(),
+        type: job.type,
+        name: job.name,
+        acl: job.acl,
+        lifecycle: job.lifecycle,
+        state: job.state,
+        workflow_id: job.workflow_id,
+        workflow_job_id: job.workflow_job_id,
+        task: {
+          id: job.task_id.toString(),
+          _id: job.task_id.toString(),
+        }
+      }
       //task_id: job.task_id
     }
   })
 }
+
+const parseRecipients = (values) => {
+  let recipients = null
+
+  if (!values) { return recipients }
+
+  try {
+    if (typeof values === 'string') {
+      let parsed = values.toLowerCase()
+      // email or username, single or array
+      parsed = JSON.parse(values)
+
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        recipients = parsed
+      } else {
+        recipients = [ parsed ]
+      }
+    }
+  } catch (jsonErr) {
+    logger.log(jsonErr.message)
+    logger.log(values)
+    recipients = [ values ]
+  }
+
+  return recipients
+}
+
 
 //const users2members = async (users, customer) => {
 //  const members = await App.gateway.member.fetch(users, { customer_id: customer.id })

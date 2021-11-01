@@ -48,11 +48,7 @@ exports.workflow = {
 
 exports.job = {
   crud: 'job-crud',
-  finished: 'job-finished',
-  //scheduler: {
-  //  crud: 'job-schedule-crud'
-  //}
-  //onhold: 'job-onhold'
+  finished: 'job-finished'
 }
 
 exports.schedule = {

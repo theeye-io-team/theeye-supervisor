@@ -41,8 +41,9 @@ module.exports = {
     const bearerStrategy = new BearerStrategy(async (token, done) => {
       try {
         logger.log('new connection [bearer]')
-        //let decoded = verifyToken(token)
+        //const decoded = verifyToken(token)
         //if (decoded) {
+        //  console.log(decoded)
         //}
 
         //sessionVerify(token).then(profile => {})

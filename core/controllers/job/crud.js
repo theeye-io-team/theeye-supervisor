@@ -4,11 +4,9 @@ const App = require('../../app')
 const ACL = require('../../lib/acl')
 const audit = require('../../lib/audit')
 const Constants = require('../../constants/task')
-const createJob = require('../../service/job/create')
 const dbFilter = require('../../lib/db-filter')
 const Host = require('../../entity/host').Entity
-const IntegrationConstants = require('../../constants/integrations')
-const JobConstants = require('../../constants/jobs')
+//const IntegrationConstants = require('../../constants/integrations')
 const LifecycleConstants = require('../../constants/lifecycle')
 const router = require('../../router')
 const StateConstants = require('../../constants/states')
@@ -74,24 +72,6 @@ module.exports = (server) => {
     afterFinishJobHook
   )
 
-  server.post('/:customer/job',
-    middlewares,
-    router.requireCredential('user'),
-    router.resolve.idToEntity({ param: 'task', required: true }),
-    router.ensureAllowed({ entity: { name: 'task' } }),
-    createJob
-    //audit.afterCreate('job',{ display: 'name' })
-  )
-
-  server.post('/job',
-    middlewares,
-    router.requireCredential('user'),
-    router.resolve.idToEntity({ param: 'task', required: true }),
-    router.ensureAllowed({ entity: { name: 'task' }}) ,
-    createJob
-    //audit.afterCreate('job',{ display: 'name' })
-  )
-
   server.put('/job/:job/assignee',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -108,20 +88,6 @@ module.exports = (server) => {
     router.requireCredential('viewer'),
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
     controller.participants
-  )
-
-  // create job using task secret key
-  server.post('/job/secret/:secret',
-    router.resolve.customerNameToEntity({ required: true }),
-    router.resolve.idToEntity({ param: 'task', required: true }),
-    router.requireSecret('task'),
-    (req, res, next) => {
-      req.user = App.user
-      req.origin = JobConstants.ORIGIN_SECRET
-      next()
-    },
-    createJob
-    //audit.afterCreate('job',{ display: 'name' })
   )
 }
 
@@ -180,13 +146,22 @@ const controller = {
       filters.where.acl = req.user.email
     }
 
+    filters.include = Object.assign(filters.include, {
+      task_arguments_values: 0,
+      script_arguments: 0,
+      output: 0,
+      result: 0,
+      task: 0,
+      script: 0
+    })
+
     //filters.limit = 1
 
     App.Models.Job.Job.fetchBy(filters, (err, jobs) => {
       if (err) { return res.send(500, err) }
-      let data = []
-      jobs.forEach(job => data.push(job.publish()))
-      res.send(200, data)
+      //let data = []
+      //jobs.forEach(job => data.push(job.publish()))
+      res.send(200, jobs)
       next()
     })
   },

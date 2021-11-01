@@ -282,11 +282,12 @@ const controller = {
       req.job = wJob
       next()
     } catch (err) {
+      logger.error('%o', err)
+
       if (err.name === 'ClientError') {
         return res.send(err.status, err.message)
       }
 
-      logger.error('%o', err)
       return res.send(500, 'Internal Server Error')
     }
   },

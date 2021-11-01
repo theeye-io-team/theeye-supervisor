@@ -17,7 +17,7 @@ module.exports = {
   ensureCustomerBelongs: require('./ensure-customer-belongs'),
   ensureAllowed: require('./ensure-allowed'),
   ensureHeader: require('./ensure-header'),
-  loadControllers (server) {
+  load (server) {
     logger.log('loading controllers')
 
     server.auth = auth.initialize()

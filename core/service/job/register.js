@@ -16,14 +16,18 @@ module.exports = async (operation, topic, input) => {
   const { job, user } = input
   const task = (job.task || {})
 
+  if (!job.notify && !job.log) { return }
+
   await job.populate([
     { path: 'host', select: 'id hostname' },
     { path: 'workflow_job' },
   ]).execPopulate()
 
-  const payload = prepareLog({ job, task, user })
-  payload.operation = operation
-  App.logger.submit(job.customer_name, topic, payload)
+  if (job.log !== false) {
+    const payload = prepareLog({ job, task, user })
+    payload.operation = operation
+    App.logger.submit(job.customer_name, topic, payload)
+  }
 
   // skip system notifications for this job.
   if (job.notify !== false) {
@@ -37,8 +41,27 @@ module.exports = async (operation, topic, input) => {
         organization_id: job.customer_id,
         model_id: job._id,
         model_type: job._type,
-        model: job.toObject(),
-        approvers: (job.approvers || undefined)
+        //approvers: (job.approvers || undefined),
+        model: {
+          approvers: (job.approvers || undefined),
+          _id: job._id.toString(),
+          _type: job._type,
+          id: job._id.toString(),
+          type: job.type,
+          lifecycle: job.lifecycle,
+          state: job.state,
+          name: job.name,
+          workflow_id: job.workflow_id,
+          workflow_job_id: job.workflow_job_id,
+          task_id: job.task_id,
+          task: {
+            id: job.task_id.toString(),
+            _id: job.task_id.toString(),
+          },
+          user_inputs: job.user_inputs,
+          user_inputs_members: job.user_inputs_members,
+          cancellable: job.cancellable
+        }
       }
     })
   }

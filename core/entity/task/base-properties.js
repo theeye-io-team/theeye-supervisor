@@ -23,6 +23,12 @@ module.exports = {
   execution_count: { type: Number, default: 0 },
   multitasking: { type: Boolean, default: true },
   show_result: { type: Boolean, default: false }, // popup
+
+  // send activity to the logger system
+  logger: { type: Boolean },
+  // send activity to the notification system
+  notify: { type: Boolean },
+
   // users that will interact with this task
   assigned_users: [{ type: String }],
   // this task requieres input (forced). will not accept input via triggers. users action is required.

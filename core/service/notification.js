@@ -45,10 +45,18 @@ module.exports = {
    */
   async generateSystemNotification (payload) {
     try {
-      if (!config.notifications.api.url) { return logger.error('notification event aborted. url required') }
-      if (!payload) { return logger.error('notification event aborted. invalid payload %o', payload) }
-      if (!payload.topic) { return logger.error('notification event aborted. invalid payload topic %o', payload) }
-      if (!payload.data) { return logger.error('notification event aborted. invalid payload data %o', payload) }
+      if (!config.notifications.api.url) {
+        return logger.error('notification event aborted. url required')
+      }
+      if (!payload) {
+        return logger.error('notification event aborted. invalid payload %o', payload)
+      }
+      if (!payload.topic) {
+        return logger.error('notification event aborted. invalid payload topic %o', payload)
+      }
+      if (!payload.data) {
+        return logger.error('notification event aborted. invalid payload data %o', payload)
+      }
 
       if (payload.data && payload.data.model) {
         if (payload.data.model.constructor.name === 'model') {
@@ -75,6 +83,58 @@ module.exports = {
       payload.id = uuidv1()
 
       const res = await got.post(config.notifications.api.url, {
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(payload),
+        searchParams: {
+          secret: config.gateway.secret
+        }
+      })
+
+      if (res.statusCode != 200) {
+        logger.error('submit to notification system failed')
+        logger.debug('payload %j', payload)
+        logger.error('%s, %o', res.statusCode, body)
+      } else if (res.body) {
+        logger.log('notification registered')
+        logger.log(res.body.replace(/(\r\n|\n|\r)/gm,''))
+      } else {
+        logger.error('unhandled response message')
+        logger.debug(arguments)
+      }
+
+      return res
+    } catch (err) {
+      logger.error('notification system failure')
+      logger.error(err)
+      return err
+    }
+  },
+  /**
+   * @param {Object} payload
+   * @property {String} payload.data
+   * @property {String} payload.topic
+   * @return {Promise}
+   */
+  async generateTaskNotification (payload) {
+    try {
+      if (!config.notifications.api.url) {
+        return logger.error('notification event aborted. url required')
+      }
+      if (!payload) {
+        return logger.error('notification event aborted. invalid payload %o', payload)
+      }
+      if (!payload.topic) {
+        return logger.error('notification event aborted. invalid payload topic %o', payload)
+      }
+      if (!payload.data) {
+        return logger.error('notification event aborted. invalid payload data %o', payload)
+      }
+
+      payload.id = uuidv1()
+
+      const res = await got.post(`${config.notifications.api.url}/task`, {
         headers: {
           'content-type': 'application/json'
         },

@@ -27,6 +27,11 @@ function WorkflowSchema (props) {
     secret: { type: String, default: randomSecret }, // one way hash
     table_view: { type: Boolean, default: false },
 
+    // send activity to the logger system
+    logger: { type: Boolean },
+    // send activity to the notification system
+    notify: { type: Boolean },
+
     // users that will interact with this workflows
     assigned_users: [{ type: String }],
     // which users members are going to interact with this workflow execution

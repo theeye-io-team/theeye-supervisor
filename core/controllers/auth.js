@@ -3,8 +3,6 @@ const passport = require('passport')
 
 module.exports = function (server) {
   /**
-   * DEPRECATED
-   * backward compatibility
    * agents basic authentication
    */
   server.post(
