@@ -1,19 +1,11 @@
-"use strict"
+module.exports = (query = {}, defaults = {}) => {
+  const filter = {}
+  filter.where = Object.assign({}, (defaults.where||{}), (query.where||{}))
+  filter.sort = Object.assign({}, (defaults.sort||{}), (query.sort||{}))
+  filter.include = Object.assign({}, (defaults.include||{}), (query.include||{}))
+  filter.limit = parseInt(query.limit) || null
 
-
-module.exports = function(input, defaults){
-  var filter = {}
-
-  defaults || (defaults={})
-
-  filter.where = Object.assign({}, (defaults.where||{}), (input.where||{}))
-  filter.limit = parseInt(input.limit) || null
-  filter.sort = Object.assign({}, (defaults.sort||{}), (input.sort||{}))
-  filter.include = Object.assign({}, (defaults.include||{}), (input.include||{}))
-
-  if (input.populate) {
-    filter.populate = input.populate
-  }
+  if (query.populate) { filter.populate = query.populate }
 
   return filter 
 }

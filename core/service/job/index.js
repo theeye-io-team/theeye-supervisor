@@ -62,7 +62,7 @@ module.exports = {
             dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
           })
 
-          RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
+          RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job })
         } else {
           allowedMultitasking(job, (err, allowed) => {
             if (!allowed) {
@@ -75,7 +75,7 @@ module.exports = {
                 terminateRecursion(err, job)
               })
 
-              RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
+              RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job })
             }
           })
         }
@@ -234,7 +234,7 @@ module.exports = {
     await JobFactory.restart(input)
 
     // everything ok
-    RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
+    RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
 
     return job
   },
@@ -249,7 +249,7 @@ module.exports = {
     job.lifecycle = LifecycleConstants.READY
     job.state = StateConstants.IN_PROGRESS
     await job.save()
-    RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job })
+    RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job })
     return job
   },
   /**
@@ -457,7 +457,7 @@ module.exports = {
       done(null, job) // continue processing in paralell
 
       process.nextTick(() => {
-        RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
+        RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
         App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
         dispatchFinishedTaskExecutionEvent(job)
         emitJobFinishedNotification({ job })
@@ -506,7 +506,7 @@ module.exports = {
 
       logger.log('job %s terminated', job._id)
 
-      RegisterOperation(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
+      RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
     })
   },
   /**
@@ -721,7 +721,7 @@ const createJob = async (input) => {
   })
 
   // await notification and system log generation
-  await RegisterOperation(Constants.CREATE, TopicsConstants.job.crud, { job, user })
+  await RegisterOperation.submit(Constants.CREATE, TopicsConstants.job.crud, { job, user })
 
   if (task.type === TaskConstants.TYPE_DUMMY) {
     if (job.lifecycle !== LifecycleConstants.ONHOLD) {
@@ -752,7 +752,7 @@ const scheduleJob = async (input) => {
       operation,
       organization: customer.name,
       organization_id: customer._id,
-      model: job
+      model: job // AGENDA JOB !!
       //model_id: job._id,
       //model_type: job._type,
     }
@@ -1060,33 +1060,33 @@ const WorkflowJobCreatedNotification = ({ job, customer }) => {
       organization_id: customer._id,
       model_id: job._id,
       model_type: job._type,
-      //model: job
-      model: {
-        _id: job._id.toString(),
-        _type: job._type,
-        id: job._id.toString(),
-        type: job.type,
-        name: job.name,
-        acl: job.acl,
-        lifecycle: job.lifecycle,
-        state: job.state,
-        workflow_id: job.workflow_id,
-        workflow_job_id: job.workflow_job_id,
-        creation_date: job.creation_date,
-        customer_id: job.customer_id,
-        order: job.order,
-        user_id: job.user_id,
-        user_inputs: job.user_inputs,
-        user_inputs_members: job.user_inputs_members,
-        task_id: job.task._id,
-        task: {
-          id: job.task._id.toString(),
-          _id: job.task._id.toString(),
-          type: job.task.type,
-          _type: job.task._type,
-          name: job.task.name,
-        }
-      }
+      model: RegisterOperation.jobToEventModel(job)
+      //model: {
+      //  _id: job._id.toString(),
+      //  _type: job._type,
+      //  id: job._id.toString(),
+      //  type: job.type,
+      //  name: job.name,
+      //  acl: job.acl,
+      //  lifecycle: job.lifecycle,
+      //  state: job.state,
+      //  workflow_id: job.workflow_id,
+      //  workflow_job_id: job.workflow_job_id,
+      //  creation_date: job.creation_date,
+      //  customer_id: job.customer_id,
+      //  order: job.order,
+      //  user_id: job.user_id,
+      //  user_inputs: job.user_inputs,
+      //  user_inputs_members: job.user_inputs_members,
+      //  task_id: job.task._id,
+      //  task: {
+      //    id: job.task._id.toString(),
+      //    _id: job.task._id.toString(),
+      //    type: job.task.type,
+      //    _type: job.task._type,
+      //    name: job.task.name,
+      //  }
+      //}
     }
   })
 }
@@ -1108,29 +1108,26 @@ const emitJobFinishedNotification = ({ job }) => {
       operation: Constants.UPDATE,
       organization: job.customer_name,
       organization_id: job.customer_id,
-      model: {
-        _id: job._id,
-        acl: job.acl
-      },
       model_id: job._id,
       model_type: job._type,
+      model: RegisterOperation.jobToEventModel(job)
       //model: job
-      model: {
-        _id: job._id.toString(),
-        _type: job._type,
-        id: job._id.toString(),
-        type: job.type,
-        name: job.name,
-        acl: job.acl,
-        lifecycle: job.lifecycle,
-        state: job.state,
-        workflow_id: job.workflow_id,
-        workflow_job_id: job.workflow_job_id,
-        task: {
-          id: job.task_id.toString(),
-          _id: job.task_id.toString(),
-        }
-      }
+      //model: {
+      //  _id: job._id.toString(),
+      //  _type: job._type,
+      //  id: job._id.toString(),
+      //  type: job.type,
+      //  name: job.name,
+      //  acl: job.acl,
+      //  lifecycle: job.lifecycle,
+      //  state: job.state,
+      //  workflow_id: job.workflow_id,
+      //  workflow_job_id: job.workflow_job_id,
+      //  task: {
+      //    id: job.task_id.toString(),
+      //    _id: job.task_id.toString(),
+      //  }
+      //}
       //task_id: job.task_id
     }
   })

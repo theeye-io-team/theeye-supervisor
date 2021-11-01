@@ -29,7 +29,7 @@ module.exports = (server) => {
       }
       return next()
     } catch (err) {
-      res.send(400, err.message)
+      res.sendError(err)
     }
   }
 
@@ -63,7 +63,7 @@ module.exports = (server) => {
           next()
         })
         .catch(err => {
-          return res.send(500, err.message)
+          res.sendError(err)
         })
     },
     verifyStartingTask,
@@ -98,7 +98,7 @@ module.exports = (server) => {
         res.send(200, job.publish())
         next()
       } catch (err) {
-        return res.send(500, err)
+        res.sendError(err)
       }
     }
   )
@@ -140,40 +140,54 @@ module.exports = (server) => {
         const jobs = await App.Models.Job.Job.fetchBy(filter)
         res.send(200, jobs.map(job => job.publish()))
       } catch (err) {
-        if (err instanceof ClientError) {
-          return res.send(err.status, err.message)
-        } else {
-          logger.error(err)
-          return res.send(500, err.message)
-        }
+        res.sendError(err)
       }
     }
   )
 
+  /**
+   *
+   * fetch all job instances
+   *
+   */
   server.get('/workflows/:workflow/job',
     server.auth.bearerMiddleware,
-    router.requireCredential('admin'),
+    router.requireCredential('viewer'),
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     router.resolve.idToEntityByCustomer({ param: 'workflow', required: true }),
     router.ensureCustomerBelongs('workflow'),
-    async (req, res, next) => {
+    (req, res, next) => {
       const workflow = req.workflow
       const customer = req.customer
+      const user = req.user
 
       const filter = dbFilter(req.query, { })
       filter.where.customer_id = customer.id
       filter.where.workflow_id = workflow._id.toString()
+
+      filter.include = Object.assign(filter.include, {
+        script_arguments: 0,
+        output: 0,
+        result: 0,
+        script: 0
+      })
+
+      if (workflow.table_view !== true) {
+        filter.include.task_arguments_values = 0
+        filter.include.task = 0
+      }
+
+      if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
+        filter.where.acl = req.user.email
+      }
 
       App.Models.Job.Job.fetchBy(filter)
         .then(jobs => {
           res.send(200, jobs)
           next()
         })
-        .catch(err => {
-          logger.error(err, err.status)
-          res.send(err.status || 500, err.message)
-        })
+        .catch(res.sendError)
     }
   )
 
@@ -214,12 +228,7 @@ module.exports = (server) => {
 
         next()
       } catch (err) {
-        if (err instanceof ClientError) {
-          res.send(err.status, err.message)
-        } else {
-          logger.error(err)
-          res.send(500, 'Internal Server Error')
-        }
+        res.sendError(err)
       }
     },
     controller.replaceAcl
@@ -245,8 +254,7 @@ const controller = {
       await job.save()
       res.send(200, job.acl)
     } catch (err) {
-      logger.error(err, err.status)
-      res.send(err.status || 500, err.message)
+      res.sendError(err)
     }
   },
   async cancel (req, res, next) {
@@ -261,8 +269,7 @@ const controller = {
 
       res.send(200)
     } catch (err) {
-      logger.error(err)
-      res.send(err.status, err.message)
+      res.sendError(err)
     }
   },
   async create (req, res, next) {
@@ -282,13 +289,7 @@ const controller = {
       req.job = wJob
       next()
     } catch (err) {
-      logger.error('%o', err)
-
-      if (err.name === 'ClientError') {
-        return res.send(err.status, err.message)
-      }
-
-      return res.send(500, 'Internal Server Error')
+      res.sendError(err)
     }
   },
   remove (req, res, next) {

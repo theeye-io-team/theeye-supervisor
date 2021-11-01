@@ -134,17 +134,9 @@ const controller = {
   fetch (req, res, next) {
     const customer = req.customer
     const user = req.user
-    const query = req.query
 
-    logger.log('querying jobs')
-
-    const filters = dbFilter(query, { /** default **/ })
+    const filters = dbFilter(req.query, { /** default **/ })
     filters.where.customer_id = customer._id.toString()
-
-    if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
-      // find what this user can access
-      filters.where.acl = req.user.email
-    }
 
     filters.include = Object.assign(filters.include, {
       task_arguments_values: 0,
@@ -155,15 +147,16 @@ const controller = {
       script: 0
     })
 
-    //filters.limit = 1
+    if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
+      filters.where.acl = req.user.email
+    }
 
-    App.Models.Job.Job.fetchBy(filters, (err, jobs) => {
-      if (err) { return res.send(500, err) }
-      //let data = []
-      //jobs.forEach(job => data.push(job.publish()))
-      res.send(200, jobs)
-      next()
-    })
+    App.Models.Job.Job.fetchBy(filters)
+      .then(jobs => {
+        res.send(200, jobs)
+        next()
+      })
+      .catch(res.sendError)
   },
   fetchRunning (req, res, next) {
     const customer = req.customer
@@ -257,7 +250,6 @@ const controller = {
       res.send(200, counters)
       next()
     } catch (err) {
-      logger.error(err)
       res.sendError(err)
     }
   },

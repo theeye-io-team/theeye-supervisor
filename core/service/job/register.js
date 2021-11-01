@@ -12,61 +12,80 @@ const logger = require('../../lib/logger')('service:jobs')
  * @property {Job} input.job
  * @return {Promise}
  */
-module.exports = async (operation, topic, input) => {
-  const { job, user } = input
-  const task = (job.task || {})
+module.exports = {
+  async submit (operation, topic, input) {
+    const { job, user } = input
+    const task = (job.task || {})
 
-  if (!job.notify && !job.log) { return }
+    if (!job.notify && !job.log) { return }
 
-  await job.populate([
-    { path: 'host', select: 'id hostname' },
-    { path: 'workflow_job' },
-  ]).execPopulate()
+    await job.populate([
+      { path: 'host', select: 'id hostname' },
+      { path: 'workflow_job' },
+    ]).execPopulate()
 
-  if (job.log !== false) {
-    const payload = prepareLog({ job, task, user })
-    payload.operation = operation
-    App.logger.submit(job.customer_name, topic, payload)
-  }
+    if (job.log !== false) {
+      const payload = prepareLog({ job, task, user })
+      payload.operation = operation
+      App.logger.submit(job.customer_name, topic, payload)
+    }
 
-  // skip system notifications for this job.
-  if (job.notify !== false) {
-    // async call
-    App.notifications.generateSystemNotification({
-      topic,
-      data: {
-        operation,
-        hostname: (job.host && job.host.hostname) || job.host_id,
-        organization: job.customer_name,
-        organization_id: job.customer_id,
-        model_id: job._id,
-        model_type: job._type,
-        //approvers: (job.approvers || undefined),
-        model: {
-          approvers: (job.approvers || undefined),
-          _id: job._id.toString(),
-          _type: job._type,
-          id: job._id.toString(),
-          type: job.type,
-          lifecycle: job.lifecycle,
-          state: job.state,
-          name: job.name,
-          workflow_id: job.workflow_id,
-          workflow_job_id: job.workflow_job_id,
-          task_id: job.task_id,
-          task: {
-            id: job.task_id.toString(),
-            _id: job.task_id.toString(),
-          },
-          user_inputs: job.user_inputs,
-          user_inputs_members: job.user_inputs_members,
-          cancellable: job.cancellable
+    // skip system notifications for this job.
+    if (job.notify !== false) {
+      App.notifications.generateSystemNotification({
+        topic,
+        data: {
+          operation,
+          hostname: (job.host && job.host.hostname) || job.host_id,
+          organization: job.customer_name,
+          organization_id: job.customer_id,
+          model_id: job._id,
+          model_type: job._type,
+          //approvers: (job.approvers || undefined),
+          model: this.jobToEventModel(job)
         }
-      }
+      })
+    }
+
+    return
+  },
+  /**
+   *
+   * Trimmed job schema
+   *
+   * @return {Object}
+   *
+   */
+  jobToEventModel (job) {
+    return ({
+      acl: job.acl,
+      approvers: (job.approvers || undefined),
+      cancellable: job.cancellable,
+      creation_date: job.creation_date,
+      customer_id: job.customer_id,
+      _id: job._id.toString(),
+      id: job._id.toString(),
+      lifecycle: job.lifecycle,
+      name: job.name,
+      order: job.order,
+      state: job.state,
+      task_id: job.task_id,
+      _type: job._type,
+      type: job.type,
+      user_id: job.user_id,
+      user_inputs: job.user_inputs,
+      user_inputs_members: job.user_inputs_members,
+      workflow_id: job.workflow_id,
+      workflow_job_id: job.workflow_job_id,
+      task: {
+        id: job.task_id?.toString(),
+        _id: job.task_id?.toString(),
+        type: job.task.type,
+        _type: job.task._type,
+        name: job.task.name,
+      },
     })
   }
-
-  return
 }
 
 const prepareLog = ({ job, task, user }) => {
