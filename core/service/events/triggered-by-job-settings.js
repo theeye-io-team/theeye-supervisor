@@ -6,8 +6,8 @@ module.exports = (job) => {
   let dynamic_settings = null // if the event was emitted by a job
 
   if (job) { // event triggered by a job
-    if (job.result && job.result.next) {
-      dynamic_settings = job.result.next
+    if (job.next) {
+      dynamic_settings = job.next
     }
 
     if (job.user_id) {

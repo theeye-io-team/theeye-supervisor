@@ -587,6 +587,8 @@ class AbstractJob {
     job.host = task.host_id
     job.name = task.name
     job.allows_dynamic_settings = task.allows_dynamic_settings
+    job.show_result = task.show_result
+    //job.handle_errors = task.handle_errors
 
     job.customer = vars.customer._id
     job.customer_id = vars.customer._id

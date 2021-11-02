@@ -19,6 +19,8 @@ module.exports = {
   workflow_job_id: { type: String }, // job belongs to an instance of the workflow
   workflow_job: { type: ObjectId, ref: 'WorkflowJob' },
   result: { type: Object, default: () => { return {} } },
+  components: { type: Object, default: () => { return {} } },
+  next: { type: Object, default: () => { return {} } },
   output: {
     type: String,
     get: function (data) {
@@ -43,7 +45,6 @@ module.exports = {
   host: { type: ObjectId, ref: 'Host' },
   task_id: { type: String },
   task: { type: Object }, // embedded
-  //task_arguments_values: [ String ], // array of task arguments
   task_arguments_values: [ ], // array of task arguments
   show_result: { type: Boolean, default: false }, // popup
 
@@ -74,4 +75,5 @@ module.exports = {
 
   // can be canceled by users
   cancellable: { type: Boolean, 'default': true },
+  //handle_errors: { type: Boolean }
 }

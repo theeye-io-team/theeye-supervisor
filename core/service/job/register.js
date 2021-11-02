@@ -60,7 +60,10 @@ module.exports = {
     return ({
       acl: job.acl,
       approvers: (job.approvers || undefined),
+      assigned_users: job.assigned_users,
       cancellable: job.cancellable,
+      components: job.components,
+      next: job.next,
       creation_date: job.creation_date,
       customer_id: job.customer_id,
       _id: job._id.toString(),
@@ -77,12 +80,13 @@ module.exports = {
       user_inputs_members: job.user_inputs_members,
       workflow_id: job.workflow_id,
       workflow_job_id: job.workflow_job_id,
+      show_result: job.show_result,
       task: {
         id: job.task_id?.toString(),
         _id: job.task_id?.toString(),
-        type: job.task.type,
-        _type: job.task._type,
-        name: job.task.name,
+        type: job.task?.type,
+        _type: job.task?._type,
+        name: job.task?.name,
       },
     })
   }

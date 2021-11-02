@@ -137,11 +137,11 @@ module.exports = {
   },
   async finishNotificationJob (job, input) {
     return new Promise((resolve, reject) => {
+      const args = job.task_arguments_values
       const task = job.task
-      const args = (task?.task_arguments_values || [])
-      const subject = (args[0] || task?.subject)
-      const message = (args[1] || task?.body)
-      const recipients = (parseRecipients(args[2]) || task?.recipients)
+      const subject = args[0] || task?.subject
+      const message = args[1] || task?.body
+      const recipients = args[2] || task?.recipients
 
       App.notifications.generateTaskNotification({
         topic: TopicsConstants.task.notification,
@@ -149,7 +149,7 @@ module.exports = {
           subject,
           recipients,
           message,
-          notificationTypes: task.notificationTypes,
+          notificationTypes: task?.notificationTypes,
           operation: Constants.CREATE,
           organization: job.customer_name,
           organization_id: job.customer_id,
@@ -398,8 +398,8 @@ module.exports = {
    */
   async finish (input, done) {
     try {
-      const { job, user } = input
-      const result = (input.result ||{})
+      const { job, user, result = {} } = input
+      //const result = (input.result ||{})
 
       let state
       let lifecycle
@@ -423,32 +423,34 @@ module.exports = {
       job.result = result
       // parse result output
       if (result.output) {
-        // data output, can be anything. stringify for security
-        let output = result.output
-        job.output = this.parseOutputParameters(output)
-        job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
+        // data output, can be anything. stringify for security reason
+        job.output = this.parseOutputParameters(result.output)
+        //job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
       }
 
-      try {
-        let jsonLastline = JSON.parse(result.lastline)
-        // looking for state and output
-        if (isObject(jsonLastline)) {
-          if (jsonLastline.components) {
-            job.result.components = jsonLastline.components
+      let eventName
+      if (result.lastline) {
+        try {
+          const jsonLastline = JSON.parse(result.lastline)
+          // looking for state and output
+          if (isObject(jsonLastline)) {
+            if (jsonLastline.components) {
+              job.components = jsonLastline.components
+            }
+            if (jsonLastline.next) {
+              job.next = jsonLastline.next
+            }
+            if (jsonLastline.event_name) {
+              eventName = jsonLastline.event_name
+            }
           }
-          if (jsonLastline.next) {
-            job.result.next = jsonLastline.next
-          }
-          if (jsonLastline.event_name) {
-            job.result.event_name = jsonLastline.event_name
-          }
+        } catch (err) {
+          //logger.log(err)
         }
-      } catch (err) {
-        //logger.log(err)
       }
 
-      if (job.result.event_name) {
-        job.trigger_name = job.result.event_name
+      if (eventName) {
+        job.trigger_name = eventName
       } else {
         job.trigger_name = (state === StateConstants.FAILURE) ? StateConstants.FAILURE : StateConstants.SUCCESS
       }
