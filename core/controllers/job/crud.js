@@ -89,6 +89,24 @@ module.exports = (server) => {
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
     controller.participants
   )
+
+  server.get('/job/:job/input',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('viewer'),
+    router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
+    controller.input
+  )
+
+  server.get('/job/:job/output',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('viewer'),
+    router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
+    controller.output
+  )
 }
 
 const controller = {
@@ -370,6 +388,27 @@ const controller = {
     } catch (err) {
       res.sendError(err)
     }
+  },
+  input (req, res, next) {
+    const values = req.job.task_arguments_values
+
+    if (req.query.hasOwnProperty("include_definitions")) {
+      const definitions = [...req.job.task.task_arguments]
+
+      for (let index = 0; index < definitions.length; index++) {
+        definitions[index].value = values[index]
+      }
+
+      res.send(200, definitions)
+    } else {
+      res.send(200, values)
+    }
+
+    next()
+  },
+  output (req, res, next) {
+    res.send(200, req.job.output)
+    next()
   }
 }
 
