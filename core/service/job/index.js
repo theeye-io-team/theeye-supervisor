@@ -136,12 +136,15 @@ module.exports = {
     })
   },
   async finishNotificationJob (job, input) {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const args = job.task_arguments_values
       const task = job.task
       const subject = args[0] || task?.subject
       const message = args[1] || task?.body
-      const recipients = args[2] || task?.recipients
+      const recipients = parseRecipients(args[2]) || task?.recipients
+
+      job.task_arguments_values = [ subject, message, recipients ]
+      await job.save()
 
       App.notifications.generateTaskNotification({
         topic: TopicsConstants.task.notification,
@@ -1155,7 +1158,13 @@ const parseRecipients = (values) => {
   } catch (jsonErr) {
     logger.log(jsonErr.message)
     logger.log(values)
-    recipients = [ values ]
+
+    const parts = values.split(',')
+    if (parts.length > 1) {
+      recipients = parts
+    } else {
+      recipients = [ values ]
+    }
   }
 
   return recipients
