@@ -6,7 +6,7 @@
   "author": "Facundo Gonzalez <facugon@theeye.io>",
   "main": "core/main.js",
   "keywords": [],
-  "license":"AGPL-3.0",
+  "license": "AGPL-3.0",
   "engines": {
     "node": ">=10.*"
   },
@@ -32,7 +32,7 @@
     "got": "~11.0.2",
     "graphlib": "~2.1.1",
     "jsonwebtoken": "~8.5.1",
-    "lodash": "~4.17.15",
+    "lodash": "~4.17.21",
     "md5": "~2.1.0",
     "mime": "~2.4.4",
     "mocha": "~8.2.1",
@@ -40,7 +40,7 @@
     "mongoose": "~5.12.3",
     "mongoose-lifecycle": "1.0.0",
     "multer": "~1.4.2",
-    "nodemailer": "6.2.1",
+    "nodemailer": "~6.7.0",
     "nodemon": "~2.0.4",
     "passport": "~0.3.2",
     "passport-http": "~0.3.0",

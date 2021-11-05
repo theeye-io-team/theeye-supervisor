@@ -170,13 +170,15 @@ module.exports = (server) => {
         script_arguments: 0,
         output: 0,
         result: 0,
-        script: 0
+        script: 0,
+        task_arguments_values: 0, // input
+        task: 0
       })
 
-      if (workflow.table_view !== true) {
-        filter.include.task_arguments_values = 0
-        filter.include.task = 0
-      }
+      //if (workflow.table_view !== true) {
+      //  filter.include.task_arguments_values = 0
+      //  filter.include.task = 0
+      //}
 
       if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
         filter.where.acl = req.user.email
