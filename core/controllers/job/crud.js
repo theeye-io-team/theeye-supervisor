@@ -390,16 +390,21 @@ const controller = {
     }
   },
   input (req, res, next) {
-    const values = req.job.task_arguments_values
+    const job = req.job
+    const values = job.task_arguments_values
 
     if (req.query.hasOwnProperty("include_definitions")) {
-      const definitions = [...req.job.task.task_arguments]
+      //const definitions = [...req.job.task.task_arguments]
+      //for (let index = 0; index < definitions.length; index++) {
+      //  definitions[index].value = values[index]
+      //}
 
-      for (let index = 0; index < definitions.length; index++) {
-        definitions[index].value = values[index]
-      }
-
-      res.send(200, definitions)
+      res.send(200, {
+        task_arguments_values: values,
+        task: {
+          task_arguments: job.task.task_arguments
+        }
+      })
     } else {
       res.send(200, values)
     }
