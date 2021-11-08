@@ -193,6 +193,16 @@ module.exports = (server) => {
     }
   )
 
+  // retrieve the inputs for all the executions
+  server.get('/workflows/:workflow/jobs/input',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('viewer'),
+    router.resolve.idToEntityByCustomer({ param: 'workflow', required: true }),
+    controller.input
+  )
+
   server.put('/workflows/:workflow/job/:job/cancel',
     server.auth.bearerMiddleware,
     router.requireCredential('admin'),
@@ -238,6 +248,37 @@ module.exports = (server) => {
 }
 
 const controller = {
+  async input (req, res, next) {
+    const { workflow, customer, user } = req
+
+    const filters = dbFilter(req.query, { /** default **/ })
+    filters.where.customer_id = customer._id.toString()
+    filters.where.workflow_id = workflow._id
+    filters.where.task_id = workflow.start_task_id
+
+    if (!ACL.hasAccessLevel(user.credential, 'admin')) {
+      filters.where.acl = user.email
+    }
+
+    filters.include = Object.assign(filters.include, {
+      workflow_id: 1,
+      workflow_job_id: 1,
+      task_arguments_values: 1,
+      _type: 1,
+      type: 1
+    })
+
+    if (req.query.hasOwnProperty("include_definitions")) {
+      filters.include.task = 1
+    }
+
+    App.Models.Job.Job.fetchBy(filters)
+      .then(jobs => {
+        res.send(200, jobs)
+        next()
+      })
+      .catch(res.sendError)
+  },
   async replaceAcl (req, res, next) {
     try {
       const job = req.job
