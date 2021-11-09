@@ -5,10 +5,10 @@ const logger = require('../../lib/logger')('controller:monitor:runner')
 module.exports = (server) => {
   server.get('/monitor/runner',
     server.auth.bearerMiddleware,
+    router.requireCredential('admin'),
     router.resolve.customerSessionToEntity(),
     // router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer,
-    router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'host', required: true }),
     fetch
   )
@@ -16,9 +16,9 @@ module.exports = (server) => {
   // create job runner
   server.post('/monitor/runner',
     server.auth.bearerMiddleware,
+    router.ensureCustomer,
     router.resolve.customerSessionToEntity(),
     // router.resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'host', required: true }),
     router.resolve.idToEntity({ param: 'task', required: true }),
@@ -28,9 +28,9 @@ module.exports = (server) => {
   // remove runner
   server.del('/monitor/runner/:monitor',
     server.auth.bearerMiddleware,
+    router.ensureCustomer,
     router.resolve.customerSessionToEntity(),
     // router.resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'monitor', required: true }),
     remove
@@ -45,6 +45,7 @@ module.exports = (server) => {
 const create = async (req, res, next) => {
   try {
     const { customer, host, task } = req
+    // default values.
     const {
       looptime = 10000,
       name = `${host.hostname}-listener`,
@@ -73,7 +74,7 @@ const create = async (req, res, next) => {
       }
     }
 
-    // use insert to skip schema validations
+    // use insert to avoid schema validations
     const inserted = await App.Models.Monitor.Monitor.collection.insert(payload)
 
     App.jobDispatcher.createAgentUpdateJob(host._id)
