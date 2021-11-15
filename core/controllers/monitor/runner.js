@@ -16,8 +16,8 @@ module.exports = (server) => {
   // create job runner
   server.post('/monitor/runner',
     server.auth.bearerMiddleware,
-    router.ensureCustomer,
     router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     // router.resolve.customerNameToEntity({ required: true }),
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'host', required: true }),
@@ -28,8 +28,8 @@ module.exports = (server) => {
   // remove runner
   server.del('/monitor/runner/:monitor',
     server.auth.bearerMiddleware,
-    router.ensureCustomer,
     router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     // router.resolve.customerNameToEntity({ required: true }),
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'monitor', required: true }),

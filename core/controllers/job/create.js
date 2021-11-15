@@ -1,3 +1,4 @@
+const App = require('../../app')
 const restify = require('restify')
 const createJob = require('../../service/job/create')
 const router = require('../../router')
