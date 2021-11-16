@@ -269,7 +269,7 @@ const controller = {
     })
 
     if (req.query.hasOwnProperty("include_definitions")) {
-      filters.include.task = 1
+      filters.include['task.task_arguments'] = 1
     }
 
     App.Models.Job.Job.fetchBy(filters)
