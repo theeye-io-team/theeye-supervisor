@@ -1,28 +1,46 @@
 const App = require('../../app')
 const router = require('../../router')
-const logger = require('../../lib/logger')('controller:workflow:job')
+const logger = require('../../lib/logger')('controller:task:job')
 const LifecycleConstants = require('../../constants/lifecycle')
 const JobConstants = require('../../constants/jobs')
 const createJob = require('../../service/job/create')
+const { ClientError, ServerError } = require('../../lib/error-handler')
 
 module.exports = (server) => {
-  const middlewares = [
+
+  /**
+   * fetch many jobs information
+   */
+  server.get('/task/:task/job/queue',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('agent'),
+    router.resolve.idToEntity({ param: 'task', required: true }),
+    queueController
+  )
+
+  server.del('/:customer/task/:task/job',
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer
-  ]
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param: 'task', required: true }),
+    router.ensureCustomerBelongs('task'),
+    remove
+  )
 
-  server.post(
-    '/:customer/task/:task/job',
-    middlewares,
+  server.post('/:customer/task/:task/job',
+    server.auth.bearerMiddleware,
+    router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
     router.requireCredential('user'),
     router.resolve.idToEntity({ param: 'task', required: true }),
     router.ensureAllowed({ entity: { name: 'task' } }),
     createJob
   )
 
-  server.post(
-    '/:customer/task/:task/secret/:secret/job',
+  server.post('/:customer/task/:task/secret/:secret/job',
     router.resolve.idToEntity({ param: 'task', required: true }),
     router.requireSecret('task'),
     (req, res, next) => {
@@ -42,8 +60,7 @@ module.exports = (server) => {
     createJob
   )
 
-  server.post(
-    '/task/:task/secret/:secret/job',
+  server.post('/task/:task/secret/:secret/job',
     router.resolve.idToEntity({ param: 'task', required: true }),
     router.requireSecret('task'),
     (req, res, next) => {
@@ -62,15 +79,35 @@ module.exports = (server) => {
     },
     createJob
   )
+}
 
-  server.del(
-    '/:customer/task/:task/job',
-    middlewares,
-    router.requireCredential('admin'),
-    router.resolve.idToEntity({ param: 'task', required: true }),
-    router.ensureCustomerBelongs('task'),
-    remove
-  )
+const queueController = async (req, res, next) => {
+  try {
+    const { customer, user, task } = req
+    const query = req.query
+
+    if (query.limit && isNaN(query.limit)) {
+      throw new ClientError('Invalid limit value')
+    }
+    const limit = ( Number(query.limit) || 1)
+
+    const jobs = await App.jobDispatcher.getJobsByTask({
+      customer,
+      //host,
+      task,
+      limit
+    })
+
+    for (let job of jobs) {
+      App.scheduler.scheduleJobTimeoutVerification(job)
+    }
+
+    res.send(200, jobs)
+    next()
+  } catch (err) {
+    logger.error(err)
+    res.sendError(err)
+  }
 }
 
 const remove = async (req, res, next) => {

@@ -26,6 +26,60 @@ module.exports = {
       next(null, jobs)
     })
   },
+
+  async getJobsByTask (input) {
+    const { task, customer } = input
+
+    const limit = (input.limit || 1)
+
+    if (task.multitasking === false) {
+      // @TODO MongoDB index creation
+      const job = await App.Models.Job
+        .Job
+        .findOne({
+          task_id: task._id,
+          lifecycle: LifecycleConstants.ASSIGNED
+        })
+
+      if (job) {
+        return []
+      }
+    }
+
+    // @TODO MongoDB index creation for this $match and $sort
+    const jobs = await App.Models.Job.Job.aggregate([
+      {
+        $match: {
+          task_id: task._id.toString(),
+          lifecycle: LifecycleConstants.READY
+        }
+      },
+      {
+        $sort: {
+          creation_date: 1
+        }
+      },
+      {
+        $limit: limit
+      }
+    ])
+
+    if (jobs.length === 0) {
+      return []
+    }
+
+    const models = []
+    for (let index = 0; index < jobs.length; index++) {
+      const job = JobModels.Job.hydrate(jobs[index])
+      job.lifecycle = LifecycleConstants.ASSIGNED
+      await job.save()
+
+      RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job })
+      models.push(job)
+    }
+
+    return models
+  },
   /**
    *
    * @param {Object} input
@@ -109,7 +163,8 @@ module.exports = {
 
       if (groups.length>0) {
         let idx = 0
-        dispatchJobExecutionRecursive(idx, groups.map(grp => grp.nextJob), next)
+        const jobs = groups.map(grp => grp.nextJob)
+        dispatchJobExecutionRecursive(idx, jobs, next)
       } else {
         next()
       }
@@ -1169,7 +1224,6 @@ const parseRecipients = (values) => {
 
   return recipients
 }
-
 
 //const users2members = async (users, customer) => {
 //  const members = await App.gateway.member.fetch(users, { customer_id: customer.id })
