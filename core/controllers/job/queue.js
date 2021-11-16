@@ -12,7 +12,7 @@ module.exports = (server) => {
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     router.requireCredential('agent'),
-    router.resolve.idToEntity({ param: 'host', required: true }),
+    //router.resolve.idToEntity({ param: 'host', required: true }),
     router.resolve.idToEntity({ param: 'task', required: true }),
     queueController
   )
@@ -20,13 +20,20 @@ module.exports = (server) => {
 
 const queueController = async (req, res, next) => {
   try {
-    const { customer, user, host } = req
+    const { customer, user, task } = req
+    const query = req.query
 
-    if (!host) {
-      throw new ClientError('host required')
+    if (query.limit && isNaN(query.limit)) {
+      throw new ClientError('Invalid limit value')
     }
+    const limit = ( Number(query.limit) || 1)
 
-    const jobs = await App.jobDispatcher.getJobs({ customer, host, task })
+    const jobs = await App.jobDispatcher.getJobsByTask({
+      customer,
+      //host,
+      task,
+      limit
+    })
 
     for (let job of jobs) {
       App.scheduler.scheduleJobTimeoutVerification(job)
