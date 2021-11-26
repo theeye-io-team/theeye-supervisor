@@ -182,6 +182,15 @@ Scheduler.prototype = {
       ]
     })
   },
+  // deletes ALL schedules for a given task
+  unscheduleWorkflow (workflow) {
+    return this.agenda.cancel({
+      $and: [
+        { name: SchedulerConstants.AGENDA_WORKFLOW },
+        { 'data.workflow_id': workflow._id },
+      ]
+    })
+  },
   /**
    * @param {Job} job
    * @return {Promise}
