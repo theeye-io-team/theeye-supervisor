@@ -38,6 +38,11 @@ module.exports = async function (payload) {
  * @param {Job} job the job that generates the event
  */
 const triggeredTaskByEvent = async ({ event, data, job }) => {
+
+  if (!event||!event._id) {
+    return
+  }
+
   // search all task triggered by the event, not included in workflows
   const tasks = await Task.find({
     triggers: event._id,
