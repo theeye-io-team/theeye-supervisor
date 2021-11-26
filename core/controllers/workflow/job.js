@@ -10,11 +10,6 @@ const { ClientError } = require('../../lib/error-handler')
 const ACL = require('../../lib/acl')
 
 module.exports = (server) => {
-  const middlewares = [
-    server.auth.bearerMiddleware,
-    router.resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer
-  ]
 
   const verifyStartingTask = async (req, res, next) => {
     try {
@@ -71,7 +66,9 @@ module.exports = (server) => {
   )
 
   server.del('/workflows/:workflow/job',
-    middlewares,
+    server.auth.bearerMiddleware,
+    router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'workflow', required: true }),
     router.ensureCustomerBelongs('workflow'),
