@@ -5,6 +5,7 @@
 <table>
   <tr>
     <td> <img src="images/TheEye-Of-Sauron.png"></td>
+    <td>
     TheEye es una plataforma de automatización de procesos desarrollada en NodeJS. Puede usarla como BPM, Rapid Backoffice Development (RDA) y nucleo de procesos.
 Técnicamente, TheEye es un orquestrador. 
     </td>

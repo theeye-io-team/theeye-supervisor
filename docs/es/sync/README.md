@@ -17,7 +17,7 @@ Esto puede hacerse usando la API en modo `sync`. la única limitación es el tim
 
 | Metoodo | Dirección                   | Descripción                 | ACL  | 
 | ------- | --------------------------- | --------------------------- | ---- |
-| POST    | /${customer}/task/${id}/job | [Run task](#waiting-output) | user | 
+| POST    | /${customer}/task/${id}/job | [Run task](#esperar-por-el-output) | user | 
 
 
 ### NOTAS
