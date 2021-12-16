@@ -7,9 +7,6 @@ const logger = require('../../lib/logger')('controller:workflow')
 const audit = require('../../lib/audit')
 const router = require('../../router')
 // const audit = require('../../lib/audit')
-const Workflow = require('../../entity/workflow').Workflow
-const Task = require('../../entity/task').Entity
-const Tag = require('../../entity/tag').Entity
 
 const ACL = require('../../lib/acl');
 const dbFilter = require('../../lib/db-filter');
