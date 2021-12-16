@@ -3,188 +3,172 @@ const ObjectId = require('mongoose').Types.ObjectId
 const isMongoId = require('validator/lib/isMongoId')
 const graphlib = require('graphlib')
 const App = require('../../app')
-const TopicsConstants = require('../../constants/topics')
-const logger = require('../../lib/logger')('controller:workflow')
-const audit = require('../../lib/audit')
-const router = require('../../router')
-// const audit = require('../../lib/audit')
-const Workflow = require('../../entity/workflow').Workflow
-const Task = require('../../entity/task').Entity
-const Tag = require('../../entity/tag').Entity
-
-const ACL = require('../../lib/acl')
-const dbFilter = require('../../lib/db-filter')
+//const logger = require('../../lib/logger')('controller:workflow:crudv2')
 const AsyncController = require('../../lib/async-controller')
 const { ClientError, ServerError } = require('../../lib/error-handler')
 
-/**
- *
- * @method POST
- *
- */
-const create = async (req, res, next) => {
-  const { customer, user, body } = req
+module.exports = {
+  /**
+   *
+   * @method POST
+   *
+   */
+  create: AsyncController(async (req, res, next) => {
+    const { customer, user, body } = req
 
-  if (body.graph.nodes.length === 0) {
-    throw new ClientError('invalid graph definition')
-  }
+    if (body.graph.nodes.length === 0) {
+      throw new ClientError('invalid graph definition')
+    }
 
-  const workflow = new Workflow(
-    Object.assign({}, body, {
-      _type: 'Workflow',
-      customer: customer.id,
-      customer_id: customer.id,
-      user: user.id,
-      user_id: user.id,
-      version: 2
-    })
-  )
+    const workflow = new App.Models.Workflow.Workflow(
+      Object.assign({}, body, {
+        _type: 'Workflow',
+        customer: customer.id,
+        customer_id: customer.id,
+        user: user.id,
+        user_id: user.id,
+        version: 2
+      })
+    )
 
-  const payload = { workflow, customer, user, body }
-  const { tasks, graph } = await createTasks(payload)
+    const payload = { workflow, customer, user, body }
+    const { tasks, graph } = await createTasks(payload)
 
-  // updated grph with created tasks ids
-  workflow.graph = graph
-  await workflow.save()
+    // updated grph with created tasks ids
+    workflow.graph = graph
+    await workflow.save()
 
-  //createTags(req)
-  req.workflow = workflow
-  return workflow
-}
+    //createTags(req)
+    req.workflow = workflow
+    return workflow
+  }),
+  /**
+   *
+   * @method DELETE
+   *
+   */
+  remove: AsyncController(async (req) => {
+    const { workflow, body } = req
 
-/**
- *
- * @method PUT
- *
- */
-const replace = async (req, res, next) => {
-  const { workflow, customer, user, body } = req
-  const { graph, tasks, start_task_id } = req.body
+    await Promise.all([
+      workflow.remove(),
+      App.Models.Job.Workflow.deleteMany({ workflow_id: workflow._id.toString() }),
+      App.scheduler.unscheduleWorkflow(workflow),
+      removeWorkflowTasks(workflow, body?.keepTasks)
+    ])
 
-  if (body.graph.nodes.length === 0) {
-    throw new ClientError('invalid graph definition')
-  }
+    return
+  }),
+  /**
+   *
+   * @method PUT
+   *
+   */
+  replace: AsyncController(async (req, res, next) => {
+    const { workflow, customer, user, body } = req
+    const { graph, tasks, start_task_id } = req.body
 
-  const oldgraphlib = graphlib.json.read(workflow.graph)
+    if (body.graph.nodes.length === 0) {
+      throw new ClientError('invalid graph definition')
+    }
 
-  const checkRemovedNodes = async () => {
-    const newgraph = graphlib.json.read(graph)
-    // update removed nodes
-    const oldNodes = oldgraphlib.nodes()
-    for (let id of oldNodes) {
-      const node = newgraph.node(id)
-      if (!node) { // it is not in the workflow no more
-        const oldNode = oldgraphlib.node(id)
-        if (workflow.version === 2) {
-          await App.task.destroy(oldNode.id)
-        } else {
-          await App.task.unlinkTaskFromWorkflow(oldNode.id)
+    const oldgraphlib = graphlib.json.read(workflow.graph)
+
+    const checkRemovedNodes = async () => {
+      const newgraph = graphlib.json.read(graph)
+      // update removed nodes
+      const oldNodes = oldgraphlib.nodes()
+      for (let id of oldNodes) {
+        const node = newgraph.node(id)
+        if (!node) { // it is not in the workflow no more
+          const oldNode = oldgraphlib.node(id)
+          if (workflow.version === 2) {
+            await App.task.destroy(oldNode.id)
+          } else {
+            await App.task.unlinkTaskFromWorkflow(oldNode.id)
+          }
         }
       }
     }
-  }
 
-  const checkCreatedNodes = async (graph) => {
-    // add new nodes
-    for (let node of graph.nodes) {
-      if (!oldgraphlib.node(node.v)) { // is not in the workflow
+    const checkCreatedNodes = async (graph) => {
+      // add new nodes
+      for (let node of graph.nodes) {
+        if (!oldgraphlib.node(node.v)) { // is not in the workflow
 
-        const props = tasks.find(task => {
-          return (task.id === node.value.id)
-        })
-
-        const model = await App.task.factory(
-          Object.assign({}, props, {
-            customer_id: customer._id,
-            customer: customer,
-            user: user,
-            user_id: user.id,
-            workflow_id: workflow._id,
-            workflow: workflow,
-            id: undefined
+          const props = tasks.find(task => {
+            return (task.id === node.value.id)
           })
-        )
 
-        if (props.id === start_task_id) {
-          workflow.start_task = model._id
-          workflow.start_task_id = model._id
-        }
-
-        // update node and edges
-        const newid = model._id.toString()
-
-        // first: update the edges.
-        for (let edge of graph.edges) {
-          const eventName = edge.value
-
-          if (edge.v === node.v) {
-            edge.v = newid
-
-            await createTaskEvent({
+          const model = await App.task.factory(
+            Object.assign({}, props, {
               customer_id: customer._id,
-              name: eventName,
-              task_id: model._id
+              customer: customer,
+              user: user,
+              user_id: user.id,
+              workflow_id: workflow._id,
+              workflow: workflow,
+              id: undefined
             })
+          )
+
+          if (props.id === start_task_id) {
+            workflow.start_task = model._id
+            workflow.start_task_id = model._id
           }
 
-          if (edge.w === node.v) {
-            edge.w = newid
+          // update node and edges
+          const newid = model._id.toString()
 
-            if (isMongoId(edge.v)) {
-              const task_id = ObjectId(edge.v)
+          // first: update the edges.
+          for (let edge of graph.edges) {
+            const eventName = edge.value
+
+            if (edge.v === node.v) {
+              edge.v = newid
+
               await createTaskEvent({
                 customer_id: customer._id,
                 name: eventName,
-                task_id
+                task_id: model._id
               })
             }
-          }
-        }
 
-        // second: update the node.
-        node.value.id = node.v = newid
+            if (edge.w === node.v) {
+              edge.w = newid
+
+              if (isMongoId(edge.v)) {
+                const task_id = ObjectId(edge.v)
+                await createTaskEvent({
+                  customer_id: customer._id,
+                  name: eventName,
+                  task_id
+                })
+              }
+            }
+          }
+
+          // second: update the node.
+          node.value.id = node.v = newid
+        }
       }
     }
-  }
 
-  await checkRemovedNodes()
-  await checkCreatedNodes(graph)
+    await checkRemovedNodes()
+    await checkCreatedNodes(graph)
 
-  workflow.set(body)
-  await workflow.save()
+    workflow.set(body)
+    await workflow.save()
 
-  createTags(req)
-  return workflow
-}
-
-/**
- *
- * @method DELETE
- *
- */
-const remove = async (req) => {
-  const { workflow, body } = req
-
-  await Promise.all([
-    workflow.remove(),
-    App.Models.Job.Workflow.deleteMany({ workflow_id: workflow._id.toString() }),
-    App.scheduler.unscheduleWorkflow(workflow),
-    removeWorkflowTasks(workflow, body?.keepTasks)
-  ])
-
-  return
-}
-
-module.exports = {
-  create: AsyncController(create),
-  remove: AsyncController(remove),
-  replace: AsyncController(replace)
+    createTags(req)
+    return workflow
+  })
 }
 
 const createTags = ({ body, customer }) => {
   const tags = body.tags
   if (tags && Array.isArray(tags)) {
-    Tag.create(tags, customer)
+    App.Models.Tag.Tag.create(tags, customer)
   }
 }
 
