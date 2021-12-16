@@ -31,9 +31,9 @@ Components Control. Can be configured to do one o more things (or nothing)
 | Variable Name | Usage |
 | ----- | ----- |
 | COMMANDER_DISABLED | disable internal commander api |
-| MONITORING_DISABLED | disable monitoring system. system monitors will not be checked anymore. will only change when bots and agents send updates |
+| MONITORING_DISABLED | disable monitoring system. The core will stop checking monitors status. Events for monitor status will be triggered on API updates |
 | API_DISABLED | disable rest api |
-| SCHEDULER_JOBS_DISABLED | disable internal scheduler execution. scheduler-jobs will be created using the rest api but task will never be executed. theeye-jobs execution timeout will be never checked. |
+| SCHEDULER_JOBS_DISABLED | disable internal scheduler execution. scheduled jobs can be created but jobs will not be created. |
 
 ### Start development sample
 
