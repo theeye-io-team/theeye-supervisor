@@ -1,6 +1,6 @@
 
 if [ -z "${DEBUG}" ]; then
-  export DEBUG="*eye*"
+  export DEBUG="*eye*err*"
 fi
 
 if [ -z "${NODE_ENV}" ]; then
