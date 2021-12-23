@@ -6,14 +6,14 @@
 
 | Method | Path                                                  | Description                                | ACL       |
 | ------ | ----------------------------------------------------- | ------------------------------------------ | --------- |
-| GET    | /${customer}/task                                     | [Enlistar tareas](#ejemplo-1) <br> [Enlistar tareas y su timeout](#ejemplo-3)| viewer    |
+| GET    | /${customer}/task                                     | [Enlistar tareas](#ejemplo-1)              | viewer    |
 | GET    | /${customer}/task/${id}                               | [Buscar por ID](#ejemplo-2)                | viewer    |
 | DELETE | /${customer}/task/${id}                               | Eliminar tarea                             | admin     |
 | GET    | /${customer}/task/:task/recipe                        | Buscar receta                              | admin     |
 | GET    | /${customer}/task/import                              | Crear desde receta                         | admin     |
 | GET    | /${customer}/task/:task/credentials                   | Buscar credenciales de tarea               | admin     |
 | POST   | /${customer}/task/${id}/job                           | Ejecutar tarea                             | user      |
-| POST   | /${customer}/task/${id}/secret/${task_secret_key}/job | [Ejecutar tarea con su key](#example-4)    | anonymous |
+| POST   | /${customer}/task/${id}/secret/${task_secret_key}/job | [Ejecutar tarea con su key](#ejemplo-3)    | anonymous |
 | DELETE | /${customer}/task/${id}/job                           | Vaciar cola de jobs                        | admin     |
 
 ### NOTAS
@@ -133,13 +133,13 @@ xhr.send(null)
 > Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la clave de integración
 
 ```javascript
-var http = require('http');
+const http = require('http');
 
-var options = {
+const options = {
   host: 'supervisor.theeye.io',
   path: `/${process.env.THEEYE_ORGANIZATION_NAME}/task?access_token=${process.env.THEEYE_TOKEN}`,
   method: 'GET'
-};
+}
 
 const req = https.request(options, res => {
   let data = ''
@@ -234,17 +234,17 @@ xhr.send(null)
 > Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la clave de integración
 
 ```javascript
-var http = require('http');
+const http = require('http');
 
 // El ID de la tarea que se quiere solicitar
 const task_id = "61098ee1a3013300120c687b"
 
 
-var options = {
+const options = {
   host: 'supervisor.theeye.io',
   path: `/${process.env.THEEYE_ORGANIZATION_NAME}/task/${task_id}?access_token=${process.env.THEEYE_TOKEN}`,
   method: 'GET'
-};
+}
 
 const req = https.request(options, res => {
   let data = ''
@@ -293,97 +293,133 @@ print(r.json())
 
 ### **Ejemplo 3**
 
-#### Enlistar tareas y su timeout
+### Ejecutar con la Secret Key
 
-(Timeout = null) means that the timeout is set to default (10 minutes).
+En este ejemplo enviaremos un POST request que ejecutará una tarea de nuestra elección, creando un Job para el agente. Debe proveerse el ID de la tarea y su Secret Key, ilustrado como argumentos de función. Devuelve información del Job que se creó.
 
-```bash
-#!/bin/bash
+<!-- tabs:start -->
 
-customer=$1
-access_token=$THEEYE_TOKEN
-supervisor=$2
-if [ $2 == "" ]; then supervisor='https://supervisor.theeye.io' ; fi
-if [ $# -ne 2 ]; then echo "missing parameters" ; exit ; fi
+##### **Bash**
 
-data=$(curl -s ${supervisor}/${customer}/task?access_token=${access_token})
-
-echo "${data}" | jq -j '.[] | "id: ", .id, "\ttask: ", .name, "\ttimeout: ", .timeout, "\n"'
-```
-
-### **Example 4**
-
-### Execute using secret key
+> Se asume que está declaradas las variable de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización
+>
+> Como BASH no permite devolver valores arbitrarios, se imprime el resultado en stdout. Si en su lugar desea guardarlo en una variable, puede ejecutar la función de la siguiente manera: <br/>
+> `$ output=$(execTask "ID" "Secret")`
 
 ```bash
-task_id=$TASK_ID
-task_secret_key=$TASK_SECRET
-customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
+execTask () {
+  task_id=$1
+  task_secret_key=$2
 
-curl -i -sS \
-  --request POST \
-  --header "Accept: application/json" \
-  --header "Content-Type: application/json" \
-  --data-urlencode "customer = ${customer}" \
-  --data-urlencode "task = ${task_id}" \
-  --url "https://supervisor.theeye.io/job/secret/${task_secret_key}"
+  body='{ "customer": "'"$THEEYE_ORGANIZATION_NAME"'", "task": "'"$task_id"'" }'
+
+  curl -sS \
+    --request POST \
+    --header "Accept: application/json" \
+    --header "Content-Type: application/json" \
+    --data ${body} \
+    --url "https://supervisor.theeye.io/job/secret/${task_secret_key}"
+}
 ```
 
-### **Example 5**
+##### **Javascript**
 
-### HTML Button
+> Se asume que está declarada las variable `window.THEEYE_ORGANIZATION_NAME` como el nombre de la organización
+> 
+> En este ejemplo, la función devuelve una `Promise` que se resuelve al completar el request
 
-This technique could be combined with an HTML form to generate an action button.
-This is very handy when it is needed to perform actions from email bodies or static web pages.
+```javascript
+const execTask = (task_id, task_secret_key) => {
+  return new Promise((resolve, reject) => {
+    let xhr = new XMLHttpRequest();
 
-```html
-<html>
-<head><title>Sample approval request</title></head>
-<body></body>
-<script>
-var secret = ""
-var taskId = ""
-var customerName = ""
-var template = [
-  "<div>",
-    '<span>Approve please!</span>',
-    '<form action="http://supervisor.theeye.io/job/secret/' + secret + '" method=POST>',
-      '<input type="hidden" name="customer" value="' + customerName + '">',
-      '<input type="hidden" name="task" value="' + taskId + '">',
-      '<input type="hidden" name="task_arguments[]" value="arg1">',
-      '<input type="hidden" name="task_arguments[]" value="arg2">',
-      '<input type="submit" value="ACEPTO">',
-    '</form>',
-  '</div>',
-].join("")
+    const body = {
+      customer: window.THEEYE_ORGANIZATION_NAME,
+      task: task_id
+    }
 
-document.body.innerHTML = template
+    xhr.open('POST', `https://supervisor.theeye.io/job/secret/${task_secret_key}`);
 
-</script>
-</html>
+    xhr.setRequestHeader("Accept", "application/json")
+    xhr.setRequestHeader("Content-Type", "application/json")
+
+    xhr.onload = () => {
+      resolve(JSON.parse(xhr.response))
+    }
+
+    xhr.onerror = () => {
+      reject(xhr.response)
+    }
+
+    xhr.send(JSON.stringify(body))
+  })
+}
 ```
 
-### **Example 6**
+##### **Node.js**
 
-### API integration tokens
+> Se asume que está declaradas las variable de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización
+> 
+> En este ejemplo, la función devuelve una `Promise` que se resuelve al completar el request
 
-Integration Tokens can be obtained only by admin users.
+```javascript
+const http = require('http');
 
-<h2 style="color:red"> Integration Tokens has full admin privileges. Keep it safe</h2>
+const execTask = (task_id, task_secret_key) => {
+  return new Promise((resolve, reject) => {
+    const body = {
+      customer: process.env.THEEYE_ORGANIZATION_NAME,
+      task: task_id
+    }
 
-Accessing to the web interfaz *Menu > Settings > Credentials > Integration Tokens*.
+    const options = {
+      host: 'supervisor.theeye.io',
+      path: `/job/secret/${task_secret_key}`,
+      method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+    }
 
-```bash
-task_id=$TASK_ID
-access_token=$ACCESS_TOKEN
-customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
+    const req = https.request(options, res => {
+      let data = ''
 
+      res.on('data', d => {
+        data = data + d
+      })
 
-curl -X POST \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -d "{\"task_arguments\":[]}" \
-  "https://supervisor.theeye.io/job?access_token=${access_token}&customer=${customer}&task=${task_id}"
+      res.on('end', () => {
+        console.log(JSON.parse(data))
+      })
+    })
+
+    req.on('error', error => {
+      console.error(error)
+    })
+
+    req.write(JSON.stringify(body))
+    req.end()
+  })
+}
 ```
 
-The API response is a the created job. We can save the job id and use it later to query the job status.
+##### **Python**
+
+```python
+import os
+import requests
+
+def execTask(task_id, task_secret_key):
+  url = "https://supervisor.theeye.io/job/secret/" + task_secret_key
+
+  body = {
+    "customer": os.getenv("THEEYE_ORGANIZATION_NAME"),
+    "task": task_id
+  }
+  
+  r = requests.post(url, body)
+  return(r.json())
+```
+
+<!-- tabs:end -->
