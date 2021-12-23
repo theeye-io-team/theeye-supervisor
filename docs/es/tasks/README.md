@@ -133,7 +133,7 @@ xhr.send(null)
 > Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la clave de integración
 
 ```javascript
-const http = require('http');
+const https = require('https')
 
 const options = {
   host: 'supervisor.theeye.io',
@@ -166,7 +166,7 @@ req.end()
 
 > Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la clave de integración
 >
-> También se asume que está instalada la librería `requests`, de no tenerla puede instalarla usando `pip`
+> También se asume que está instalada la librería [`requests`](https://pypi.python.org/pypi/requests/), de no tenerla puede instalarla usando `pip`
 
 ```python
 import os
@@ -234,7 +234,7 @@ xhr.send(null)
 > Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la clave de integración
 
 ```javascript
-const http = require('http');
+const https = require('https')
 
 // El ID de la tarea que se quiere solicitar
 const task_id = "61098ee1a3013300120c687b"
@@ -271,7 +271,7 @@ req.end()
 
 > Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la clave de integración
 >
-> También se asume que está instalada la librería `requests`, de no tenerla puede instalarla usando `pip`
+> También se asume que está instalada la librería [`requests`](https://pypi.python.org/pypi/requests/), de no tenerla puede instalarla usando `pip`
 
 ```python
 import os
@@ -301,6 +301,8 @@ En este ejemplo enviaremos un POST request que ejecutará una tarea de nuestra e
 
 ##### **Bash**
 
+##### Nota:
+
 > Se asume que está declaradas las variable de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización
 >
 > Como BASH no permite devolver valores arbitrarios, se imprime el resultado en stdout. Si en su lugar desea guardarlo en una variable, puede ejecutar la función de la siguiente manera: <br/>
@@ -323,6 +325,8 @@ execTask () {
 ```
 
 ##### **Javascript**
+
+##### Nota:
 
 > Se asume que está declarada las variable `window.THEEYE_ORGANIZATION_NAME` como el nombre de la organización
 > 
@@ -358,12 +362,14 @@ const execTask = (task_id, task_secret_key) => {
 
 ##### **Node.js**
 
+##### Nota:
+
 > Se asume que está declaradas las variable de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización
 > 
 > En este ejemplo, la función devuelve una `Promise` que se resuelve al completar el request
 
 ```javascript
-const http = require('http');
+const https = require('https')
 
 const execTask = (task_id, task_secret_key) => {
   return new Promise((resolve, reject) => {
@@ -405,6 +411,11 @@ const execTask = (task_id, task_secret_key) => {
 ```
 
 ##### **Python**
+
+##### Nota:
+> Se asume que está declaradas las variable de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización
+> 
+> También se asume que está instalada la librería [`requests`](https://pypi.python.org/pypi/requests/), de no tenerla puede instalarla usando `pip`
 
 ```python
 import os
