@@ -132,7 +132,9 @@ const controller = {
       App.jobDispatcher.getNextPendingJob(
         { customer, user, host: req.host },
         (err, job) => {
-          if (err) { return res.send(500, err.message) }
+          if (err) {
+            return res.send(500, err.message)
+          }
 
           let jobs = []
           if (job) {

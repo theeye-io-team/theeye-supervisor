@@ -102,38 +102,60 @@ module.exports = {
     const dispatchJobExecutionRecursive = (
       idx, jobs, terminateRecursion
     ) => {
-      if (idx===jobs.length) { return terminateRecursion() }
-      let job = JobModels.Job.hydrate(jobs[idx])
-      //job.populate('task', err => {
-        //if (err) { return terminateRecursion(err) }
+      if (idx === jobs.length) {
+        return terminateRecursion()
+      }
 
-        // Cancel this job and process next
-        if (App.jobDispatcher.jobMustHaveATask(job) && !job.task) {
-          // cancel invalid job
-          job.lifecycle = LifecycleConstants.CANCELED
-          job.save(err => {
-            if (err) { logger.error('%o', err) }
+      const job = JobModels.Job.hydrate(jobs[idx])
+
+      // Cancel this job and process next
+      if (App.jobDispatcher.jobMustHaveATask(job) && !job.task) {
+        // cancel invalid job
+        job.lifecycle = LifecycleConstants.CANCELED
+        job.save(err => {
+          if (err) {
+            logger.error('%o', err)
+          }
+
+          // continue
+          dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
+        })
+
+        RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job })
+      } else {
+        allowedMultitasking(job, (err, allowed) => {
+          if (!allowed) {
+            // just ignore this one
             dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
-          })
+          } else {
+            logger.log(`Dispatching job ${job.id}: ${job.name}`)
+            const query = App.Models.Job.Job.findOneAndUpdate({
+              _id: job._id,
+              lifecycle: LifecycleConstants.READY
+            }, {
+              lifecycle: LifecycleConstants.ASSIGNED
+            }, {
+              rawResult: true
+            })
 
-          RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job })
-        } else {
-          allowedMultitasking(job, (err, allowed) => {
-            if (!allowed) {
-              // just ignore this one
-              dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
-            } else {
-              job.lifecycle = LifecycleConstants.ASSIGNED
-              job.save(err => {
-                if (err) { logger.error('%s', err) }
-                terminateRecursion(err, job)
-              })
+            query.exec((err, result) => {
+              if (err || !result) {
+                logger.error(`Job ${job.id}: ${job.name} cannot be dispatched`)
+                logger.error('%s', err)
+                return dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
+              }
 
+              if (result.lastErrorObject?.updatedExisting !== true) {
+                logger.error(`Job ${job.id}: ${job.name} already dispatched`)
+                return dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
+              }
+
+              terminateRecursion(null, job)
               RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job })
-            }
-          })
-        }
-      //})
+            })
+          }
+        })
+      }
     }
 
     JobModels.Job.aggregate([
