@@ -1,12 +1,16 @@
 {
-  "name": "TheEye-Supervisor",
+  "name": "theeye-supervisor",
   "version": "3.0.0",
   "private": true,
-  "description": "TheEye Supervisor Core Api",
+  "description": "theeye supervisor",
   "author": "Facundo Gonzalez <facugon@theeye.io>",
   "main": "core/main.js",
   "keywords": [],
   "license": "AGPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/theeye/theeye-supervisor.git"
+  },
   "engines": {
     "node": ">=10.*"
   },
