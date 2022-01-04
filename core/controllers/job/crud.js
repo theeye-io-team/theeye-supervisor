@@ -124,14 +124,17 @@ const controller = {
     if (customer.disabled === true || host.disabled === true) {
       App.jobDispatcher.getAgentUpdateJob(host, (err, job) => {
         if (err) { return res.send(500) }
-        res.send(200, { jobs: [ job ] })
+        const jobs = job?[job]:[]
+        res.send(200, {jobs})
       })
     } else {
       logger.log('agent querying queue')
       App.jobDispatcher.getNextPendingJob(
         { customer, user, host: req.host },
         (err, job) => {
-          if (err) { return res.send(500, err.message) }
+          if (err) {
+            return res.send(500, err.message)
+          }
 
           let jobs = []
           if (job) {
