@@ -85,6 +85,14 @@ Todas las tareas y los Workflows tienen una **Secret Key**, una contraseña que 
 
 Las Secret Keys pueden revocarse en cualquier momento tan solo cambiándolas, lo que hace este método el recomendado para acceder a la API gracias a su simpleza y seguridad. 
 
+### Usando claves de integración general
+
+Un usuario administrador puede crear una clave de integración (API Integration Token) desde la interfaz, la cual luego funciona para realizar múltiples operaciones desde la API. Para crearla, haga click en el ícono de su perfil, luego diríjase a *Settings* ➔ *Credentials* ➔ *Integration Tokens* 
+
+> :warning: Las claves de integración tienen completos **permisos de ADMINISTRADOR**, almacénela en un lugar seguro
+
+Revise el [ejemplo 4](#ejemplo-4) para más información
+
 -----
 
 ## Ejemplos
@@ -101,7 +109,7 @@ En este ejemplo enviaremos un GET request que nos devolverá una lista de todas 
 
 ##### Nota:
 
-> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la clave de integración
+> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la Secret Key de la tarea
 
 ```bash
 #!/bin/bash
@@ -113,7 +121,7 @@ curl -sS "https://supervisor.theeye.io/$THEEYE_ORGANIZATION_NAME/task?access_tok
 
 ##### Nota:
 
-> Se asume que están declaradas las variables `window.THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `window.THEEYE_TOKEN` como la clave de integración
+> Se asume que están declaradas las variables `window.THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `window.THEEYE_TOKEN` como la Secret Key de la tarea
 
 ```javascript
 let xhr = new XMLHttpRequest();
@@ -130,7 +138,7 @@ xhr.send(null)
 
 ##### Nota:
 
-> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la clave de integración
+> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la Secret Key de la tarea
 
 ```javascript
 const https = require('https')
@@ -164,7 +172,7 @@ req.end()
 
 ##### Nota:
 
-> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la clave de integración
+> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la Secret Key de la tarea
 >
 > También se asume que está instalada la librería [`requests`](https://pypi.python.org/pypi/requests/), de no tenerla puede instalarla usando `pip`
 
@@ -195,7 +203,7 @@ En este ejemplo enviaremos un GET request que nos devolverá una tarea con toda 
 
 ##### Nota:
 
-> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la clave de integración
+> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la Secret Key de la tarea
 
 ```bash
 #!/bin/bash
@@ -210,7 +218,7 @@ curl -sS "https://supervisor.theeye.io/$THEEYE_ORGANIZATION_NAME/task/${task_id}
 
 ##### Nota:
 
-> Se asume que están declaradas las variables `window.THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `window.THEEYE_TOKEN` como la clave de integración
+> Se asume que están declaradas las variables `window.THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `window.THEEYE_TOKEN` como la Secret Key de la tarea
 
 ```javascript
 let xhr = new XMLHttpRequest();
@@ -231,7 +239,7 @@ xhr.send(null)
 
 ##### Nota:
 
-> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la clave de integración
+> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la Secret Key de la tarea
 
 ```javascript
 const https = require('https')
@@ -269,7 +277,7 @@ req.end()
 
 ##### Nota:
 
-> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la clave de integración
+> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la Secret Key de la tarea
 >
 > También se asume que está instalada la librería [`requests`](https://pypi.python.org/pypi/requests/), de no tenerla puede instalarla usando `pip`
 
@@ -427,6 +435,155 @@ def execTask(task_id, task_secret_key):
   body = {
     "customer": os.getenv("THEEYE_ORGANIZATION_NAME"),
     "task": task_id
+  }
+  
+  r = requests.post(url, body)
+  return(r.json())
+```
+
+<!-- tabs:end -->
+
+### **Ejemplo 4**
+
+### Ejecutar con la clave de integración
+
+En este ejemplo enviaremos un POST request que ejecutará una tarea de nuestra elección utilizando la clave de integración general. Debe proveerse el ID de la tarea y la clave de integración de la cuenta, ilustrado como argumentos de función. Devuelve información del Job que se creó.
+
+TODO: PROBARLOS
+
+<!-- tabs:start -->
+
+##### **Bash**
+
+##### Nota:
+
+> Se asume que está declaradas las variable de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización
+>
+> Como BASH no permite devolver valores arbitrarios, se imprime el resultado en stdout. Si en su lugar desea guardarlo en una variable, puede ejecutar la función de la siguiente manera: <br/>
+> `$ output=$(execTask "ID" "Secret")`
+
+```bash
+execTask () {
+  task_id=$1
+  access_token=$2
+
+  body='{ "customer": "'"$THEEYE_ORGANIZATION_NAME"'", "task": "'"$task_id"'", "access_token": "'"$access_token"'" }'
+
+  curl -sS \
+    --request POST \
+    --header "Accept: application/json" \
+    --header "Content-Type: application/json" \
+    --data ${body} \
+    --url "https://supervisor.theeye.io/job"
+}
+```
+
+##### **Javascript**
+
+##### Nota:
+
+> Se asume que está declarada las variable `window.THEEYE_ORGANIZATION_NAME` como el nombre de la organización
+> 
+> En este ejemplo, la función devuelve una `Promise` que se resuelve al completar el request
+
+```javascript
+const execTask = (task_id, access_token) => {
+  return new Promise((resolve, reject) => {
+    let xhr = new XMLHttpRequest();
+
+    const body = {
+      customer: window.THEEYE_ORGANIZATION_NAME,
+      task: task_id,
+      access_token: access_token
+    }
+
+    xhr.open('POST', 'https://supervisor.theeye.io/job');
+
+    xhr.setRequestHeader("Accept", "application/json")
+    xhr.setRequestHeader("Content-Type", "application/json")
+
+    xhr.onload = () => {
+      resolve(JSON.parse(xhr.response))
+    }
+
+    xhr.onerror = () => {
+      reject(xhr.response)
+    }
+
+    xhr.send(JSON.stringify(body))
+  })
+}
+```
+
+##### **Node.js**
+
+##### Nota:
+
+> Se asume que está declaradas las variable de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización
+> 
+> En este ejemplo, la función devuelve una `Promise` que se resuelve al completar el request
+
+```javascript
+const https = require('https')
+
+const execTask = (task_id, access_token) => {
+  return new Promise((resolve, reject) => {
+    const body = {
+      customer: process.env.THEEYE_ORGANIZATION_NAME,
+      task: task_id,
+      access_token: access_token
+    }
+
+    const options = {
+      host: 'supervisor.theeye.io',
+      path: '/job',
+      method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+    }
+
+    const req = https.request(options, res => {
+      let data = ''
+
+      res.on('data', d => {
+        data = data + d
+      })
+
+      res.on('end', () => {
+        console.log(JSON.parse(data))
+      })
+    })
+
+    req.on('error', error => {
+      console.error(error)
+    })
+
+    req.write(JSON.stringify(body))
+    req.end()
+  })
+}
+```
+
+##### **Python**
+
+##### Nota:
+> Se asume que está declaradas las variable de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización
+> 
+> También se asume que está instalada la librería [`requests`](https://pypi.python.org/pypi/requests/), de no tenerla puede instalarla usando `pip`
+
+```python
+import os
+import requests
+
+def execTask(task_id, access_token):
+  url = "https://supervisor.theeye.io/job"
+
+  body = {
+    "customer": os.getenv("THEEYE_ORGANIZATION_NAME"),
+    "task": task_id,
+    "access_token": access_token
   }
   
   r = requests.post(url, body)
