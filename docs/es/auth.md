@@ -9,7 +9,7 @@ Se puede acceder a la API de distintas maneras:
 * [Identificadores de integración (Integration Tokens)](#identificadores-de-integración-integration-tokens)
 * [Autenticación básica](#autenticación-básica)
 * [Autenticación al portador (Bearer Authentication)](#autenticación-al-portador-bearer-authentication)
-* Recursos con identificador secreto propio
+* [Recursos con identificador secreto propio](#recursos-con-identificador-secreto-propio)
 
 -----
 
