@@ -1,0 +1,10 @@
+- [API para desarrolladores](es/)
+- [Habilitar acceso a las APIs](es/auth.md)
+- [Indicadores](es/indicators/)
+- Tareas
+  - [Introducción](es/tasks/)
+  - [Argumentos](es/tasks/arguments.md)
+- [Monitores](es/monitors/)
+- [Jobs](es/jobs/)
+- [Webhooks](es/webhooks/)
+- [Sync](es/sync/)
