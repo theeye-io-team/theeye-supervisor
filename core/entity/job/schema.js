@@ -84,6 +84,15 @@ function BaseSchema (props) {
         dtask.approvers = data.task.approvers
         dtask.task_arguments = data.task.task_arguments
         dtask.output_parameters = data.task.output_parameters
+        dtask.execution_logging_enabled = data.task.execution_logging_enabled
+
+        if (data.task.execution_logging_enabled) {
+          if (!data.task.execution_logging_basename) {
+            dtask.execution_logging_basename = data.task._id.toString()
+          }
+          dtask.execution_logging_dirname = data.task.execution_logging_dirname || null
+        }
+
         data.task = dtask
       }
     }
