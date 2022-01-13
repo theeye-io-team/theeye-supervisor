@@ -805,6 +805,8 @@ const createJob = async (input) => {
   // await notification and system log generation
   await RegisterOperation.submit(Constants.CREATE, TopicsConstants.job.crud, { job, user })
 
+  awat checkTaskDependencies(task)
+
   if (task.type === TaskConstants.TYPE_DUMMY) {
     if (job.lifecycle !== LifecycleConstants.ONHOLD) {
       await App.jobDispatcher.finishDummyJob(job, input)
@@ -814,6 +816,16 @@ const createJob = async (input) => {
   }
 
   return job
+}
+
+const checkTaskDependencies = (task) => {
+
+  if (task.dependencies_check_enabled === true) {
+
+    const deps = task.dependencies
+
+  }
+
 }
 
 /**
