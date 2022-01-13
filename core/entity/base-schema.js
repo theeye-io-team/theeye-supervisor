@@ -3,7 +3,7 @@
 const util = require('util')
 const mongoose = require('mongoose')
 const Schema = mongoose.Schema
-const lifecicle = require('mongoose-lifecycle')
+const lifecycle = require('mongoose-lifecycle')
 const FetchBy = require('../lib/fetch-by');
 const baseProperties = require('./base-schema-properties')
 
@@ -31,7 +31,7 @@ function BaseSchema (props, specs) {
   this.set('toJSON'  , def)
   this.set('toObject', def)
 
-  this.plugin(lifecicle)
+  this.plugin(lifecycle)
 
   this.statics.fetchBy = function (filter, next) {
     FetchBy.call(this,filter,next)
