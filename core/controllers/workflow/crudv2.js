@@ -6,6 +6,8 @@ const App = require('../../app')
 //const logger = require('../../lib/logger')('controller:workflow:crudv2')
 const AsyncController = require('../../lib/async-controller')
 const { ClientError, ServerError } = require('../../lib/error-handler')
+//const formidable = require('formidable')
+//const form = formidable({ multiples: true })
 
 module.exports = {
   /**
@@ -15,6 +17,13 @@ module.exports = {
    */
   create: AsyncController(async (req, res, next) => {
     const { customer, user, body } = req
+
+    //const { fields, files } = await new Promise((resolve, reject) => {
+    //  form.parse(req, (err, fields, files) => {
+    //    if (err) { reject(err) }
+    //    else { resolve({ fields, files }) }
+    //  })
+    //})
 
     if (body.graph.nodes.length === 0) {
       throw new ClientError('invalid graph definition')

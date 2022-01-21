@@ -28,15 +28,7 @@ module.exports = {
   factory (props) {
     validateProperties(props)
 
-    const task = App.Models.Task.Factory.create(props)
-    const errors = task.validateSync()
-    if (errors) {
-      const err = new ClientError('TaskValidationError')
-      err.errors = errors
-      throw err
-    }
-
-    return task.save()
+    return Factory.create(props)
   },
   async destroy (taskId) {
     const task = await App.Models.Task.Task.findById(taskId)
@@ -209,17 +201,7 @@ module.exports = {
       logger.log('creating task')
       logger.data(input)
 
-      const task = App.Models.Task.Factory.create(input)
-
-      let errors = task.validateSync()
-      if (errors) {
-        let err = new Error('TaskValidationError')
-        err.statusCode = 400
-        err.errors = errors
-        throw err
-      }
-
-      await task.save()
+      const task = await this.factory(input)
 
       const customer = input.customer
       createTags(input.tags, customer)
@@ -443,7 +425,9 @@ module.exports = {
         customer: customer,
         user_id: user.id,
         user: user,
-        source_model_id: task.source_model_id
+        source_model_id: task.source_model_id,
+        _id: undefined,
+        secret: undefined
       })
 
       const template = TaskTemplate.Factory.create(data)
@@ -487,9 +471,10 @@ const validateProperties = (input) => {
   }
 
   if (input.type === TaskConstants.TYPE_SCRIPT) {
-    if (!input.script_id) {
-      errors.required('script', input.script_id)
+    if (!input.script_id && !input.script) {
+      errors.required('script', [input.script_id, input.script])
     }
+
     if (!input.script_runas) {
       errors.required('script_runas', input.script_runas)
     }
@@ -501,7 +486,9 @@ const validateProperties = (input) => {
   if (input.type === TaskConstants.TYPE_NOTIFICATION) { }
 
   if (errors.hasErrors()) {
-    throw new ClientError(errors)
+    const err = new ClientError('TaskValidationError', {statusCode: 400})
+    err.errors = errors
+    throw err
   }
 }
 
@@ -554,4 +541,77 @@ const createTags = (tags, customer) => {
   if (tags && Array.isArray(tags)) {
     Tag.create(tags, customer)
   }
+}
+
+const Factory = {
+  async create (input) {
+    delete input._type
+    delete input.creation_date
+    delete input.last_update
+    delete input.secret
+
+    if (input.hasOwnProperty('allows_dynamic_settings') === false) {
+      input.allows_dynamic_settings = false
+    }
+
+    if (FactoryMethod.hasOwnProperty(input.type)) {
+      const task = await FactoryMethod[input.type](input)
+
+      const errors = task.validateSync()
+      if (errors) {
+        const err = new ClientError('TaskValidationError')
+        err.statusCode = 400
+        err.errors = errors
+        throw err
+      }
+      return task.save()
+    }
+    throw new Error('Invalid type error: ' + input.type)
+  }
+}
+
+const FactoryMethod = {}
+FactoryMethod[ TaskConstants.TYPE_SCRAPER ] = App.Models.Task.ScraperTask
+FactoryMethod[ TaskConstants.TYPE_APPROVAL ] = App.Models.Task.ApprovalTask
+FactoryMethod[ TaskConstants.TYPE_DUMMY ] = App.Models.Task.DummyTask
+FactoryMethod[ TaskConstants.TYPE_SCRIPT ] = async function (input) {
+  let task = new App.Models.Task.ScriptTask(input)
+  // keep backward compatibility with script_arguments
+  task.script_arguments = input.task_arguments
+
+  if (input.script_runas) {
+    task.script_runas = input.script_runas
+    if (/%script%/.test(input.script_runas) === false) {
+      task.script_runas += ' %script%'
+    }
+  }
+
+  if (input.script_id) {
+    task.script = input.script_id
+  } else if (input.script) {
+    if (input.script.id) {
+      const id = input.script.id
+      input.script = id
+      input.script_id = id
+    } else {
+      const props = input.script 
+      props.customer = input.customer
+      const script = await App.file.create(props)
+      task.script_id = script._id
+      task.script = script._id
+    }
+  } else {
+    // ?? 
+  }
+
+  return task
+}
+FactoryMethod[ TaskConstants.TYPE_NOTIFICATION ] = function (input) {
+  if (
+    !Array.isArray(input.task_arguments) ||
+    input.task_arguments.length === 0
+  ) {
+    delete input.task_arguments
+  }
+  return new App.Models.Task.NotificationTask(input)
 }
