@@ -6,14 +6,11 @@ const TopicsConstants = require('../../constants/topics')
 const Constants = require('../../constants')
 
 module.exports = function (server) {
-  var middlewares = [
-    server.auth.bearerMiddleware,
-    router.resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer
-  ]
 
-  server.patch( '/indicator/:indicator/increase',
-    middlewares,
+  server.patch('/indicator/:indicator/increase',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     router.requireCredential('agent'),
     router.resolve.idToEntity({ param:'indicator', required: true }),
     isNumericIndicator,
@@ -22,8 +19,22 @@ module.exports = function (server) {
     notifyEvent({ operation: Constants.UPDATE })
   )
 
-  server.patch( '/indicator/:indicator/decrease',
-    middlewares,
+  server.patch('/indicator/title/:title/increase',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('agent'),
+    findByTitleMiddleware(),
+    isNumericIndicator,
+    controller.increase,
+    audit.afterUpdate('indicator', { display: 'title' }),
+    notifyEvent({ operation: Constants.UPDATE })
+  )
+
+  server.patch('/indicator/:indicator/decrease',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     router.requireCredential('agent'),
     router.resolve.idToEntity({ param:'indicator', required: true }),
     isNumericIndicator,
@@ -32,8 +43,22 @@ module.exports = function (server) {
     notifyEvent({ operation: Constants.UPDATE })
   )
 
-  server.patch( '/indicator/:indicator/restart',
-    middlewares,
+  server.patch('/indicator/title/:title/decrease',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('agent'),
+    findByTitleMiddleware(),
+    isNumericIndicator,
+    controller.decrease,
+    audit.afterUpdate('indicator', { display: 'title' }),
+    notifyEvent({ operation: Constants.UPDATE })
+  )
+
+  server.patch('/indicator/:indicator/restart',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     router.requireCredential('agent'),
     router.resolve.idToEntity({ param:'indicator', required: true }),
     isNumericIndicator,
@@ -41,6 +66,42 @@ module.exports = function (server) {
     audit.afterUpdate('indicator', { display: 'title' }),
     notifyEvent({ operation: Constants.UPDATE })
   )
+
+  server.patch('/indicator/title/:title/restart',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('agent'),
+    findByTitleMiddleware(),
+    isNumericIndicator,
+    controller.restart,
+    audit.afterUpdate('indicator', { display: 'title' }),
+    notifyEvent({ operation: Constants.UPDATE })
+  )
+}
+
+const findByTitleMiddleware = (options = {}) => {
+  return (req, res, next) => {
+    const title = req.params.title
+    const customer = req.customer
+
+    App.Models.Indicator.Indicator.findOne({
+      title,
+      customer_id: customer._id
+    }, (err, indicator) => {
+      if (err) {
+        logger.error(err)
+        return res.send(500, err.message)
+      }
+
+      if (!indicator && options.required !== false) {
+        return res.send(404, 'indicator not found')
+      }
+
+      req.indicator = indicator
+      return next()
+    })
+  }
 }
 
 const controller = {

@@ -22,36 +22,39 @@ module.exports = (server) => {
     }
   })
 
-  const middlewares = [
-    server.auth.bearerMiddleware,
-    router.resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer
-  ]
-
   // FETCH
-  server.get('/:customer/file', middlewares, fetchFiles)
+  server.get('/:customer/file',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    fetchFiles
+    )
 
   // GET
-  server.get(
-    '/:customer/file/:file',
-    middlewares,
+  server.get('/:customer/file/:file',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     router.resolve.idToEntity({ param: 'file', required: true }),
     getFile
   )
 
   // CREATE
-  server.post(
-    '/:customer/file',
-    middlewares.concat(router.requireCredential('admin')),
+  server.post('/:customer/file',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
     upload.single('file'),
     createFile,
     audit.afterCreate('file', { display: 'filename' })
   )
 
   // UPDATE
-  server.put(
-    '/:customer/file/:file',
-    middlewares,
+  server.put('/:customer/file/:file',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param:'file', required:true }),
     upload.single('file'),
@@ -61,9 +64,10 @@ module.exports = (server) => {
   )
 
   // DELETE
-  server.del(
-    '/:customer/file/:file',
-    middlewares,
+  server.del('/:customer/file/:file',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'file', required: true }),
     removeFile,
@@ -71,20 +75,20 @@ module.exports = (server) => {
   )
 
   // DOWNLOAD SCRIPTS
-  server.get(
-    '/:customer/file/:file/download',
+  server.get('/:customer/file/:file/download',
     server.auth.bearerMiddleware,
     router.requireCredential('user'),
-    router.resolve.customerNameToEntity({required:true}),
+    router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     router.resolve.idToEntity({param:'file',required:true}),
     downloadFile
   )
 
   // GET LINKED MODELS
-  server.get(
-    '/:customer/file/:file/linkedmodels',
-    middlewares,
+  server.get('/:customer/file/:file/linkedmodels',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     router.resolve.idToEntity({ param:'file', required:true }),
     getLinkedModels
   )
