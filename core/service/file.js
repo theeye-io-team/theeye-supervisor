@@ -114,11 +114,33 @@ module.exports = {
     delete data.keyname
 
     this.createFromText({
-      content: Buffer.from(template.data, 'base64').toString('utf8'),
+      text: Buffer.from(template.data, 'base64').toString('utf8'),
       metadata: data,
       storename: customer.name,
       filename: data.filename
     }, done)
+  },
+  create (input) {
+    return new Promise((resolve, reject) => {
+      const { customer } = input
+      const props = Object.assign({}, input, {
+        customer: customer._id,
+        customer_id: customer._id,
+        customer_name: customer.name,
+        template: null,
+        template_id: null
+      })
+
+      this.createFromText({
+        metadata: props,
+        text: input.data,
+        filename: props.filename,
+        storename: customer.name
+      }, (err, file) => {
+        if (err) { reject(err) }
+        else { resolve(file) }
+      })
+    })
   },
   /**
    *
@@ -131,29 +153,29 @@ module.exports = {
    *
    */
   createFromText (input, done) {
-    let { content } = input
+    const { text, storename, filename, metadata } = input
     logger.log('saving file in the store')
 
-    FileHandler.storeText({
-      storename: input.storename,
-      filename: input.filename,
-      text: input.content
-    }, (err, storeData) => {
+    FileHandler.storeText({ storename, filename, text }, (err, storeData) => {
       if (err) {
         logger.error(err)
         return done(err)
-      } else {
-        let props = Object.assign({}, input.metadata)
-        props.keyname = storeData.keyname
-        props.md5 = crypto.createHash('md5').update(input.content).digest('hex')
-        props._type = 'Script' // force to create all files as scripts
-
-        let script = FileModel.Script(props)
-        script.save( (err, model) => {
-          if (err) { logger.error(err) }
-          done(err, model)
-        })
       }
+
+      const props = Object.assign({}, metadata)
+      props.keyname = storeData.keyname
+      props.md5 = crypto
+        .createHash('md5')
+        .update(text)
+        .digest('hex')
+
+      props._type = 'Script' // force to create all files as scripts
+
+      const script = FileModel.Script(props)
+      script.save( (err, model) => {
+        if (err) { logger.error(err) }
+        done(err, model)
+      })
     })
   },
   /**
