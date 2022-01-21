@@ -247,8 +247,8 @@ module.exports = {
             workflow_job_id: job.workflow_job_id,
             task_id: job.task_id,
             task: {
-              id: job.task_id.toString(),
-              _id: job.task_id.toString(),
+              id: job.task_id?.toString(),
+              _id: job.task_id?.toString(),
             }
           }
         }
