@@ -11,59 +11,65 @@ const TaskConstants = require('../../constants/task')
 module.exports = (server) => {
   server.get('/:customer/task', [
     server.auth.bearerMiddleware,
-    router.resolve.customerNameToEntity({ required: true }),
+    router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     router.requireCredential('viewer'),
-    router.resolve.idToEntity({ param: 'host', required: false })
+    router.resolve.idToEntityByCustomer({ param: 'host', required: false })
   ], controller.fetch)
 
   server.get('/:customer/task/:task', [
     server.auth.bearerMiddleware,
-    router.resolve.customerNameToEntity({ required: true }),
+    router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     router.requireCredential('viewer'),
-    router.resolve.idToEntity({ param: 'task', required: true }),
+    router.resolve.idToEntityByCustomer({ param: 'task', required: true }),
     router.ensureAllowed({ entity: { name: 'task' } })
   ], controller.get)
 
-  const middlewares = [
+  server.post('/:customer/task',
     server.auth.bearerMiddleware,
-    router.resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer
-  ]
-
-  server.post(
-    '/:customer/task',
-    middlewares.concat([
-      router.requireCredential('admin'),
-      router.resolve.idToEntity({ param: 'script', entity: 'file' }),
-      router.resolve.idToEntity({ param: 'host' })
-    ]),
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntityByCustomer({ param: 'script', entity: 'file' }),
+    router.resolve.idToEntityByCustomer({ param: 'host' }),
     controller.create,
     audit.afterCreate('task', { display: 'name' })
   )
 
-  const mws = middlewares.concat(
-    router.requireCredential('admin'),
-    router.resolve.idToEntity({ param: 'task', required: true }),
-    router.resolve.idToEntity({ param: 'host_id', entity: 'host', into: 'host' })
-  )
-
   server.patch('/:customer/task/:task',
-    mws,
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntityByCustomer({ param: 'script', entity: 'file' }),
+    router.resolve.idToEntityByCustomer({ param: 'host' }),
+    router.resolve.idToEntityByCustomer({ param: 'task', required: true }),
+    router.resolve.idToEntityByCustomer({ param: 'host_id', entity: 'host', into: 'host' }),
     controller.replace,
     audit.afterUpdate('task', { display: 'name' })
   )
 
   server.put('/:customer/task/:task',
-    mws,
-    router.resolve.idToEntity({ param: 'script', entity: 'file' }),
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntityByCustomer({ param: 'script', entity: 'file' }),
+    router.resolve.idToEntityByCustomer({ param: 'host' }),
+    router.resolve.idToEntityByCustomer({ param: 'task', required: true }),
+    router.resolve.idToEntityByCustomer({ param: 'host_id', entity: 'host', into: 'host' }),
+    router.resolve.idToEntityByCustomer({ param: 'script', entity: 'file' }),
     controller.replace,
     audit.afterReplace('task', { display: 'name' })
   )
 
   server.del('/:customer/task/:task',
-    mws,
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntityByCustomer({ param: 'task', required: true }),
     controller.remove,
     audit.afterRemove('task', { display: 'name' })
   )
