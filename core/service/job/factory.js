@@ -684,6 +684,8 @@ class ApprovalJob extends AbstractJob {
       job.approvers = [ job.user_id ]
     } else if (job.approvals_target === TaskConstants.APPROVALS_TARGET_ASSIGNEES) {
       job.approvers = job.assigned_users
+    } else if (job.approvals_target === TaskConstants.APPROVALS_TARGET_DYNAMIC) {
+      job.approvers = []
     } else if (!job.approvals_target || job.approvals_target === TaskConstants.APPROVALS_TARGET_FIXED) {
       job.approvers = task.approvers
     }
@@ -723,7 +725,7 @@ class ApprovalJob extends AbstractJob {
               }
 
               job['approvers'] = users.map(u => u.id)
-              job.approvals_target = TaskConstants.APPROVALS_TARGET_ASSIGNEES
+              job.approvals_target = TaskConstants.APPROVALS_TARGET_FIXED
             } else {
               job[prop] = value
             }

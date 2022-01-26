@@ -21,6 +21,7 @@ exports.ARGUMENT_TYPE_REMOTE_OPTIONS = ARGUMENT_TYPE_REMOTE_OPTIONS
 
 exports.APPROVALS_TARGET_FIXED = 'fixed'
 exports.APPROVALS_TARGET_ASSIGNEES = 'assignees'
+exports.APPROVALS_TARGET_DYNAMIC = 'dynamic'
 exports.APPROVALS_TARGET_INITIATOR = 'initiator'
 
 exports.ARGUMENT_TYPES = Object.freeze([
