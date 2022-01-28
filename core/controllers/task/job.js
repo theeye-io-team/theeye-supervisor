@@ -40,6 +40,18 @@ module.exports = (server) => {
     createJob
   )
 
+  //
+  // new version
+  //
+  server.post('/task/:task/job',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.requireCredential('user'),
+    router.resolve.idToEntityByCustomer({ param: 'task', required: true }),
+    router.ensureAllowed({ entity: { name: 'task' } }),
+    createJob
+  )
+
   server.post('/:customer/task/:task/secret/:secret/job',
     router.resolve.idToEntity({ param: 'task', required: true }),
     router.requireSecret('task'),
