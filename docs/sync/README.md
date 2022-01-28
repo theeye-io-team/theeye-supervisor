@@ -31,7 +31,7 @@ By default the sync api will respond with the final output of the task execution
 | Name | Values | Description | 
 | ---- |  ---- |  ---- |
 | result | empty/null. is ignored | Result is another field stored with the job execution data in the database. This includes the execution log, the output, the lastline. | 
-| job | empty/null. is ignored | This is the full job document. This is the same value that can be obtained doing a GET request to the jobs api |  
+| full | empty/null. is ignored | This is the full job document. This is the same value that can be obtained doing a GET request to the jobs api |  
 | parse | empty or a Number/Integer > 0 | The output of a job is always stored in the database as an array of Task Arguments strings.  The parse option will use the index number 0 of the output and parse it as JSON.  In some cases you might need to return a specific index of the output array. Using parse, set it to the a number from 0 to N, representing the index of the output array.  If the index is not present or if it is unreadable the raw output will be returned |  
 
 
@@ -132,7 +132,7 @@ Keep-Alive: timeout=5
 
 ###  sample success using parse
 
-[Import this task](./Rest_API_Response.json)
+[Download and Import this task](/sync/Rest_API_Response.json ":ignore")
 
 
 Get the ID and replace in the requests below
