@@ -345,24 +345,122 @@ print(r.json())
 
 <!-- tabs:end -->
 
+### **Ejemplo 4**
 
+#### Eliminar un Monitor
 
-#### **Example 4**
+En este ejemplo enviaremos un DELETE request que eliminará un monitor de una organización.
 
-##### **Delete Monitor**
+<!-- tabs:start -->
+
+##### **Bash**
+
+##### Nota:
+
+> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_ACCESS_TOKEN` como la Secret Key de la tarea
+
 ```bash
+#!/bin/bash
 
-customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
-token=$THEEYE_ACCESS_TOKEN
-id_monitor=$1
+# El ID del monitor que se quiere solicitar
+monitor_id="60d2586a830e950019051dc0"
 
-curl -X DELETE "https://supervisor.theeye.io/monitor/${id_monitor}?access_token=${token}&customer=${customer}"
+curl -X DELETE "https://supervisor.theeye.io/monitor/${monitor_id}?access_token=${THEEYE_ACCESS_TOKEN}&customer=${THEEYE_ORGANIZATION_NAME}"
 ```
 
+##### **Javascript**
 
-#### **Example 5**
+##### Nota:
 
-##### **Create Web Check Monitor**
+> Se asume que están declaradas las variables `window.THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `window.THEEYE_TOKEN` como la Secret Key de la tarea
+
+```javascript
+// El ID del monitor que se quiere solicitar
+const monitor_id = "60d2586a830e950019051dc0"
+
+let xhr = new XMLHttpRequest();
+xhr.open('DELETE', `https://supervisor.theeye.io/monitor/${monitor_id}?access_token=${window.THEEYE_ACCESS_TOKEN}&customer=${window.THEEYE_ORGANIZATION_NAME}`);
+
+xhr.onload = () => {
+  console.log(JSON.parse(xhr.response))
+}
+
+xhr.send(null)
+```
+
+##### **Node.js**
+
+##### Nota:
+
+> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_ACCESS_TOKEN` como la Secret Key de la tarea
+
+```javascript
+const https = require('https')
+
+// El ID del monitor que se quiere solicitar
+const monitor_id = "60d2586a830e950019051dc0"
+
+const options = {
+  host: 'supervisor.theeye.io',
+  path: `/monitor/${monitor_id}?access_token=${process.env.THEEYE_ACCESS_TOKEN}&customer=${process.env.THEEYE_ORGANIZATION_NAME}`,
+  method: 'DELETE'
+}
+
+const req = https.request(options, res => {
+  let data = ''
+
+  res.on('data', d => {
+    data = data + d
+  })
+
+  res.on('end', () => {
+    console.log(JSON.parse(data))
+  })
+})
+
+req.on('error', error => {
+  console.error(error)
+})
+
+req.end()
+```
+
+##### **Python**
+
+##### Nota:
+
+> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_ACCESS_TOKEN` como la Secret Key de la tarea
+>
+> También se asume que está instalada la librería [`requests`](https://pypi.python.org/pypi/requests/), de no tenerla puede instalarla usando `pip`
+
+```python
+import os
+import requests
+
+# El ID del Monitor que se quiere solicitar
+monitor_id = "60d2586a830e950019051dc0"
+
+url = "https://supervisor.theeye.io/monitor/" + monitor_id
+
+params = {
+  "access_token": os.getenv("THEEYE_ACCESS_TOKEN"),
+  "customer": os.getenv("THEEYE_ORGANIZATION_NAME")
+}
+
+r = requests.delete(url, params)
+
+print(r.json())
+```
+
+<!-- tabs:end -->
+
+#### **Ejemplo 5**
+
+##### **Crear un Monitor para el estado de una página**
+
+En este ejemplo enviaremos un POST request para crear un Monitor de tipo *Scraper* 
+
+<!-- TODO -->
 
 ```bash
 customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
@@ -375,30 +473,5 @@ curl -sS -X POST "https://supervisor.theeye.io/monitor?access_token=${token}&cus
 --header 'Content-Type: application/json' \
 --data "{\"name\":\"${monitorName}\",\"host_id\":\"${host_id}\",\"url\":\"${url}\",\"timeout\":\"5000\",\"looptime\":\"15000\",\"type\":\"scraper\",\"status_code\":\"200\",\"_type\":\"ScraperMonitor\"}"
 ```
-#### **Example 6**
-
-##### **Get Monitor by Id**
-
-```bash
-customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.') token=$THEEYE_ACCESS_TOKEN
-id_monitor=$1
-
-
-curl -sS -X GET "https://supervisor.theeye.io/monitor/${id_monitor}?access_token=${token}&customer=${customer}"
-```
-#### **Example 7**
-
-##### **Get Monitor by name**
-
-```bash
-customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.') 
-token=$THEEYE_ACCESS_TOKEN
-nameMonitor=$1
-
-
-curl -sS -X GET "https://supervisor.theeye.io/monitor?access_token=${token}&where\[name\]=${nameMonitor}"
-```
-
-
 
 
