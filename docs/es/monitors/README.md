@@ -475,3 +475,157 @@ curl -sS -X POST "https://supervisor.theeye.io/monitor?access_token=${token}&cus
 ```
 
 
+{
+  "name": "Check BTC price in USDC 2",
+  "type": "scraper",
+  "host_id": "60d2586a830e950019051dbe",
+  "_type": "ScraperMonitor",
+  "looptime": 10000,
+  "status_code": "200",
+  "method": "GET",
+  "timeout": "5000",
+  "url": "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDC"
+}
+
+<!-- tabs:start -->
+
+##### **Bash**
+
+##### Nota:
+
+> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_ACCESS_TOKEN` como la Secret Key de la tarea. El `host_id` es el ID del agente que ejecutará la tarea
+
+```bash
+#!/bin/bash
+
+curl -sS -X POST "https://supervisor.theeye.io/monitor?access_token=${THEEYE_ACCESS_TOKEN}&customer=${THEEYE_ORGANIZATION_NAME}&host_id=${host_id}" \
+--header 'Content-Type: application/json' \
+--data '{
+  "name": "Check BTC price in USDC 2",
+  "type": "scraper",
+  "host_id": "${host_id}",
+  "_type": "ScraperMonitor",
+  "looptime": 10000,
+  "status_code": "200",
+  "method": "GET",
+  "timeout": "5000",
+  "url": "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDC"
+}'
+```
+
+##### **Javascript**
+
+##### Nota:
+
+> Se asume que están declaradas las variables `window.THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `window.THEEYE_TOKEN` como la Secret Key de la tarea. El `host_id` es el ID del agente que ejecutará la tarea
+
+```javascript
+const monitor = {
+  "name": "Check BTC price in USDC 2",
+  "type": "scraper",
+  "host_id": host_id,
+  "_type": "ScraperMonitor",
+  "looptime": 10000,
+  "status_code": "200",
+  "method": "GET",
+  "timeout": "5000",
+  "url": "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDC"
+}
+
+let xhr = new XMLHttpRequest();
+xhr.open('POST', `https://supervisor.theeye.io/monitor?access_token=${window.THEEYE_TOKEN}&customer=${window.THEEYE_ORGANIZATION_NAME}&host_id=${host_id}`);
+
+xhr.setRequestHeader("Accept", "application/json")
+xhr.setRequestHeader("Content-Type", "application/json")
+
+xhr.onload = () => {
+  console.log(JSON.parse(xhr.response))
+}
+
+xhr.send(JSON.stringify(monitor))
+```
+
+##### **Node.js**
+
+##### Nota:
+
+> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_ACCESS_TOKEN` como la Secret Key de la tarea. El `host_id` es el ID del agente que ejecutará la tarea
+
+```javascript
+const https = require('https')
+
+const monitor = {
+  "name": "Check BTC price in USDC 2",
+  "type": "scraper",
+  "host_id": host_id,
+  "_type": "ScraperMonitor",
+  "looptime": 10000,
+  "status_code": "200",
+  "method": "GET",
+  "timeout": "5000",
+  "url": "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDC"
+}
+
+const options = {
+  host: 'supervisor.theeye.io',
+  path: `monitor?access_token=${process.env.THEEYE_TOKEN}&customer=${process.env.THEEYE_ORGANIZATION_NAME}&host_id=${host_id}`,
+  method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    }
+}
+
+const req = https.request(options, res => {
+  let data = ''
+
+  res.on('data', d => {
+    data = data + d
+  })
+
+  res.on('end', () => {
+    console.log(JSON.parse(data))
+  })
+})
+
+req.on('error', error => {
+  console.error(error)
+})
+
+req.write(JSON.stringify(body))
+req.end()
+```
+
+##### **Python**
+
+##### Nota:
+
+> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_ACCESS_TOKEN` como la Secret Key de la tarea. El `host_id` es el ID del agente que ejecutará la tarea
+>
+> También se asume que está instalada la librería [`requests`](https://pypi.python.org/pypi/requests/), de no tenerla puede instalarla usando `pip`
+
+```python
+import os
+import requests
+
+const monitor = {
+  "name": "Check BTC price in USDC 2",
+  "type": "scraper",
+  "host_id": host_id,
+  "_type": "ScraperMonitor",
+  "looptime": 10000,
+  "status_code": "200",
+  "method": "GET",
+  "timeout": "5000",
+  "url": "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDC"
+}
+
+url = "https://supervisor.theeye.io/monitor?access_token=" + os.getenv(THEEYE_TOKEN) * "&customer=" + os.getenv(THEEYE_ORGANIZATION_NAME) + "&host_id=" + host_id
+
+
+r = requests.post(url, monitor)
+
+print(r.json())
+```
+
+<!-- tabs:end -->
