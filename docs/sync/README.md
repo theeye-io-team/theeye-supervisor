@@ -1,4 +1,4 @@
-[![theeye.io](../images/logo-theeye-theOeye-logo2.png)](https://theeye.io/en/index.html)
+[![theeye.io](../../images/logo-theeye-theOeye-logo2.png)](https://theeye.io/index.html)
 
 # Sync API
 
@@ -26,7 +26,6 @@ ___
 
 ## Arguments
 
-By default the sync api will respond with the final output of the task execution. when a job finishes the output value is parsed and then stored withing the job document in the output field.
 
 | Name | Values | Description | 
 | ---- |  ---- |  ---- |
@@ -37,7 +36,7 @@ By default the sync api will respond with the final output of the task execution
 
 ## Response
 
-By default the response will be the raw task outputs without parsing
+By default the sync api will respond with the final output of the task execution. when a job finishes the output value is parsed and then stored withing the job document in the output field.
 
 | State | HTTP Status Code | 
 | ---- |  ---- |
