@@ -42,6 +42,7 @@ function TaskSchema (props, specs) {
     delete values.customer_id
     delete values.workflow
     delete values.workflow_id
+    // @todo script and script_is is required for templates creation. this dependency must be removed
     //delete values.script
     //delete values.script_id
     return values
