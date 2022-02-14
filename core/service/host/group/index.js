@@ -993,51 +993,51 @@ const createRequiredFiles = (input, done) => {
       resources,
       (resource, next) => {
         let monitor = resource.monitor
-        let file_id, query
 
+        let file_id
         if (resource.type==='script') {
           file_id = monitor.config.script_id
-        }
-        else if (resource.type==='file') {
+        } else if (resource.type==='file') {
           file_id = monitor.config.file
+        } else {
+          return next()
         }
-        else return next()
 
-        // try to get the file already created
-        query = FileModel
-          .File
-          .findOne({ template_id: file_id })
-
-        query.exec((err, file) => {
-          if (err) { return next(err) }
-          if (!file) {
-            // search the file template
-            let fileTpl = input.files.find(f => {
-              return f._id.toString() === file_id.toString()
-            })
-
-            if (!fileTpl) {
-              logger.error('file template not found. perhaps this is an old template? skiping')
-              monitor.enable = false
-              return setMonitorFile(monitor, { _id: null }, next)
+        // try to get the original file
+        FileModel.File
+          .findOne({ _id: file_id })
+          .exec((err, file) => {
+            if (err) {
+              return next(err)
             }
+            if (!file) {
+              // search the file template
+              const fileTpl = input.files.find(templateFile => {
+                return templateFile.source_model_id.toString() === file_id.toString()
+              })
 
-            logger.log('creating new file from template')
-            // create a new file instance
-            App.file.createFromTemplate({
-              template: fileTpl,
-              customer: input.customer
-            }, (err, file) => {
+              if (!fileTpl) {
+                logger.error('file template not found. perhaps this is an old template? skiping')
+                monitor.enable = false
+                return setMonitorFile(monitor, { _id: null }, next)
+              }
+
+              logger.log('creating new file from template')
+              // create a new file instance
+              App.file.createFromTemplate({
+                template: fileTpl,
+                customer: input.customer
+              }, (err, file) => {
+                fetchedFiles.push(file)
+                setMonitorFile(monitor, file, next)
+              })
+            } else {
+              // use the already created file
+              logger.log('using already existent file')
               fetchedFiles.push(file)
               setMonitorFile(monitor, file, next)
-            })
-          } else {
-            // use the already created file
-            logger.log('using already existent file')
-            fetchedFiles.push(file)
-            setMonitorFile(monitor, file, next)
-          }
-        })
+            }
+          })
       },
       (err) => { cb() }
     )
