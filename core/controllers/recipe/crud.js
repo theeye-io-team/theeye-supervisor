@@ -1,5 +1,6 @@
 
 const App = require('../../app')
+const logger = require('../../lib/logger')('controller:recipe')
 const Recipe = require('../../entity/recipe').Recipe
 const router = require('../../router')
 const dbFilter = require('../../lib/db-filter')
@@ -11,21 +12,18 @@ module.exports = (server) => {
     router.ensureCustomer
   ]
 
-  server.get(
-    '/recipe/:recipe',
+  server.get('/recipe/:recipe',
     middlewares,
     router.resolve.idToEntity({ param: 'recipe', required: true }),
     controller.get
   )
 
-  server.get(
-    '/recipe',
+  server.get('/recipe',
     middlewares,
     controller.fetch
   )
 
-  server.get(
-    '/recipe/host/:host/config',
+  server.get('/recipe/host/:host/config',
     middlewares,
     router.resolve.idToEntity({ param: 'host', required: true }),
     controller.botRecipe
@@ -64,11 +62,15 @@ const controller = {
   /**
    * @method GET
    */
-  botRecipe (req, res, next) {
-    const customer = req.customer
-    const host = req.host
-    App.host.config(host, customer, (err, recipe) => {
+  async botRecipe (req, res, next) {
+    try {
+      const customer = req.customer
+      const host = req.host
+      const recipe = await App.host.config(host, customer)
       res.send(200, recipe)
-    })
+    } catch (err) {
+      logger.error(err)
+      res.send(500, err)
+    }
   }
 }

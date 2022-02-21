@@ -23,13 +23,12 @@ const templateProperties = ScriptSchema.methods.templateProperties
 ScriptSchema.methods.templateProperties = function (options) {
   let backup = (options && options.backup)
   if (backup === true) {
+    delete values.script_arguments
     return this.toObject()
   }
 
   const values = templateProperties.apply(this, arguments)
-
-  //values.env = this.env
-  //values.task_arguments = this.task_arguments
+  delete values.script_arguments
 
   // blank user defined env properties values
   for (let name in values.env) {
@@ -43,8 +42,8 @@ ScriptSchema.methods.templateProperties = function (options) {
     }
   }
 
-  //values.script_runas = this.script_runas
-  values.script_arguments = values.task_arguments
+  values.script_runas = this.script_runas
+  //values.script_arguments = values.task_arguments
 
   return values
 }

@@ -1,6 +1,5 @@
-'use strict'
-
 const mongodb = require('../../../lib/mongodb').db
+const TaskConstants = require('../../../constants/task')
 
 const TemplateSchema = require('./schema')
 const ScriptSchema = require('./script')
@@ -23,7 +22,6 @@ ApprovalTemplate.ensureIndexes()
 DummyTemplate.ensureIndexes()
 NotificationTemplate.ensureIndexes()
 
-
 // called for both inserts and updates
 Template.on('beforeSave', function(model) {
   model.last_update = new Date()
@@ -36,3 +34,23 @@ exports.ScraperTemplate = ScraperTemplate
 exports.ApprovalTemplate = ApprovalTemplate
 exports.DummyTemplate = DummyTemplate
 exports.NotificationTemplate = NotificationTemplate
+
+const ClassesMap = {}
+ClassesMap[ TaskConstants.TYPE_SCRIPT ] = function (input) {
+  return new ScriptTemplate(input)
+}
+ClassesMap[ TaskConstants.TYPE_SCRAPER ] = ScraperTemplate
+ClassesMap[ TaskConstants.TYPE_APPROVAL ] = ApprovalTemplate
+ClassesMap[ TaskConstants.TYPE_DUMMY ] = DummyTemplate
+ClassesMap[ TaskConstants.TYPE_NOTIFICATION ] = function (input) {
+  return new NotificationTemplate(input)
+}
+exports.Factory = {
+  create (input) {
+    delete input._type
+    if (ClassesMap.hasOwnProperty(input.type)) {
+      return new ClassesMap[input.type](input)
+    }
+    throw new Error('invalid error type ' + input.type)
+  }
+}

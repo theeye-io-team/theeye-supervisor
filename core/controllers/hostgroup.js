@@ -192,17 +192,15 @@ const controller = {
         resources: body.resources || [], // Array of Objects with resources and monitors definition, all mixed
         files: body.files || [], // Array of Objects with file definitions
         applyToSourceHost: applyToSourceHost
-      }), (err, group) => {
-        if (err) {
-          err.statusCode || (err.statusCode = 500)
-          responseError(err, res)
-        } else {
-          res.send(200, group)
-          req.group = group
-          next()
-        }
-      }
-    )
+      })
+    ).catch(err => {
+      err.statusCode || (err.statusCode = 500)
+      responseError(err, res)
+    }).then(group => {
+      res.send(200, group)
+      req.group = group
+      next()
+    })
   },
   /**
    *
@@ -238,15 +236,13 @@ const controller = {
       tasks: body.tasks || [], // Array of Objects with task definition
       resources: body.resources || [], // Array of Objects with resources and monitors definition, all mixed
       deleteInstances: deleteInstances
-    }, (err, group) => {
-      if (err) {
-        logger.error(err)
-        err.statusCode || (err.statusCode = 500)
-        responseError(err, res)
-      } else {
-        res.send(200, group)
-        next()
-      }
+    }).catch(err => {
+      logger.error(err)
+      err.statusCode || (err.statusCode = 500)
+      responseError(err, res)
+    }).then(group => {
+      res.send(200, group)
+      next()
     })
   }
 }
