@@ -10,7 +10,7 @@ const ScriptSchema = new BaseSchema({
   template: { type: ObjectId, ref: 'TaskTemplate' },
   script_id: { type: String },
   script_runas: { type: String },
-  script_arguments: { type: Array }, // will be replaced with task_arguments in the future
+  script_arguments: { type: Array, default: () => { return [] } }, // will be replaced with task_arguments in the future
   script: { type: ObjectId, ref: 'Script' },
   env: { type: Object, default: () => { return {} }},
   logging: { type: Boolean, default: false }
@@ -57,7 +57,7 @@ ScriptSchema.statics.create = function (input, next) {
   instance.customer = input.customer._id
   instance.customer_id = input.customer._id
   instance.script_id = input.script._id
-  instance.script_arguments = input.script_arguments
+  //instance.script_arguments = input.script_arguments
   instance.task_arguments = input.task_arguments
   instance.script_runas = input.script_runas
   instance.tags = input.tags

@@ -1,5 +1,4 @@
 const util = require('util')
-const after = require('lodash/after')
 const logger = require('../../lib/logger')('entity:task:schema')
 const BaseSchema = require('../base-schema')
 const properties = require('./base-properties')

@@ -61,7 +61,7 @@ function WorkflowSchema (props) {
 
   BaseSchema.call(this, Object.assign({}, properties, props), specs)
 
-  this.methods.populateTriggers = _populateTriggers
+  //this.methods.populateTriggers = _populateTriggers
 
   const def = {
     getters: true,
@@ -84,33 +84,33 @@ util.inherits(WorkflowSchema, BaseSchema)
 
 module.exports = WorkflowSchema
 
-function _populateTriggers (done) {
-  this.populate('triggers',(err) => {
-    if (err) return done(err)
-    if (Array.isArray(this.triggers) && this.triggers.length > 0) {
-      const populated = after(this.triggers.length, done)
-      this.triggers.forEach((event) => {
-        if (!event) {
-          // empty elements could be present inside triggers
-          return populated()
-        }
-
-        event.populate({
-          path: 'emitter',
-          populate: {
-            path: 'host',
-            model: 'Host'
-          }
-        },(err) => {
-          if (err) {
-            logger.error('could not populate event %o', event)
-            logger.error(err)
-          }
-          populated()
-        })
-      })
-    } else {
-      done()
-    }
-  })
-}
+//function _populateTriggers (done) {
+//  this.populate('triggers',(err) => {
+//    if (err) return done(err)
+//    if (Array.isArray(this.triggers) && this.triggers.length > 0) {
+//      const populated = after(this.triggers.length, done)
+//      this.triggers.forEach((event) => {
+//        if (!event) {
+//          // empty elements could be present inside triggers
+//          return populated()
+//        }
+//
+//        event.populate({
+//          path: 'emitter',
+//          populate: {
+//            path: 'host',
+//            model: 'Host'
+//          }
+//        },(err) => {
+//          if (err) {
+//            logger.error('could not populate event %o', event)
+//            logger.error(err)
+//          }
+//          populated()
+//        })
+//      })
+//    } else {
+//      done()
+//    }
+//  })
+//}
