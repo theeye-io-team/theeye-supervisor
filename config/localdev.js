@@ -7,7 +7,11 @@ module.exports = {
     driver: "local"
   },
   mongo: {
-    uri: "mongodb://127.0.0.1/theeye?retryWrites=true&w=majority"
+    uri: "mongodb://127.0.0.1/theeye?retryWrites=true&w=majority",
+    options: {
+      useFindAndModify: false,
+      useCreateIndex: true
+    }
   },
   monitor: {
     fails_count_alert: 1
