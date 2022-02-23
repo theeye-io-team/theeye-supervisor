@@ -6,27 +6,28 @@ const router = require('../../router')
 const dbFilter = require('../../lib/db-filter')
 
 module.exports = (server) => {
-  const middlewares = [
-    server.auth.bearerMiddleware,
-    router.resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer
-  ]
 
   server.get('/recipe/:recipe',
-    middlewares,
+    server.auth.bearerMiddleware,
+    router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
     router.resolve.idToEntity({ param: 'recipe', required: true }),
     controller.get
   )
 
   server.get('/recipe',
-    middlewares,
+    server.auth.bearerMiddleware,
+    router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
     controller.fetch
   )
 
   server.get('/recipe/host/:host/config',
-    middlewares,
+    server.auth.bearerMiddleware,
+    router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
     router.resolve.idToEntity({ param: 'host', required: true }),
-    controller.botRecipe
+    controller.recipe
   )
 }
 
@@ -35,22 +36,17 @@ const controller = {
    * @method GET
    */
   fetch (req, res, next) {
-    let input = req.query
+    const { query, customer } = req
 
-    let filter = dbFilter(
-      Object.assign({}, (input || {}), {
-        where: {
-          customer: req.customer._id
-        }
-      })
-    )
+    const filter = dbFilter(query, {})
+    filter.where.customer_id = customer.id
 
-    Recipe.find(filter.where, (err, recipes) => {
+    Recipe.fetchBy(filter, (err, recipes) => {
       if (err) {
-        logger.error(err)
-        return res.send(500)
+        return res.sendError(err)
+      } else {
+        res.send(200, recipes)
       }
-      res.send(200, recipes)
     })
   },
   /**
@@ -62,7 +58,7 @@ const controller = {
   /**
    * @method GET
    */
-  async botRecipe (req, res, next) {
+  async recipe (req, res, next) {
     try {
       const customer = req.customer
       const host = req.host
