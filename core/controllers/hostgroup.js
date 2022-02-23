@@ -136,8 +136,7 @@ const controller = {
       deleteInstances: deleteInstances
     }, (err) => {
       if (err) {
-        logger.error(err)
-        res.send(500)
+        res.sendError(err)
       } else {
         res.send(200)
         next()
@@ -163,7 +162,7 @@ const controller = {
   create (req, res, next) {
     const body = req.body
     const hostname_regex = body.hostname_regex
-    const host_origin = req.body.copy_host
+    const source_host = req.body.source_host
     const applyToSourceHost = req.body.applyToSourceHost
 
     if (typeof applyToSourceHost !== 'boolean') {
@@ -180,7 +179,7 @@ const controller = {
 
     App.hostTemplate.create(
       Object.freeze({
-        host_origin: host_origin,
+        source_host,
         user: req.user,
         customer: req.customer,
         name: body.name,
@@ -193,13 +192,12 @@ const controller = {
         files: body.files || [], // Array of Objects with file definitions
         applyToSourceHost: applyToSourceHost
       })
-    ).catch(err => {
-      err.statusCode || (err.statusCode = 500)
-      responseError(err, res)
-    }).then(group => {
+    ).then(group => {
       res.send(200, group)
       req.group = group
       next()
+    }).catch(err => {
+      res.sendError(err)
     })
   },
   /**
@@ -236,24 +234,11 @@ const controller = {
       tasks: body.tasks || [], // Array of Objects with task definition
       resources: body.resources || [], // Array of Objects with resources and monitors definition, all mixed
       deleteInstances: deleteInstances
-    }).catch(err => {
-      logger.error(err)
-      err.statusCode || (err.statusCode = 500)
-      responseError(err, res)
     }).then(group => {
       res.send(200, group)
       next()
+    }).catch(err => {
+      res.sendError(err)
     })
   }
-}
-
-const responseError = (e,res) => {
-  const errorRes = {
-    error: e.message,
-    info: []
-  }
-  if (e.info) {
-    errorRes.info.push( e.info.toString() )
-  }
-  res.send( e.statusCode || 500, errorRes )
 }
