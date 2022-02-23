@@ -102,7 +102,7 @@ const Service = module.exports = {
     const applyToSourceHost = input.applyToSourceHost
 
     /**
-     * @summary check if input.hosts contains the same id as host_origin.
+     * @summary check if input.hosts contains the same id as source_host.
      * remove it if present. will be added at the end of the process
      * @param {String} host
      * @param {String[]} hosts
@@ -123,7 +123,7 @@ const Service = module.exports = {
       user_id: user.id,
       customer_id: customer.id,
       customer_name: customer.name,
-      hosts: findAndRemove(input.host_origin, input.hosts.slice())
+      hosts: findAndRemove(input.source_host, input.hosts.slice())
     })
 
     logger.log('creating group %o', values)
@@ -180,7 +180,7 @@ const Service = module.exports = {
       logger.log('copying template to hosts')
       for (let i=0; i<group.hosts.length; i++) {
         let host = group.hosts[i]
-        if (host._id.toString() !== input.host_origin) {
+        if (host._id.toString() !== input.source_host) {
           // this is async and will not wait for it
           copyTemplateToHost(
             group.hosts[i],
@@ -192,9 +192,9 @@ const Service = module.exports = {
       }
     }
 
-    if (input.host_origin && applyToSourceHost === true) {
+    if (input.source_host && applyToSourceHost === true) {
       await new Promise( (resolve, reject) => {
-        addHostOriginToGroup(input.host_origin, group, customer, user, err => {
+        addHostOriginToGroup(input.source_host, group, customer, user, err => {
           if (err) reject(err)
           else resolve()
         })
@@ -615,10 +615,7 @@ const generateTasksTriggersTemplates = (templates, triggers) => {
   }
 
   for (let i = 0; i < triggers.length; i++) {
-    const { task_id, events } = triggers[i]
-
-    if (!task_id) { break }
-    if (!Array.isArray(events) || events.length === 0) { break }
+    const { task_id, event_type, event_name, emitter_id } = triggers[i]
 
     // search task for this triggers
     const taskTemplate = tasks.find(task => {
@@ -629,44 +626,41 @@ const generateTasksTriggersTemplates = (templates, triggers) => {
 
     if (!taskTemplate) { break }
 
-    // for each event trigger of the taskTemplate
-    for (let j = 0; j < events.length; j++) {
-      // search the template via it's original emitter (task/monitor)
-      if (events[j]._type === 'TaskEvent') {
-        // task templates emitter
-        for (var k = 0; k < tasks.length; k++) {
-          const source_id = tasks[k].source_model_id.toString()
-          if (source_id === events[j].emitter_id) {
-            eventTemplates.push({
-              event_type: events[j]._type, // the instance of Event to create
-              event_name: events[j].name, // something to distinguish the event
-              emitter_template_id: tasks[k]._id, // emitter task template id
-              emitter_template_type: tasks[k]._type,
-              task_template_id: taskTemplate._id, // triggered task template id
-              task_template: taskTemplate._id, // triggered task template id
-            })
-          }
+    // search the template via it's original emitter (task/monitor)
+    if (event_type === 'TaskEvent') {
+      // task templates emitter
+      for (var k = 0; k < tasks.length; k++) {
+        const source_id = tasks[k].source_model_id.toString()
+        if (source_id === emitter_id) {
+          eventTemplates.push({
+            event_type, // the instance of Event to create
+            event_name, // something to distinguish the event
+            emitter_id: tasks[k]._id, // emitter task template id
+            emitter_type: tasks[k]._type,
+            task_id: taskTemplate._id, // triggered task template id
+            task: taskTemplate._id, // triggered task template id
+          })
         }
-      } else if (events[j]._type === 'MonitorEvent') {
-        // monitor templates emitter
-        for (let l = 0; l < resources.length; l++) {
-          const source_id = resources[l].monitor_template.source_model_id.toString()
-          if (source_id === events[j].emitter_id) {
-            eventTemplates.push({
-              event_type: events[j]._type, // the instance of Event to create
-              event_name: events[j].name, // something to distinguish the event
-              emitter_template_id: resources[l].monitor_template._id, // emitter monitor template id
-              emitter_template_type: resources[l].monitor_template._type,
-              task_template_id: taskTemplate._id, // triggered task template id
-              task_template: taskTemplate._id, // triggered task template id
-            })
-          }
-        }
-      } else {
-        // unexpected templates emitter
-        logger.error('emitter type %s won\'t be registered',events[j]._type)
-        break
       }
+    } else if (event_type === 'MonitorEvent') {
+      // monitor templates emitter
+      for (let l = 0; l < resources.length; l++) {
+        const source_id = resources[l].monitor_template.source_model_id.toString()
+        if (source_id === emitter_id) {
+          eventTemplates.push({
+            event_type, // the instance of Event to create
+            event_name, // something to distinguish the event
+            emitter_id: resources[l].monitor_template._id, // emitter monitor template id
+            emitter_type: resources[l].monitor_template._type,
+            task_id: taskTemplate._id, // triggered task template id
+            task: taskTemplate._id, // triggered task template id
+          })
+        }
+      }
+    } else {
+      // unexpected templates emitter
+      logger.error('emitter type %s won\'t be registered',event_type)
+      break
     }
   }
 
@@ -746,7 +740,7 @@ const unlinkHostFromTemplate = async (host, template, keepInstances) => {
     await entity.remove()
     logger.log('entity %s removed', entity._type)
     // remove all events attached to the entity
-    await Event.remove({ emitter_id: entity._id })
+    await Event.deleteMany({ emitter_id: entity._id })
     logger.log('events removed')
   }
 
@@ -999,73 +993,53 @@ const copyResourcesToHost = (host, templates, customer, next) => {
  * @param {Mongoose.Schema} LinkedSchema non template schema clone
  * @param {Boolean} keepClones to keep template instances instead of removing them completely
  */
-const removeTemplateEntities = (templates, TemplateSchema, LinkedSchema, keepClones, next) => {
-  if (!Array.isArray(templates)||templates.length===0) {
-    return next()
-  }
-
-  const removeEntityTemplateClone = (entity,done) => {
-    entity.remove(err => {
-      if (err) {
-        logger.error('%o',err)
-        return done(err)
+const removeTemplateEntities = async (templates, TemplateSchema, LinkedSchema, keepClones, next) => {
+  try {
+    if (Array.isArray(templates) && templates.length > 0) {
+      /**
+       * @return {Promise}
+       */
+      const removeEntityTemplateClone = (entity) => {
+        return Promise.all([
+          entity.remove(),
+          Event.deleteMany({ emitter_id: entity._id })
+        ])
       }
-      logger.log('removing entity %s [%s] events', entity._type, entity._id)
-      Event.remove({ emitter_id: entity._id }).exec(err => {
-        if (err) {
-          logger.error('%o',err)
-          return done(err)
-        }
-        done()
-      })
-    })
-  }
 
-  const updateEntityTemplateClone = (entity,done) => {
-    // update entities , removing parent template
-    entity.template = null
-    entity.template_id = null
-    entity.last_update = new Date()
-    entity.save(err => {
-      if (err) logger.error('%o',err)
-      done(err)
-    })
-  }
+      /**
+       * @return {Promise}
+       */
+      const updateEntityTemplateClone = (entity) => {
+        // update entities , removing parent template
+        entity.template = null
+        entity.template_id = null
+        entity.last_update = new Date()
+        return entity.save()
+      }
 
-  asyncModule.eachSeries(templates, (id, done) => {
-    // remove template
-    TemplateSchema.remove({ _id: id }).exec(err => {
-      if (err) return logger.error('%o',err)
+      for (let id of templates) {
+        await TemplateSchema.deleteOne({ _id: id })
 
-      // remove entities linked to the template
-      LinkedSchema.find({ template_id: id }).exec((err,entities) => {
-        if (err) return done(err)
-        if (!Array.isArray(entities)||entities.length===0) {
-          return done()
-        }
-
-        if (keepClones === true) {
-          for (var i=0; i<entities.length; i++) {
-            updateEntityTemplateClone(entities[i],()=>{})
-          }
-          // do not wait until all entities are updated
-          return done()
-        } else {
-          // remove all
-          const removed = after(entities.length, () => {
-            logger.log('all entities removed')
-            return done()
-          })
-          for (var i=0; i<entities.length; i++) {
-            removeEntityTemplateClone(entities[i],removed)
+        // remove entities linked to the template
+        const entities = await LinkedSchema.find({ template_id: id })
+        if (Array.isArray(entities) && entities.length > 0) {
+          if (keepClones === true) {
+            for (let i = 0; i < entities.length; i++) {
+              updateEntityTemplateClone(entities[i]).catch(logger.error)
+            }
+          } else {
+            for (let i = 0; i < entities.length; i++) {
+              removeEntityTemplateClone(entities[i]).catch(logger.error)
+            }
           }
         }
-      })
-    })
-  }, (err) => {
-    if (err) logger.error(err)
+      }
+    }
+    next()
+  } catch (err) {
+    logger.error(err)
     next(err)
-  })
+  }
 }
 
 /**
@@ -1104,14 +1078,14 @@ const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
     // search current emitter id
     if (trigger.event_type === 'TaskEvent') {
       for (var j=0; j<tasks.length; j++) {
-        if (tasks[j].template_id.toString() === trigger.emitter_template_id.toString()) {
+        if (tasks[j].template_id.toString() === trigger.emitter_id.toString()) {
           // found the task emitter
           emitter = tasks[j]
         }
       }
     } else if (trigger.event_type === 'MonitorEvent') {
       for (var k=0; k<resources.length; k++) {
-        if (resources[k].monitor.template_id.toString() === trigger.emitter_template_id.toString()) {
+        if (resources[k].monitor.template_id.toString() === trigger.emitter_id.toString()) {
           // found the monitor emitter
           emitter = resources[k].monitor
         }
@@ -1127,7 +1101,7 @@ const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
     var task
     // trying to obtain the task to trigger
     for (var t=0; t<tasks.length; t++) {
-      if (tasks[t].template_id.toString() === trigger.task_template_id.toString()) {
+      if (tasks[t].template_id.toString() === trigger.task_id.toString()) {
         task = tasks[t]
       }
     }

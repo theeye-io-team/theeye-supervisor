@@ -312,18 +312,16 @@ HostService.config = async (host, customer, next) => {
         const triggers = await detectTaskTriggersOfSameHost(events, host)
 
         if (triggers.length > 0) {
-          recipes.push({
-            task: {
-              _id: task.source_model_id,
-              _type: task._type,
-              name: task.name,
-            },
-            task_id: task.source_model_id,
-            events: triggers
-          })
-
-          // find trigger within task.triggers and remove
           for (let trigger of triggers) {
+            recipes.push({
+              event_type: trigger._type,
+              event_name: trigger.name,
+              emitter_id: trigger.emitter_id,
+              //emitter: trigger.emitter,
+              task_id: task.source_model_id
+            })
+
+            // find trigger within task.triggers and remove
             let index
             const elem = task.triggers.find((t,idx) => {
               index = idx
@@ -549,11 +547,11 @@ const detectTaskTriggersOfSameHost = async (triggers, host) => {
         _type: trigger._type,
         name: trigger.name,
         emitter_id: trigger.emitter._id,
-        emitter: { // required by mongoose to populate schema
-          _id: trigger.emitter._id,
-          _type: trigger.emitter._type,
-          name: trigger.emitter.name,
-        }
+        //emitter: { // required by mongoose to populate schema
+        //  _id: trigger.emitter._id,
+        //  _type: trigger.emitter._type,
+        //  name: trigger.emitter.name,
+        //}
       })
     }
   }
