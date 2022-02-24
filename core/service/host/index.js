@@ -228,10 +228,10 @@ HostService.config = async (host, customer, next) => {
 
     if (Array.isArray(resources) && resources.length > 0) {
       for (let resource of resources) {
-        const resourceData = resource.templateProperties()
+        const resourceData = resource.templateProperties({backup:true})
 
         const monitor = await Monitor.findOne({ resource_id: resource._id })
-        resourceData.monitor = monitor.templateProperties()
+        resourceData.monitor = monitor.templateProperties({backup:true})
         recipes.push(resourceData)
 
         if (monitor.type === MonitorsConstants.RESOURCE_TYPE_SCRIPT) {
@@ -259,7 +259,7 @@ HostService.config = async (host, customer, next) => {
           filesToConfigure.push(task.script_id.toString())
         }
 
-        const values = task.templateProperties()
+        const values = task.templateProperties({backup:true})
         if (task.triggers.length > 0) {
           values.triggers = task.triggers // keep it until triggers are exported
         }
@@ -291,7 +291,7 @@ HostService.config = async (host, customer, next) => {
           })
         })
 
-        const props = file.templateProperties() // convert to plain object ...
+        const props = file.templateProperties({backup:true}) // convert to plain object ...
         props.data = fileContent
         recipes.push(props)
       }
