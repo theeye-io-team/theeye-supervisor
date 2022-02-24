@@ -64,6 +64,7 @@ module.exports = function () {
           errors: error.errors
         })
       } else {
+        logger.error(error)
         const handler = new ErrorHandler()
         handler.sendExceptionAlert(error, req)
         res.send(500, 'Internal Server Error')

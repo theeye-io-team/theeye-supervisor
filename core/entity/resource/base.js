@@ -26,6 +26,23 @@ ResourceSchema.methods.templateProperties = function () {
   const values = this.toObject()
 
   values.source_model_id = this._id
+  // remove non essential properties
+  delete values.enable
+  delete values.monitor_id
+  delete values.template
+  delete values.template_id
+  delete values.last_check
+  delete values.last_event
+  delete values.fails_count
+  delete values.recovery_count
+  delete values.hostname
+  delete values.state
+  delete values.creation_date
+  delete values.last_update
+  delete values._id
+  delete values.id
+  delete values.host_id
+  delete values.host
   delete values.acl
   delete values.customer
   delete values.customer_id

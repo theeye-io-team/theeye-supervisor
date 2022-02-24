@@ -136,18 +136,7 @@ const controller = {
       res.send(200, response)
       next()
     })
-  },
-  /**
-   *
-   *
-   */
-  //config (req, res, next) {
-  //  const customer = req.customer
-  //  const host = req.host
-  //  HostService.config(host, customer, (err, cfg) => {
-  //    res.send(200,cfg)
-  //  })
-  //}
+  }
 }
 
 /**

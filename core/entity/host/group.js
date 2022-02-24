@@ -7,10 +7,10 @@ const debug = require('debug')('eye:entity:host:group')
 const BaseSchema = require('../base-schema')
 
 const TriggerTemplate = new Schema({
-  emitter_template_id: { type: Schema.Types.ObjectId },
-  emitter_template_type: { type: 'String' },
-  task_template: { type: Schema.Types.ObjectId, ref: 'TaskTemplate' },
-  task_template_id: { type: Schema.Types.ObjectId },
+  emitter_id: { type: Schema.Types.ObjectId },
+  emitter_type: { type: 'String' },
+  task: { type: Schema.Types.ObjectId, ref: 'TaskTemplate' },
+  task_id: { type: Schema.Types.ObjectId },
   event_type: { type: String },
   event_name: { type: String },
 })
@@ -44,12 +44,8 @@ EntitySchema.methods.populateAll = function(next) {
     { path: 'files' },
     { path: 'resources' },
     {
-      path: 'triggers.task_template',
+      path: 'triggers.task',
       select: 'name type' // only populate this fields
-      //populate: {
-      //  path: 'task_template',
-      //  select: 'name type' // only populate this fields
-      //}
     },
   ], (err, group) => {
     return next(err, group)

@@ -69,6 +69,8 @@ module.exports = {
     // uri: mongodb+srv://<user>:<password>@<host>/<db>?retryWrites=true&w=majority
     // options are passed directly to the mongo-native driver
     options: {
+      useFindAndModify: false,
+      useCreateIndex: true,
       useNewUrlParser: true,
       useUnifiedTopology: true
     }

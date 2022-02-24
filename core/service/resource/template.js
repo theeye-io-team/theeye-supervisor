@@ -1,7 +1,6 @@
 'use strict'
 
 const App = require('../../app')
-const async = require('async')
 const logger = require('../../lib/logger')('service:resource:template')
 
 const ResourceTemplateModel = require('../../entity/resource/template').Entity;
@@ -20,61 +19,61 @@ module.exports = {
    * @param {Customer} customer
    * @param {User} user
    * @param {Function} done
+   * @return {Promise}
    *
    */
-  createTemplates (hostgroup, resources, customer, user, done) {
-    if (!resources) { return done(null, []) }
+  createTemplates (hostgroup, resources, customer, user) {
+    if (!resources) {
+      return done(null, [])
+    }
     if (!Array.isArray(resources) || resources.length===0) {
       return done(null, [])
     }
 
     logger.log('processing %s resource monitors', resources.length);
 
-    /* create templates from input */
-    async.map(
-      resources,
-      (resource, next) => {
-        if (!resource || !resource.monitor) {
-          const err = new Error('Invalid Monitor Data')
-          err.statusCode = 400
-          err.resource = resource
-          return next(err)
-        }
-
-        const monitor = resource.monitor
-        const config = Object.assign({}, monitor, monitor.config||{})
-        const result = App.resourceMonitor.validateData(config)
-
-        if (!result || result.errors) {
-          const msg = 'Invalid monitor data'
-          logger.error(msg)
-          const e = new Error(msg)
-          e.statusCode = 400
-          e.data = config
-          e.errors = result.errors
-          return next(e)
-        }
-
-        const data = result.data
-        data.customer = customer
-        // DO NOT UN-COMMENT ! user property generates conflict with monitor.config.user property of monitor.type === file 
-        //data.user = user
-        data.hostgroup = hostgroup
-        data.source_monitor_id = (resource.monitor._id || resource.monitor.id)
-        data.source_resource_id = (resource._id || resource.id)
-
-        logger.log('creating template')
-        createResourceTemplate(data, next)
-      },
-      (err, templates) => {
-        if (err) {
-          logger.error('Failed to create monitor template')
-          logger.error(err, err.resource)
-          return done(err)
-        }
-        done(null, templates)
+    const resourcesData = []
+    for (let resource of resources) {
+      if (!resource || !resource.monitor) {
+        const err = new Error('Invalid Monitor Data')
+        err.statusCode = 400
+        err.resource = resource
+        throw err
       }
-    )
+
+      const monitor = resource.monitor
+      const config = Object.assign({}, monitor, monitor.config||{})
+      const result = App.resourceMonitor.validateData(config)
+
+      if (!result || result.errors) {
+        const msg = 'Invalid monitor data'
+        logger.error(msg)
+        const err = new Error(msg)
+        err.statusCode = 400
+        err.data = config
+        err.errors = result.errors
+        throw err
+      }
+
+      const data = result.data
+      data.customer = customer
+      // DO NOT UN-COMMENT ! user property generates conflict with monitor.config.user property of monitor.type === file 
+      //data.user = user
+      data.hostgroup = hostgroup
+      data.source_monitor_id = monitor.source_model_id
+      data.source_resource_id = resource.source_model_id
+
+      resourcesData.push(data)
+    }
+
+    /* create templates from input */
+    const templates = []
+    if (resourcesData.length > 0) {
+      for (let data of resourcesData) {
+        templates.push(createResourceTemplate(data))
+      }
+    }
+    return Promise.all(templates)
   }
 }
 
@@ -82,9 +81,8 @@ module.exports = {
  * create resource and monito from input
  * @author Facundo
  * @param {Object} input
- * @param {Function(ErrorObject,Object)} done
  */
-const createResourceTemplate = async (input, done) => {
+const createResourceTemplate = async (input) => {
   const data = {
     customer: input.customer._id,
     customer_id: input.customer._id,
@@ -105,7 +103,7 @@ const createResourceTemplate = async (input, done) => {
   // create both and link them together
 
   let monitorTemplate = new MonitorTemplateModel(monitor_data)
-  let resourceTemplate = new ResourceTemplateModel(data)
+  const resourceTemplate = new ResourceTemplateModel(data)
 
   resourceTemplate._type = 'ResourceTemplate'
   resourceTemplate.monitor_template = monitorTemplate
@@ -122,6 +120,5 @@ const createResourceTemplate = async (input, done) => {
 
   await monitorTemplate.save()
   await resourceTemplate.save()
-  logger.log('all templates created')
-  done(null, resourceTemplate)
+  return resourceTemplate
 }

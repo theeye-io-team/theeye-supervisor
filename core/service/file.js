@@ -3,7 +3,6 @@ const Task = require("../entity/task").Entity;
 const logger = require('../lib/logger')('service:file');
 const storage = require('../lib/storage').get();
 const FileHandler = require('../lib/file')
-const asyncMap = require('async/map')
 const crypto = require('crypto')
 
 const FileModel = require('../entity/file')
@@ -75,21 +74,17 @@ module.exports = {
    * @param {Function} done
    *
    */
-  createTemplates (input, done) {
-    let { group, files } = input
-
-    asyncMap(files, (file, next) => {
-      file.source_model_id || (file.source_model_id = file._id)
+  createTemplates (input) {
+    const { group, files } = input
+    const templates = []
+    for (let file of files) {
       file.hostgroup_id = group._id
       file.hostgroup = group._id
-      delete file.keyname // keyname must be generated during file template provisioning
 
-      let tpl = FileModel.Template.FactoryCreate(file)
-      tpl.save( (err, fileModel) => {
-        if (err) { logger.error(err) }
-        next(err, fileModel)
-      })
-    }, done)
+      const model = FileModel.Template.FactoryCreate(file)
+      templates.push(model.save())
+    }
+    return Promise.all(templates)
   },
   /**
    *
@@ -106,7 +101,7 @@ module.exports = {
     }
 
     logger.log('creating file from template %j', template)
-    let data = Object.assign({}, templateData, {
+    const data = Object.assign({}, templateData, {
       customer: customer._id,
       customer_id: customer._id,
       customer_name: customer.name,
@@ -114,6 +109,7 @@ module.exports = {
       template_id: template._id
     })
 
+    delete data._id
     delete data.md5
     delete data.keyname
 

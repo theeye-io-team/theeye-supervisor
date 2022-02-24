@@ -338,7 +338,6 @@ module.exports = {
    * @property {User} input.user
    * @property {Customer} input.customer
    * @property {Boolean} input.notify
-   * @property {String[]} input.script_arguments (will be deprecated)
    * @property {String[]} input.task_arguments_values arguments definitions
    * @property {ObjectId} input.workflow_job_id current workflow ejecution
    * @property {ObjectId} input.workflow_job

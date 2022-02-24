@@ -2,7 +2,6 @@
 
 const App = require('../../app')
 const after = require('lodash/after')
-const async = require('async')
 const logger = require('../../lib/logger')('service:host')
 const FileHandler = require('../../lib/file')
 const HostGroupService = require('./group')
@@ -214,156 +213,172 @@ HostService.removeHostResource = function (input, done) {
  * @param {Host} host
  * @param {Function} next
  */
-HostService.config = (host, customer, next) => {
-  const data = { resources: [], tasks: [], triggers: [], files: [] }
+HostService.config = async (host, customer, next) => {
   const filesToConfigure = []
 
-  const resourcesConfig = (done) => {
-    Resource.find({
-      enable: true,
+  const resourcesConfig = async () => {
+    const recipes = []
+
+    const resources = await Resource.find({
+      //enable: true,
       host_id: host._id,
       customer_id: customer._id,
       type: { $ne: 'host' }
-    }).exec(function(err,resources){
-      if (err) return done()
-      if (!resources||resources.length===0) return done()
+    }).exec()
 
-      const completed = after(resources.length, done)
+    if (Array.isArray(resources) && resources.length > 0) {
+      for (let resource of resources) {
+        const resourceData = resource.templateProperties({backup:true})
 
-      resources.forEach(resource => {
-        let resourceData = resource.templateProperties()
-        resourceData.last_event = null
+        const monitor = await Monitor.findOne({ resource_id: resource._id })
+        resourceData.monitor = monitor.templateProperties({backup:true})
+        recipes.push(resourceData)
 
-        Monitor.findOne({
-          resource_id: resource._id
-        }).exec(function(err,monitor){
-          resourceData.monitor = monitor.templateProperties()
-          data.resources.push(resourceData)
+        if (monitor.type === MonitorsConstants.RESOURCE_TYPE_SCRIPT) {
+          filesToConfigure.push(monitor.config.script_id.toString())
+        } else if (monitor.type === MonitorsConstants.RESOURCE_TYPE_FILE) {
+          filesToConfigure.push(monitor.config.file.toString())
+        }
+      }
+    }
 
-          if (monitor.type === MonitorsConstants.RESOURCE_TYPE_SCRIPT) {
-            filesToConfigure.push(monitor.config.script_id.toString())
-          } else if (monitor.type === MonitorsConstants.RESOURCE_TYPE_FILE) {
-            filesToConfigure.push(monitor.config.file.toString())
-          }
-
-          completed()
-        })
-      })
-    })
+    return recipes
   }
 
-  const tasksConfig = (done) => {
-    Task.find({
-      enable: true,
+  const tasksConfig = async () => {
+    const recipes = []
+    const tasks = await Task.find({
+      //enable: true,
       host: host._id,
       customer_id: customer._id
-    }).exec(function(err,tasks){
-      if (err) return done()
-      if (!tasks||tasks.length===0) return done()
+    })
 
-      const completed = after(tasks.length, done)
-
-      tasks.forEach(task => {
+    if (Array.isArray(tasks) && tasks.length > 0) {
+      for (let task of tasks) {
         if (task.type === TaskConstants.TYPE_SCRIPT && task.script_id) {
           filesToConfigure.push(task.script_id.toString())
         }
 
-        task.populateTriggers(() => {
-          logger.log('processing triggers')
-          logger.data('triggers %j', task.triggers)
+        const values = task.templateProperties({backup:true})
+        if (task.triggers.length > 0) {
+          values.triggers = task.triggers // keep it until triggers are exported
+        }
+        recipes.push(values)
+      }
+    }
 
-          data.tasks.push(task.templateProperties())
-
-          if (
-            ! task.triggers ||
-            ! Array.isArray(task.triggers) ||
-            task.triggers.length===0
-          ) {
-            // if no triggers
-            return completed()
-          }
-
-          detectTaskTriggersOfSameHost(task.triggers, host, (err,triggers) => {
-            if (!err && triggers.length>0) {
-              data.triggers.push({
-                task: {
-                  _id: task._id,
-                  _type: task._type,
-                  name: task.name,
-                },
-                task_id: task._id,
-                events: triggers
-              })
-
-              // find trigger within task.triggers and remove
-              triggers.forEach(trigger => {
-                var index
-                const elem = task.triggers.find((t,idx) => {
-                  index = idx
-                  return t._id === trigger.id 
-                })
-
-                if (elem !== undefined) {
-                  task.triggers.splice(index, 1)
-                }
-              })
-            }
-            // At this point task.triggers should contain only triggers that :
-            // 1. belongs to tasks and monitors of other hosts
-            // 2. to webhooks 
-            // 3. other external events and sources (not implemented yet)
-            // Triggers of same host should be "templatized"
-            completed()
-          })
-        })
-      })
-    })
+    return recipes
   }
 
-  const filesConfig = (done) => {
-    if (filesToConfigure.length===0) { return done() }
+  const filesConfig = async () => {
+    const recipes = []
+    if (filesToConfigure.length===0) {
+      return []
+    }
 
     // this function alters `filesToConfigure` (array) content
-    const unique = (() => {
-      return filesToConfigure.sort().filter((item, pos, ary) => {
-        return !pos || item != ary[pos - 1];
-      })
-    })()
+    const files = filesToConfigure.sort().filter((item, pos, ary) => {
+      return !pos || item != ary[pos - 1];
+    })
 
-    async.map(
-      unique,
-      (file_id, next) => {
-        File.findById(file_id, (err, file) => {
-          if (err) return next(err)
-          if (!file) return next(null,file_id)
-
-          FileHandler.getBuffer(file, (error, buff) => {
-            let props = file.templateProperties() // convert to plain object ...
-            if (error) {
-              logger.error('error getting file buffer. %s', error)
-              props.data = '' // cannot obtain file content
-            } else {
-              props.data = buff.toString('base64') // ... assign data to file plain object only
-            }
-            data.files.push(props)
-            next(null, file)
+    for (let file_id of files) {
+      const file = await File.findById(file_id)
+      if (file) {
+        const fileContent = await new Promise((resolve, reject) => {
+          FileHandler.getBuffer(file, (err, buff) => {
+            if (err) reject(err)
+            else resolve(buff.toString('base64'))
           })
         })
-      }, done
-    )
+
+        const props = file.templateProperties({backup:true}) // convert to plain object ...
+        props.data = fileContent
+        recipes.push(props)
+      }
+    }
+
+    return recipes
   }
 
+  const triggersConfig = async (tasks) => {
+    const recipes = []
+
+    logger.log('processing triggers')
+    logger.data('triggers %j', tasks.triggers)
+
+    for (let task of tasks) {
+      if (Array.isArray(task.triggers) && task.triggers.length > 0) {
+        const events = await fetchTaskTriggers(task.triggers)
+        const triggers = await detectTaskTriggersOfSameHost(events, host)
+
+        if (triggers.length > 0) {
+          for (let trigger of triggers) {
+            recipes.push({
+              event_type: trigger._type,
+              event_name: trigger.name,
+              emitter_id: trigger.emitter_id,
+              //emitter: trigger.emitter,
+              task_id: task.source_model_id
+            })
+
+            // find trigger within task.triggers and remove
+            let index
+            const elem = task.triggers.find((t,idx) => {
+              index = idx
+              return t._id.toString() === trigger.id.toString()
+            })
+
+            if (elem !== undefined) {
+              task.triggers.splice(index, 1)
+            }
+          }
+        }
+
+        // At this point task.triggers should contain only triggers that :
+        // 1. belongs to tasks and monitors of other hosts
+        // 2. to webhooks 
+        // 3. other external events and sources (not implemented yet)
+        // Triggers of same host should be "templatized"
+      }
+    }
+    return recipes
+  }
+
+  const data = {}
+
   logger.log('getting resources config')
-  resourcesConfig(() => {
-    logger.log('getting tasks config')
-    tasksConfig(() => {
-      logger.log('getting files config')
-      filesConfig(() => {
-        logger.log('data fetched')
-        next(null,data)
-      })
-    })
-  })
+  data.resources = await resourcesConfig()
+
+  logger.log('getting tasks config')
+  data.tasks = await tasksConfig()
+
+  logger.log('getting triggers config')
+  data.triggers = await triggersConfig(data.tasks)
+
+  logger.log('getting files config')
+  data.files = await filesConfig()
+
+  return data
+}
+
+
+const fetchTaskTriggers = async (triggers) => {
+  const events = await App.Models.Event.Event.find({ _id: { $in: triggers } })
+  if (Array.isArray(events) && events.length > 0) {
+    // call after task events async populate is completed
+    for (let event of events) {
+      if (event) {
+        await event.populate({
+          path: 'emitter',
+          populate: {
+            path: 'host',
+            model: 'Host'
+          }
+        }).execPopulate()
+      }
+    }
+  }
+  return events
 }
 
 /**
@@ -499,52 +514,20 @@ const createHostResource = (host, data, next) => {
   })
 }
 
-
-/**
- * @summary create a dstats and psaux monitoring workers
- * @param {Object} input
- * @param {Function} next
- */
-//const createBaseMonitors = (input, next) => {
-//  logger.log('creating base monitors')
-//  next||(next = ()=>{})
-//
-//  const dstat = Object.assign({}, input, {
-//    type: 'dstat',
-//    name: 'Health Monitor'
-//  })
-//
-//  const psaux = Object.assign({}, input, {
-//    type: 'psaux',
-//    name: 'Processes Monitor'
-//  })
-//
-//  App.resource.createResourceOnHosts([ input.host._id ], dstat, (err) => {
-//    if (err) logger.error(err)
-//    App.resource.createResourceOnHosts([ input.host._id ], psaux, (err) => {
-//      if (err) logger.error(err)
-//      next()
-//    })
-//  })
-//}
-
 /**
  *
  * Given an task, extract the triggers for monitors and tasks that belongs
- * to the same host of the task. Remove the triggers from the task
+ * to the same host of the task.
  *
  * A trigger belongs to a host, if the monitor or task that emit
- * the trigger belongs to the host.
+ * the event belongs to the same host.
  *
  * @param {Event[]} triggers array of task triggers, Event entities
  * @param {Host} host
- * @param {Function(Error,Array)} next
- * @return null
+ * @return {Promise<Array>}
  *
  */
-const detectTaskTriggersOfSameHost = (triggers, host, next) => {
-  const asyncOps = []
-
+const detectTaskTriggersOfSameHost = async (triggers, host) => {
   // pre-filter triggers data. should has been previously populated
   // if not valid object, skip
   const filteredTriggers = triggers.filter(event => {
@@ -552,74 +535,26 @@ const detectTaskTriggersOfSameHost = (triggers, host, next) => {
   },[])
 
   if (filteredTriggers.length === 0) {
-    return next(null,[])
+    return []
   }
 
-  // now get those of the same host
-  async.filterSeries(
-    filteredTriggers,
-    (trigger, done) => {
-      isHostEvent(trigger._id, host._id, (err,result) => {
-        // on error report and ignore
-        if (err) return done(null, false)
-        done(null, result)
+  const data = []
+  for (let trigger of filteredTriggers) {
+    //const isHostTrigger = await isHostEvent(trigger._id, host._id)
+    if (trigger.emitter.host_id === host._id.toString()) {
+      data.push({
+        id: trigger._id,
+        _type: trigger._type,
+        name: trigger.name,
+        emitter_id: trigger.emitter._id,
+        //emitter: { // required by mongoose to populate schema
+        //  _id: trigger.emitter._id,
+        //  _type: trigger.emitter._type,
+        //  name: trigger.emitter.name,
+        //}
       })
-    },
-    (err, hostTriggers) => {
-      if (err) return next(err,[])
-
-      if (!Array.isArray(hostTriggers)||hostTriggers.length===0) {
-        return next(null,[])
-      }
-      const data = hostTriggers.map(trigger => {
-        return {
-          id: trigger._id,
-          _type: trigger._type,
-          name: trigger.name,
-          emitter_id: trigger.emitter._id,
-          emitter: { // required by mongoose to populate schema
-            _id: trigger.emitter._id,
-            _type: trigger.emitter._type,
-            name: trigger.emitter.name,
-          }
-        }
-      })
-      next(err, data)
     }
-  )
-}
+  }
 
-/**
- * Detect if an event has an emitter that triggers a task on the same host
- * @param {ObjectId} event_id Event mongodb id
- * @param {ObjectId} host_id Host mongodb id
- * @param {Function} next callback
- */
-const isHostEvent = (event_id, host_id, next) => {
-  logger.log('fetching event %s', event_id)
-
-  // use fetch instead of findById because fetch also populate
-  // the correct emitter
-  Event.fetch({ _id: event_id }, (err,events) => {
-    if (err) { return next(err) }
-    if (!events) { return next(null, false) }
-    if (!Array.isArray(events) || events.length===0) {
-      return next(null, false)
-    }
-
-    const event = events[0]
-    if (!event.emitter) {
-      var err = new Error('the event doesn\'t has an emitter')
-      err.event = event
-      logger.error(err)
-      next(err, false)
-    } else {
-      if (!event.emitter.host_id) { // webhooks, special tasks
-        next(null,false)
-      } else {
-        // emitter.host_id and host_id are ObjectId's 
-        next(null, Boolean(event.emitter.host_id.toString() === host_id.toString()))
-      }
-    }
-  })
+  return data
 }

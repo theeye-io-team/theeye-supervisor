@@ -75,7 +75,7 @@ module.exports = {
             })
 
             payload.data.model.task_arguments_values = args
-            payload.data.model.script_arguments = args
+            //payload.data.model.script_arguments = args
           }
         }
       }

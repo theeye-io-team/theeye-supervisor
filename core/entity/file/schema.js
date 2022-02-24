@@ -48,9 +48,18 @@ function FileSchema (props) {
   }
 
   this.methods.templateProperties = function () {
-    let values = {}
-    for (let key in SchemaProperties) { values[key] = this[key] }
+    let values = this.toObject()
+
     values.source_model_id = this._id
+    // remove non essential properties
+    delete values.id
+    delete values._id
+    delete values.creation_date
+    delete values.last_update
+    delete values.template
+    delete values.template_id
+    delete values.enable
+    delete values.keyname
     delete values.customer
     delete values.customer_id
     delete values.customer_name

@@ -15,6 +15,7 @@ const MonitorSchema = new BaseSchema({
   template: { type: ObjectId, ref: 'MonitorTemplate' }, // has one
   host: { type: ObjectId, ref: 'Host' }, // belongs to
   resource: { type: ObjectId, ref: 'Resource' }, // belongs to
+  env: { type: Object, default: () => { return {} } },
   _type: { type: String, 'default': 'ResourceMonitor' }
 }, { collection: 'resourcemonitors' })
 
@@ -39,10 +40,22 @@ MonitorSchema.methods.publish = function (options, next) {
   }
 }
 
-MonitorSchema.methods.templateProperties = function() {
+MonitorSchema.methods.templateProperties = function () {
   let values = this.toObject()
 
   values.source_model_id = this._id
+  // remove non essential properties
+  delete values.enable
+  delete values.creation_date
+  delete values.last_update
+  delete values._id
+  delete values.id
+  delete values.resource_id
+  delete values.resource
+  delete values.template
+  delete values.template_id
+  delete values.host_id
+  delete values.host
   delete values.customer
   delete values.customer_id
   delete values.customer_name
