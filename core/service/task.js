@@ -81,7 +81,7 @@ module.exports = {
 
     // keep backward compatibility with script_arguments
     if (task.type === TaskConstants.TYPE_SCRIPT) {
-      task.script_arguments = updates.task_arguments
+      //task.script_arguments = updates.task_arguments
       let runas = updates.script_runas
       if (runas) {
         if (/%script%/.test(runas) === false) {

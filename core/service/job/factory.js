@@ -532,8 +532,10 @@ class AbstractJob {
       job.lifecycle = LifecycleConstants.ONHOLD
       job.task_arguments_values = []
     } else {
-      const argsDefinition = (task.task_arguments || task.script_arguments)
-      const inputArgsValues = (vars.task_arguments_values || vars.script_arguments)
+      //const argsDefinition = (task.task_arguments || task.script_arguments)
+      //const inputArgsValues = (vars.task_arguments_values || vars.script_arguments)
+      const argsDefinition = task.task_arguments
+      const inputArgsValues = vars.task_arguments_values
 
       try {
         const values = await new Promise( (resolve, reject) => {

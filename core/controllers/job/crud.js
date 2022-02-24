@@ -138,6 +138,7 @@ const controller = {
 
           let jobs = []
           if (job) {
+            job.script_arguments = job.task_arguments_values // keep backward compatibility
             jobs.push(job.publish('agent'))
             App.scheduler.scheduleJobTimeoutVerification(job)
           }

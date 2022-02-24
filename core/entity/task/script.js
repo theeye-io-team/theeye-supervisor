@@ -10,7 +10,7 @@ const ScriptSchema = new BaseSchema({
   template: { type: ObjectId, ref: 'TaskTemplate' },
   script_id: { type: String },
   script_runas: { type: String },
-  script_arguments: { type: Array, default: () => { return [] } }, // will be replaced with task_arguments in the future
+  //script_arguments: { type: Array, default: () => { return [] } }, // will be replaced with task_arguments in the future
   script: { type: ObjectId, ref: 'Script' },
   env: { type: Object, default: () => { return {} }},
   logging: { type: Boolean, default: false }
@@ -23,12 +23,12 @@ const templateProperties = ScriptSchema.methods.templateProperties
 ScriptSchema.methods.templateProperties = function (options) {
   let backup = (options && options.backup)
   if (backup === true) {
-    delete values.script_arguments
+    //delete values.script_arguments
     return this.toObject()
   }
 
   const values = templateProperties.apply(this, arguments)
-  delete values.script_arguments
+  //delete values.script_arguments
 
   // blank user defined env properties values
   for (let name in values.env) {
