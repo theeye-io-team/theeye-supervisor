@@ -10,7 +10,9 @@ module.exports = {
     uri: "mongodb://127.0.0.1/theeye?retryWrites=true&w=majority",
     options: {
       useFindAndModify: false,
-      useCreateIndex: true
+      useCreateIndex: true,
+      useNewUrlParser: true,
+      useUnifiedTopology: true
     }
   },
   monitor: {
