@@ -216,8 +216,7 @@ const controller = {
     })
   },
   approve (req, res, next) {
-    const job = req.job
-    const user = req.user
+    const { job, user, customer } = req
 
     App.jobDispatcher.finish({
       result: {
@@ -230,8 +229,8 @@ const controller = {
       },
       state: StateConstants.SUCCESS,
       job,
-      user: req.user,
-      customer: req.customer
+      user,
+      customer
     }, err => {
       if (err) { return res.send(500) }
       res.send(204)
@@ -239,8 +238,7 @@ const controller = {
     })
   },
   reject (req, res, next) {
-    const job = req.job
-    const user = req.user
+    const { job, user, customer } = req
 
     App.jobDispatcher.finish({
       result: {
@@ -254,7 +252,7 @@ const controller = {
       state: StateConstants.FAILURE,
       job,
       user,
-      customer: req.customer
+      customer
     }, err => {
       if (err) { return res.send(500) }
       res.send(204)

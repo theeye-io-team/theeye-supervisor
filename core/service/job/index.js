@@ -480,25 +480,25 @@ module.exports = {
       const { job, user, result = {} } = input
       //const result = (input.result ||{})
 
-      let state
-      let lifecycle
-      let trigger_name
-
       if (result.killed === true) {
-        state = StateConstants.TIMEOUT
-        lifecycle = LifecycleConstants.TERMINATED
+        job.state = StateConstants.TIMEOUT
+        job.lifecycle = LifecycleConstants.TERMINATED
       } else {
-        if (input.state) {
-          state = input.state
+        if (job.finished_state_required === true) {
+          // finished state must be present
+          if (input.state === StateConstants.SUCCESS) {
+            job.state = StateConstants.SUCCESS
+          } else {
+            job.state = StateContants.FAILURE
+          }
         } else {
           // assuming success
-          state = StateConstants.SUCCESS
+          job.state = (input.state || StateConstants.SUCCESS)
         }
-        lifecycle = LifecycleConstants.FINISHED
+
+        job.lifecycle = LifecycleConstants.FINISHED
       }
 
-      job.state = state
-      job.lifecycle = lifecycle
       job.result = result
       // parse result output
       if (result.output) {
@@ -507,7 +507,6 @@ module.exports = {
         //job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
       }
 
-      let eventName
       if (result.lastline) {
         try {
           const jsonLastline = JSON.parse(result.lastline)
@@ -520,7 +519,7 @@ module.exports = {
               job.next = jsonLastline.next
             }
             if (jsonLastline.event_name) {
-              eventName = jsonLastline.event_name
+              job.trigger_name = jsonLastline.event_name
             }
           }
         } catch (err) {
@@ -528,10 +527,8 @@ module.exports = {
         }
       }
 
-      if (eventName) {
-        job.trigger_name = eventName
-      } else {
-        job.trigger_name = (state === StateConstants.FAILURE) ? StateConstants.FAILURE : StateConstants.SUCCESS
+      if (!job.trigger_name) {
+        job.trigger_name = (job.state === StateConstants.FAILURE) ? StateConstants.FAILURE : StateConstants.SUCCESS
       }
 
       await job.save()

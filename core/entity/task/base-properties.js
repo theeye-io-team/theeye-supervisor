@@ -50,5 +50,6 @@ module.exports = {
   cancellable: { type: Boolean, 'default': true },
   autoremove_completed_jobs: { type: Boolean },
   autoremove_completed_jobs_limit: { type: Number, 'default': 5 },
+  finished_state_required: { type: Boolean, 'default': false }
   //handle_errors: { type: Boolean }
 }
