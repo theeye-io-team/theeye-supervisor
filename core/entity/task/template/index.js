@@ -36,15 +36,11 @@ exports.DummyTemplate = DummyTemplate
 exports.NotificationTemplate = NotificationTemplate
 
 const ClassesMap = {}
-ClassesMap[ TaskConstants.TYPE_SCRIPT ] = function (input) {
-  return new ScriptTemplate(input)
-}
+ClassesMap[ TaskConstants.TYPE_SCRIPT ] = ScriptTemplate
 ClassesMap[ TaskConstants.TYPE_SCRAPER ] = ScraperTemplate
 ClassesMap[ TaskConstants.TYPE_APPROVAL ] = ApprovalTemplate
 ClassesMap[ TaskConstants.TYPE_DUMMY ] = DummyTemplate
-ClassesMap[ TaskConstants.TYPE_NOTIFICATION ] = function (input) {
-  return new NotificationTemplate(input)
-}
+ClassesMap[ TaskConstants.TYPE_NOTIFICATION ] = NotificationTemplate
 exports.Factory = {
   create (input) {
     delete input._type
