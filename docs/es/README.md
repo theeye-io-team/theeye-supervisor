@@ -71,3 +71,17 @@ Puede configurarse para una o más cosas (o ninguna)
 ### Ejemplo para iniciar el desarrollo
 
 `DEBUG=*eye* NODE_ENV=localdev MONITORING_DISABLED= SCHEDULER_JOBS_DISABLED= npx nodemon --inspect $PWD/core/main.js`
+
+## Changelog
+
+TheEye se actualiza frecuentemente. En caso de hostear su propio entorno, es recomendable revisar periódicamente si hay actualizaciones disponibles para mantener su instalación al día con los últimos parches y features.
+
+El changelog de TheEye se encuentra [aquí](https://github.com/theeye-io-team/theeye-changelog).
+
+Nuestro entorno SaaS [app.theeye.io](http://app.theeye.io) está siempre al día con la última versión estable. 
+
+Para conocer la versión de cada componentes puede consultar el dashboard web dentro de la pestaña *Help*, o hacer un GET request a las APIS. Es habitual que todos los componentes sean actualizados en cada release, por lo que es necesario verificar las versiones de todos los componentes y actualizarlos en el mismo momento ya que suelen tener dependencias entre si. 
+
+El supervisor [`supervisor.theeye.io/api/status`](https://supervisor.theeye.io/api/status).
+
+El Gateway [`app.theeye.io/api/status`](https://app.theeye.io/api/status).
