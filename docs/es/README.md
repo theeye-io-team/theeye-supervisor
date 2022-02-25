@@ -74,12 +74,14 @@ Puede configurarse para una o más cosas (o ninguna)
 
 ## Changelog
 
-TheEye se actualiza frecuentemente, y puede ser util revisar el changelog frecuentemente y mantener la instalación al día.
+TheEye se actualiza frecuentemente. En caso de hostear su propio entorno, es recomendable revisar periódicamente si hay actualizaciones disponibles para mantener su instalación al día con los últimos parches y features.
 
-Puede revisar el changelog de TheEye [aquí](https://github.com/theeye-io-team/theeye-changelog).
+El changelog de TheEye se encuentra [aquí](https://github.com/theeye-io-team/theeye-changelog).
 
-[app.theeye.io](http://app.theeye.io) está siempre al día con la última versión, pero en caso de hostear su propio entorno, es recomendable revisar periódicamente si hay actualizaciones disponibles. 
+Nuestro entorno SaaS [app.theeye.io](http://app.theeye.io) está siempre al día con la última versión estable. 
 
-Para saber la versión del Supervisor de TheEye puede revisar en el dashboard web dentro de la pestaña *Help*, o puede hacer un GET request a [`supervisor.theeye.io/api/status`](https://supervisor.theeye.io/api/status).
+Para conocer la versión de cada componentes puede consultar el dashboard web dentro de la pestaña *Help*, o hacer un GET request a las APIS. Es habitual que todos los componentes sean actualizados en cada release, por lo que es necesario verificar las versiones de todos los componentes y actualizarlos en el mismo momento ya que suelen tener dependencias entre si. 
 
-También es importante conocer la versión del Gateway, el cual se ocupa de administrar muchos procesos de la interfaz web. Puede revisarla en el dashboard web dentro de la pestaña *Help*, o puede hacer un GET request a [`app.theeye.io/api/status`](https://app.theeye.io/api/status).
+El supervisor [`supervisor.theeye.io/api/status`](https://supervisor.theeye.io/api/status).
+
+El Gateway [`app.theeye.io/api/status`](https://app.theeye.io/api/status).
