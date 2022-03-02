@@ -1,16 +1,19 @@
-[![theeye.io](../../images/logo-theeye-theOeye-logo2.png)](https://theeye.io/index.html)
+[![theeye.io](../images/logo-theeye-theOeye-logo2.png)](https://theeye.io/en/index.html)
 
-# Argumento de tareas
+# Tasks Arguments
 
-## Ejecución de tareas y Workflows mediante API
+_____
 
-Hay varios métodos para ejecutar tareas y workflows diréctamente desde la API.
+## Task and Workflows. API execution
 
-Revise estas secciones de la documentación
+There are alternatives to directly execute tasks and workflows vía API.
 
-[Usando la Secret Key de la tarea (recomendado)](es/tasks/#Usando-la-Secret-Key-de-la-tarea-recomendado)
+Check the following Documentation Sections
 
-[Run Task and Workflow using Integration Token (beta)](/es/tasks/#Usando-claves-de-integración-general)
+
+[Run Task and Workflow using Integration Secret (recomended)](entasks/#using-task-secret-key-integration-feature-40recommended41)
+
+[Run Task and Workflow using Integration Token (beta)](entasks/#api-integration-tokens)
 
 ___
 

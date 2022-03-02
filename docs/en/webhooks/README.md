@@ -25,7 +25,7 @@ Then, simply removing the Webhook, you can revoke the remote access to the Task.
 
 * Base Path `/${customer}/webhook?access_token=${token}`
 
-* [Bearer authentication required](/api/auth)
+* [Bearer authentication required](enapi/auth)
 
  | Method | Path                             | Description                           | ACL    | 
  | -----  | -----                            | -----                                 | -----  | 
