@@ -1,12 +1,13 @@
 # TheEye Supervisor Core API
 
-## What is TheEye?
+## ¿Qué es TheEye?
 
 <table>
   <tr>
     <td> <img src="images/TheEye-Of-Sauron.png"></td>
-    <td> TheEye is a process automation platform developed in NodeJS. Best used as BPM, Rapid Backoffice Development (RDA) and processes' hub.
-Technically TheEye is a choreographer 
+    <td>
+    TheEye es una plataforma de automatización de procesos desarrollada en NodeJS. Puede usarla como BPM, Rapid Backoffice Development (RDA) y nucleo de procesos.
+Técnicamente, TheEye es un orquestrador. 
     </td>
   </tr> 
 </table>
@@ -25,47 +26,62 @@ Technically TheEye is a choreographer
   </div>
 </div>
 
-## Architecture
+## Arquitectura
 
 ![Image of TheEye-overview](images/TheEye-core-Architect.png)
 
-If you want more information please read the https://documentation.theeye.io
+Para más información por favor revise la documentación en https://documentation.theeye.io/
 
-## Environment settings
+## Opciones de entorno
 
-Provide this env variables to change the initial behaviour of the core Api. Once started cannot be changed.
+Modifique estas variables de entorno para cambiar el comportamiento inicial de la API. No se pueden cambiar luego de la inicialización.
 
+* Rest API - API para interactuar con los recursos de TheEye. https://documentation.theeye.io/api/auth/
 
-* Rest API - Api to interactar with TheEye resources. https://documentation.theeye.io/api/auth/
+* Sistema de Monitoreo - Funciona como un proceso en segundo plano. Chequea el estado de los Monitores.
 
-* Monitoring System - It works as a background process. Will check Monitors status.
+* API comandante interna (Solo escucha en el puerto 6666 en localhost) - Esta API no está documentada. Se usa solamente con propósitos de administración interna.
 
-* Internal commander API (listen on port 6666 only localhost) - This API is not documented. It is used only for internal management purpose.
+### Configuración de entorno
 
-### Environment configuration
+#### Configuración básica
 
-Basic configuration
-
-| Variable Name | Usage |
-| ----- | ----- |
-| PORT | change rest api port. default 60080 |
-| NODE_ENV | choose the configuration file that the api should use. |
-| DEBUG | enabled/disable the debug module. check npm debug module for more information |
-| THEEYE_NODE_HOSTNAME | this features extends the debug module. add the hostname to debug output and used to define a Hostname on Dockers |
-| VERSION | api version. if not provided will try to detected the version using git. |
-| CONFIG_NOTIFICATIONS_API_URL | target notification system url |
-
-
-Components Control. Can be configured to do one o more things (or nothing)
+| Nombre de la Variable        | Uso |
+| ---------------------------- | --- |
+| PORT                         | Cambia el puerto de la Rest API. Por defecto 60080 |
+| NODE_ENV                     | El archivo del que la API debe sacar la configuración. |
+| DEBUG                        | Activa/desactiva el módulo debug. [Más información](https://www.npmjs.com/package/debug) |
+| THEEYE_NODE_HOSTNAME         | Extiende el módulo debug. Agrega el hostname para depurar el output y define el Hostname en contenedores Docker |
+| VERSION                      | Versión de la API. Si no se provee se intentará usar la versión definida en git. |
+| CONFIG_NOTIFICATIONS_API_URL | URL de destino para el sistema de notificaciones |
 
 
-| Variable Name | Usage |
-| ----- | ----- |
-| COMMANDER_DISABLED | disable internal commander api |
-| MONITORING_DISABLED | disable monitoring system. system monitors will not be checked anymore. will only change when bots and agents send updates |
-| API_DISABLED | disable rest api |
-| SCHEDULER_JOBS_DISABLED | disable internal scheduler execution. scheduler-jobs will be created using the rest api but task will never be executed. theeye-jobs execution timeout will be never checked. |
+#### Control de componentes
 
-### Start development sample
+Puede configurarse para una o más cosas (o ninguna)
+
+
+| Nombre de la Variable   | Uso |
+| ----------------------- | --- |
+| COMMANDER_DISABLED      | Desactiva la API comandante interna |
+| MONITORING_DISABLED     | Desactiva el monitoreo del sistema. Los monitores del sistema no van a revisarse más, solo van a actualizarse cuando los bots y agentes envíen updates |
+| API_DISABLED            | Desactiva la Rest API |
+| SCHEDULER_JOBS_DISABLED | Desactiva la ejecución del scheduler interno. Los jobs programados se seguiran creando usando la Rest API pero la tarea nunca se ejecutará. El timeout de la ejecución nunca se revisará. |
+
+### Ejemplo para iniciar el desarrollo
 
 `DEBUG=*eye* NODE_ENV=localdev MONITORING_DISABLED= SCHEDULER_JOBS_DISABLED= npx nodemon --inspect $PWD/core/main.js`
+
+## Changelog
+
+TheEye se actualiza frecuentemente. En caso de hostear su propio entorno, es recomendable revisar periódicamente si hay actualizaciones disponibles para mantener su instalación al día con los últimos parches y features.
+
+El changelog de TheEye se encuentra [aquí](https://github.com/theeye-io-team/theeye-changelog).
+
+Nuestro entorno SaaS [app.theeye.io](http://app.theeye.io) está siempre al día con la última versión estable. 
+
+Para conocer la versión de cada componentes puede consultar el dashboard web dentro de la pestaña *Help*, o hacer un GET request a las APIS. Es habitual que todos los componentes sean actualizados en cada release, por lo que es necesario verificar las versiones de todos los componentes y actualizarlos en el mismo momento ya que suelen tener dependencias entre si. 
+
+El supervisor [`supervisor.theeye.io/api/status`](https://supervisor.theeye.io/api/status).
+
+El Gateway [`app.theeye.io/api/status`](https://app.theeye.io/api/status).
