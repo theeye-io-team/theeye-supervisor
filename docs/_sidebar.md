@@ -1,10 +1,10 @@
-- [API for developers](/)
-- [Enable access to APIs](/auth.md)
-- [Indicators](/indicators/)
-- Tasks
-  - [Basics](/tasks/)
-  - [Arguments](/tasks/arguments.md)
-- [Monitors](/monitors/)
+- [API para desarrolladores](/)
+- [Habilitar acceso a las APIs](/auth.md)
+- [Indicadores](/indicators/)
+- Tareas
+  - [Introducción](/tasks/)
+  - [Argumentos](/tasks/arguments.md)
+- [Monitores](/monitors/)
 - [Jobs](/jobs/)
 - [Webhooks](/webhooks/)
 - [Sync](/sync/)

@@ -1,6 +1,8 @@
-[![theeye.io](../../images/logo-theeye-theOeye-logo2.png)](https://theeye.io/index.html)
+[![theeye.io](../images/logo-theeye-theOeye-logo2.png)](https://theeye.io/en/index.html)
 
-# Sync API
+# API Sync
+
+Ejecución sincrónica de tareas.
 
 ## URL
 
@@ -8,35 +10,45 @@
 
 ____
 
-Tasks execution in TheEye is asynchronous by nature. This means, that task will get executed and then continue in background an the time it takes to complete varies. Usually, we do not need to wait the result and we can check it later.                                                    
+La ejecución de tareas individuales en TheEye es asincrónica por la naturaleza de los procesos.
+Esto se debe a que las tareas en general son ejecutadas en lotes mediante el uso de "Queues". El tiempo y la complejidad varía en cada implementación.
+Habitualmente no necesitamos esperar el resultado de forma instantanea.
 
-But there are cases when we need to invoke the task and we want to wait the result. This is very common when connecting apis, using task with interfaces that requires user interaction and many other escenarios. 
+En algunos casos es necesario obtener el resultado de la ejecución de forma inmediata.
+Este es aún común si necesitamos que las tareas se comporten como si fueran métodos de una API Rest.
 
-This can be achived using the API in sync mode. The only restriction is the task execution timeout. A recommended timeout would be between 10 to 30 seconds maximum. Most of the web client will abort the request near the 60 seconds. Clients behaviour can be configured and changed but experience tells us that it is not recommended, unless you really need it.
+Este comportamiento puede ser logrado utilizando la API en modo Sync.
+Cualquier tarea puede ser utilizada mediante la API Sync. Es necesario tener en cuenta que con tiempo de ejecución muy largos se pueden producir Timeouts o incluso el orquestador puede cortar la comunicación de forma repentina.
+
+Un tiempo de respuesta razonable no debe superar los 60 segundos de ejecución
 
 ___
 
 
-## Paths
+## Rutas
 
 | Method | Path | Description | ACL | 
 | ---- |  ----|  ----|  ----|
 | POST | /${customer}/task/${id}/job | [Run task](#waiting-output) | user | 
 
 
-## Arguments
+## Argumentos
 
 
 | Name | Values | Description | 
 | ---- |  ---- |  ---- |
-| result | empty/null. is ignored | Result is another field stored with the job execution data in the database. This includes the execution log, the output, the lastline. | 
-| full | empty/null. is ignored | This is the full job document. This is the same value that can be obtained doing a GET request to the jobs api |  
-| parse | empty or a Number/Integer > 0 | The output of a job is always stored in the database as an array of Task Arguments strings.  The parse option will use the index number 0 of the output and parse it as JSON.  In some cases you might need to return a specific index of the output array. Using parse, set it to the a number from 0 to N, representing the index of the output array.  If the index is not present or if it is unreadable the raw output will be returned |  
+| result | empty/null. is ignored | Result es la información informada por el Agente al finalizar la ejecución. En otros incluye execution log, output, lastline. | 
+| full | empty/null. is ignored | Responde con el document Job completo asociado a la ejecución. El mismo documento puede ser obtenido haciendo un GET a la API de jobs |  
+| parse | empty or a Number/Integer > 0 | El output de un job es almacenado en la base de datos como un Array de Strings, que si fuera encadenado serán argumentos de la siguiente tarea. La opción parse utilizara por defecto el índice 0 de este array de outputs y lo intentara interpretar como JSON.  En algunos casos puede ser necesario utilizar un índice diferente al 0, sobre todo si se trabaja con outputs de tareas ya definidios en otras implementaciones. Usando parse=INDEX_NUM donde INDEX_NUM es un número entero del output. Si el índice no esta presente o no es posible interpretarlo se devuelve el output crudo |
 
 
-## Response
+## Respuesta
 
-By default the sync api will respond with the final output of the task execution. when a job finishes the output value is parsed and then stored withing the job document in the output field.
+
+Por defecto la API Sync responde con el output obtenido de la ejecución de la tarea. El output es lo que desde la interfaz se visualiza en la sección "output" del resultado de la ejecución.
+
+El output se almacena en la base de datos dentro del documento job. El job representa la instancia de ejecución de la tarea.
+
 
 | State | HTTP Status Code | 
 | ---- |  ---- |
@@ -46,14 +58,18 @@ By default the sync api will respond with the final output of the task execution
 
 ### NOTES
 
-* Single **Task execution** is supported. Workflows execution is **NOT Possible** at this moment.
-
-______
+* Por el momento solo es posible la ejecución de _Tareas Individuales_ .
 
 
-## Examples
+____
 
-### Waiting output
+
+## Ejemplos
+
+Puede descargar e importa [esta receta utilizada para todos los ejemplos](/sync/Rest_API_Response.json ":ignore")
+
+
+### Esperando output
 
 ```bash
 
@@ -66,7 +82,7 @@ curl -s -X POST "https://sync.theeye.io/${customer}/task/${taskId}/job?access_to
 
 ```
 
-### sample failure
+### Ejemplo de resultado "failure"
 
 
 ```bash
@@ -98,7 +114,7 @@ Keep-Alive: timeout=5
 
 ```
 
-### sample success
+### Ejemplo de resultado "success"
 
 
 ```bash
@@ -129,9 +145,7 @@ Keep-Alive: timeout=5
 ```
 
 
-###  sample success using parse
-
-[Download and Import this task](/sync/Rest_API_Response.json ":ignore")
+### Ejemplo de "success" usando "parse"
 
 
 Get the ID and replace in the requests below
@@ -164,7 +178,7 @@ Keep-Alive: timeout=5
 
 ```
 
-###  sample failure using parse
+### Ejemplo de "failure" usando "parse"
 
 
 ```bash
