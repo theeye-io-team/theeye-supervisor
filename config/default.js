@@ -13,6 +13,7 @@ module.exports = {
     file_upload_folder: join(__dirname , '..', 'uploads'),
     view_teamplates_path: __dirname + '/../core/view/template',
     secret: 'b28d9f2a4d52ace6e5d3ac1dd3e5c2a0e7e66472ec7276ca501b8c4fa1f07679',
+    secret_uuid: 'a2a29a19-aba1-412b-a9ba-c29668e3c17b',
     user: {
       username: 'theeye-automatic',
       email: 'info@theeye.io',
