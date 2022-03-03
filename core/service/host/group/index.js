@@ -182,12 +182,19 @@ const Service = module.exports = {
         let host = group.hosts[i]
         if (host._id.toString() !== input.source_host) {
           // this is async and will not wait for it
-          copyTemplateToHost(
-            group.hosts[i],
-            group,
-            customer,
-            (err) => {}
-          )
+          await new Promise((resolve, reject) => {
+            copyTemplateToHost(
+              group.hosts[i],
+              group,
+              customer,
+              (err) => {
+                if (err) {
+                  logger.error(err)
+                }
+                resolve()
+              }
+            )
+          })
         }
       }
     }
@@ -267,7 +274,7 @@ const Service = module.exports = {
 
           unlinkHostFromTemplate(host, group, keepInstances)
             .catch(err => {
-              logger.err('error unlinking templates')
+              logger.error('error unlinking templates')
             })
             .then(() => {
               App.jobDispatcher.createAgentUpdateJob( host._id )
@@ -714,7 +721,7 @@ const unlinkHostFromTemplate = async (host, template, keepInstances) => {
     const entities = await Schema.find({
       host_id: host._id.toString(),
       template_id: template_id
-    }).exec()
+    })
 
     if (!entities||entities.length===0) { return }
 
@@ -824,14 +831,14 @@ const createRequiredFiles = async (input) => {
   const { tasks, resources } = input
 
   const getFile = async (file_id) => {
-    let file
+    let file = null
     try {
       file = await FileModel.File.findOne({
         $or: [
           { _id: file_id }, // the original file
           { template_id: file_id } // a file created out of the file template
         ]
-      }).exec()
+      })
 
       if (!file) {
         logger.log('creating new file from template')

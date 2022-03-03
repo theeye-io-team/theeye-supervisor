@@ -310,7 +310,6 @@ const TaskJobProcessor = async (agendaJob) => {
   const task = await App.Models.Task.Entity
     .findById(data.task_id)
     .populate('customer')
-    .exec()
 
   if (!task) {
     throw new Error(`task ${data.task_id} is no longer available`)
@@ -335,7 +334,6 @@ const WorkflowJobProcessor = async (agendaJob) => {
   const workflow = await App.Models.Workflow.Workflow
     .findById(data.workflow_id)
     .populate('customer')
-    .exec()
 
   if (!workflow) {
     throw new Error(`workflow ${data.workflow_id} is no longer available`)

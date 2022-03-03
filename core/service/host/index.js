@@ -224,7 +224,7 @@ HostService.config = async (host, customer, next) => {
       host_id: host._id,
       customer_id: customer._id,
       type: { $ne: 'host' }
-    }).exec()
+    })
 
     if (Array.isArray(resources) && resources.length > 0) {
       for (let resource of resources) {

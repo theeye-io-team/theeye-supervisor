@@ -418,7 +418,7 @@ module.exports = {
     return job
   },
   async createAgentUpdateJob (host_id) {
-    const host = await App.Models.Host.Entity.findById(host_id).exec()
+    const host = await App.Models.Host.Entity.findById(host_id)
     if (!host) {
       throw new Error('Host not found')
     }
@@ -663,7 +663,7 @@ module.exports = {
    * @return {Promise}
    */
   async jobExecutionTimedOutCheck (job_id) {
-    let job = await JobModels.Job.findById(job_id).exec()
+    let job = await JobModels.Job.findById(job_id)
     if (!job) {
       // finished / removed / canceled
       return null
