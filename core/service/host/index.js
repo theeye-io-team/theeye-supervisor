@@ -362,18 +362,10 @@ const fetchTaskTriggers = async (triggers) => {
  * @param {Customer} input.customer
  * @param {User} input.user
  * @param {Object} input.info
- * @property {String} input.info.agent_version
- * @property {String} input.info.ip
- * @property {String} input.info.os_name
- * @property {String} input.info.os_version
- * @property {String} input.info.state
  * @param {Function(Error,Object)} next
  */
 HostService.register = (input, next) => {
-  const hostname = input.hostname
-  const customer = input.customer
-  const info = input.info
-  const user = input.user
+  const { hostname, customer, user } = input
 
   logger.log('registering new host "%s"', hostname)
 
@@ -382,18 +374,8 @@ HostService.register = (input, next) => {
     customer_id: customer._id,
     creation_date: new Date(),
     last_update: new Date(),
-    hostname: hostname,
-    ip: info.ip,
-    os_name: info.os_name,
-    os_version: info.os_version,
-    agent_version: info.agent_version,
-    state: info.state
-  }, (err, host) => {
-    if (err) {
-      logger.error(err)
-      return next(err)
-    }
-
+    hostname
+  }).then(host => {
     logger.log('host registered. creating host resource')
 
     const data = {
@@ -410,11 +392,12 @@ HostService.register = (input, next) => {
       description: host.hostname
     }
 
-    createHostResource(host, data, (err, payload) => {
-      if (err) { return next(err) }
-      logger.log('host %s resource created', hostname)
-      next(null, payload)
+    App.resource.create(data).then( resource => {
+      next(null, { host, resource })
     })
+  }).catch(err => {
+    logger.error(err)
+    next(err)
   })
 }
 
@@ -460,31 +443,6 @@ HostService.disableHostsByCustomer = (customer, doneFn) => {
       }
     }
   });
-}
-
-/**
- * Create a resource for the host
- *
- * @summary Create host resource
- * @param {Host} host
- * @param {Object} data
- * @property {Customer} data.customer
- * @property {Mixed} ... many more properties
- * @param {Function(Error,Object)} next
- */
-const createHostResource = (host, data, next) => {
-  const customer = data.customer
-
-  App.resource.create(data, (err, result) => {
-    if (err) {
-      logger.error(err)
-      return next(err)
-    }
-
-    logger.log('host resource created')
-    const resource = result.resource
-    next(null, { host, resource })
-  })
 }
 
 /**
