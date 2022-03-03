@@ -171,20 +171,19 @@ const Service = module.exports = {
       })
     })
 
+    /**
+     * copy template configs to the attached hosts.
+     * group.hosts should be already populated,
+     * it is Host object Array
+     */
     if (group.hosts.length > 0) {
-      /**
-       * copy template configs to the attached hosts.
-       * group.hosts should be already populated,
-       * it is Host object Array
-       **/
       logger.log('copying template to hosts')
       for (let i=0; i<group.hosts.length; i++) {
-        let host = group.hosts[i]
+        const host = group.hosts[i]
         if (host._id.toString() !== input.source_host) {
-          // this is async and will not wait for it
           await new Promise((resolve, reject) => {
             copyTemplateToHost(
-              group.hosts[i],
+              host,
               group,
               customer,
               (err) => {
@@ -259,19 +258,31 @@ const Service = module.exports = {
     })
 
     if (newHosts.length > 0) {
+      logger.log('copying template to hosts')
       for (let i=0; i < newHosts.length; i++) {
-        findHost(newHosts[i],(err,host) => {
-          if (err || !host) return
-          copyTemplateToHost(host, group, customer, () => { })
-        })
+        const host = await Host.findById(newHosts[i])
+        if (host) {
+          await new Promise((resolve, reject) => {
+            copyTemplateToHost(
+              host,
+              group,
+              customer,
+              (err) => {
+                if (err) {
+                  logger.error(err)
+                }
+                resolve()
+              }
+            )
+          })
+        }
       }
     }
 
     if (delHosts.length > 0) {
       for (let i=0; i < delHosts.length; i++) {
-        findHost(delHosts[i], (err,host) => {
-          if (err || !host) { return }
-
+        const host = await Host.findById(delHosts[i])
+        if (host) {
           unlinkHostFromTemplate(host, group, keepInstances)
             .catch(err => {
               logger.error('error unlinking templates')
@@ -279,7 +290,7 @@ const Service = module.exports = {
             .then(() => {
               App.jobDispatcher.createAgentUpdateJob( host._id )
             })
-        })
+        }
       }
     }
 
