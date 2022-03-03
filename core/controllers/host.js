@@ -1,6 +1,7 @@
 
-const App = require('../app')
+const restify = require('restify')
 const config = require('config')
+const App = require('../app')
 const Constants = require('../constants')
 const dbFilter = require('../lib/db-filter')
 const Host = require("../entity/host").Entity
@@ -57,7 +58,9 @@ module.exports = function (server) {
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     router.requireCredential('agent', { exactMatch: true }), // only agents can create hosts
-    controller.register
+    restify.plugins.conditionalHandler([
+      { version: '1.2.4', handler: controller.register }
+    ])
   )
 }
 
