@@ -42,7 +42,7 @@ HostService.populate = (hosts, next) => {
 }
 
 HostService.provisioning = async (input) => {
-  const { host, customer, user, resource } = input
+  const { host, customer } = input
   await HostGroupService.orchestrate(host, customer)
   App.jobDispatcher.createAgentUpdateJob(host._id)
 }
