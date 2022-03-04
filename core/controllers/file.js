@@ -32,16 +32,14 @@ module.exports = (server) => {
   server.get('/:customer/file', middlewares, fetchFiles)
 
   // GET
-  server.get(
-    '/:customer/file/:file',
+  server.get('/:customer/file/:file',
     middlewares,
     router.resolve.idToEntity({ param: 'file', required: true }),
     getFile
   )
 
   // CREATE
-  server.post(
-    '/:customer/file',
+  server.post('/:customer/file',
     middlewares.concat(router.requireCredential('admin')),
     upload.single('file'),
     createFile,
@@ -49,8 +47,7 @@ module.exports = (server) => {
   )
 
   // UPDATE
-  server.put(
-    '/:customer/file/:file',
+  server.put('/:customer/file/:file',
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param:'file', required:true }),
@@ -61,8 +58,7 @@ module.exports = (server) => {
   )
 
   // DELETE
-  server.del(
-    '/:customer/file/:file',
+  server.del('/:customer/file/:file',
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'file', required: true }),
@@ -71,8 +67,7 @@ module.exports = (server) => {
   )
 
   // DOWNLOAD SCRIPTS
-  server.get(
-    '/:customer/file/:file/download',
+  server.get('/:customer/file/:file/download',
     server.auth.bearerMiddleware,
     router.requireCredential('user'),
     router.resolve.customerNameToEntity({required:true}),
@@ -82,8 +77,7 @@ module.exports = (server) => {
   )
 
   // GET LINKED MODELS
-  server.get(
-    '/:customer/file/:file/linkedmodels',
+  server.get('/:customer/file/:file/linkedmodels',
     middlewares,
     router.resolve.idToEntity({ param:'file', required:true }),
     getLinkedModels
@@ -149,9 +143,9 @@ const updateFile = (req, res, next) => {
       return next(err)
     }
 
-    let buf = fs.readFileSync(fileUploaded.path)
+    const buf = fs.readFileSync(fileUploaded.path)
 
-    let data = {
+    const data = {
       filename: fileUploaded.name,
       mimetype: mimetype,
       extension: extension,
@@ -160,6 +154,11 @@ const updateFile = (req, res, next) => {
       keyname: storeData.keyname,
       md5: md5(buf),
       public: isPublic
+    }
+
+    if (fileModel.template || fileModel.template_id) {
+      data.template = null
+      data.template_id = null
     }
 
     logger.log('File model is being updated')
@@ -205,9 +204,9 @@ const createFile = (req, res, next) => {
       return next(err);
     } else {
 
-      let buf = fs.readFileSync(file.path);
+      const buf = fs.readFileSync(file.path);
 
-      let data = {
+      const data = {
         filename: file.name,
         mimetype: mimetype,
         extension: extension,

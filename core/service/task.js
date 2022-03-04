@@ -254,7 +254,6 @@ module.exports = {
       const script = await App.Models.File.Script
         .findById(id)
         .select({ _id: 1, filename: 1 })
-        .exec()
 
       if (script !== null) {
         data.script = script
