@@ -178,25 +178,25 @@ const registerHostname = (req, done) => {
         if (err) { return done(err) }
 
         const host = result.host
+        NotificationService.generateSystemNotification({
+          topic: TopicsConstants.host.registered,
+          data: {
+            model_type:'Host',
+            model: host,
+            model_id: host._id,
+            hostname,
+            organization: customer.name,
+            organization_id: customer._id,
+            operations: Constants.CREATE
+          }
+        })
+
         HostService.provisioning({
           host,
           resource: result.resource,
           customer,
           user: req.user
         }).then(() => {
-          NotificationService.generateSystemNotification({
-            topic: TopicsConstants.host.registered,
-            data: {
-              model_type:'Host',
-              model: host,
-              model_id: host._id,
-              hostname,
-              organization: customer.name,
-              organization_id: customer._id,
-              operations: Constants.CREATE
-            }
-          })
-
           done(null, result)
         }).catch(done)
       })
