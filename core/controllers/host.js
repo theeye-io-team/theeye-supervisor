@@ -176,31 +176,29 @@ const registerHostname = (req, done) => {
         info: properties
       }, (err, result) => {
         if (err) { return done(err) }
-        done(null, result)
 
-        // async unattended steps
         const host = result.host
-        const resource = result.resource
-        HostService.provision({
+        HostService.provisioning({
           host,
-          resource,
+          resource: result.resource,
           customer,
-          user: req.user,
-          skip_auto_provisioning: req.body.skip_auto_provisioning
-        })
+          user: req.user
+        }).then(() => {
+          NotificationService.generateSystemNotification({
+            topic: TopicsConstants.host.registered,
+            data: {
+              model_type:'Host',
+              model: host,
+              model_id: host._id,
+              hostname,
+              organization: customer.name,
+              organization_id: customer._id,
+              operations: Constants.CREATE
+            }
+          })
 
-        NotificationService.generateSystemNotification({
-          topic: TopicsConstants.host.registered,
-          data: {
-            model_type:'Host',
-            model: host,
-            model_id: host._id,
-            hostname,
-            organization: customer.name,
-            organization_id: customer._id,
-            operations: Constants.CREATE
-          }
-        })
+          done(null, result)
+        }).catch(done)
       })
     } else {
       logger.log('host found')

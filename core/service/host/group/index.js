@@ -316,90 +316,32 @@ const Service = module.exports = {
     })
   },
 
+
   /**
    *
-   * @param {Host} host
-   * @param {Function(Error,Group[])}
+   *
    *
    */
-  searchGroupsForHost (host, next) {
-    logger.log('searching group for host %s', host.hostname);
-    /**
-     * @param {HostGroup[]} groups
-     */
-    const matchGroups = (name, groups) => {
-      const matches = []
-      for (var i=0; i<groups.length; i++) {
-        var group = groups[i]
-        if (Boolean(group.hostname_regex) !== false ) {
-          var regex = new RegExp(group.hostname_regex)
-          if (regex.test(name) === true) {
-            matches.push(group)
-          }
-        }
-      }
-      return matches
+  async orchestrate (host, customer) {
+    const groups = await searchGroupsForHost(host)
+
+    if (!groups||groups.length===0) {
+      return null
     }
 
-    HostGroup.find({
-      customer: host.customer_id,
-      hostname_regex: {
-        $exists: true,
-        $nin: [ null, "" ]
-      }
-    }).populate('customer').exec((err, items) => {
-      if (err) {
-        logger.error(err)
-        return next(err,[])
-      }
+    // copy each matching template
+    for (let idx=0; idx<groups.length; idx++) {
+      const group = groups[idx]
+      logger.log('using group regexp %s', group.hostname_regex)
+      await supplyHostWithTemplateInstructions(host, group, customer)
 
-      if (!Array.isArray(items)||items.length===0) {
-        return next(null,[])
-      }
+      group.hosts.addToSet(host._id)
+      await group.save()
 
-      const groups = matchGroups(host.hostname, items)
+      logger.log('group %s provisioning completed', group.hostname_regex)
+    }
 
-      if (groups.length===0) {
-        logger.log('not found any group')
-        return next(null,[])
-      }
-
-      next(null, groups)
-    })
-  },
-
-  /**
-   *
-   *
-   *
-   */
-  orchestrate (host, next) {
-    this.searchGroupsForHost(host,(err, groups) => {
-      if (err||!groups||groups.length===0) return next(err,null)
-
-      const customer = groups[0].customer // @todo all the same customer. populate.customer may not be necessary. improve somehow
-
-      const provisioningCompleted = after(groups.length, () => {
-        next(null, groups)
-      })
-
-      // copy each matching template
-      for (var i=0; i<groups.length; i++) {
-        (function(group){ // ensure vars scope
-          logger.log('using group regexp %s', group.hostname_regex)
-          supplyHostWithTemplateInstructions(host, group, customer, (err) => {
-            if (err) logger.error(err)
-
-            group.hosts.addToSet(host._id)
-            group.save(err => logger.error(err))
-
-            logger.log('group %s provisioning completed', group.hostname_regex)
-
-            provisioningCompleted()
-          })
-        })(groups[i])
-      }
-    })
+    return
   }
 }
 
@@ -1068,10 +1010,13 @@ const removeTemplateEntities = async (templates, TemplateSchema, LinkedSchema, k
  * @param {Customer} customer
  * @param {Function} done
  */
-const supplyHostWithTemplateInstructions = (host, group, customer, done) => {
-  Service.populate(group,(err) => {
-    copyTemplateToHost(host, group, customer, (err) => {
-      done(err)
+const supplyHostWithTemplateInstructions = (host, group, customer) => {
+  return new Promise((resolve, reject) => {
+    Service.populate(group, (err) => {
+      copyTemplateToHost(host, group, customer, (err) => {
+        if (err) reject(err)
+        else resolve()
+      })
     })
   })
 }
@@ -1247,4 +1192,51 @@ const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
       }
     }
   )
+}
+
+/**
+ *
+ * @param {Host} host
+ * @param {Function(Error,Group[])}
+ *
+ */
+const searchGroupsForHost = async (host) => {
+  logger.log('searching group for host %s', host.hostname)
+  const items = await HostGroup.find({
+    customer: host.customer_id,
+    hostname_regex: {
+      $exists: true,
+      $nin: [ null, "" ]
+    }
+  })
+
+  if (!Array.isArray(items)||items.length===0) {
+    return []
+  }
+
+  const groups = matchGroups(host.hostname, items)
+
+  if (groups.length===0) {
+    logger.log('not found any group')
+    return []
+  }
+
+  return groups
+}
+
+/**
+ * @param {HostGroup[]} groups
+ */
+const matchGroups = (name, groups) => {
+  const matches = []
+  for (var i=0; i<groups.length; i++) {
+    var group = groups[i]
+    if (Boolean(group.hostname_regex) !== false ) {
+      var regex = new RegExp(group.hostname_regex)
+      if (regex.test(name) === true) {
+        matches.push(group)
+      }
+    }
+  }
+  return matches
 }

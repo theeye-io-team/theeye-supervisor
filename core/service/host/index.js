@@ -41,37 +41,10 @@ HostService.populate = (hosts, next) => {
   })
 }
 
-HostService.provision = (input) => {
-  const { host, customer, user, resource, skip_auto_provisioning } = input
-  const host_id = host._id
-
-  HostGroupService.orchestrate(host, (err, groups) => {
-    if (err) {
-      logger.error(err)
-      return
-    }
-
-    if (!groups || ! Array.isArray(groups) || groups.length === 0) {
-      // create resources and notify agent
-      const monitorData = {
-        user,
-        customer,
-        customer_id: customer._id,
-        customer_name: customer.name,
-        host,
-        host_id: host._id.toString(),
-        hostname: host.hostname,
-        resource,
-        enabled: true,
-        description: 'Host auto-created monitor.'
-      }
-
-      // by default add base monitors always.
-      if (skip_auto_provisioning === true) { return }
-    }
-
-    App.jobDispatcher.createAgentUpdateJob(host_id)
-  })
+HostService.provisioning = async (input) => {
+  const { host, customer, user, resource } = input
+  await HostGroupService.orchestrate(host, customer)
+  App.jobDispatcher.createAgentUpdateJob(host._id)
 }
 
 /**
