@@ -19,17 +19,15 @@ const ScriptSchema = new BaseSchema({
 module.exports = ScriptSchema
 
 const templateProperties = ScriptSchema.methods.templateProperties
-
 ScriptSchema.methods.templateProperties = function (options) {
-  let backup = (options && options.backup)
+  const values = templateProperties.apply(this, arguments)
+  const backup = options?.backup
+
   if (backup === true) {
-    //delete values.script_arguments
-    return this.toObject()
+    return Object.assign({}, values, this.toObject())
   }
 
-  const values = templateProperties.apply(this, arguments)
   //delete values.script_arguments
-
   // blank user defined env properties values
   for (let name in values.env) {
     values.env[name] = ''

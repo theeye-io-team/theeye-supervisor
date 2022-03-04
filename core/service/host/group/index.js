@@ -2,7 +2,6 @@
 const App = require('../../../app')
 const after = require('lodash/after')
 const config = require('config')
-const asyncModule = require('async')
 const logger = require('../../../lib/logger')('service:host:group')
 
 /** TEMPLATES **/
@@ -333,7 +332,15 @@ const Service = module.exports = {
     for (let idx=0; idx<groups.length; idx++) {
       const group = groups[idx]
       logger.log('using group regexp %s', group.hostname_regex)
-      await supplyHostWithTemplateInstructions(host, group, customer)
+      //await supplyHostWithTemplateInstructions(host, group, customer)
+      await new Promise((resolve, reject) => {
+        Service.populate(group, (err) => {
+          copyTemplateToHost(host, group, customer, (err) => {
+            if (err) { reject(err) }
+            else { esolve() }
+          })
+        })
+      })
 
       group.hosts.addToSet(host._id)
       await group.save()
@@ -584,43 +591,42 @@ const generateTasksTriggersTemplates = (templates, triggers) => {
       )
     })
 
-    if (!taskTemplate) { break }
-
-    // search the template via it's original emitter (task/monitor)
-    if (event_type === 'TaskEvent') {
-      // task templates emitter
-      for (var k = 0; k < tasks.length; k++) {
-        const source_id = tasks[k].source_model_id.toString()
-        if (source_id === emitter_id) {
-          eventTemplates.push({
-            event_type, // the instance of Event to create
-            event_name, // something to distinguish the event
-            emitter_id: tasks[k]._id, // emitter task template id
-            emitter_type: tasks[k]._type,
-            task_id: taskTemplate._id, // triggered task template id
-            task: taskTemplate._id, // triggered task template id
-          })
+    if (taskTemplate?._id) {
+      // search the template via it's original emitter (task/monitor)
+      if (event_type === 'TaskEvent') {
+        // task templates emitter
+        for (var k = 0; k < tasks.length; k++) {
+          const source_id = tasks[k].source_model_id.toString()
+          if (source_id === emitter_id) {
+            eventTemplates.push({
+              event_type, // the instance of Event to create
+              event_name, // something to distinguish the event
+              emitter_id: tasks[k]._id, // emitter task template id
+              emitter_type: tasks[k]._type,
+              task_id: taskTemplate._id, // triggered task template id
+              task: taskTemplate._id, // triggered task template id
+            })
+          }
         }
-      }
-    } else if (event_type === 'MonitorEvent') {
-      // monitor templates emitter
-      for (let l = 0; l < resources.length; l++) {
-        const source_id = resources[l].monitor_template.source_model_id.toString()
-        if (source_id === emitter_id) {
-          eventTemplates.push({
-            event_type, // the instance of Event to create
-            event_name, // something to distinguish the event
-            emitter_id: resources[l].monitor_template._id, // emitter monitor template id
-            emitter_type: resources[l].monitor_template._type,
-            task_id: taskTemplate._id, // triggered task template id
-            task: taskTemplate._id, // triggered task template id
-          })
+      } else if (event_type === 'MonitorEvent') {
+        // monitor templates emitter
+        for (let l = 0; l < resources.length; l++) {
+          const source_id = resources[l].monitor_template.source_model_id.toString()
+          if (source_id === emitter_id) {
+            eventTemplates.push({
+              event_type, // the instance of Event to create
+              event_name, // something to distinguish the event
+              emitter_id: resources[l].monitor_template._id, // emitter monitor template id
+              emitter_type: resources[l].monitor_template._type,
+              task_id: taskTemplate._id, // triggered task template id
+              task: taskTemplate._id, // triggered task template id
+            })
+          }
         }
+      } else {
+        // unexpected templates emitter
+        logger.error('emitter type %s won\'t be registered',event_type)
       }
-    } else {
-      // unexpected templates emitter
-      logger.error('emitter type %s won\'t be registered',event_type)
-      break
     }
   }
 
@@ -1003,25 +1009,6 @@ const removeTemplateEntities = async (templates, TemplateSchema, LinkedSchema, k
 }
 
 /**
- * @author Facugon
- *
- * @param {Host} host
- * @param {Group} group
- * @param {Customer} customer
- * @param {Function} done
- */
-const supplyHostWithTemplateInstructions = (host, group, customer) => {
-  return new Promise((resolve, reject) => {
-    Service.populate(group, (err) => {
-      copyTemplateToHost(host, group, customer, (err) => {
-        if (err) reject(err)
-        else resolve()
-      })
-    })
-  })
-}
-
-/**
  * This is a long process to find Events via Emitters
  * and then assign Events to Tasks via Triggers
  *
@@ -1101,97 +1088,50 @@ const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
    * @param {Task} task
    * @param {String} eventName
    * @param {String} emitterId
-   * @param {Function(Error,Task)} done callback
    */
-  const addEventToTaskTriggers = (task, eventName, emitterId, done) => {
+  const addEventToTaskTriggers = async (task, eventName, emitterId) => {
     logger.log('searchin events for task %s', task._id)
     logger.data('%j', task)
 
-    Event.findOne({
+    const event = await Event.findOne({
       name: eventName,
       emitter: emitterId,
       //_type: trigger.event_type
-    }).exec((err,event) => {
-      if (err) {
-        logger.error(err)
-        return done(err)
-      }
-      if (!event) {
-        var err = new Error(`named event ${eventName} for emitter ${emitterId} not found`)
-        logger.error(err.message)
-        return done(err)
-      }
-
-      logger.log('event found %s. added to task triggers', event._id)
-      logger.data('%j',event)
-      task.triggers.addToSet(event._id) // add only once
-      //task.triggers.push(event._id)
-      //task.save((err) => { return done(err) })
-      done(null, task)
     })
+
+    if (!event) {
+      throw new Error(`Named event ${eventName} for emitter ${emitterId} not found`)
+    }
+
+    logger.log('event found %s. added to task triggers', event._id)
+    logger.data('%j',event)
+    task.triggers.addToSet(event._id) // add only once
+    return task.save()
   }
 
   logger.log('searching events for new task triggers')
 
-  var procesableTriggers = []
-  var procesable
+  const promises = []
   for (let i=0; i<triggers.length; i++) {
-    procesable = getProcesableTrigger(triggers[i])
-    if (typeof procesable === 'object') {
-      procesableTriggers.push( procesable )
+    let procesable = getProcesableTrigger(triggers[i])
+    if (procesable !== null) {
+      promises.push(
+        addEventToTaskTriggers(
+          procesable.task,
+          procesable.trigger.event_name,
+          procesable.emitter._id
+        ).catch(err => { return err })
+      )
     }
   }
 
-  // async operations part
-  asyncModule.map(
-    procesableTriggers,
-    (proc, done) => {
-      addEventToTaskTriggers(
-        proc.task,
-        proc.trigger.event_name,
-        proc.emitter._id,
-        (err, taskToSave) => {
-          if (err) {
-            logger.error('failed trying to link emitter %s to task %s', proc.emitter._id, proc.task._id)
-            return done(err)
-          }
-          logger.log('trigger added')
-          done(null, taskToSave)
-        }
-      )
-    }, (err, tasksToSave) => {
-      if (err) {
-        logger.error('trigger added')
-        return next(err)
-      }
-
-      if (tasksToSave.length===0) {
-        return next()
-      }
-
-      logger.log('saving tasks')
-      const saved = []
-      const saveCompleted = after(tasksToSave.length, next)
-      const saveTask = (task) => {
-        var id = task._id.toString()
-        // if not saved
-        if (saved.indexOf(id) === -1) {
-          saved.push(id)
-          task.save((err) => {
-            logger.log('task %s saved', id)
-            saveCompleted()
-          })
-        } else {
-          logger.log('%s skipped', id)
-          saveCompleted()
-        }
-      }
-
-      for (var t=0; t<tasksToSave.length; t++) {
-        saveTask(tasksToSave[t])
-      }
-    }
-  )
+  if (promises.length > 0) {
+    Promise.all(promises)
+      .then((result) => next(null, result))
+      .catch(err => next(err))
+  } else {
+    next()
+  }
 }
 
 /**
