@@ -337,7 +337,7 @@ const Service = module.exports = {
         Service.populate(group, (err) => {
           copyTemplateToHost(host, group, customer, (err) => {
             if (err) { reject(err) }
-            else { esolve() }
+            else { resolve() }
           })
         })
       })
