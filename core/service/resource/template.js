@@ -1,14 +1,11 @@
-'use strict'
 
 const App = require('../../app')
 const logger = require('../../lib/logger')('service:resource:template')
 
-const ResourceTemplateModel = require('../../entity/resource/template').Entity;
-const MonitorTemplateModel = require('../../entity/monitor/template').Entity;
-const MonitorModel = require('../../entity/monitor').Entity;
-const ResourceModel = require('../../entity/resource').Entity;
-
-//const MonitorService = require('./monitor')
+const ResourceTemplateModel = require('../../entity/resource/template').Entity
+const MonitorTemplateModel = require('../../entity/monitor/template').Entity
+const MonitorModel = require('../../entity/monitor').Entity
+const ResourceModel = require('../../entity/resource').Entity
 
 module.exports = {
   /**
@@ -18,16 +15,15 @@ module.exports = {
    * @param {Array Resource} resources
    * @param {Customer} customer
    * @param {User} user
-   * @param {Function} done
    * @return {Promise}
    *
    */
-  createTemplates (hostgroup, resources, customer, user) {
+  async createTemplates (hostgroup, resources, customer, user) {
     if (!resources) {
-      return done(null, [])
+      return []
     }
     if (!Array.isArray(resources) || resources.length===0) {
-      return done(null, [])
+      return []
     }
 
     logger.log('processing %s resource monitors', resources.length);

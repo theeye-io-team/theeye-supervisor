@@ -388,15 +388,14 @@ module.exports = {
    * @param {Array<Task>} tasks
    * @param {Customer} customer
    * @param {User} user
-   * @param {Function} done
    * @return {Promise}
    *
    */
-  createTemplates (hostgroup, tasks, customer, user, done) {
-    if (!tasks) { return done(null,[]) }
+  async createTemplates (hostgroup, tasks, customer, user) {
+    if (!tasks) { return [] }
 
     if (!Array.isArray(tasks) || tasks.length == 0) {
-      return done(null,[])
+      return []
     }
 
     logger.log('processing %s tasks', tasks.length)
@@ -413,7 +412,7 @@ module.exports = {
         customer: customer,
         user_id: user.id,
         user: user,
-        source_model_id: task.source_model_id
+        source_model_id: task.id
       })
 
       const template = TaskTemplate.Factory.create(data)
@@ -482,10 +481,6 @@ const createTaskEvents = (task, customer, next) => {
       return next(err, events)
     }
   )
-}
-
-const toObject = () => {
-  return
 }
 
 const createTags = (tags, customer) => {
