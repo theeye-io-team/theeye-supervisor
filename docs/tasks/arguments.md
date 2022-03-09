@@ -12,11 +12,62 @@ Revise estas secciones de la documentación
 
 [Run Task and Workflow using Integration Token (beta)](/tasks/#Usando-claves-de-integración-general)
 
-___
+____
 
-## Providing Arguments
+## Inputs argumentos de Tareas.
 
-To execute a task via Api you must provide the values for every task argument.
+Para ejecutar tareas con argumentos es necesario proveer valores para cada argumento y respetar la cantidad de argumentos definidos.
+Si hubiera un argumento de tipo FIXED el espacio ocupado por dicho argumento debe dejarse vacío.
+
+Se pueden usar las rutas de task o job indistintamente.
+
+Por ejemplo para lanzar una tarea usando la ruta de job se debería usar la siguiente forma
+
+
+```shell
+
+secret=$SECRET_ID
+task=$TASK_ID
+customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
+
+curl -i -sS \
+  --request POST \
+  --url "https://supervisor.theeye.io/job/secret/${secret}?customer=${customer}&task=${task}" \
+  --header 'Content-Type: application/json' \
+  --data '{"task_arguments":["arg1","arg2"]}'
+
+```
+
+Para hacer lo mismo usando la ruta de tarea se debería usar la siguiente forma
+
+
+```shell
+
+secret=$SECRET_ID
+task=$TASK_ID
+
+curl -i -sS \
+  --request POST \
+  --url "https://supervisor.theeye.io/task/${task}/secret/${secret}/job" \
+  --header 'Content-Type: application/json' \
+  --data '{"task_arguments":["arg1","arg2"]}'
+
+```
+
+En caso de estar utilizando access_token Bearer la ruta sería la siguiente
+
+
+
+```shell
+
+curl -i -sS \
+  --request POST \
+  --url "https://supervisor.theeye.io/task/${task}/job?access_token=${THEEYE_ACCESS_TOKEN}" \
+  --header 'Content-Type: application/json' \
+  --data '{"task_arguments":["arg1","arg2"]}'
+
+```
+
 
 
 ### application/json
@@ -106,3 +157,5 @@ curl -i -sS \
   --data-urlencode "task_arguments[]=${arg2}" 
 
 ```
+
+#### Alternative 
