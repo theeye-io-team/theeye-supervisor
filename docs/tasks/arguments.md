@@ -14,7 +14,7 @@ Revise estas secciones de la documentación
 
 ____
 
-## Inputs argumentos de Tareas.
+## Argumentos de Tareas.
 
 Para ejecutar tareas con argumentos es necesario proveer valores para cada argumento y respetar la cantidad de argumentos definidos.
 Si hubiera un argumento de tipo FIXED el espacio ocupado por dicho argumento debe dejarse vacío.
