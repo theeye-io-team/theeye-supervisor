@@ -19,7 +19,7 @@ ____
 Para ejecutar tareas con argumentos es necesario proveer valores para cada argumento y respetar la cantidad de argumentos definidos.
 Si hubiera un argumento de tipo FIXED el espacio ocupado por dicho argumento debe dejarse vacío.
 
-Se pueden usar las rutas de task o job indistintamente.
+Se pueden usar las rutas de task o job indistintamente. En todos los casos es necesario obtener el ID de la tarea a ejecutar.
 
 Por ejemplo para lanzar una tarea usando la ruta de job se debería usar la siguiente forma
 
