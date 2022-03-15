@@ -235,26 +235,6 @@ const registerAgent = (req, done) => {
         return done(error)
       }
 
-      /** update agent reported version **/
-      //function updateAgentVersion () {
-      //  logger.log('updating agent version')
-      //  host.agent_version = properties.agent_version
-      //  host.last_update = new Date()
-      //  host.save(err => {
-      //    if (err) {
-      //      logger.error(err)
-      //      return 
-      //    }
-      //    const topic = TopicsConstants.agent.version
-      //    App.logger.submit(customer.name, topic, {
-      //      hostname,
-      //      organization: customer.name,
-      //      version: host.agent_version
-      //    }) // topic = topics.agent.version
-      //  })
-      //}
-      //updateAgentVersion()
-
       Resource.findOne({
         host_id: host._id,
         type: 'host'
@@ -314,12 +294,11 @@ const registerPullAgent = async (input) => {
       }
     })
 
-    HostService.provision({
+    await HostService.provisioning({
       host,
       resource,
       customer,
-      user,
-      skip_auto_provisioning: input.skip_auto_provisioning
+      user
     })
   } else {
     resource = await Resource.findOne({
