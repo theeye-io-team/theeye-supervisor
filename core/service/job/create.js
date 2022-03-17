@@ -40,11 +40,6 @@ module.exports = async (req, res, next) => {
     req.job = job
     next()
   } catch (err) {
-    if (err.name === 'ClientError') {
-      return res.send(err.status, err.message)
-    }
-
-    logger.error('%o', err)
-    return res.send(500, 'Internal Server Error')
+    res.sendError(err)
   }
 }

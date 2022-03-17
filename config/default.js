@@ -7,13 +7,13 @@ module.exports = {
     port: process.env.PORT || 60080
   },
   system: {
-    logs: `${__dirname}/../logs`,
     base_url: 'http://127.0.0.1:60080',
     web_url: 'http://127.0.0.1:6080',
     file_upload_folder: join(__dirname , '..', 'uploads'),
-    view_teamplates_path: __dirname + '/../core/view/template',
     secret: 'b28d9f2a4d52ace6e5d3ac1dd3e5c2a0e7e66472ec7276ca501b8c4fa1f07679',
     secret_uuid: 'a2a29a19-aba1-412b-a9ba-c29668e3c17b',
+    logs: `${__dirname}/../logs`,
+    view_teamplates_path: __dirname + '/../core/view/template',
     user: {
       username: 'theeye-automatic',
       email: 'info@theeye.io',
@@ -82,8 +82,8 @@ module.exports = {
    *
    */
   monitor: {
-    disabled: false,
     fails_count_alert: 3,
+    disabled: false,
     check_interval: 10000
   },
   /**
@@ -137,16 +137,13 @@ module.exports = {
    */
   notifications: {
     api: {
-      // outgoing requests secret passphrase
       secret: '77E0EAF3B83DD7A7A4004602626446EADED31BF794956FC9BBAD051FA5A25038',
-      timeout: 5000,
-      url: process.env.CONFIG_NOTIFICATIONS_API_URL || 'http://127.0.0.1:6080/api/notification'
+      url: process.env.CONFIG_NOTIFICATIONS_API_URL || 'http://127.0.0.1:6080/api/notification',
+      timeout: 5000
     }
   },
   authentication: {
-    // same key must be in every internal service
-    secret: '692fc164a0c06a9fd02575cf17688c9e',
-    protocol: 'http', // http or https
+    protocol: 'http',
     api: {
       timeout: 5000,
       host: '127.0.0.1',
@@ -156,7 +153,8 @@ module.exports = {
         profile: '/api/session/profile',
         login: '/api/auth/login/local'
       }
-    }
+    },
+    secret: '692fc164a0c06a9fd02575cf17688c9e'
   },
   gateway: {
     secret: '77E0EAF3B83DD7A7A4004602626446EADED31BF794956FC9BBAD051FA5A25038',

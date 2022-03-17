@@ -20,7 +20,8 @@ module.exports = (machineData) => {
           }
           else if (name === 'net') {
             // array of name, address, mac
-            payload.push(device.name + device.addres + device.mac)
+            //payload.push(device.name + device.addres + device.mac)
+            payload.push(device.mac)
           }
         }
       }

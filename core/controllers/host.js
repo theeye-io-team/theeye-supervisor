@@ -17,22 +17,27 @@ const { ClientError, ServerError } = require('../lib/error-handler')
 module.exports = function (server) {
   const middlewares = [
     server.auth.bearerMiddleware,
-    router.resolve.customerSessionToEntity({ required: true }),
+    router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
   ]
 
-  server.get('/:customer/host', middlewares, controller.fetch)
+  server.get('/:customer/host',
+    middlewares,
+    router.requireCredential('viewer'),
+    controller.fetch
+  )
 
   server.get('/:customer/host/:host',
     middlewares,
+    router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'host', required: true }),
     controller.get
   )
 
   server.put('/:customer/host/:host/reconfigure',
     middlewares,
-    router.resolve.idToEntity({ param: 'host', required: true }),
     router.requireCredential('admin'),
+    router.resolve.idToEntity({ param: 'host', required: true }),
     controller.reconfigure
   )
 
@@ -43,9 +48,7 @@ module.exports = function (server) {
   )
 
   server.post('/host/:hostname',
-    server.auth.bearerMiddleware,
-    router.resolve.customerSessionToEntity({ required: true }),
-    router.ensureCustomer,
+    middlewares,
     router.requireCredential('agent', { exactMatch: true }), // only agents can create hosts
     controller.create
   )
@@ -54,13 +57,64 @@ module.exports = function (server) {
   // new agents registration process.
   //
   server.post('/host',
-    server.auth.bearerMiddleware,
-    router.resolve.customerSessionToEntity(),
-    router.ensureCustomer,
+    middlewares,
     router.requireCredential('agent', { exactMatch: true }), // only agents can create hosts
     restify.plugins.conditionalHandler([
       { version: '1.2.4', handler: controller.register }
     ])
+  )
+
+  server.put('/host/:host/disable',
+    middlewares,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param: 'host', required: true }),
+    async (req, res, next) => {
+      try {
+        const host = req.host
+        host.disabled = true
+        await host.save()
+        res.send(200, 'ok')
+      } catch (err) {
+        res.sendError(err)
+      }
+    }
+  )
+ 
+  server.put('/host/:host/enable',
+    middlewares,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param: 'host', required: true }),
+    async (req, res, next) => {
+      try {
+        const host = req.host
+        host.disabled = false
+        await host.save()
+        res.send(200, 'ok')
+      } catch (err) {
+        res.sendError(err)
+      }
+    }
+  )
+
+  server.put('/host/:host/fingerprints',
+    middlewares,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param: 'host', required: true }),
+    async (req, res, next) => {
+      try {
+        const host = req.host
+        let fingerprints = req.body
+        if (!Array.isArray(fingerprints)) {
+          fingerprints = []
+        }
+
+        host.fingerprints = fingerprints
+        await host.save()
+        res.send(200, 'ok')
+      } catch (err) {
+        res.sendError(err)
+      }
+    }
   )
 }
 
@@ -229,7 +283,7 @@ const registerAgent = (req, done) => {
     } else {
       logger.log('host found')
 
-      if (!host.enable) {
+      if (host.disabled === true) {
         var error = new Error('host is disabled')
         error.statusCode = 400
         return done(error)
