@@ -7,6 +7,7 @@ const ACL = require('../../lib/acl')
 const ErrorHandler = require('../../lib/error-handler')
 const audit = require('../../lib/audit')
 const TaskConstants = require('../../constants/task')
+const { ClientError, ServerError } = require('../../lib/error-handler')
 
 module.exports = (server) => {
   server.get('/:customer/task', [
@@ -198,7 +199,7 @@ const controller = {
       const data = await App.task.populate(req.task)
       res.send(200, data)
     } catch (e) {
-      res.send(e.statusCode, e)
+      res.sendError(e)
     }
   },
   /**
