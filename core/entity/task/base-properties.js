@@ -50,6 +50,13 @@ module.exports = {
   cancellable: { type: Boolean, 'default': true },
   autoremove_completed_jobs: { type: Boolean },
   autoremove_completed_jobs_limit: { type: Number, 'default': 5 },
-  version: { type: Number, 'default': 1 }
+  version: { type: Number, 'default': 1 },
+  fingerprint: { type: String, 'default': '' }, 
+  decorator: {
+    type: ObjectId,
+    index: true,
+    required: true,
+    auto: true
+  }
   //handle_errors: { type: Boolean }
 }
