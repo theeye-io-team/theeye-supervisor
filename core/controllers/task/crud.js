@@ -10,6 +10,20 @@ const TaskConstants = require('../../constants/task')
 const { ClientError, ServerError } = require('../../lib/error-handler')
 
 module.exports = (server) => {
+  const increaseVersion = async (req, res, next) => {
+    try {
+      const task = req.task
+      if (typeof task.version !== 'number') {
+        task.version = 1
+      } else {
+        task.version += 1
+      }
+      await task.save()
+    } catch (err) {
+      logger.error(err)
+    }
+  }
+
   server.get('/:customer/task', [
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -48,6 +62,7 @@ module.exports = (server) => {
     router.resolve.idToEntityByCustomer({ param: 'task', required: true }),
     router.resolve.idToEntityByCustomer({ param: 'host_id', entity: 'host', into: 'host' }),
     controller.replace,
+    increaseVersion,
     audit.afterUpdate('task', { display: 'name' })
   )
 
@@ -60,8 +75,8 @@ module.exports = (server) => {
     router.resolve.idToEntityByCustomer({ param: 'host' }),
     router.resolve.idToEntityByCustomer({ param: 'task', required: true }),
     router.resolve.idToEntityByCustomer({ param: 'host_id', entity: 'host', into: 'host' }),
-    router.resolve.idToEntityByCustomer({ param: 'script', entity: 'file' }),
     controller.replace,
+    increaseVersion,
     audit.afterReplace('task', { display: 'name' })
   )
 
