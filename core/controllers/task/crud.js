@@ -24,28 +24,35 @@ module.exports = (server) => {
     }
   }
 
-  server.get('/:customer/task', [
-    server.auth.bearerMiddleware,
-    router.resolve.customerSessionToEntity(),
-    router.ensureCustomer,
-    router.requireCredential('viewer'),
-    router.resolve.idToEntityByCustomer({ param: 'host', required: false })
-  ], controller.fetch)
+  const identityMiddleware = (credential) => {
+    return ([
+      server.auth.bearerMiddleware,
+      router.resolve.customerSessionToEntity(),
+      router.ensureCustomer,
+      router.requireCredential(credential),
+    ])
+  }
 
-  server.get('/:customer/task/:task', [
-    server.auth.bearerMiddleware,
-    router.resolve.customerSessionToEntity(),
-    router.ensureCustomer,
-    router.requireCredential('viewer'),
+  server.get('/:customer/task',
+    identityMiddleware('viewer'),
+    router.resolve.idToEntityByCustomer({ param: 'host', required: false }),
+    controller.fetch
+  )
+
+  server.get('/:customer/task/:task',
+    identityMiddleware('viewer'),
     router.resolve.idToEntityByCustomer({ param: 'task', required: true }),
-    router.ensureAllowed({ entity: { name: 'task' } })
-  ], controller.get)
+    router.ensureAllowed({ entity: { name: 'task' } }),
+    controller.get
+  )
+
+  server.get('/task/version',
+    identityMiddleware('admin'),
+    controller.version
+  )
 
   server.post('/:customer/task',
-    server.auth.bearerMiddleware,
-    router.resolve.customerSessionToEntity(),
-    router.ensureCustomer,
-    router.requireCredential('admin'),
+    identityMiddleware('admin'),
     router.resolve.idToEntityByCustomer({ param: 'script', entity: 'file' }),
     router.resolve.idToEntityByCustomer({ param: 'host' }),
     controller.create,
@@ -53,10 +60,7 @@ module.exports = (server) => {
   )
 
   server.patch('/:customer/task/:task',
-    server.auth.bearerMiddleware,
-    router.resolve.customerSessionToEntity(),
-    router.ensureCustomer,
-    router.requireCredential('admin'),
+    identityMiddleware('admin'),
     router.resolve.idToEntityByCustomer({ param: 'script', entity: 'file' }),
     router.resolve.idToEntityByCustomer({ param: 'host' }),
     router.resolve.idToEntityByCustomer({ param: 'task', required: true }),
@@ -67,10 +71,7 @@ module.exports = (server) => {
   )
 
   server.put('/:customer/task/:task',
-    server.auth.bearerMiddleware,
-    router.resolve.customerSessionToEntity(),
-    router.ensureCustomer,
-    router.requireCredential('admin'),
+    identityMiddleware('admin'),
     router.resolve.idToEntityByCustomer({ param: 'script', entity: 'file' }),
     router.resolve.idToEntityByCustomer({ param: 'host' }),
     router.resolve.idToEntityByCustomer({ param: 'task', required: true }),
@@ -81,10 +82,7 @@ module.exports = (server) => {
   )
 
   server.del('/:customer/task/:task',
-    server.auth.bearerMiddleware,
-    router.resolve.customerSessionToEntity(),
-    router.ensureCustomer,
-    router.requireCredential('admin'),
+    identityMiddleware('admin'),
     router.resolve.idToEntityByCustomer({ param: 'task', required: true }),
     controller.remove,
     audit.afterRemove('task', { display: 'name' })
@@ -304,6 +302,43 @@ const controller = {
         res.sendError(err)
       }
     })
+  },
+  async version (req, res) {
+    try {
+      const { customer, query } = req
+
+      const $match = {
+        customer_id: customer._id.toString(),
+      }
+
+      if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
+        // find what this user can access
+        $match.acl = req.user.email
+      }
+
+      const tasks = await App.Models.Task.Task.aggregate([
+        { $match },
+        {
+          $project: {
+            decorator: 1,
+            version: { $ifNull: [ '$version', 1 ] },
+            fingerprint: 1,
+            name: 1,
+          }
+        },
+        {
+          $sort: {
+            decorator: 1,
+            version: 1
+          }
+        },
+        { $group: { _id: '$decorator', tasks: { $addToSet: '$$ROOT' } } }
+      ])
+
+      res.send(200, tasks)
+    } catch (err) {
+      res.sendError(err)
+    }
   }
 }
 
