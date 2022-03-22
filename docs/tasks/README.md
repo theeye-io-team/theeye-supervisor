@@ -404,12 +404,12 @@ const execTask = (task_id, task_secret_key) => {
       })
 
       res.on('end', () => {
-        console.log(JSON.parse(data))
+        resolve(JSON.parse(data))
       })
     })
 
     req.on('error', error => {
-      console.error(error)
+      reject(error)
     })
 
     req.write(JSON.stringify(body))
@@ -552,12 +552,12 @@ const execTask = (task_id, access_token) => {
       })
 
       res.on('end', () => {
-        console.log(JSON.parse(data))
+        resolve(JSON.parse(data))
       })
     })
 
     req.on('error', error => {
-      console.error(error)
+      reject(error)
     })
 
     req.write(JSON.stringify(body))
