@@ -1,5 +1,5 @@
 'use strict'
-const ObjectId = require('mongoose').Schema.Types.ObjectId
+const ObjectId = require('mongoose').Types.ObjectId
 const randomSecret = require('../../lib/random-secret')
 module.exports = {
   order: { type: Number, default: 0 },
@@ -50,5 +50,7 @@ module.exports = {
   cancellable: { type: Boolean, 'default': true },
   autoremove_completed_jobs: { type: Boolean },
   autoremove_completed_jobs_limit: { type: Number, 'default': 5 },
+  version: { type: Number, 'default': 1 },
+  fingerprint: { type: String, 'default': '' }, 
   //handle_errors: { type: Boolean }
 }

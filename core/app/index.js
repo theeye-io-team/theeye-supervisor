@@ -3,10 +3,14 @@ const logger = require('../lib/logger')('app')
 //const User = require('../entity/user').Entity
 const App = {}
 const AWS = require('aws-sdk')
+const { v5: uuidv5 } = require('uuid')
 
 module.exports = App
 
+
 App.boot = async (config) => {
+
+  App.namespace = uuidv5(config.system.secret, config.system.secret_uuid)
 
   App.config = config
   App.db = await MongoDB.connect(config.mongo)
