@@ -65,11 +65,18 @@ ScriptSchema.methods.calculateFingerprint = function (namespace) {
     payload.push( this[prop] )
   }
 
-  payload.push( this.env.length )
-  payload.push( Object.keys(this.env) )
+  if (typeof this.env === 'object') {
+    const keys = Object.keys(this.env)
+    payload.push( keys.length )
+    payload.push( keys ) // keys names has changed
+  }
 
-  payload.push( this.task_arguments.length )
-  payload.push( this.task_arguments )
+  if (Array.isArray(this.task_arguments)) {
+    payload.push( this.task_arguments.length )
+    // all arguments but fixed.
+    // fixed arguments values can change and will alter the uuid
+    payload.push( this.task_arguments.toObject().filter(t => t.type !== 'fixed') )
+  }
 
   return Fingerprint.payloadUUID(namespace, payload)
 }
