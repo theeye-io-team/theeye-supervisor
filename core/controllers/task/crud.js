@@ -1,4 +1,5 @@
 const isMongoId = require('validator/lib/isMongoId')
+const ObjectId = require('mongoose').Types.ObjectId
 const App = require('../../app')
 const logger = require('../../lib/logger')('controller:task')
 const router = require('../../router')
@@ -13,6 +14,11 @@ module.exports = (server) => {
   const increaseVersion = async (req, res, next) => {
     try {
       const task = req.task
+      const fingerprint = task.calculateFingerprint(App.namespace)
+      // is a new version ?
+      if (task.fingerprint !== fingerprint) {
+        task.fingerprint = fingerprint
+      }
       if (typeof task.version !== 'number') {
         task.version = 1
       } else {
@@ -320,19 +326,32 @@ const controller = {
         { $match },
         {
           $project: {
-            decorator: 1,
-            version: { $ifNull: [ '$version', 1 ] },
             fingerprint: 1,
+            version: { $ifNull: [ '$version', 1 ] },
             name: 1,
+            type: 1,
+            id: '$_id',
+            _type: 1
           }
         },
         {
           $sort: {
-            decorator: 1,
+            fingerprint: 1,
             version: 1
           }
         },
-        { $group: { _id: '$decorator', tasks: { $addToSet: '$$ROOT' } } }
+        {
+          $group: {
+            _id: {
+              fingerprint: '$fingerprint',
+              version: '$version'
+            },
+            task: {
+              $first: '$$ROOT'
+            }
+          }
+        },
+        { $replaceRoot: { newRoot: "$task" } }
       ])
 
       res.send(200, tasks)
