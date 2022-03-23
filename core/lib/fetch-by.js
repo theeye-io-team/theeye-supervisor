@@ -1,7 +1,6 @@
-'use strict';
-var logger = require('./logger')('lib:fetch-by');
+const logger = require('./logger')('lib:fetch-by')
 module.exports = function (filter, next) {
-  var query = this.find(filter.where);
+  const query = this.find(filter.where)
   if (filter.include) { query.select(filter.include) }
   if (filter.sort) { query.sort(filter.sort) }
   if (filter.limit) { query.limit(filter.limit) }
@@ -15,14 +14,19 @@ module.exports = function (filter, next) {
   }
 
   logger.data('%s query %j',this.modelName,filter);
-  query.exec(function(error,models){
-    if (error) {
-      logger.error(error);
-      return next(error,[]);
-    }
-    if (models===null||models.length===0) {
-      return next(null,[]);
-    }
-    return next(null,models);
-  })
+  // return a Promise
+  if (!next) {
+    return query.exec()
+  } else {
+    query.exec((error,models) => {
+      if (error) {
+        logger.error(error);
+        return next(error,[]);
+      }
+      if (models===null||models.length===0) {
+        return next(null,[]);
+      }
+      return next(null,models);
+    })
+  }
 }

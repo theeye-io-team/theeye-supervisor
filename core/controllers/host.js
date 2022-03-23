@@ -11,7 +11,7 @@ const NotificationService = require('../service/notification')
 const Resource = require('../entity/resource').Entity
 const router = require('../router')
 const TopicsConstants = require('../constants/topics')
-const machineFingerprint = require('../lib/machine-fingerprint')
+const Fingerprint = require('../lib/fingerprint')
 const { ClientError, ServerError } = require('../lib/error-handler')
 
 module.exports = function (server) {
@@ -371,7 +371,7 @@ const registerPullAgent = async (input) => {
 }
 
 const registerHostFingerprint = async (host, info) => {
-  const calc = machineFingerprint(info)
+  const calc = Fingerprint.machineUUID(App.namespace, info)
 
   const registered = host.fingerprints.find(fp => {
     return fp.fingerprint === calc

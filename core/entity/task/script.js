@@ -1,6 +1,7 @@
 const BaseSchema = require('./schema')
 const ObjectId = require('mongoose').Schema.Types.ObjectId
 const TaskConstants = require('../../constants/task')
+const Fingerprint = require('../../lib/fingerprint')
 
 const ScriptSchema = new BaseSchema({
   template_id: { type: ObjectId },
@@ -44,6 +45,40 @@ ScriptSchema.methods.templateProperties = function (options) {
   //values.script_arguments = values.task_arguments
 
   return values
+}
+
+ScriptSchema.methods.calculateFingerprint = function (namespace) {
+  const props = [
+    'customer_id',
+    'type',
+    'name',
+    'grace_time',
+    'timeout',
+    'multitasking',
+    'script_id',
+    'script_runas'
+  ]
+
+  const payload = []
+  for (let index = 0; index < props.length; index++) {
+    const prop = props[index]
+    payload.push( this[prop] )
+  }
+
+  if (typeof this.env === 'object') {
+    const keys = Object.keys(this.env)
+    payload.push( keys.length )
+    payload.push( keys ) // keys names has changed
+  }
+
+  if (Array.isArray(this.task_arguments)) {
+    payload.push( this.task_arguments.length )
+    // all arguments but fixed.
+    // fixed arguments values can change and will alter the uuid
+    payload.push( this.task_arguments.toObject().filter(t => t.type !== 'fixed') )
+  }
+
+  return Fingerprint.payloadUUID(namespace, payload)
 }
 
 ScriptSchema.statics.create = function (input, next) {

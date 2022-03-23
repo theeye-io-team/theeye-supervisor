@@ -34,7 +34,7 @@ function BaseSchema (props, specs) {
   this.plugin(lifecicle)
 
   this.statics.fetchBy = function (filter, next) {
-    FetchBy.call(this,filter,next)
+    return FetchBy.call(this, filter, next)
   }
 
   // turn into a new document
