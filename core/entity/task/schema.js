@@ -1,6 +1,7 @@
 const util = require('util')
 const logger = require('../../lib/logger')('entity:task:schema')
 const BaseSchema = require('../base-schema')
+const Fingerprint = require('../../lib/fingerprint')
 const properties = require('./base-properties')
 
 function TaskSchema (props, specs) {
@@ -49,6 +50,22 @@ function TaskSchema (props, specs) {
     //delete values.script
     //delete values.script_id
     return values
+  }
+
+  this.methods.calculateFingerprint = function (namespace) {
+    const props = [
+      'customer_id',
+      'type',
+      'name',
+    ]
+
+    const payload = []
+    for (let index = 0; index < props.length; index++) {
+      const prop = props[index]
+      payload.push( this[prop] )
+    }
+
+    return Fingerprint.payloadUUID(namespace, payload)
   }
 
   return this
