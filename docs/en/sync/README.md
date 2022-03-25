@@ -131,7 +131,7 @@ Keep-Alive: timeout=5
 
 ###  sample success using parse
 
-[Download and Import this task](ensync/Rest_API_Response.json ":ignore")
+[Download and Import this task](en/sync/Rest_API_Response.json ":ignore")
 
 
 Get the ID and replace in the requests below
