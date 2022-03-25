@@ -33,14 +33,12 @@ module.exports = async (req) => {
 
   let owners = []
   if (user?.id && user?.credential) {
-    if (user.credential !== 'integration') {
-      owners = await verifyUsers({
-        users: [ user.id ],
-        customer,
-        task,
-        workflow
-      })
-    }
+    owners = await verifyUsers({
+      users: [ user.id ],
+      customer,
+      task,
+      workflow
+    })
   }
 
   Object.assign(payload, { owners, assignee })
