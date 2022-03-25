@@ -47,8 +47,84 @@ El nombre de la organización dueña del script que se está ejecutando
 
 ## Ejemplos
 
-###  Conseguir información del usuario mediante un script de Windows (BAT)
+###  Conseguir información del usuario mediante una tarea script de Windows (Batch)
 
-Este script te muestra cómo conseguir el ID del usuario y su email. Puede usarse el mismo método para las variables `THEEYE_JOB` and `THEEYE_JOB_WORKFLOW`.
+Esta receta para tarea de script te muestra cómo conseguir el ID del usuario y su email. Puede usarse el mismo método para las variables `THEEYE_JOB` and `THEEYE_JOB_WORKFLOW`.
 
 [Descargar Receta](https://raw.githubusercontent.com/theeye-io/theeye-docs/master/docs/assets/recipes/check_theeye_env_vars.json)
+
+### Leer las variables desde una consola en el host
+
+<!-- tabs:start -->
+
+#### **Bash**
+
+```bash
+host@theeye:~$ echo "$THEEYE_JOB"
+host@theeye:~$ echo "$THEEYE_JOB_USER"
+host@theeye:~$ echo "$THEEYE_JOB_WORKFLOW"
+host@theeye:~$ echo "$THEEYE_API_URL"
+host@theeye:~$ echo "$THEEYE_ORGANIZATION_NAME"
+```
+
+#### **Batch (Windows CMD)**
+
+```batch
+C:\Users\Host> echo %THEEYE_JOB%
+C:\Users\Host> echo %THEEYE_JOB_USER%
+C:\Users\Host> echo %THEEYE_JOB_WORKFLOW%
+C:\Users\Host> echo %THEEYE_API_URL%
+C:\Users\Host> echo %THEEYE_ORGANIZATION_NAME%
+```
+
+#### **PowerShell**
+
+```powershell
+PS C:\Users\Host> $env:THEEYE_JOB
+PS C:\Users\Host> $env:THEEYE_JOB_USER
+PS C:\Users\Host> $env:THEEYE_JOB_WORKFLOW
+PS C:\Users\Host> $env:THEEYE_API_URL
+PS C:\Users\Host> $env:THEEYE_ORGANIZATION_NAME
+```
+
+#### **Node.JS**
+
+```javascript
+console.log(process.env.THEEYE_JOB)
+console.log(process.env.THEEYE_JOB_USER)
+console.log(process.env.THEEYE_JOB_WORKFLOW)
+console.log(process.env.THEEYE_API_URL)
+console.log(process.env.THEEYE_ORGANIZATION_NAME)
+```
+
+#### **Python**
+
+```python
+import os
+
+print(os.environ.get("THEEYE_JOB"))
+print(os.environ.get("THEEYE_JOB_USER"))
+print(os.environ.get("THEEYE_JOB_WORKFLOW"))
+print(os.environ.get("THEEYE_API_URL"))
+print(os.environ.get("THEEYE_ORGANIZATION_NAME"))
+```
+
+#### **Go**
+
+```go
+package main
+
+import (
+  "fmt"
+  "os"
+)
+
+func main() {
+  fmt.Println(os.Getenv("THEEYE_JOB"))
+  fmt.Println(os.Getenv("THEEYE_JOB_USER"))
+  fmt.Println(os.Getenv("THEEYE_JOB_WORKFLOW"))
+  fmt.Println(os.Getenv("THEEYE_API_URL"))
+  fmt.Println(os.Getenv("THEEYE_ORGANIZATION_NAME"))
+}
+```
+<!-- tabs:end -->
