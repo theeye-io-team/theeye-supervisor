@@ -129,29 +129,35 @@ module.exports = {
             dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
           } else {
             logger.log(`Dispatching job ${job.id}: ${job.name}`)
-            const query = App.Models.Job.Job.findOneAndUpdate({
+            App.Models.Job.Job.findOneAndUpdate({
               _id: job._id,
               lifecycle: LifecycleConstants.READY
             }, {
               lifecycle: LifecycleConstants.ASSIGNED
             }, {
-              rawResult: true
-            })
-
-            query.exec((err, result) => {
-              if (err || !result) {
-                logger.error(`Job ${job.id}: ${job.name} cannot be dispatched`)
-                logger.error('%s', err)
-                return dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
-              }
+              rawResult: true,
+              new: true
+            }).then(result => {
+              if (!result) { throw new Error('query failed') }
 
               if (result.lastErrorObject?.updatedExisting !== true) {
                 logger.error(`Job ${job.id}: ${job.name} already dispatched`)
                 return dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
               }
 
-              terminateRecursion(null, job)
-              RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job })
+              const updatedJob = result.value
+
+              terminateRecursion(null, updatedJob)
+              RegisterOperation.submit(
+                Constants.UPDATE,
+                TopicsConstants.job.crud, {
+                  job: updatedJob
+                }
+              )
+            }).catch(err => {
+              logger.error(`Job ${job.id}: ${job.name} cannot be dispatched`)
+              logger.error('%s', err)
+              dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
             })
           }
         })
