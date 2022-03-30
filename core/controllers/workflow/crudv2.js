@@ -18,13 +18,6 @@ module.exports = {
   create: AsyncController(async (req, res, next) => {
     const { customer, user, body } = req
 
-    //const { fields, files } = await new Promise((resolve, reject) => {
-    //  form.parse(req, (err, fields, files) => {
-    //    if (err) { reject(err) }
-    //    else { resolve({ fields, files }) }
-    //  })
-    //})
-
     if (body.graph.nodes.length === 0) {
       throw new ClientError('invalid graph definition')
     }
@@ -39,6 +32,12 @@ module.exports = {
         version: 2
       })
     )
+
+    //if (workflow.errors) {
+    //  const key = Object.keys(workflow.errors)[0] 
+    //  const err = workflow.errors[key].reason
+    //  throw new ClientError(`${key}: ${err.message}`)
+    //}
 
     const payload = { workflow, customer, user, body }
     const { tasks, graph } = await createTasks(payload)
