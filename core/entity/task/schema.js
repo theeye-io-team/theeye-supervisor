@@ -1,3 +1,4 @@
+const App = require('../../app')
 const util = require('util')
 const logger = require('../../lib/logger')('entity:task:schema')
 const BaseSchema = require('../base-schema')
@@ -67,6 +68,16 @@ function TaskSchema (props, specs) {
 
     return Fingerprint.payloadUUID(namespace, payload)
   }
+
+  this.pre('save', function(next) {
+    if (this.isNew) {
+      this.fingerprint = this.calculateFingerprint(App.namespace)
+    }
+
+    this.last_update = new Date()
+    // do stuff
+    next()
+  })
 
   return this
 }
