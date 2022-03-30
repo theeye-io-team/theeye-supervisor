@@ -40,7 +40,7 @@ const serialize = async (req, res, next) => {
 
 const serializeDAG = async (workflow) => {
   const serial = workflow.toObject()
-  serial.id = uuidv4()
+  delete serial.id
   serial.tasks = []
   serial.events = []
 
@@ -66,7 +66,7 @@ const serializeDAG = async (workflow) => {
       }
       serial.tasks.push(model)
 
-      if (workflow.start_task_id === model.id) {
+      if (workflow.start_task_id.toString() === model.id) {
         serial.start_task_id = uuid
       }
     }
