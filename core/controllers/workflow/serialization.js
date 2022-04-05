@@ -61,6 +61,8 @@ const serializeDAG = async (workflow) => {
       model.id = task._id.toString() //@GOTO_UUID keep until serialization ends
       if (recipe.file) {
         model.script = recipe.file
+        model.script_id = null
+        model.source_model_id = null
         const data = model.script.data
         model.script.data = `data:text/plain;base64,${data}` // data uri
       }
