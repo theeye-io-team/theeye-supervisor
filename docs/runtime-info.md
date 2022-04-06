@@ -15,6 +15,42 @@ Contiene la información del job que se está ejecutando.
 | id      | string | El ID del job. Se puede usar para consultar a la API                      |
 | task_id | string | El ID de la task que generó el job. Se puede usar para consultar a la API |
 
+### Ejemplo 
+
+<!-- tabs:start -->
+
+#### **Bash**
+
+Para analizar un objeto JSON en una string haremos uso del paquete `jq`. [Mas información](https://stedolan.github.io/jq/)
+
+```bash
+echo "$THEEYE_JOB" || jq .
+```
+
+#### **PowerShell**
+
+```powershell
+$env:THEEYE_JOB | convertfrom-json | convertto-json -depth 100 | Write-Host
+```
+
+#### **Node.JS**
+
+```javascript
+console.log(JSON.parse(process.env.THEEYE_JOB))
+```
+
+#### **Python**
+
+```python
+import os
+import json
+
+print(json.loads(os.environ.get("THEEYE_JOB")))
+```
+
+<!-- tabs:end -->
+
+
 ## `THEEYE_JOB_USER` (objeto)
 
 Este es el usuario que ejecutó la task y creó el job. Esta variable va a contener distintos parámetros dependiendo de cómo se haya ejecutado
@@ -28,6 +64,41 @@ Este es el usuario que ejecutó la task y creó el job. Esta variable va a conte
 | id     | string | ID del usuario    |
 | email  | string | Email del usuario |
 
+### Ejemplo 
+
+<!-- tabs:start -->
+
+#### **Bash**
+
+Para analizar un objeto JSON en una string haremos uso del paquete `jq`. [Mas información](https://stedolan.github.io/jq/)
+
+```bash
+echo "$THEEYE_JOB_USER" || jq .
+```
+
+#### **PowerShell**
+
+```powershell
+$env:THEEYE_JOB_USER | convertfrom-json | convertto-json -depth 100 | Write-Host
+```
+
+#### **Node.JS**
+
+```javascript
+console.log(JSON.parse(process.env.THEEYE_JOB_USER))
+```
+
+#### **Python**
+
+```python
+import os
+import json
+
+print(json.loads(os.environ.get("THEEYE_JOB_USER")))
+```
+
+<!-- tabs:end -->
+
 ## `THEEYE_JOB_WORKFLOW` (objeto)
 
 Cuando las tareas son parte de un Workflow, esta variable contendrá información del mismo.
@@ -37,63 +108,100 @@ Cuando las tareas son parte de un Workflow, esta variable contendrá informació
 | id      | string | Schema ID del workflow            |
 | job_id  | string | La instancia de ejecución del job |
 
+### Ejemplo 
+
+<!-- tabs:start -->
+
+#### **Bash**
+
+Para analizar un objeto JSON en una string haremos uso del paquete `jq`. [Mas información](https://stedolan.github.io/jq/)
+
+```bash
+echo "$THEEYE_JOB_WORKFLOW" || jq .
+```
+
+#### **PowerShell**
+
+```powershell
+$env:THEEYE_JOB_WORKFLOW | convertfrom-json | convertto-json -depth 100 | Write-Host
+```
+
+#### **Node.JS**
+
+```javascript
+console.log(JSON.parse(process.env.THEEYE_JOB_WORKFLOW))
+```
+
+#### **Python**
+
+```python
+import os
+import json
+
+print(json.loads(os.environ.get("THEEYE_JOB_WORKFLOW")))
+```
+
+<!-- tabs:end -->
+
 ## `THEEYE_API_URL` (string)
 
 La URL de la API por defecto
 
-## `THEEYE_ORGANIZATION_NAME` (string)
-
-El nombre de la organización dueña del script que se está ejecutando
-
-## Ejemplos
-
-###  Conseguir información del usuario mediante una tarea script de Windows (Batch)
-
-Esta receta para tarea de script te muestra cómo conseguir el ID del usuario y su email. Puede usarse el mismo método para las variables `THEEYE_JOB` and `THEEYE_JOB_WORKFLOW`.
-
-[Descargar Receta](https://raw.githubusercontent.com/theeye-io/theeye-docs/master/docs/assets/recipes/check_theeye_env_vars.json)
-
-### Leer las variables desde una consola en el host
+### Ejemplo 
 
 <!-- tabs:start -->
 
 #### **Bash**
 
 ```bash
-host@theeye:~$ echo "$THEEYE_JOB"
-host@theeye:~$ echo "$THEEYE_JOB_USER"
-host@theeye:~$ echo "$THEEYE_JOB_WORKFLOW"
-host@theeye:~$ echo "$THEEYE_API_URL"
-host@theeye:~$ echo "$THEEYE_ORGANIZATION_NAME"
-```
-
-#### **Batch (Windows CMD)**
-
-```batch
-C:\Users\Host> echo %THEEYE_JOB%
-C:\Users\Host> echo %THEEYE_JOB_USER%
-C:\Users\Host> echo %THEEYE_JOB_WORKFLOW%
-C:\Users\Host> echo %THEEYE_API_URL%
-C:\Users\Host> echo %THEEYE_ORGANIZATION_NAME%
+echo "$THEEYE_API_URL" 
 ```
 
 #### **PowerShell**
 
 ```powershell
-PS C:\Users\Host> $env:THEEYE_JOB
-PS C:\Users\Host> $env:THEEYE_JOB_USER
-PS C:\Users\Host> $env:THEEYE_JOB_WORKFLOW
-PS C:\Users\Host> $env:THEEYE_API_URL
-PS C:\Users\Host> $env:THEEYE_ORGANIZATION_NAME
+$env:THEEYE_API_URL 
 ```
 
 #### **Node.JS**
 
 ```javascript
-console.log(process.env.THEEYE_JOB)
-console.log(process.env.THEEYE_JOB_USER)
-console.log(process.env.THEEYE_JOB_WORKFLOW)
 console.log(process.env.THEEYE_API_URL)
+```
+
+#### **Python**
+
+```python
+import os
+
+print(os.environ.get("THEEYE_API_URL"))
+```
+
+<!-- tabs:end -->
+
+## `THEEYE_ORGANIZATION_NAME` (string)
+
+El nombre de la organización dueña del script que se está ejecutando
+
+### Ejemplo 
+
+<!-- tabs:start -->
+
+#### **Bash**
+
+```bash
+echo "$THEEYE_ORGANIZATION_NAME" 
+```
+
+#### **PowerShell**
+
+```powershell
+$env:THEEYE_ORGANIZATION_NAME 
+```
+
+#### **Node.JS**
+
+```javascript
 console.log(process.env.THEEYE_ORGANIZATION_NAME)
 ```
 
@@ -102,29 +210,15 @@ console.log(process.env.THEEYE_ORGANIZATION_NAME)
 ```python
 import os
 
-print(os.environ.get("THEEYE_JOB"))
-print(os.environ.get("THEEYE_JOB_USER"))
-print(os.environ.get("THEEYE_JOB_WORKFLOW"))
-print(os.environ.get("THEEYE_API_URL"))
 print(os.environ.get("THEEYE_ORGANIZATION_NAME"))
 ```
 
-#### **Go**
-
-```go
-package main
-
-import (
-  "fmt"
-  "os"
-)
-
-func main() {
-  fmt.Println(os.Getenv("THEEYE_JOB"))
-  fmt.Println(os.Getenv("THEEYE_JOB_USER"))
-  fmt.Println(os.Getenv("THEEYE_JOB_WORKFLOW"))
-  fmt.Println(os.Getenv("THEEYE_API_URL"))
-  fmt.Println(os.Getenv("THEEYE_ORGANIZATION_NAME"))
-}
-```
 <!-- tabs:end -->
+
+## Más ejemplos
+
+###  Conseguir información del usuario mediante una tarea script de Windows (Batch)
+
+Esta receta para tarea de script te muestra cómo conseguir el ID del usuario y su email. Puede usarse el mismo método para las variables `THEEYE_JOB` and `THEEYE_JOB_WORKFLOW`.
+
+[Descargar Receta](https://raw.githubusercontent.com/theeye-io/theeye-docs/master/docs/assets/recipes/check_theeye_env_vars.json)
