@@ -75,7 +75,7 @@ module.exports = {
           }
 
           req[targetName] = null
-          next()
+          return next()
         }
 
 
@@ -83,8 +83,7 @@ module.exports = {
         req[targetName] = dbDoc
         next()
       } catch (err) {
-        logger.error(err)
-        res.send(err.status, err.message)
+        res.sendError(err)
       }
     }
   },
