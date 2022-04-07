@@ -1,4 +1,5 @@
 const after = require('lodash/after')
+const isDataUrl = require('valid-data-url')
 const Task = require("../entity/task").Entity;
 const logger = require('../lib/logger')('service:file');
 const storage = require('../lib/storage').get();
@@ -113,8 +114,10 @@ module.exports = {
     delete data.md5
     delete data.keyname
 
+    let text = fileDataDecode(template.data)
+
     this.createFromText({
-      text: Buffer.from(template.data, 'base64').toString('utf8'),
+      text,
       metadata: data,
       storename: customer.name,
       filename: data.filename
@@ -131,9 +134,11 @@ module.exports = {
         template_id: null
       })
 
+      let text = fileDataDecode(input.data)
+
       this.createFromText({
+        text,
         metadata: props,
-        text: input.data,
         filename: props.filename,
         storename: customer.name
       }, (err, file) => {
@@ -146,7 +151,7 @@ module.exports = {
    *
    * @summary create a file from it's content. all metadata must be provided. save content in the files storage and metadata in the database
    * @param {Object} input
-   * @property {String} input.content file content to save in files storage
+   * @property {String} input.text file content to save in files storage
    * @property {Object} input.metadata file metadata to save in database
    * @property {String} input.storename files storage name
    * @property {String} input.filename file name
@@ -216,4 +221,15 @@ const isFileModel = (file) => {
     file instanceof FileModel.File
   )
   return isModel
+}
+
+const fileDataDecode = (data) => {
+  let text
+  try {
+    const encoded = (isDataUrl(data)) ? data.split(';base64,')[1] : data
+    text = Buffer.from(encoded, 'base64').toString('utf8')
+  } catch (err) {
+    text = `Cannot decode the script. Invalid DataUrl encode, must be base64 encoded. Error: ${err.message}`
+  }
+  return text
 }
