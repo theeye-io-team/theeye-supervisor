@@ -258,4 +258,4 @@ curl -X DELETE "https://supervisor.theeye.io/indicator/title/${TITLE_INDICATOR}?
 
 Please, check out the indicators recipe example. After importing It, fulfill the api-key and then run it, It covers the most common requirements.
 
-Check the [Recipes Documentation](enassets/recipes/) for more details.
+Check the [Recipes Documentation](en/assets/recipes/) for more details.

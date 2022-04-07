@@ -1,5 +1,6 @@
 - [API para desarrolladores](/)
 - [Habilitar acceso a las APIs](/auth.md)
+- [Información en Tiempo de Ejecución](/runtime-info.md)
 - [Hosts](/hosts/)
 - [Indicadores](/indicators/)
 - [Jobs](/jobs/)
