@@ -11,9 +11,9 @@ There are alternatives to directly execute tasks and workflows vía API.
 Check the following Documentation Sections
 
 
-[Run Task and Workflow using Integration Secret (recomended)](entasks/#using-task-secret-key-integration-feature-40recommended41)
+[Run Task and Workflow using Integration Secret (recomended)](en/tasks/#using-task-secret-key-integration-feature-40recommended41)
 
-[Run Task and Workflow using Integration Token (beta)](entasks/#api-integration-tokens)
+[Run Task and Workflow using Integration Token (beta)](en/tasks/#api-integration-tokens)
 
 ___
 
