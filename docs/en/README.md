@@ -29,42 +29,45 @@ Technically TheEye is a choreographer
 
 ![Image of TheEye-overview](images/TheEye-core-Architect.png)
 
-If you want more information please read the https://documentation.theeye.io
+You can find more details about the Architecture of TheEye in the comprehensive [Documentation](https://documentation.theeye.io/theeye-supervisor/#/)
+
 
 ## Environment settings
 
-Provide this env variables to change the initial behaviour of the core Api. Once started cannot be changed.
+
+Check the [quickstart](https://documentation.theeye.io/#/?id=install-all-theeye-components-on-a-single-machine) for a basic guided setup.
+
+In the quickstart scripts and docker-compose you will find all the settings pre-defined to work locally.
+
+You can play with it and try a different variation that fits your requirements. Pleas contact us if you need any further assistance or information.
 
 
-* Rest API - Api to interactar with TheEye resources. https://documentation.theeye.io/api/auth/
+### Predefined environment configuration
 
-* Monitoring System - It works as a background process. Will check Monitors status.
-
-* Internal commander API (listen on port 6666 only localhost) - This API is not documented. It is used only for internal management purpose.
-
-### Environment configuration
 
 Basic configuration
 
-| Variable Name | Usage |
-| ----- | ----- |
-| PORT | change rest api port. default 60080 |
-| NODE_ENV | choose the configuration file that the api should use. |
-| DEBUG | enabled/disable the debug module. check npm debug module for more information |
-| THEEYE_NODE_HOSTNAME | this features extends the debug module. add the hostname to debug output and used to define a Hostname on Dockers |
-| VERSION | api version. if not provided will try to detected the version using git. |
-| CONFIG_NOTIFICATIONS_API_URL | target notification system url |
+
+| Name | Usage | Default |
+| ----- | ----- | ----- |
+| PORT | change rest api port. | 60080 |
+| NODE_ENV | choose the configuration file that should be used. | undefined |
+| DEBUG | enabled/disable the debug module. check npm debug module for more information | undefined |
+| THEEYE_NODE_HOSTNAME | This key extends the debug module adding the hostname to logger output. tt is also handy to identify the docker containers logs using a hostname | undefined |
+| VERSION | The current api version. If not provided will the programm will try to detected the version using git. This value could also be set using the configuration file default.js | undefined |
+| CONFIG_NOTIFICATIONS_API_URL | Target notification system url. This could also be set using the configuration file default.js | undefined |
 
 
-Components Control. Can be configured to do one o more things (or nothing)
+Core components control. Can be configured to do one o more things (or nothing). All the components are activated by default
 
 
-| Variable Name | Usage |
-| ----- | ----- |
-| COMMANDER_DISABLED | disable internal commander api |
-| MONITORING_DISABLED | disable monitoring system. system monitors will not be checked anymore. will only change when bots and agents send updates |
-| API_DISABLED | disable rest api |
-| SCHEDULER_JOBS_DISABLED | disable internal scheduler execution. scheduler-jobs will be created using the rest api but task will never be executed. theeye-jobs execution timeout will be never checked. |
+| Variable Name | Usage | Default |
+| ----- | ----- | ----- |
+| COMMANDER_DISABLED | disable internal commander api | false |
+| MONITORING_DISABLED | disable monitoring system. system monitors will not be checked anymore. will only change when bots and agents send updates | false |
+| API_DISABLED | disable rest api | false |
+| SCHEDULER_JOBS_DISABLED | disable internal scheduler execution. scheduler-jobs will be created using the rest api but task will never be executed. theeye-jobs execution timeout will be never checked. | false |
+
 
 ### Start development sample
 
