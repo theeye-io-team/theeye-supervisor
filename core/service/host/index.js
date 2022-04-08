@@ -250,6 +250,7 @@ HostService.config = async (host, customer, next) => {
     }
 
     // this function alters `filesToConfigure` (array) content
+    // uniq. one of each
     const files = filesToConfigure.sort().filter((item, pos, ary) => {
       return !pos || item != ary[pos - 1];
     })
@@ -257,16 +258,13 @@ HostService.config = async (host, customer, next) => {
     for (let file_id of files) {
       const file = await File.findById(file_id)
       if (file) {
-        const fileContent = await new Promise((resolve, reject) => {
-          FileHandler.getBuffer(file, (err, buff) => {
-            if (err) reject(err)
-            else resolve(buff.toString('base64'))
+        const recipe = await new Promise((resolve, reject) => {
+          App.file.getRecipe(file, (err, recipe) => {
+            if (err) { reject(err) }
+            else { resolve(recipe) }
           })
         })
-
-        const props = file.templateProperties({backup:true}) // convert to plain object ...
-        props.data = fileContent
-        recipes.push(props)
+        recipes.push(recipe)
       }
     }
 
