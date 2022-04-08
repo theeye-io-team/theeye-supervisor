@@ -22,8 +22,6 @@ function WorkflowSchema (props) {
     current_task: { type: ObjectId, ref: 'Task' },
     start_task_id: { type: ObjectId },
     start_task: { type: ObjectId, ref: 'Task' },
-    end_task_id: { type: ObjectId, required: false },
-    end_task: { type: ObjectId, ref: 'Task', required: false },
     secret: { type: String, default: randomSecret }, // one way hash
     table_view: { type: Boolean, default: false },
 

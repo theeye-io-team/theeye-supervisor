@@ -441,7 +441,6 @@ module.exports = {
    */
   getRecipe (task, next) {
     let data = {}
-
     data.task = task.templateProperties()
     // only script task
     if (task._type === 'ScriptTask') {
@@ -461,12 +460,14 @@ const validateProperties = (input) => {
   if (!input.name) { errors.required('name', input.name) }
   if (!input.type) { errors.required('type', input.type) }
 
-  if (
-    input.type === TaskConstants.TYPE_SCRIPT ||
-    input.type === TaskConstants.TYPE_SCRAPER
-  ) {
-    if (!input.host_id) { errors.required('host', req.host) }
-  }
+  //if (
+  //  input.type === TaskConstants.TYPE_SCRIPT ||
+  //  input.type === TaskConstants.TYPE_SCRAPER
+  //) {
+  //  if (!input.host_id) {
+  //    errors.required('host', input.host)
+  //  }
+  //}
 
   if (input.type === TaskConstants.TYPE_SCRIPT) {
     if (!input.script_id && !input.script) {

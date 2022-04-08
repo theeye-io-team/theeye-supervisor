@@ -27,12 +27,6 @@ function BaseSchema (specs, opts) {
     discriminatorKey: '_type'
   })
 
-  this.pre('save', function(next) {
-    this.last_update = new Date()
-    // do stuff
-    next()
-  })
-
   // Duplicate the ID field.
   this.virtual('id').get(function () {
     return this._id.toHexString()
