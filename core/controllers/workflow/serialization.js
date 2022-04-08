@@ -1,6 +1,7 @@
 const App = require('../../app')
 const logger = require('../../lib/logger')('controller:workflow:recipe');
 const router = require('../../router');
+const TaskConstants = require('../../constants/task')
 const { v4: uuidv4 } = require('uuid')
 
 module.exports = (server) => {
@@ -56,15 +57,12 @@ const serializeDAG = async (workflow) => {
       serial.events.push(model)
     } else if (node && /Task$/.test(node.value._type)) {
       const task = await App.Models.Task.Task.findById(node.value.id)
-      const recipe = await taskRecipe(task)
-      model = recipe.task
+
+      model = await taskRecipe(task)
       model.id = task._id.toString() //@GOTO_UUID keep until serialization ends
-      if (recipe.file) {
-        model.script = recipe.file
+      if (model.type === TaskConstants.TYPE_SCRIPT) {
         model.script_id = null
         model.source_model_id = null
-        const data = model.script.data
-        model.script.data = `data:text/plain;base64,${data}` // data uri
       }
       serial.tasks.push(model)
 
@@ -91,7 +89,7 @@ const serializeDAG = async (workflow) => {
 
 const taskRecipe = (task) => {
   return new Promise((resolve, reject) => {
-    App.task.getRecipe(task, (err, data) => {
+    App.task.getRecipe(task, {}, (err, data) => {
       if (err) reject(err)
       else resolve(data)
     })

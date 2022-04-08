@@ -189,27 +189,28 @@ module.exports = {
    * @param {Function} next
    */
   getRecipe (file, next) {
-    const getFileContent = (fileModel) => {
+    const getSerializedFile = (fileModel) => {
       FileHandler.getBuffer(fileModel, (error, buff) => {
         let props = fileModel.templateProperties() // convert to plain object ...
+        props.source_model_id = null
         if (error) {
           logger.error('error getting file buffer. %s', error)
           props.data = '' // cannot obtain file content
         } else {
-          props.data = buff.toString('base64') // ... assign data to file plain object only
+          const data = buff.toString('base64') // ... assign data to file plain object only
+          props.data = `data:text/plain;base64,${data}` // data uri
         }
         next(null, props)
       })
     }
 
     if (isFileModel(file)) {
-      getFileContent(file)
+      getSerializedFile(file)
     } else {
       FileModel.File.findById(file, (err, model) => {
         if (err) { return next(err) }
         if (!model) { return next(null) }
-
-        getFileContent(model)
+        getSerializedFile(model)
       })
     }
   }

@@ -439,17 +439,16 @@ module.exports = {
    * @param {Mixed} task instance or id
    * @param {Function} next
    */
-  getRecipe (task, next) {
-    let data = {}
-    data.task = task.templateProperties()
+  getRecipe (task, options, next) {
+    const serial = task.templateProperties(options)
     // only script task
     if (task._type === 'ScriptTask') {
-      App.file.getRecipe(task.script_id, (err, fprops) => {
-        data.file = fprops
-        next(null, data)
+      App.file.getRecipe(task.script_id, (err, file) => {
+        serial.script = file
+        next(null, serial)
       })
     } else {
-      next(null, data)
+      next(null, serial)
     }
   }
 }
