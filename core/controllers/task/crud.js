@@ -25,6 +25,7 @@ module.exports = (server) => {
         task.version += 1
       }
       await task.save()
+      next()
     } catch (err) {
       logger.error(err)
     }
@@ -256,8 +257,12 @@ const controller = {
     const errors = new ErrorHandler()
     const input = Object.assign({}, req.body)
 
-    if (!req.task) return res.send(400, errors.required('task'))
-    if (!input.name) return res.send(400, errors.required('name'))
+    if (!req.task) {
+      return res.send(400, errors.required('task'))
+    }
+    if (!input.name) {
+      return res.send(400, errors.required('name'))
+    }
 
     delete input.type
     const type = req.task.type

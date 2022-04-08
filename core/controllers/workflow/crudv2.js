@@ -18,13 +18,6 @@ module.exports = {
   create: AsyncController(async (req, res, next) => {
     const { customer, user, body } = req
 
-    //const { fields, files } = await new Promise((resolve, reject) => {
-    //  form.parse(req, (err, fields, files) => {
-    //    if (err) { reject(err) }
-    //    else { resolve({ fields, files }) }
-    //  })
-    //})
-
     if (body.graph.nodes.length === 0) {
       throw new ClientError('invalid graph definition')
     }
@@ -39,6 +32,12 @@ module.exports = {
         version: 2
       })
     )
+
+    //if (workflow.errors) {
+    //  const key = Object.keys(workflow.errors)[0] 
+    //  const err = workflow.errors[key].reason
+    //  throw new ClientError(`${key}: ${err.message}`)
+    //}
 
     const payload = { workflow, customer, user, body }
     const { tasks, graph } = await createTasks(payload)
@@ -74,22 +73,34 @@ module.exports = {
    *
    */
   replace: AsyncController(async (req, res, next) => {
-    const { workflow, customer, user, body } = req
-    const { graph, tasks, start_task_id } = req.body
+    const { workflow, customer, user } = req
+    const { tasks, start_task_id } = req.body
 
-    if (body.graph.nodes.length === 0) {
+    if (req.body.graph.nodes.length === 0) {
       throw new ClientError('invalid graph definition')
     }
 
+    // copy to not altere original req.body
+    const props = Object.assign({}, req.body)
+    delete props.graph
+    delete props.start_task_id
+    delete props.tasks
+    
+    workflow.set(props) // update. will be saved at then end
+    if (isMongoId(start_task_id)) {
+      workflow.set({ start_task_id })
+    }
+
     const oldgraphlib = graphlib.json.read(workflow.graph)
+    const newgraphlib = graphlib.json.read(req.body.graph)
+    const newgraphplain = graphlib.json.write(newgraphlib)
 
     const checkRemovedNodes = async () => {
-      const newgraph = graphlib.json.read(graph)
       // update removed nodes
       const oldNodes = oldgraphlib.nodes()
       for (let id of oldNodes) {
-        const node = newgraph.node(id)
-        if (!node) { // it is not in the workflow no more
+        const node = newgraphlib.node(id)
+        if (!node && isMongoId(id)) { // it is not in the workflow no more
           const oldNode = oldgraphlib.node(id)
           if (workflow.version === 2) {
             await App.task.destroy(oldNode.id)
@@ -100,9 +111,9 @@ module.exports = {
       }
     }
 
-    const checkCreatedNodes = async (graph) => {
+    const checkCreatedNodes = async () => {
       // add new nodes
-      for (let node of graph.nodes) {
+      for (let node of newgraphplain.nodes) {
         if (!oldgraphlib.node(node.v)) { // is not in the workflow
 
           const props = tasks.find(task => {
@@ -130,7 +141,7 @@ module.exports = {
           const newid = model._id.toString()
 
           // first: update the edges.
-          for (let edge of graph.edges) {
+          for (let edge of newgraphplain.edges) {
             const eventName = edge.value
 
             if (edge.v === node.v) {
@@ -141,9 +152,7 @@ module.exports = {
                 name: eventName,
                 task_id: model._id
               })
-            }
-
-            if (edge.w === node.v) {
+            } else if (edge.w === node.v) {
               edge.w = newid
 
               if (isMongoId(edge.v)) {
@@ -164,9 +173,9 @@ module.exports = {
     }
 
     await checkRemovedNodes()
-    await checkCreatedNodes(graph)
+    await checkCreatedNodes()
 
-    workflow.set(body)
+    workflow.graph = newgraphplain
     await workflow.save()
 
     createTags(req)
@@ -269,17 +278,18 @@ const createTaskEvent = async ({ customer_id, name, task_id }) => {
   return tEvent
 }
 
-const removeWorkflowTasks = (workflow, keepTasks = false) => {
-  const graph = workflow.graph
+const removeWorkflowTasks = async (workflow, keepTasks = false) => {
   const promises = []
 
-  for (let node of graph.nodes) {
-    const value = node.value
+  const tasks = await App.Models.Task.Task.find({
+    workflow_id: workflow._id
+  })
 
-    if (keepTasks === true) {
-      promises.push( App.task.unlinkTaskFromWorkflow(value.id) )
+  for (let task of tasks) {
+    if (workflow.version === 1 || keepTasks === true) {
+      promises.push( App.task.unlinkTaskFromWorkflow(task._id) )
     } else {
-      promises.push( App.task.destroy(value.id) )
+      promises.push( App.task.destroy(task._id) )
     }
   }
 
