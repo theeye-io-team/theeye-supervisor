@@ -44,19 +44,13 @@ const controller = {
     const options = {
       backup: (query.backup === true || query.backup === "true")
     }
-
-    const data = {}
-    data.task = task.templateProperties(options)
-
-    // only script task has a file so far
-    if (task._type === 'ScriptTask') {
-      App.file.getRecipe(task.script_id, (err, fprops) => {
-        data.file = fprops
-        res.send(200, data)
-      })
-    } else {
-      res.send(200, data)
-    }
+    App.task.getRecipe(task, options, (err, recipe) => {
+      if (err) {
+        res.sendError(err)
+      } else {
+        res.send(200, recipe)
+      }
+    })
   },
   /**
    *
