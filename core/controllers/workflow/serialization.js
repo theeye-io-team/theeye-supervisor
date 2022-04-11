@@ -3,6 +3,7 @@ const logger = require('../../lib/logger')('controller:workflow:recipe');
 const router = require('../../router');
 const TaskConstants = require('../../constants/task')
 const { v4: uuidv4 } = require('uuid')
+const graphlib = require('graphlib')
 
 module.exports = (server) => {
   server.get(
@@ -43,9 +44,15 @@ const serializeDAG = async (workflow) => {
   const serial = workflow.toObject()
   delete serial.id
   serial.tasks = []
-  serial.events = []
+  //serial.events = []
 
-  const graph = serial.graph
+  let graph
+  if (!workflow.version || workflow.version < 2) {
+    graph = migrateGraph(serial.graph)
+    serial.version = 2
+  } else {
+    graph = graphlib.json.write(graphlib.json.read(serial.graph))
+  }
 
   for (let node of graph.nodes) {
     const uuid = uuidv4()
@@ -83,7 +90,7 @@ const serializeDAG = async (workflow) => {
     model.id = uuid
   }
 
-  //serial.graph = graph
+  serial.graph = graph
   return serial
 }
 
@@ -103,3 +110,38 @@ const create = (req, res, next) => {
   const serialization = req.body
   res.send(200)
 }
+
+const migrateGraph = (graph) => {
+  const cgraph = graphlib.json.read(graph)
+  const ngraph = new graphlib.Graph()
+
+  const eventNodes = []
+  const nodes = cgraph.nodes()
+  for (let id of nodes) {
+    const value = cgraph.node(id)
+
+    if (/Event$/.test(value._type) === false) {
+      ngraph.setNode(id, value)
+    } else {
+      eventNodes.push({ id, value })
+    }
+  }
+
+  for (let node of eventNodes) {
+    const eventName = node.value.name
+    const edges = cgraph.nodeEdges(node.id)
+
+    const connect = []
+    for (let edge of edges) {
+      if (edge.w === node.id) {
+        connect[0] = edge.v
+      } else {
+        connect[1] = edge.w
+      }
+    }
+    ngraph.setEdge(connect[0], connect[1], eventName)
+  }
+
+  return graphlib.json.write(ngraph)
+}
+
