@@ -48,7 +48,7 @@ exports.Script = Script
 exports.Template = Template
 
 exports.FactoryCreate = function (data) {
-  let _type = data._type
+  const _type = data._type
 
   delete data._type
   delete data._id

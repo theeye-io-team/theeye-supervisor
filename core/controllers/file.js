@@ -10,8 +10,7 @@ const audit = require('../lib/audit')
 const dbFilter = require('../lib/db-filter')
 const FileHandler = require('../lib/file')
 
-const File = require('../entity/file').File
-const Script = require('../entity/file').Script
+const { ClientError, ServerError } = require('../lib/error-handler')
 
 module.exports = (server) => {
 
@@ -28,7 +27,7 @@ module.exports = (server) => {
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     fetchFiles
-    )
+  )
 
   // GET
   server.get('/:customer/file/:file',
@@ -105,7 +104,7 @@ const fetchFiles = (req, res, next) => {
   const filter = dbFilter(query, { sort: { filename: 1 } })
   filter.where.customer_id = customer.id
 
-  File.fetchBy(filter, (error, files) => {
+  App.Models.File.File.fetchBy(filter, (error, files) => {
     if (!files) { files = [] }
     res.send(200, files)
     next()
@@ -118,10 +117,7 @@ const fetchFiles = (req, res, next) => {
  *
  */
 const getFile = (req, res, next) => {
-  req.file.publish((err, file) => {
-    if (err) { return next(err) }
-    res.send(200, file)
-  })
+  res.send(200, req.file)
 }
 
 /**
@@ -129,29 +125,31 @@ const getFile = (req, res, next) => {
  * @method PUT/PATCH
  *
  */
-const updateFile = (req, res, next) => {
-  const fileModel = req.file || req.script
-  const fileUploaded = req.files.file
-  const description = req.params.description
-  const isPublic = (req.params.public || false)
-  const mimetype = req.params.mimetype
-  const extension = req.params.extension
+const updateFile = async (req, res, next) => {
+  try {
+    const fileModel = req.file || req.script
+    const fileUploaded = req.files.file
+    const description = req.params.description
+    const isPublic = (req.params.public || false)
+    const mimetype = req.params.mimetype
+    const extension = req.params.extension
 
-  if (!fileUploaded) {
-    return res.send(400, 'file is required')
-  }
-
-  logger.log('Updating file content')
-  FileHandler.replace({
-    model: fileModel,
-    filepath: fileUploaded.path,
-    filename: fileUploaded.name,
-    storename: req.customer.name
-  }, function (err, storeData) {
-    if (err) {
-      logger.error(err)
-      return next(err)
+    if (!fileUploaded) {
+      throw new ClientError('File and filename are required')
     }
+
+    logger.log('Updating file content')
+    const storeData = await new Promise( (resolve, reject) => {
+      FileHandler.replace({
+        model: fileModel,
+        filepath: fileUploaded.path,
+        filename: fileUploaded.name,
+        storename: req.customer.name
+      }, (err, data) => {
+        if (err) { reject(err) }
+        else { resolve(data) }
+      })
+    })
 
     const buf = fs.readFileSync(fileUploaded.path)
 
@@ -171,22 +169,14 @@ const updateFile = (req, res, next) => {
       data.template_id = null
     }
 
-    logger.log('File model is being updated')
+    logger.log('File metadata is being updated')
     fileModel.set(data)
-    fileModel.save(err => {
-      if (err) {
-        logger.error(err)
-        next(err)
-      } else {
-        fileModel.publish((err, pub) => {
-          if (err) { return next(err) }
-          res.send(200,pub)
-          logger.log('Operation completed')
-          next()
-        })
-      }
-    })
-  })
+    await fileModel.save()
+
+    res.send(200, fileModel)
+  } catch (err) {
+    res.sendError(err)
+  }
 }
 
 /**
@@ -194,58 +184,52 @@ const updateFile = (req, res, next) => {
  * @method POST
  *
  */
-const createFile = (req, res, next) => {
-  const customer = req.customer
-  const file = req.files.file
-  const description = req.params.description
-  const isPublic = (req.params.public || false)
-  const mimetype = req.params.mimetype
-  const extension = req.params.extension
+const createFile = async (req, res, next) => {
+  try {
+    const customer = req.customer
+    const file = req.files.file
+    const description = req.params.description
+    const isPublic = (req.params.public || false)
+    const mimetype = req.params.mimetype
+    const extension = req.params.extension
 
-  logger.log('creating file');
+    logger.log('creating file')
 
-  FileHandler.storeFile({
-    filepath: file.path,
-    filename: file.name,
-    storename: req.customer.name
-  }, function (err, storeData) {
-    if (err) {
-      logger.error(err);
-      return next(err);
-    } else {
-
-      const buf = fs.readFileSync(file.path);
-
-      const data = {
+    const storeData = await new Promise( (resolve, reject) => {
+      FileHandler.storeFile({
+        filepath: file.path,
         filename: file.name,
-        mimetype: mimetype,
-        extension: extension,
-        size: file.size,
-        description: description,
-        customer: customer,
-        customer_id: customer._id,
-        customer_name: customer.name,
-        keyname: storeData.keyname,
-        md5: md5(buf),
-        public: isPublic
-      }
-
-      Script.create(data,(err,file) => {
-        if (err) {
-          logger.error(err)
-          next(err)
-        } else {
-          file.publish((err,data) => {
-            if (err) return next(err)
-
-            req.file = file; // assign to the route to audit
-            res.send(200,data)
-            next()
-          })
-        }
+        storename: req.customer.name
+      }, (err, storeData) => {
+        if (err) { reject(err) }
+        else { resolve(storeData) }
       })
+    })
+
+    const buf = fs.readFileSync(file.path)
+
+    const data = {
+      _type: 'Script',
+      filename: file.name,
+      mimetype: mimetype,
+      extension: extension,
+      size: file.size,
+      description: description,
+      customer: customer,
+      customer_id: customer._id,
+      customer_name: customer.name,
+      keyname: storeData.keyname,
+      md5: md5(buf),
+      public: isPublic
     }
-  })
+
+    const model = await App.Models.File.FactoryCreate(data)
+    req.file = model // assign to the route to audit
+    res.send(200, model)
+    next()
+  } catch (err) {
+    res.sendError(err)
+  }
 }
 
 /**
@@ -254,14 +238,14 @@ const createFile = (req, res, next) => {
  *
  */
 const downloadFile = (req, res, next) => {
-  let file = req.file
+  const file = req.file
   FileHandler.getStream(file, (error, stream) => {
     if (error) {
       logger.error(error)
       next(error)
     } else {
       logger.log('streaming file to client')
-      var headers = {
+      const headers = {
         'Content-Disposition': 'attachment; filename=' + file.filename
       }
       res.writeHead(200,headers)
@@ -277,15 +261,11 @@ const downloadFile = (req, res, next) => {
  */
 const removeFile = async (req, res, next) => {
   try {
-    //let file = req.file || req.script
-    let file = req.file
-    let models = await App.file.getLinkedModels({ file })
+    const file = req.file
+    const linkedModels = await App.file.getLinkedModels({ file })
 
-    if (models.length > 0) {
-      let err = new Error('Cannot delete this file. It is being used')
-      err.code = 'FileInUse'
-      err.statusCode = 400
-      throw err
+    if (linkedModels.length > 0) {
+      throw new ClientError('Cannot delete this file. It is being used')
     }
 
     await new Promise((resolve, reject) => {
@@ -298,10 +278,10 @@ const removeFile = async (req, res, next) => {
         else resolve(data)
       })
     })
+
+    res.send(204)
   } catch (err) {
-    logger.error(err)
-    res.send(err.statusCode || 500, err.message)
-    next()
+    res.sendError(err)
   }
 }
 
@@ -313,9 +293,9 @@ const removeFile = async (req, res, next) => {
 const getLinkedModels = async (req, res, next) => {
   try {
     const file = req.file
-    let models = await App.file.getLinkedModels({ file })
+    const linkedModels = await App.file.getLinkedModels({ file })
 
-    res.send(200, models)
+    res.send(200, linkedModels)
     next()
   } catch (err) {
     logger.error(err)
@@ -326,10 +306,11 @@ const getLinkedModels = async (req, res, next) => {
 
 const checkAfectedModels = async (req, res, next) => {
   try {
-    let file = req.file
-    let models = await App.file.getLinkedModels({ file })
-    if (Array.isArray(models) && models.length > 0) {
-      for (let model of models) {
+    const file = req.file
+    const linkedModels = await App.file.getLinkedModels({ file })
+
+    if (Array.isArray(linkedModels) && linkedModels.length > 0) {
+      for (let model of linkedModels) {
         if (
           model._type === 'ResourceMonitor'||
           model._type === 'FileMonitor' ||
