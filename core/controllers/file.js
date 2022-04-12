@@ -223,7 +223,8 @@ const createFile = async (req, res, next) => {
       public: isPublic
     }
 
-    const model = await App.Models.File.FactoryCreate(data)
+    const model = App.Models.File.FactoryCreate(data)
+    model.save()
     req.file = model // assign to the route to audit
     res.send(200, model)
     next()
