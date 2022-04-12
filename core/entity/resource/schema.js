@@ -13,7 +13,7 @@ const properties = {
   name: { type: String, required: true },
   type: { type: String, required: true },
   acl: [{ type: String }],
-  failure_severity: { type: String, default: Constants.MONITOR_SEVERITY_HIGH },
+  failure_severity: { type: String, default: Constants.MONITOR_SEVERITY_LOW },
   alerts: { type: Boolean, default: true },
   creation_date: { type: Date, default: Date.now },
   last_update: { type: Date, default: Date.now }
