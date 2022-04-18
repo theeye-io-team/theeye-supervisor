@@ -83,7 +83,7 @@ const executeWorkflowStep = async (workflow, workflow_job_id, event, argsValues,
     return
   }
 
-  const { user, dynamic_settings } = ifTriggeredByJobSettings(job)
+  const { user, dynamic_settings } = await ifTriggeredByJobSettings(job)
 
   const promises = []
   for (let i = 0; i < tasks.length; i++) {
@@ -129,12 +129,12 @@ const executeWorkflowStepVersion2 = (workflow, workflow_job_id, event, argsValue
     if (edgeLabel === event.name) {
       promises.push(
         Task.findById(nodeW)
-        .then(task => {
+        .then(async (task) => {
           if (!task) {
             throw new Error(`workflow step ${nodeW} is missing`)
           }
 
-          const { user, dynamic_settings } = ifTriggeredByJobSettings(job)
+          const { user, dynamic_settings } = await ifTriggeredByJobSettings(job)
           const createPromise = createJob({
             user,
             task,
@@ -184,7 +184,7 @@ const executeWorkflow = async (workflow, argsValues, job, event) => {
     return logger.error('FATAL. Workflow %s does not has a customer', workflow._id)
   }
 
-  const { user, dynamic_settings } = ifTriggeredByJobSettings(job)
+  const { user, dynamic_settings } = await ifTriggeredByJobSettings(job)
 
   return App.jobDispatcher.createByWorkflow({
     customer: workflow.customer,
