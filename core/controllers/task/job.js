@@ -91,6 +91,27 @@ module.exports = (server) => {
     },
     createJob
   )
+
+  // execute task using GET Method
+  server.get('/task/:task/secret/:secret/job',
+    router.resolve.idToEntity({ param: 'task', required: true }),
+    router.requireSecret('task'),
+    (req, res, next) => {
+      req.task
+        .populate('customer')
+        .execPopulate()
+        .then(() => {
+          req.customer = req.task.customer
+          req.user = App.user
+          req.origin = JobConstants.ORIGIN_SECRET
+          next()
+        })
+        .catch(err => {
+          return res.send(500, err.message)
+        })
+    },
+    createJob
+  )
 }
 
 const queueController = async (req, res, next) => {

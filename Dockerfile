@@ -1,5 +1,5 @@
 FROM node:14
-MAINTAINER Javier Ailbirt <jailbirt@interactar.com>
+MAINTAINER Facundo Gonzalez <facugon@theeye.io>
 ENV destDir /src/theeye/supervisor
 # Create app directory
 RUN mkdir -p ${destDir}
@@ -9,5 +9,5 @@ COPY . ${destDir}
 RUN cd ${destDir}; npm install
 #Export and run.
 EXPOSE 60080
-#By default run prod, If development is requiered This command would be override by docker-compose up
+# run prod by default.
 CMD ["npm","run","start"]
