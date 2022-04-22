@@ -111,9 +111,7 @@ const executeWorkflowStep = async (workflow, workflow_job_id, event, argsValues,
  */
 const executeWorkflowStepVersion2 = (workflow, workflow_job_id, event, argsValues, job) => {
 
-  if (!event || !event._id) {
-    return
-  }
+  if (!event) { return }
 
   const graph = new graphlib.json.read(workflow.graph)
   const nodeV = event.emitter_id.toString()
