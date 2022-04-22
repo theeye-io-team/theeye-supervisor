@@ -6,9 +6,13 @@
 
 ## Model Properties
 
- | Property Name | UI Name | Type   | Default | Description    | 
- | -----         | -----   | -----  |         | -----          | 
- | name          | Name    | string |         |                | 
+    | Property Name         | Type   | Default | Description | 
+    | -----                 | -----  |         | -----       | 
+    | name                  | string |         |             | 
+    | state                 | string |         |             | 
+    | lifecycle             | string |         |             | 
+    | task_arguments_values | array |         |             | 
+    |                       |        |         |             | 
 
 -----
 
@@ -22,7 +26,7 @@ Replace the `${customer}` keyword with your organization name
 
  | Method | Path                             | Description                           | ACL    | 
  | -----  | -----                            | -----                                 | -----  | 
- | GET    | /${customer}/job                 | [Get all jobs](#example-2)            | viewer | 
+ | GET    | /${customer}/job                 | Fetch [Get all jobs](#example-2)            | viewer | 
  | GET    | /${customer}/job/${id}           | [Get job by id](#example-1)           | viewer | 
  | PUT    | /${customer}/job/${id}           | Finish a job, update execution status | \*agent | 
  | POST   | /${customer}/job                 | Create a new job instance             | user   |
@@ -41,6 +45,34 @@ Replace the `${customer}` keyword with your organization name
   | PUT    | /job/${id}/approve  | [Approve Approval job](#example-7)          | viewer    |
   | PUT    | /job/${id}/reject   | [Reject Approval job](#example-8)           | viewer    |
   | PUT    | /job/${id}/input    | Submit script job input                     | user      |
+
+
+-----
+
+## Ejemplos de Fetch
+
+Utilizando el método HTTP GET sobre el endpoint de fetch de jobs permite obtener la infomación de todos los jobs existentes de una organización.
+
+Los endpoints para fetch permiten hacer consultas aplicando filtros.
+Los parámetros admitidos son los siguientes
+
+  | Nombre   | Detalles                                                                                       | 
+  | -----    | -----                                                                                          | 
+  | where    | El filtro básico que permite obtener jobs utilizando cualquiera de las propiedades del modelo  | 
+  | include  | Aplica filtros sobre el resultado del where para devolver los valores solicitados              | 
+  | sort     | Ordenamiento                                                                                   | 
+  | limit    | Cantidad máxima de valores devueltos                                                           | 
+  | skip     | Filtra los primeros "skip" elementos del resultado                                             | 
+  | populate | Obtiene documentos relacionados                                                                | 
+
+
+### Jobs donde el primer argumento es igual a un JSON particular
+
+  ```
+  /job?where[task_arguments_values.0]={"comando":"MES_ACTUAL"}
+
+  ```
+
 
 
 -----

@@ -1073,16 +1073,21 @@ const dispatchFinishedJobExecutionEvent = async (job) => {
     // cannot trigger a workflow event without a task
     if (!task_id) { return }
 
-    const event = await TaskEvent.findOne({
+    let event = await TaskEvent.findOne({
       emitter_id: task_id,
       enable: true,
       name: trigger_name
     })
 
-    //if (!event) {
-    //  const msg = `no handler defined for event named ${trigger_name} of task ${task_id}`
-    //  throw new Error(msg)
-    //}
+    if (!event) {
+      //event.id = uuidv4()
+      event = new TaskEvent({
+        emitter_id: task_id,
+        name: trigger_name,
+        creation_date: new Date(),
+        last_update: new Date()
+      })
+    }
 
     // trigger task execution event within a workflow
     if (job.workflow_id && job.workflow_job_id) {
