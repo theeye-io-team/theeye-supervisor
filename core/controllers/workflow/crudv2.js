@@ -56,13 +56,15 @@ module.exports = {
    *
    */
   remove: AsyncController(async (req) => {
-    const { workflow, body } = req
+    const { workflow, body, query } = req
+
+    const keepTasks = (query?.keepTasks==='true' || query?.keepTasks===true)
 
     await Promise.all([
       workflow.remove(),
       App.Models.Job.Workflow.deleteMany({ workflow_id: workflow._id.toString() }),
       App.scheduler.unscheduleWorkflow(workflow),
-      removeWorkflowTasks(workflow, body?.keepTasks)
+      removeWorkflowTasks(workflow, keepTasks)
     ])
 
     return
@@ -286,7 +288,7 @@ const removeWorkflowTasks = async (workflow, keepTasks = false) => {
   })
 
   for (let task of tasks) {
-    if (workflow.version === 1 || keepTasks === true) {
+    if (keepTasks === true) {
       promises.push( App.task.unlinkTaskFromWorkflow(task._id) )
     } else {
       promises.push( App.task.destroy(task._id) )
