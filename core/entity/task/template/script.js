@@ -7,7 +7,6 @@ const BaseSchema = require('./schema') // template schema
 const Schema = new BaseSchema({
   script: { type: ObjectId }, // has one
   script_id: { type: ObjectId }, //has one
-  //script_arguments: { type: Array },
   script_runas: { type: String, default: '' },
   env: { type: Object, default: () => { return {} }},
 })
