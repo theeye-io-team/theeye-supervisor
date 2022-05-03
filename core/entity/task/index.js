@@ -39,9 +39,6 @@ exports.NotificationTask = NotificationTask
 const ClassesMap = {}
 ClassesMap[ TaskConstants.TYPE_SCRIPT ] = function (input) {
   let task = new ScriptTask(input)
-  // keep backward compatibility with script_arguments
-  //task.script_arguments = input.task_arguments
-
   if (input.script_runas) {
     task.script_runas = input.script_runas
     if (/%script%/.test(input.script_runas) === false) {

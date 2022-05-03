@@ -48,7 +48,7 @@ function TaskSchema (props, specs) {
     delete values.template
     delete values.template_id
     delete values.fingerprint
-    // @todo script and script_is are required for templates creation. this dependency must be removed
+    // @todo script and script_is are required for templates creation. this dependency must be removed later
     //delete values.script
     //delete values.script_id
     return values

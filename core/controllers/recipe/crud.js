@@ -6,7 +6,6 @@ const router = require('../../router')
 const dbFilter = require('../../lib/db-filter')
 
 module.exports = (server) => {
-
   server.get('/recipe/:recipe',
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
@@ -21,17 +20,15 @@ module.exports = (server) => {
     router.ensureCustomer,
     controller.fetch
   )
-
-  server.get('/recipe/host/:host/config',
-    server.auth.bearerMiddleware,
-    router.resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer,
-    router.resolve.idToEntity({ param: 'host', required: true }),
-    controller.recipe
-  )
 }
 
 const controller = {
+  /**
+   * @method GET
+   */
+  get (req, res, next) {
+    return res.send(200, req.recipe)
+  },
   /**
    * @method GET
    */
@@ -49,24 +46,4 @@ const controller = {
       }
     })
   },
-  /**
-   * @method GET
-   */
-  get (req, res, next) {
-    return res.send(200, req.recipe)
-  },
-  /**
-   * @method GET
-   */
-  async recipe (req, res, next) {
-    try {
-      const customer = req.customer
-      const host = req.host
-      const recipe = await App.host.config(host, customer)
-      res.send(200, recipe)
-    } catch (err) {
-      logger.error(err)
-      res.send(500, err)
-    }
-  }
 }

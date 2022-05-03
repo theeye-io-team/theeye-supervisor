@@ -50,6 +50,30 @@ function BaseSchema (props, specs) {
     next()
   })
 
+  this.methods.serialize = function (options = {}) {
+    let serial
+    if (options?.mode === 'deep') {
+      serial = this.toObject() // as is
+      serial.source_model_id = this._id
+    } else {
+      serial = this.templateProperties() // shallow mode
+    }
+    return serial
+  }
+
+  this.methods.templateProperties = function () {
+    const values = this.toObject()
+    delete values.public
+    delete values.user
+    delete values.user_id
+    delete values.id
+    delete values.creation_date
+    delete values.last_update
+    delete values.customer
+    delete values.customer_id
+    return values
+  }
+
   return this
 }
 
