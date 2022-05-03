@@ -133,7 +133,7 @@ const generateAgentConfig = async (monitors) => {
   const promises = []
 
   for (let monitor of monitors) {
-    const configProm = ConfigFactory.create(monitor) 
+    const configProm = ConfigFactory.create(monitor).catch(e => e)
     promises.push( configProm )
   }
 

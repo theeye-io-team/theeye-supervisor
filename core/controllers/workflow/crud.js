@@ -55,7 +55,8 @@ module.exports = function (server) {
     router.requireCredential('admin'),
     router.resolve.idToEntity({param: 'workflow', required: true}),
     restify.plugins.conditionalHandler([
-      { version: '1.0.0', handler: remove },
+      //{ version: '1.0.0', handler: remove },
+      { version: '1.0.0', handler: crudv2.remove },
       { version: '2.9.0', handler: crudv2.remove }
     ]),
     audit.afterRemove('workflow', { display: 'name', topic: CRUD_TOPIC })
@@ -96,22 +97,22 @@ const fetch = (req, res, next) => {
   })
 }
 
-const remove = (req, res, next) => {
-  const workflow = req.workflow
-  workflow.remove(err => {
-    if (err) return res.send(500,err)
-
-    unlinkWorkflowTasks(req)
-    res.send(200)
-  })
-}
-
-const unlinkWorkflowTasks = (req) => {
-  var graph = graphlib.json.read(req.workflow.graph)
-  graph.nodes().forEach(node => {
-    var data = graph.node(node)
-    if (!/Event/.test(data._type)) {
-      App.task.unlinkTaskFromWorkflow(data.id)
-    }
-  })
-}
+//const remove = (req, res, next) => {
+//  const workflow = req.workflow
+//  workflow.remove(err => {
+//    if (err) return res.send(500,err)
+//
+//    unlinkWorkflowTasks(req)
+//    res.send(200)
+//  })
+//}
+//
+//const unlinkWorkflowTasks = (req) => {
+//  var graph = graphlib.json.read(req.workflow.graph)
+//  graph.nodes().forEach(node => {
+//    var data = graph.node(node)
+//    if (!/Event/.test(data._type)) {
+//      App.task.unlinkTaskFromWorkflow(data.id)
+//    }
+//  })
+//}

@@ -116,9 +116,28 @@ module.exports = function (server) {
       }
     }
   )
+
+  server.get('/host/:host/template',
+    server.auth.bearerMiddleware,
+    router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
+    router.resolve.idToEntity({ param: 'host', required: true }),
+    controller.template
+  )
+
 }
 
 const controller = {
+  async template (req, res, next) {
+    try {
+      const { customer, host } = req
+      const template = await App.host.template(host, customer)
+      res.send(200, template)
+    } catch (err) {
+      logger.error(err)
+      res.send(500, err)
+    }
+  },
   async reconfigure (req, res, next) {
     try {
       const host = req.host

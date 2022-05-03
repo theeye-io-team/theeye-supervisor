@@ -11,7 +11,6 @@ const ScriptSchema = new BaseSchema({
   template: { type: ObjectId, ref: 'TaskTemplate' },
   script_id: { type: String },
   script_runas: { type: String },
-  //script_arguments: { type: Array, default: () => { return [] } }, // will be replaced with task_arguments in the future
   script: { type: ObjectId, ref: 'Script' },
   env: { type: Object, default: () => { return {} }},
   logging: { type: Boolean, default: false }
@@ -19,31 +18,34 @@ const ScriptSchema = new BaseSchema({
 
 module.exports = ScriptSchema
 
-const templateProperties = ScriptSchema.methods.templateProperties
-ScriptSchema.methods.templateProperties = function (options) {
-  const values = templateProperties.apply(this, arguments)
-  const backup = options?.backup
-
-  if (backup === true) {
-    return Object.assign({}, values, this.toObject())
-  }
-
+const serialize = ScriptSchema.methods.serialize
+ScriptSchema.methods.serialize = function (options) {
+  const values = serialize.apply(this, arguments)
   //delete values.script_arguments
-  // blank user defined env properties values
-  for (let name in values.env) {
-    values.env[name] = ''
-  }
 
-  for (let name in values.task_arguments) {
-    let arg = values.task_arguments[name]
-    if (arg.type === TaskConstants.ARGUMENT_TYPE_FIXED) {
-      values.task_arguments[name].value = '' // empty value
+  if (options.mode === 'shallow') {
+    // blank user defined env properties values
+    for (let name in values.env) {
+      values.env[name] = ''
     }
+
+    for (let name in values.task_arguments) {
+      let arg = values.task_arguments[name]
+      if (arg.type === TaskConstants.ARGUMENT_TYPE_FIXED) {
+        values.task_arguments[name].value = '' // empty value
+      }
+    }
+
+    delete values.script_id
   }
 
-  values.script_runas = this.script_runas
-  //values.script_arguments = values.task_arguments
+  return values
+}
 
+const templateProperties = ScriptSchema.methods.templateProperties
+ScriptSchema.methods.templateProperties = function () {
+  const values = templateProperties.apply(this, arguments)
+  delete values.script_arguments
   return values
 }
 
@@ -90,7 +92,6 @@ ScriptSchema.statics.create = function (input, next) {
   instance.customer = input.customer._id
   instance.customer_id = input.customer._id
   instance.script_id = input.script._id
-  //instance.script_arguments = input.script_arguments
   instance.task_arguments = input.task_arguments
   instance.script_runas = input.script_runas
   instance.tags = input.tags

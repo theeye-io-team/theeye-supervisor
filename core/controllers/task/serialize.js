@@ -5,7 +5,7 @@ const TaskConstants = require('../../constants')
 
 module.exports = (server) => {
   server.get(
-    '/:customer/task/:task/recipe',
+    '/:customer/task/:task/serialize',
     [
       server.auth.bearerMiddleware,
       router.resolve.customerNameToEntity({ required: true }),
@@ -14,7 +14,7 @@ module.exports = (server) => {
       router.resolve.idToEntity({ param: 'task', required: true }),
       router.ensureAllowed({ entity: { name: 'task' } })
     ],
-    controller.recipe
+    controller.serialize
   )
 
   server.post(
@@ -37,14 +37,13 @@ const controller = {
    * @param {Mixed} task instance or id
    * @param {Function} next
    */
-  recipe (req, res, next) {
+  serialize (req, res, next) {
     const task = req.task
     const query = req.query || {}
 
-    const options = {
-      backup: (query.backup === true || query.backup === "true")
-    }
-    App.task.getRecipe(task, options, (err, recipe) => {
+    const options = { mode: query.mode }
+
+    App.task.serialize(task, options, (err, recipe) => {
       if (err) {
         res.sendError(err)
       } else {

@@ -186,10 +186,10 @@ HostService.removeHostResource = function (input, done) {
  * @param {Host} host
  * @param {Function} next
  */
-HostService.config = async (host, customer, next) => {
+HostService.template = async (host, customer, next) => {
   const filesToConfigure = []
 
-  const resourcesConfig = async () => {
+  const resourcesTemplates = async () => {
     const recipes = []
 
     const resources = await Resource.find({
@@ -201,10 +201,10 @@ HostService.config = async (host, customer, next) => {
 
     if (Array.isArray(resources) && resources.length > 0) {
       for (let resource of resources) {
-        const resourceData = resource.templateProperties({backup:true})
+        const resourceData = resource.templateProperties()
 
         const monitor = await Monitor.findOne({ resource_id: resource._id })
-        resourceData.monitor = monitor.templateProperties({backup:true})
+        resourceData.monitor = monitor.templateProperties()
         recipes.push(resourceData)
 
         if (monitor.type === MonitorsConstants.RESOURCE_TYPE_SCRIPT) {
@@ -218,12 +218,13 @@ HostService.config = async (host, customer, next) => {
     return recipes
   }
 
-  const tasksConfig = async () => {
+  const tasksTemplates = async () => {
     const recipes = []
     const tasks = await Task.find({
       //enable: true,
       host: host._id,
-      customer_id: customer._id
+      customer_id: customer._id,
+      workflow_id: { $exists: false }
     })
 
     if (Array.isArray(tasks) && tasks.length > 0) {
@@ -232,7 +233,7 @@ HostService.config = async (host, customer, next) => {
           filesToConfigure.push(task.script_id.toString())
         }
 
-        const values = task.templateProperties({backup:true})
+        const values = task.templateProperties()
         if (task.triggers.length > 0) {
           values.triggers = task.triggers // keep it until triggers are exported
         }
@@ -243,7 +244,7 @@ HostService.config = async (host, customer, next) => {
     return recipes
   }
 
-  const filesConfig = async () => {
+  const filesTemplates = async () => {
     const recipes = []
     if (filesToConfigure.length===0) {
       return []
@@ -259,7 +260,7 @@ HostService.config = async (host, customer, next) => {
       const file = await File.findById(file_id)
       if (file) {
         const recipe = await new Promise((resolve, reject) => {
-          App.file.getRecipe(file, (err, recipe) => {
+          App.file.serialize(file, { mode: 'shallow' }, (err, recipe) => {
             if (err) { reject(err) }
             else { resolve(recipe) }
           })
@@ -271,7 +272,7 @@ HostService.config = async (host, customer, next) => {
     return recipes
   }
 
-  const triggersConfig = async (tasks) => {
+  const triggersTemplates = async (tasks) => {
     const recipes = []
 
     logger.log('processing triggers')
@@ -318,16 +319,16 @@ HostService.config = async (host, customer, next) => {
   const data = {}
 
   logger.log('getting resources config')
-  data.resources = await resourcesConfig()
+  data.resources = await resourcesTemplates()
 
   logger.log('getting tasks config')
-  data.tasks = await tasksConfig()
+  data.tasks = await tasksTemplates()
 
   logger.log('getting triggers config')
-  data.triggers = await triggersConfig(data.tasks)
+  data.triggers = await triggersTemplates(data.tasks)
 
   logger.log('getting files config')
-  data.files = await filesConfig()
+  data.files = await filesTemplates()
 
   return data
 }
