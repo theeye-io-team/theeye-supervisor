@@ -37,17 +37,17 @@ ScraperSchema.methods.publish = function(next) {
   }
 }
 
-const templateProperties = ScraperSchema.methods.templateProperties
-ScraperSchema.methods.templateProperties = function () {
-  let values = templateProperties.apply(this, arguments)
-  values.url = this.url 
-  values.method = this.method 
-  values.timeout = this.timeout 
-  values.body = this.body 
-  values.gzip = this.gzip 
-  values.json = this.json 
-  values.status_code = this.status_code 
-  values.parser = this.parser 
-  values.pattern = this.pattern 
-  return values
-}
+//const templateProperties = ScraperSchema.methods.templateProperties
+//ScraperSchema.methods.templateProperties = function () {
+//  let values = templateProperties.apply(this, arguments)
+//  values.url = this.url 
+//  values.method = this.method 
+//  values.timeout = this.timeout 
+//  values.body = this.body 
+//  values.gzip = this.gzip 
+//  values.json = this.json 
+//  values.status_code = this.status_code 
+//  values.parser = this.parser 
+//  values.pattern = this.pattern 
+//  return values
+//}
