@@ -1096,10 +1096,12 @@ const dispatchFinishedJobExecutionEvent = async (job) => {
       topic = TopicsConstants.task.execution
     }
 
+    const data = getJobResult(job)
+
     App.eventDispatcher.dispatch({
       topic,
       event,
-      data: job.output,
+      data,
       job
     })
   } catch (err) {
@@ -1107,6 +1109,19 @@ const dispatchFinishedJobExecutionEvent = async (job) => {
       return logger.error(err)
     }
   }
+}
+
+const getJobResult = (job) => {
+  let result = job.output
+  try {
+    if (job._type === JobConstants.SCRAPER_TYPE) {
+      result[1] = JSON.stringify(job.result.response?.headers)
+      result[2] = Number(job.result.response?.status_code)
+    }
+  } catch (err) {
+  }
+
+  return result
 }
 
 const parseOutputStringAsJSON = (output) => {

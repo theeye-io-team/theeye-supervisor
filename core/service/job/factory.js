@@ -834,6 +834,7 @@ class ScraperJob extends AbstractJob {
   async build () {
     const job = this.job
     job.timeout = this.task.timeout
+    job.register_body = this.task.register_body
   }
 }
 
