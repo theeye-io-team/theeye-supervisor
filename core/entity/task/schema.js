@@ -26,6 +26,20 @@ function TaskSchema (props, specs) {
   this.set('toJSON', def)
   this.set('toObject', def)
 
+  const serialize = this.methods.serialize
+  this.methods.serialize = function (options = {}) {
+
+    let serial = serialize.apply(this, arguments)
+
+    if (options?.mode === 'deep') {
+      delete serial.workflow
+      delete serial.workflow_id
+      delete serial.execution_count
+    }
+
+    return serial
+  }
+
   this.methods.templateProperties = function () {
     let values = this.toObject()
     values.source_model_id = this._id
