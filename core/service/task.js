@@ -100,9 +100,7 @@ module.exports = {
 
     task.set(updates)
 
-    // keep backward compatibility with script_arguments
     if (task.type === TaskConstants.TYPE_SCRIPT) {
-      //task.script_arguments = updates.task_arguments
       let runas = updates.script_runas
       if (runas) {
         if (/%script%/.test(runas) === false) {
@@ -439,17 +437,26 @@ module.exports = {
    * @param {Mixed} task instance or id
    * @param {Function} next
    */
-  getRecipe (task, options, next) {
-    const serial = task.templateProperties(options)
+  serialize (task, options, next) {
+    const serial = task.serialize(options)
+
     // only script task
     if (task._type === 'ScriptTask') {
-      App.file.getRecipe(task.script_id, (err, file) => {
+      App.file.serialize(task.script_id, options, (err, file) => {
         serial.script = file
         next(null, serial)
       })
     } else {
       next(null, serial)
     }
+  },
+  serializePromise (task, options) {
+    return new Promise((resolve, reject) => {
+      this.serialize(task, options, (err, data) => {
+        if (err) { reject(err) }
+        else { resolve(data) }
+      })
+    })
   }
 }
 
@@ -570,8 +577,6 @@ FactoryMethod[ TaskConstants.TYPE_APPROVAL ] = App.Models.Task.ApprovalTask
 FactoryMethod[ TaskConstants.TYPE_DUMMY ] = App.Models.Task.DummyTask
 FactoryMethod[ TaskConstants.TYPE_SCRIPT ] = async function (input) {
   let task = new App.Models.Task.ScriptTask(input)
-  // keep backward compatibility with script_arguments
-  task.script_arguments = input.task_arguments
 
   if (input.script_runas) {
     task.script_runas = input.script_runas
@@ -585,12 +590,13 @@ FactoryMethod[ TaskConstants.TYPE_SCRIPT ] = async function (input) {
   } else if (input.script) {
     if (input.script.id) {
       const id = input.script.id
-      input.script = id
-      input.script_id = id
+      task.script = id
+      task.script_id = id
     } else {
-      const props = input.script 
-      props.customer = input.customer
-      const script = await App.file.create(props)
+      const attrs = input.script 
+      attrs.customer = input.customer
+
+      const script = await App.file.create(attrs)
       task.script_id = script._id
       task.script = script._id
     }
