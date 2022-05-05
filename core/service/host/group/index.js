@@ -180,19 +180,7 @@ const Service = module.exports = {
       for (let i=0; i<group.hosts.length; i++) {
         const host = group.hosts[i]
         if (host._id.toString() !== input.source_host) {
-          await new Promise((resolve, reject) => {
-            copyTemplateToHost(
-              host,
-              group,
-              customer,
-              (err) => {
-                if (err) {
-                  logger.error(err)
-                }
-                resolve()
-              }
-            )
-          })
+          await copyTemplateToHost(host, group, customer)
         }
       }
     }
@@ -261,19 +249,7 @@ const Service = module.exports = {
       for (let i=0; i < newHosts.length; i++) {
         const host = await Host.findById(newHosts[i])
         if (host) {
-          await new Promise((resolve, reject) => {
-            copyTemplateToHost(
-              host,
-              group,
-              customer,
-              (err) => {
-                if (err) {
-                  logger.error(err)
-                }
-                resolve()
-              }
-            )
-          })
+          await copyTemplateToHost(host, group, customer)
         }
       }
     }
@@ -335,10 +311,10 @@ const Service = module.exports = {
       //await supplyHostWithTemplateInstructions(host, group, customer)
       await new Promise((resolve, reject) => {
         Service.populate(group, (err) => {
-          copyTemplateToHost(host, group, customer, (err) => {
-            if (err) { reject(err) }
-            else { resolve() }
-          })
+          if (err) { return reject(err) }
+          copyTemplateToHost(host, group, customer)
+            .catch(reject)
+            .then(resolve)
         })
       })
 
@@ -463,15 +439,12 @@ const addHostOriginToGroup = (host_id, group, customer, user, next) => {
     if (err||!host) return next(err)
     removeHostTasks(host, (err) => {
       if (err) return next(err)
-      removeHostResources(host, (err) => {
+      removeHostResources(host, async (err) => {
         if (err) return next(err)
-        copyTemplateToHost(host, group, customer, (err)=>{
-          if (err) return next(err)
-
+        copyTemplateToHost(host, group, customer).catch(next).then(() => {
           logger.log('adding original host to the template')
           group.hosts.addToSet(host._id)
           group.save(err => logger.error(err))
-
           return next()
         })
       })
@@ -746,140 +719,77 @@ const unlinkHostFromTemplate = async (host, template, keepInstances) => {
  * @param {Customer} customer
  * @param {Function} next
  */
-const copyTemplateToHost = (host, template, customer, next) => {
-  next || (next = ()=>{})
-
-  /** @todo add async calls here to handle errors on creation process **/
-  copyTasksToHost(host, template.tasks, customer, (err,tasks) => {
-    if (err) {
-      logger.error('failed to assign tasks template to host')
-      logger.error(err)
-    }
-
-    copyResourcesToHost(host, template.resources, customer, (err, resources) => {
-      if (err) {
-        logger.error('failed to assign monitor template to host')
-        logger.error(err)
-      }
-
-      copyTriggersToHostTasks(host, tasks, resources, template.triggers, (err) => {
-        if (err) {
-          logger.error('failed to assign triggers template to tasks')
-          logger.error(err)
-        }
-
-        createRequiredFiles({
-          customer,
-          tasks,
-          resources,
-          files: template.files
-        }).catch(err => {
-          logger.error(err)
-          return next(err)
-        }).then(() => {
-          logger.log('all entities processed')
-          App.jobDispatcher.createAgentUpdateJob( host._id )
-          next()
-        })
-      })
-    })
-  })
+const copyTemplateToHost = async (host, template, customer) => {
+  const filesMap = await createFilesMapFromTemplates(customer, template.files)
+  const tasks = await copyTasksToHost(host, filesMap, template.tasks, customer)
+  const resources = await copyResourcesToHost(host, filesMap, template.resources, customer)
+  await copyTriggersToHostTasks(host, tasks, resources, template.triggers)
+  logger.log('All entities processed')
+  App.jobDispatcher.createAgentUpdateJob( host._id )
+  return
 }
 
-const createRequiredFiles = async (input) => {
-  const { tasks, resources } = input
+const createFilesMapFromTemplates = (customer, filesTemplates) => {
+  const locateFile = async (fileTemplate) => {
+    const fileMap = (file) => {
+      return {
+        _id: file._id,
+        template_id: fileTemplate._id,
+        source_model_id: fileTemplate.source_model_id
+      }
+    }
+    file = await FileModel.File.findOne({
+      customer_id: customer._id.toString(),
+      _id: fileTemplate.source_model_id // the original file is in this organization
+    })
 
-  const getFile = async (file_id) => {
-    let file = null
-    try {
-      file = await FileModel.File.findOne({
-        $or: [
-          { _id: file_id }, // the original file
-          { template_id: file_id } // a file created out of the file template
-        ]
-      })
+    // original file found
+    if (file) {
+      return fileMap(file)
+    }
 
-      if (!file) {
-        logger.log('creating new file from template')
+    file = await FileModel.File.findOne({
+      customer_id: customer._id.toString(),
+      template_id: fileTemplate._id // a file was created out of this file template
+    })
 
-        // using the file from the template
-        const fileTpl = input.files.find(templateFile => {
-          return (
-            templateFile.source_model_id.toString() === file_id.toString() ||
-            templateFile._id.toString() === file_id.toString()
-          )
-        })
+    if (file) {
+      return fileMap(file)
+    }
 
-        if (!fileTpl) {
-          throw new Error('file template not found. perhaps this is an old template? skipping')
+    logger.log('not found. creating the file from template')
+
+    // create a new file instance
+    file = await new Promise((resolve, reject) => {
+      App.file.createFromTemplate(
+        { template: fileTemplate, customer },
+        (err, file) => {
+          if (err) reject(err)
+          else resolve(file)
         }
+      )
+    })
 
-        // create a new file instance
-        file = await new Promise((resolve, reject) => {
-          App.file.createFromTemplate({
-            template: fileTpl,
-            customer: input.customer
-          }, (err, file) => {
-            if (err) reject(err)
-            else resolve(file)
-          })
-        })
-      } else {
-        logger.log('using already existent file')
-      }
-    } catch (err) {
-      logger.error(err)
-    }
-    return file
+    return fileMap(file)
   }
 
-  const createTasksFiles = async (cb) => {
-    for (let task of tasks) {
-      if (task.type === 'script') {
-        const file = await getFile(task.script)
-        if (!file) { break }
-
-        task.script_id = file._id.toString()
-        task.script = file._id
-        await task.save()
-      }
-    }
+  const filesPromises = []
+  for (let index = 0; index < filesTemplates.length; index++) {
+    const fileTemplate = filesTemplates[index]
+    filesPromises.push( locateFile(fileTemplate) )
   }
+  return Promise.all(filesPromises)
+}
 
-  const createMonitorsFiles = async () => {
-    for (let resource of resources) {
-      if (resource.type !== 'script' && resource.type !== 'file') {
-        break
-      }
-
-      const monitor = resource.monitor
-      let file_id
-      if (monitor.type === 'script') {
-        file_id = monitor.config.script_id
-      } else if (monitor.type === 'file') {
-        file_id = monitor.config.file
-      }
-      const file = await getFile(file_id)
-
-      if (!file) {
-        monitor.enable = false
-      } else {
-        if (monitor.type === 'script') {
-          monitor.config.script_id = file._id.toString()
-        } else if (monitor.type === 'file') {
-          monitor.config.file = file._id.toString()
-        }
-      }
-
-      // use findOneAndUpdate , does not change this line.
-      await App.Models.Monitor
-        .Monitor
-        .findOneAndUpdate({ _id: monitor._id }, monitor.toObject())
-    }
-  }
-
-  await createTasksFiles()
-  await createMonitorsFiles()
+const getFile = (file_id, filesMap) => {
+  const file = filesMap.find(fm => {
+    return (
+      fm.source_model_id.toString() === file_id.toString() ||
+      fm.template_id?.toString() === file_id.toString() ||
+      fm._id.toString() === file_id.toString()
+    )
+  })
+  return file
 }
 
 /**
@@ -888,31 +798,32 @@ const createRequiredFiles = async (input) => {
  * @param {Host} host
  * @param {TaskTemplate[]} templates
  * @param {Customer} customer
- * @param {Function} next
  */
-const copyTasksToHost = (host, templates, customer, next) => {
-  const tasks = []
-  const done = after(templates.length,() => {
-    next(null,tasks)
-  })
-
-  if (templates.length===0) return next()
-
+const copyTasksToHost = (host, filesMap, templates, customer) => {
+  const promises = []
   for (let i=0; i<templates.length; i++) {
-    App.task.createFromTemplate({
-      customer: customer,
-      template: templates[i],
-      host: host,
-      done: (err, task) => {
-        if (err) {
-          logger.error('%o',err)
-        } else {
-          tasks.push(task)
-        }
-        done()
+    const taskPromise = new Promise((resolve, reject) => {
+      const template = templates[i]
+
+      if (template.type === 'script' || /Script/.test(template._type)) {
+        const script = getFile(template.script_id, filesMap)
+        template.script_id = script._id.toString()
+        template.script = script._id
       }
+
+      App.task.createFromTemplate({
+        template,
+        customer,
+        host,
+        done: (err, task) => {
+          if (err) { reject(err) }
+          else { resolve(task) }
+        }
+      })
     })
+    promises.push( taskPromise )
   }
+  return Promise.all(promises)
 }
 
 /**
@@ -923,32 +834,45 @@ const copyTasksToHost = (host, templates, customer, next) => {
  * @param {Customer} customer
  * @param {Function} next
  */
-const copyResourcesToHost = (host, templates, customer, next) => {
-  const resources = []
-  const done = after(templates.length,() => {
-    next(null,resources)
-  })
-
-  if (templates.length===0) return next(null,[])
-
+const copyResourcesToHost = (host, filesMap, templates, customer, next) => {
+  const promises = []
   for (let i=0; i<templates.length; i++) {
-    let template = templates[i]
-    template.populate({}, (err) => {
-      App.resource.createFromTemplate({
-        customer: customer,
-        template: template,
-        host: host,
-        done: (err, resource) => {
-          if (err) {
-            logger.error('%o',err)
+    let resourceTemplate = templates[i]
+    const resourcePromise = resourceTemplate
+      .populate('monitor_template')
+      .execPopulate()
+      .catch(err => reject(err))
+      .then(() => {
+
+        if (
+          resourceTemplate.type === 'file' ||
+          resourceTemplate.type === 'script'
+        ) {
+          const monitorTemplate = resourceTemplate.monitor_template
+          if (monitorTemplate.type === 'script') {
+            const file = getFile(monitorTemplate.config.script_id, filesMap)
+            monitorTemplate.config.script_id = file._id.toString()
           } else {
-            resources.push(resource)
+            const file = getFile(monitorTemplate.config.file, filesMap)
+            monitorTemplate.config.file = file._id.toString()
           }
-          done()
         }
+
+        return new Promise((resolve, reject) => {
+          App.resource.createFromTemplate({
+            template: resourceTemplate,
+            customer,
+            host,
+            done: (err, resource) => {
+              if (err) { reject(err) }
+              else { resolve(resource) }
+            }
+          })
+        })
       })
-    })
+    promises.push(resourcePromise)
   }
+  return Promise.all(promises)
 }
 
 /**
@@ -1018,10 +942,9 @@ const removeTemplateEntities = async (templates, TemplateSchema, LinkedSchema, k
  * @param {Task[]} tasks host tasks
  * @param {Resource[]} resources host resources with its embedded monitors
  * @param {TriggerTemplate[]} triggers template triggers (linked to templates)
- * @param {Function} next callback
  */
-const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
-  if (triggers.length===0) return next()
+const copyTriggersToHostTasks = (host, tasks, resources, triggers) => {
+  if (triggers.length===0) { return }
 
   const searchTriggerEmitter = (trigger) => {
     var emitter
@@ -1076,11 +999,7 @@ const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
     logger.data('emitter: %j', emitter)
     logger.data('task: %j', task)
 
-    return {
-      task: task,
-      trigger: trigger,
-      emitter: emitter
-    }
+    return { task, trigger, emitter }
   }
 
   /**
@@ -1125,13 +1044,7 @@ const copyTriggersToHostTasks = (host, tasks, resources, triggers, next) => {
     }
   }
 
-  if (promises.length > 0) {
-    Promise.all(promises)
-      .then((result) => next(null, result))
-      .catch(err => next(err))
-  } else {
-    next()
-  }
+  return Promise.all(promises)
 }
 
 /**
