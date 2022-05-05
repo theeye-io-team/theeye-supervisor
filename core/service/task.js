@@ -19,7 +19,7 @@ const TaskTemplate = require('../entity/task/template')
 // var filter = require('../router/param-filter');
 const FetchBy = require('../lib/fetch-by')
 const ErrorHandler = require('../lib/error-handler')
-const { ClientError, ServerError } = ErrorHandler
+const { ClientError, ServerError, ValidationError } = ErrorHandler
 
 module.exports = {
   /**
@@ -411,7 +411,7 @@ module.exports = {
     const templates = []
     for (let task of tasks) {
       if (Object.keys(task).length === 0) {
-        throw new Error('invalid task definition')
+        throw new ValidationError('invalid task definition')
       }
 
       const data = Object.assign({}, task, {
@@ -421,7 +421,6 @@ module.exports = {
         customer: customer,
         user_id: user.id,
         user: user,
-        source_model_id: task.id,
         _id: undefined,
         secret: undefined
       })
@@ -585,24 +584,25 @@ FactoryMethod[ TaskConstants.TYPE_SCRIPT ] = async function (input) {
     }
   }
 
-  if (input.script_id) {
-    task.script = input.script_id
-  } else if (input.script) {
-    if (input.script.id) {
-      const id = input.script.id
-      task.script = id
-      task.script_id = id
-    } else {
-      const attrs = input.script 
-      attrs.customer = input.customer
-
-      const script = await App.file.create(attrs)
-      task.script_id = script._id
-      task.script = script._id
-    }
-  } else {
-    // ?? 
+  let script
+  if (input.script_id) { // string
+    script = await App.Models.File.File.findById(input.script_id)
+  } else if (input.script?.id) { // file model
+    script = await App.Models.File.File.findById(input.script.id)
   }
+
+  if (!script) {
+    const attrs = input.script 
+    attrs.customer = input.customer
+    script = await App.file.create(attrs)
+  }
+
+  if (!script._id) {
+    throw new ValidationError('cannot create script')
+  }
+
+  task.script_id = script._id
+  task.script = script._id
 
   return task
 }

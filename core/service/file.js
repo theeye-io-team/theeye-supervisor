@@ -158,7 +158,7 @@ module.exports = {
    *
    */
   createFromText (input, done) {
-    const { text, storename, filename, metadata } = input
+    const { text, storename, filename = 'unknown', metadata } = input
     logger.log('saving file in the store')
 
     FileHandler.storeText({ storename, filename, text }, (err, storeData) => {
