@@ -54,10 +54,11 @@ function BaseSchema (props, specs) {
     let serial
     if (options?.mode === 'deep') {
       serial = this.toObject() // as is
-      serial.source_model_id = this._id
     } else {
       serial = this.templateProperties() // shallow mode
     }
+
+    serial.source_model_id = this._id
     return serial
   }
 
