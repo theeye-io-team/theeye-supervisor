@@ -124,33 +124,22 @@ const LocalStorage = {
    * @property {String} input.sourceContent if source is 'text', this is the content
    */
   save (input, next) {
-    const filename = input.filename
-    const storename = input.storename
-    //let file = input.script
+    try {
+      const { filename, storename, sourceOrigin } = input
+      const storagePath = ensureNamedStorageExists(storename)
 
-    const storagePath = ensureNamedStorageExists(storename)
+      const targetPath = path.join(storagePath, filename)
+      if (sourceOrigin === 'file') {
+        fs.copyFileSync(input.sourcePath, targetPath)
+      } else if (sourceOrigin === 'text') {
+        fs.writeFileSync(targetPath, input.sourceContent)
+      } else {
+        throw new Error('unhandled sources origin received')
+      }
 
-    let targetPath = path.join(storagePath, filename)
-    if (input.sourceOrigin === 'file') {
-      copyFile(input.sourcePath, targetPath, function (error) {
-        if (error) {
-          debug(error)
-          next(error)
-        } else {
-          next(null, { path: targetPath, filename })
-        }
-      })
-    } else if (input.sourceOrigin === 'text') {
-      createFile(input.sourceContent, targetPath, function (error) {
-        if (error) {
-          debug(error)
-          next(error)
-        } else {
-          next(null, { path: targetPath, filename })
-        }
-      })
-    } else {
-      // errr ?
+      next(null, { path: targetPath, filename })
+    } catch (err) {
+      next( err )
     }
   },
   getStream (key, customerName, next) {
@@ -204,32 +193,4 @@ const ensureNamedStorageExists = (storename) => {
   }
 
   return scriptsPath
-}
-
-const createFile = (content, target, cb) => {
-  fs.writeFile(target, content, cb)
-}
-
-const copyFile = (source, target, cb) => {
-  var cbCalled = false;
-
-  var rd = fs.createReadStream(source);
-  rd.on("error", function(err) {
-    done(err);
-  });
-  var wr = fs.createWriteStream(target);
-  wr.on("error", function(err) {
-    done(err);
-  });
-  wr.on("close", function(ex) {
-    done();
-  });
-  rd.pipe(wr);
-
-  function done(err) {
-    if (!cbCalled) {
-      cb(err);
-      cbCalled = true;
-    }
-  }
 }
