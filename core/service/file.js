@@ -12,14 +12,13 @@ const Monitor = require('../entity/monitor').Entity
 module.exports = {
   remove (input, next) {
     next || (next = () => {})
-    let file = input.file
-    let filter = { _id: file._id }
-    FileModel.File.deleteOne(filter, function (error) {
-      if (error) { return next(error) }
-      storage.remove({ key: file.keyname }, function (error, data) {
-        if (error) { return next(error) }
-        next()
+    const { file } = input
+    FileModel.File.deleteOne({ _id: file._id }, (err) => {
+      if (err) { return next(err) }
+      storage.remove(file, (err, data) => {
+        if (err) { logger.error(err) }
       })
+      next()
     })
   },
   getLinkedModels (input) {
@@ -182,6 +181,36 @@ module.exports = {
         done(err, model)
       })
     })
+  },
+  async locateFile (customer, fileSerial) {
+    let file
+
+    file = await FileModel.File.findOne({
+      customer_id: customer._id.toString(),
+      _id: fileSerial.source_model_id // the original file is in this organization
+    })
+
+    if (file) { return file }
+
+    file = await FileModel.File.findOne({
+      customer_id: customer._id.toString(),
+      template_id: fileSerial._id // a file was created out of this file template
+    })
+
+    if (file) { return file }
+
+    file = await FileModel.File.findOne({
+      customer_id: customer._id.toString(),
+      md5: fileSerial.md5,
+      size: fileSerial.size,
+      extension: fileSerial.extension,
+      mimetype: fileSerial.mimetype
+    })
+
+    if (file) { return file }
+
+    // no more options
+    return null
   },
   /**
    * @summary get file recipe

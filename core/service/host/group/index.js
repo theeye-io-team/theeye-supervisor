@@ -739,48 +739,20 @@ const createFilesMapFromTemplates = (customer, filesTemplates) => {
       }
     }
 
-    file = await FileModel.File.findOne({
-      customer_id: customer._id.toString(),
-      _id: fileTemplate.source_model_id // the original file is in this organization
-    })
-
-    // original file found
-    if (file) {
-      return fileMap(file)
+    let file = await App.file.locateFile(customer, fileTemplate)
+    if (!file) {
+      logger.log('not found. creating the file from template')
+      // create a new file instance
+      file = await new Promise((resolve, reject) => {
+        App.file.createFromTemplate(
+          { template: fileTemplate, customer },
+          (err, file) => {
+            if (err) { reject(err) }
+            else { resolve(file) }
+          }
+        )
+      })
     }
-
-    file = await FileModel.File.findOne({
-      customer_id: customer._id.toString(),
-      template_id: fileTemplate._id // a file was created out of this file template
-    })
-
-    if (file) {
-      return fileMap(file)
-    }
-
-    file = await FileModel.File.findOne({
-      customer_id: customer._id.toString(),
-      md5: fileTemplate.md5,
-      size: fileTemplate.size,
-      extension: fileTemplate.extension,
-      mimetype: fileTemplate.mimetype
-    })
-
-    if (file) {
-      return fileMap(file)
-    }
-
-    logger.log('not found. creating the file from template')
-    // create a new file instance
-    file = await new Promise((resolve, reject) => {
-      App.file.createFromTemplate(
-        { template: fileTemplate, customer },
-        (err, file) => {
-          if (err) reject(err)
-          else resolve(file)
-        }
-      )
-    })
 
     return fileMap(file)
   }

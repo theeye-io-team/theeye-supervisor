@@ -242,16 +242,15 @@ const downloadFile = (req, res, next) => {
   const file = req.file
   FileHandler.getStream(file, (error, stream) => {
     if (error) {
-      logger.error(error)
-      next(error)
-    } else {
-      logger.log('streaming file to client')
-      const headers = {
-        'Content-Disposition': 'attachment; filename=' + file.filename
-      }
-      res.writeHead(200,headers)
-      stream.pipe(res)
+      return res.sendError(error)
     }
+
+    logger.log('streaming file to client')
+    const headers = {
+      'Content-Disposition': 'attachment; filename=' + file.filename
+    }
+    res.writeHead(200,headers)
+    stream.pipe(res)
   })
 }
 

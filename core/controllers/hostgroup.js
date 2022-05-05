@@ -118,7 +118,7 @@ const controller = {
    */
   remove (req,res,next) {
     const group = req.group
-    var deleteInstances = req.query.deleteInstances
+    let deleteInstances = req.query.deleteInstances
 
     if (typeof deleteInstances === 'string') {
       if (deleteInstances === 'true') {
@@ -127,13 +127,13 @@ const controller = {
         deleteInstances = false
       }
     } else {
-      return res.send(400, 'Invalid parameter value')
+      return res.send(400, 'Invalid parameter value: deleteInstances')
     }
 
     App.hostTemplate.remove({
-      group: group,
       user: req.user,
-      deleteInstances: deleteInstances
+      group,
+      deleteInstances
     }, (err) => {
       if (err) {
         res.sendError(err)
@@ -156,7 +156,6 @@ const controller = {
    * @param {String} req.body.triggers[].task_id , the id of the task for this trigger
    * @param {String[]} req.body.triggers[].events , array of event ids which belongs to the same host as the tasks host (can be triggered by tasks and monitors)
    * @param {Boolean} req.body.applyToSourceHost , determines if template should be applied to source host.
-
    *
    */
   create (req, res, next) {

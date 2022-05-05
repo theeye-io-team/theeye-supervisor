@@ -63,12 +63,17 @@ const S3Storage = {
    * @param {Object} input
    * @property {String} input.key
    */
-  remove (input, next) {
+  remove (file, next) {
     next || (next = () =>{})
+    const { keyname } = file
+
+    if (!keyname) {
+      return next( new Error('undefined keyname') )
+    }
 
     let params = {
       Bucket: config.integrations.aws.s3.bucket,
-      Key: input.key
+      Key: file.keyname
     }
 
     var s3 = new AWS.S3({ params })
@@ -110,39 +115,6 @@ const S3Storage = {
 }
 
 const LocalStorage = {
-  createLocalStorage (name, next) {
-    debug('creating local storage');
-
-    var basePath = systemConfig.file_upload_folder ;
-    var storagePath = basePath + '/' + name ;
-    var scriptsPath = storagePath + '/scripts' ;
-
-    fs.exists(scriptsPath, function(exists) {
-      if (exists) {
-        next(scriptsPath);
-      } else {
-        fs.exists(storagePath, function(exists) {
-          if (!exists) {
-            fs.mkdirSync(storagePath, '0755');
-            debug('named storage %s directory created', storagePath);
-
-            fs.mkdirSync(scriptsPath, '0755');
-            debug('files storage %s directory created', scriptsPath);
-
-            next(scriptsPath);
-          } else {
-            fs.exists(scriptsPath, function(exists) {
-              if (!exists) {
-                fs.mkdirSync(scriptsPath, '0755');
-                debug('file storage %s directory created', scriptsPath);
-              }
-              next(scriptsPath);
-            });
-          }
-        });
-      }
-    });
-  },
   /**
    * @param {Object} input
    * @property {String} input.filename
@@ -152,65 +124,86 @@ const LocalStorage = {
    * @property {String} input.sourceContent if source is 'text', this is the content
    */
   save (input, next) {
-    const self = this
     const filename = input.filename
     const storename = input.storename
     //let file = input.script
 
-    this.createLocalStorage(storename, function (storagePath) {
-      let targetPath = path.join(storagePath, filename)
-      if (input.sourceOrigin === 'file') {
-        copyFile(input.sourcePath, targetPath, function (error) {
-          if (error) {
-            debug(error)
-            next(error)
-          } else {
-            next(null, { path: targetPath, filename })
-          }
-        })
-      } else if (input.sourceOrigin === 'text') {
-        createFile(input.sourceContent, targetPath, function (error) {
-          if (error) {
-            debug(error)
-            next(error)
-          } else {
-            next(null, { path: targetPath, filename })
-          }
-        })
-      } else {
-        // errr ?
-      }
-    })
-  },
-  getStream (key, customer_name, next) {
-    debug('creating file stream');
-    var self = this;
-    var storagePath = systemConfig.file_upload_folder;
-    var customerPath = storagePath + '/' + customer_name;
-    var scriptsPath = customerPath + '/scripts';
-    var filepath = path.join(scriptsPath, key);
-    var storeName = customer_name;
+    const storagePath = ensureNamedStorageExists(storename)
 
-    fs.access(filepath, fs.R_OK, function(err){
-      if(err){
-        if(err.code=='ENOENT'){
-          self.createLocalStorage(storeName,function(path){
-            fs.writeFile(filepath,'EMPTY FILE CREATED',function(err){
-              if(err) return next(err);
-              next(null,fs.createReadStream(filepath));
-            });
-          });
+    let targetPath = path.join(storagePath, filename)
+    if (input.sourceOrigin === 'file') {
+      copyFile(input.sourcePath, targetPath, function (error) {
+        if (error) {
+          debug(error)
+          next(error)
+        } else {
+          next(null, { path: targetPath, filename })
         }
-        else return next(err);
+      })
+    } else if (input.sourceOrigin === 'text') {
+      createFile(input.sourceContent, targetPath, function (error) {
+        if (error) {
+          debug(error)
+          next(error)
+        } else {
+          next(null, { path: targetPath, filename })
+        }
+      })
+    } else {
+      // errr ?
+    }
+  },
+  getStream (key, customerName, next) {
+    const storagePath = systemConfig.file_upload_folder
+    const filepath = path.join(storagePath, customerName, 'scripts', key)
+
+    try {
+      fs.accessSync(filepath, fs.R_OK)
+    } catch (err) {
+      // file is not found in the storage
+      if (err.code === 'ENOENT') {
+        const storage = ensureNamedStorageExists(customerName)
+        fs.writeFileSync(filepath, 'EMPTY FILE CREATED')
+      } else {
+        //break
+        return next(err)
       }
-      else return next(null,fs.createReadStream(filepath));
-    });
+    }
+
+    const stream = fs.createReadStream(filepath)
+    next(null, stream)
+    return stream
   },
   remove (file, next) {
-    // not implemented
-    debug('REMOVE NOT IMPLEMENTED');
-    if(next) next();
+    const storagePath = systemConfig.file_upload_folder
+    try {
+      const filepath = path.join(storagePath, file.customer_name, 'scripts', file.keyname)
+      fs.rmSync(filepath)
+      next()
+    } catch (err) {
+      next(err)
+    }
   }
+}
+
+const ensureNamedStorageExists = (storename) => {
+  debug('creating local storage')
+
+  const basePath = systemConfig.file_upload_folder
+  const storagePath = path.join(basePath, storename)
+  const scriptsPath = path.join(storagePath, 'scripts')
+
+  if (!fs.existsSync(storagePath)) {
+    fs.mkdirSync(storagePath, '0755')
+    debug('named storage %s created', storagePath)
+  }
+
+  if (!fs.existsSync(scriptsPath)) {
+    fs.mkdirSync(scriptsPath, '0755')
+    debug('scripts storage %s created', scriptsPath)
+  }
+
+  return scriptsPath
 }
 
 const createFile = (content, target, cb) => {
