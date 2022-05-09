@@ -128,10 +128,13 @@ const controller = {
     }
 
     if (input.type === TaskConstants.TYPE_SCRIPT) {
-      if (!req.script) {
+      if (!req.script && !input.script?.data) {
         errors[!req.body.script ? 'required' : 'invalid']('script', req.script)
       }
-      input.script = req.script
+
+      if (req.script) {
+        input.script = req.script
+      }
 
       if (!input.script_runas) {
         errors.required('script_runas', input.script_runas)
