@@ -1,6 +1,8 @@
 
 const App = require('../app')
 
+const ObjectId = require('mongoose').Types.ObjectId
+
 const isMongoId = require('validator/lib/isMongoId')
 const logger = require('../lib/logger')('service:task')
 
@@ -584,25 +586,46 @@ FactoryMethod[ TaskConstants.TYPE_SCRIPT ] = async function (input) {
     }
   }
 
-  let script
-  if (input.script_id) { // string
-    script = await App.Models.File.File.findById(input.script_id)
-  } else if (input.script?.id) { // file model
-    script = await App.Models.File.File.findById(input.script.id)
-  }
+  // the script was created or determined in a previous phase.
+  // no further actions are required. skip this
+  if (!ObjectId.isValid(input.script_id)) {
+    let script
+    if (input.script_id) { // string
+      script = await App.Models.File.File.findById(input.script_id)
+    } else if (input.script?.id) { // file model
+      script = await App.Models.File.File.findById(input.script.id)
+    }
 
-  if (!script) {
-    const attrs = input.script 
-    attrs.customer = input.customer
-    script = await App.file.create(attrs)
-  }
+    if (
+      !script &&
+      (input.script?.data || input.script?.md5 || input.script?.source_model_id)
+    ) {
+      script = await App.file.locateFile(input.customer, input.script)
+      // can't create the file without the data
+      if (!script && input.script?.data) {
+        const attrs = input.script 
+        attrs.customer = input.customer
+        script = await App.file.create(attrs)
+      }
+    }
 
-  if (!script._id) {
-    throw new ValidationError('cannot create script')
+    if (script?._id) {
+      if (
+        !task.template_id ||
+        (task.template_id.toString() !== script.template_id.toString())
+      ) {
+        // remove from the template
+        script.template = null
+        script.template_id = null
+        await script.save()
+      }
+      task.script_id = script._id
+      task.script = script._id
+    } else {
+      task.script_id = null
+      task.script = null
+    }
   }
-
-  task.script_id = script._id
-  task.script = script._id
 
   return task
 }
