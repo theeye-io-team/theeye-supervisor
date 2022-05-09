@@ -46,36 +46,24 @@ function BaseSchema (specs, opts) {
   this.set('toJSON', def);
   this.set('toObject', def)
 
-  this.methods.publish = function (options, next) {
-    var data = this.toObject()
-    if (next) { next(null, data) }
-    return data
-  }
-
-  this.statics.publishAll = function (entities, next) {
-    if (!entities || entities.length == 0) {
-      return next([])
-    }
-
-    var published = []
-    var donePublish = lodashAfter(entities.length, function () {
-      next(null, published)
-    })
-
-    for (let i = 0; i<entities.length; i++){
-      var entity = entities[i];
-      entity.publish({}, function(error, data) {
-        published.push(data);
-        donePublish()
-      })
-    }
-  }
-
   this.pre('save', function(next) {
     this.last_update = new Date()
     // do stuff
     next()
   })
+
+  this.methods.serialize = function (options = {}) {
+    let serial
+    if (options?.mode === 'deep') {
+      serial = this.toObject() // as is
+    } else {
+      serial = this.templateProperties() // shallow mode
+    }
+
+    serial.source_model_id = this._id
+    return serial
+  }
+
 }
 
 util.inherits(BaseSchema, Schema)

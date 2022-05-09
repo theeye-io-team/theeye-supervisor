@@ -65,6 +65,17 @@ function BaseSchema (props, opts) {
   //  // do stuff
   //  next()
   //})
+  this.methods.serialize = function (options = {}) {
+    let serial
+    if (options?.mode === 'deep') {
+      serial = this.toObject() // as is
+    } else {
+      serial = this.templateProperties() // shallow mode
+    }
+
+    serial.source_model_id = this._id
+    return serial
+  }
 }
 
 util.inherits(BaseSchema, Schema)

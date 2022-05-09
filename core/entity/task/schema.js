@@ -42,8 +42,6 @@ function TaskSchema (props, specs) {
 
   this.methods.templateProperties = function () {
     let values = this.toObject()
-    values.source_model_id = this._id
-
     // remove non essential properties
     delete values.enable
     delete values.creation_date

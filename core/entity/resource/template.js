@@ -12,12 +12,6 @@ const TemplateSchema = new BaseSchema({
   _type: { type: String, 'default': 'ResourceTemplate' }
 },{ collection: 'resource_templates' })
 
-TemplateSchema.methods.populate = function (options, next) {
-  return Entity.populate(this, [
-    { path: 'monitor_template' }
-  ], err => next(err,this))
-}
-
 TemplateSchema.methods.updateInstancesOfGroupHosts = function (done) {
   var template = this;
   logger.log('updating template resource "%s"(%s) instances',

@@ -12,14 +12,13 @@ const Monitor = require('../entity/monitor').Entity
 module.exports = {
   remove (input, next) {
     next || (next = () => {})
-    let file = input.file
-    let filter = { _id: file._id }
-    FileModel.File.deleteOne(filter, function (error) {
-      if (error) { return next(error) }
-      storage.remove({ key: file.keyname }, function (error, data) {
-        if (error) { return next(error) }
-        next()
+    const { file } = input
+    FileModel.File.deleteOne({ _id: file._id }, (err) => {
+      if (err) { return next(err) }
+      storage.remove(file, (err, data) => {
+        if (err) { logger.error(err) }
       })
+      next()
     })
   },
   getLinkedModels (input) {
@@ -158,7 +157,7 @@ module.exports = {
    *
    */
   createFromText (input, done) {
-    const { text, storename, filename, metadata } = input
+    const { text, storename, filename = 'unknown', metadata } = input
     logger.log('saving file in the store')
 
     FileHandler.storeText({ storename, filename, text }, (err, storeData) => {
@@ -182,6 +181,58 @@ module.exports = {
         done(err, model)
       })
     })
+  },
+  async locateFile (customer, fileSerial) {
+    let file
+
+    // the original file or a template
+    const fileId = (fileSerial._id || fileSerial.id)
+    if (fileId) {
+
+      // the original file is in this organization
+      file = await FileModel.File.findOne({
+        customer_id: customer._id.toString(),
+        $or: [
+          { template_id: fileId },
+          { _id: fileId }
+        ]
+      })
+
+      if (file) { return file }
+
+    }
+
+    // source_model_id
+    if (fileSerial.source_model_id) {
+
+      // a file was already created using the same template
+      file = await FileModel.File.findOne({
+        customer_id: customer._id.toString(),
+        _id: fileSerial.source_model_id
+      })
+
+      if (file) { return file }
+
+    }
+
+    // file fingerprint
+    if (fileSerial.md5 && fileSerial.size && fileSerial.extension && fileSerial.mimetype) {
+
+      // search using the metadata and fingerprint
+      file = await FileModel.File.findOne({
+        customer_id: customer._id.toString(),
+        md5: fileSerial.md5,
+        size: fileSerial.size,
+        extension: fileSerial.extension,
+        mimetype: fileSerial.mimetype
+      })
+
+      if (file) { return file }
+
+    }
+
+    // no more options
+    return null
   },
   /**
    * @summary get file recipe

@@ -139,6 +139,18 @@ class ServerError extends ExtendedError {
   }
 }
 
+class ValidationError extends ExtendedError {
+  constructor (message, options) {
+    super(message || 'Validation Error')
+    options||(options={})
+    this.name = this.constructor.name
+    this.code = options.code || ''
+    this.statusCode = this.status = options.statusCode || 400
+  }
+}
+
+ErrorHandler.ValidationError = ValidationError
+
 ErrorHandler.ClientError = ClientError
 
 ErrorHandler.ServerError = ServerError

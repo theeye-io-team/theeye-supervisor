@@ -13,31 +13,31 @@ var ResourceService = require('../service/resource')
 var Script = require('../entity/file').Script
 var dbFilter = require('../lib/db-filter')
 
-module.exports = function(server){
-  server.get('/:customer/script' , [
+module.exports = function (server) {
+  server.get('/:customer/script',
     server.auth.bearerMiddleware,
     router.requireCredential('viewer'),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,
-  ] , controller.fetch)
+    controller.fetch
+  )
 
-  server.get('/:customer/script/:script', [
+  server.get('/:customer/script/:script', 
     server.auth.bearerMiddleware,
     router.requireCredential('viewer'),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,
-    router.resolve.idToEntity({param:'script',required:true,entity:'file'})
-  ] , controller.get)
+    router.resolve.idToEntity({param:'script',required:true,entity:'file'}),
+    controller.get
+  )
 
   // clients can download scripts
-	server.get(
-    '/:customer/script/:script/download',[
-      server.auth.bearerMiddleware,
-      router.requireCredential('user'),
-      router.resolve.customerNameToEntity({required:true}),
-      router.ensureCustomer,
-      router.resolve.idToEntity({param:'script',required:true,entity:'file'})
-    ],
+  server.get('/:customer/script/:script/download',
+    server.auth.bearerMiddleware,
+    router.requireCredential('user'),
+    router.resolve.customerNameToEntity({required:true}),
+    router.ensureCustomer,
+    router.resolve.idToEntity({param:'script',required:true,entity:'file'}),
     controller.download
   )
 }
@@ -53,10 +53,9 @@ const controller = {
     var filter = dbFilter(input,{ sort: { filename: 1 } });
     filter.where.customer_id = customer.id;
 
-    Script.fetchBy(filter, function(error,scripts){
-      if (!scripts) scripts = [];
-      res.send(200, scripts);
-      next();
+    Script.fetchBy(filter, (error, scripts) => {
+      res.send(200, scripts)
+      next()
     });
   },
   /**

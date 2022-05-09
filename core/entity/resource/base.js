@@ -24,8 +24,6 @@ module.exports = ResourceSchema
 
 ResourceSchema.methods.templateProperties = function () {
   const values = this.toObject()
-
-  values.source_model_id = this._id
   // remove non essential properties
   delete values.enable
   delete values.monitor_id
@@ -50,30 +48,3 @@ ResourceSchema.methods.templateProperties = function () {
 
   return values
 }
-
-//ResourceSchema.methods.populate = function(options,next){
-//  return next(null,this)
-//  return Entity.populate(this,[
-//    { path: '' },
-//  ],next)
-//}
-
-//ResourceSchema.statics.create = function(input, next){
-//  var data = {}
-//  next||(next=function(){})
-//  var entity = new Entity(input)
-//  entity.host_id = input.host_id
-//  entity.hostname = input.hostname
-//  entity.template = input.template || null
-//  entity.save(function (err, instance) {
-//    if (err) return next (err)
-//    next(null, instance)
-//  })
-//}
-
-//ResourceSchema.methods.patch = function(input, next){
-//  next||(next=function(){})
-//  this.update(input, function(error,result){
-//    next(error,result)
-//  })
-//}
