@@ -185,29 +185,51 @@ module.exports = {
   async locateFile (customer, fileSerial) {
     let file
 
-    file = await FileModel.File.findOne({
-      customer_id: customer._id.toString(),
-      _id: fileSerial.source_model_id // the original file is in this organization
-    })
+    // the original file or a template
+    const fileId = (fileSerial._id || fileSerial.id)
+    if (fileId) {
 
-    if (file) { return file }
+      // the original file is in this organization
+      file = await FileModel.File.findOne({
+        customer_id: customer._id.toString(),
+        $or: [
+          { template_id: fileId },
+          { _id: fileId }
+        ]
+      })
 
-    file = await FileModel.File.findOne({
-      customer_id: customer._id.toString(),
-      template_id: fileSerial._id // a file was created out of this file template
-    })
+      if (file) { return file }
 
-    if (file) { return file }
+    }
 
-    file = await FileModel.File.findOne({
-      customer_id: customer._id.toString(),
-      md5: fileSerial.md5,
-      size: fileSerial.size,
-      extension: fileSerial.extension,
-      mimetype: fileSerial.mimetype
-    })
+    // source_model_id
+    if (fileSerial.source_model_id) {
 
-    if (file) { return file }
+      // a file was already created using the same template
+      file = await FileModel.File.findOne({
+        customer_id: customer._id.toString(),
+        _id: fileSerial.source_model_id
+      })
+
+      if (file) { return file }
+
+    }
+
+    // file fingerprint
+    if (fileSerial.md5 && fileSerial.size && fileSerial.extension && fileSerial.mimetype) {
+
+      // search using the metadata and fingerprint
+      file = await FileModel.File.findOne({
+        customer_id: customer._id.toString(),
+        md5: fileSerial.md5,
+        size: fileSerial.size,
+        extension: fileSerial.extension,
+        mimetype: fileSerial.mimetype
+      })
+
+      if (file) { return file }
+
+    }
 
     // no more options
     return null
