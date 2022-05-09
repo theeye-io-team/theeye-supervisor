@@ -729,8 +729,8 @@ const copyTemplateToHost = async (host, template, customer) => {
   return
 }
 
-const createFilesMapFromTemplates = (customer, filesTemplates) => {
-  const locateFile = async (fileTemplate) => {
+const createFilesMapFromTemplates = async (customer, filesTemplates) => {
+  const createFileTemplateMap = async (fileTemplate) => {
     const fileMap = (file) => {
       return {
         _id: file._id,
@@ -757,12 +757,14 @@ const createFilesMapFromTemplates = (customer, filesTemplates) => {
     return fileMap(file)
   }
 
-  const filesPromises = []
+  const filesMap = []
+  // create files in order to avoid duplicates.
+  // the same file can be used in multiple tasks and monitores
   for (let index = 0; index < filesTemplates.length; index++) {
     const fileTemplate = filesTemplates[index]
-    filesPromises.push( locateFile(fileTemplate) )
+    filesMap.push( await createFileTemplateMap(fileTemplate) )
   }
-  return Promise.all(filesPromises)
+  return filesMap
 }
 
 const getFile = (file_id, filesMap) => {
