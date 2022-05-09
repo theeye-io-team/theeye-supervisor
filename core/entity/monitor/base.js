@@ -21,29 +21,8 @@ const MonitorSchema = new BaseSchema({
 
 module.exports = MonitorSchema
 
-/**
- * extends publishing method to include Entity specific definitions
- */
-MonitorSchema.methods.publish = function (options, next) {
-  options = options || {};
-  if (options.populate) {
-    this.populate({ path:'resource' }, function (error, monitor) {
-      if (!monitor.resource) {
-        logger.error('monitor.resource is null. could not populate');
-        next(error);
-      } else {
-        next(error,monitor.toObject());
-      }
-    })
-  } else {
-    next(null, this.toObject());
-  }
-}
-
 MonitorSchema.methods.templateProperties = function () {
   let values = this.toObject()
-
-  values.source_model_id = this._id
   // remove non essential properties
   delete values.enable
   delete values.creation_date

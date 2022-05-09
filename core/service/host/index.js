@@ -201,10 +201,10 @@ HostService.template = async (host, customer, next) => {
 
     if (Array.isArray(resources) && resources.length > 0) {
       for (let resource of resources) {
-        const resourceData = resource.templateProperties()
+        const resourceData = resource.serialize()
 
         const monitor = await Monitor.findOne({ resource_id: resource._id })
-        resourceData.monitor = monitor.templateProperties()
+        resourceData.monitor = monitor.serialize()
         recipes.push(resourceData)
 
         if (monitor.type === MonitorsConstants.RESOURCE_TYPE_SCRIPT) {
@@ -224,7 +224,10 @@ HostService.template = async (host, customer, next) => {
       //enable: true,
       host: host._id,
       customer_id: customer._id,
-      workflow_id: { $exists: false }
+      $or: [
+        { workflow_id: { $exists: false } },
+        { workflow_id: { $type: 10 } } // BSON Type Null
+      ]
     })
 
     if (Array.isArray(tasks) && tasks.length > 0) {
@@ -233,7 +236,7 @@ HostService.template = async (host, customer, next) => {
           filesToConfigure.push(task.script_id.toString())
         }
 
-        const values = task.templateProperties()
+        const values = task.serialize()
         if (task.triggers.length > 0) {
           values.triggers = task.triggers // keep it until triggers are exported
         }
@@ -289,7 +292,7 @@ HostService.template = async (host, customer, next) => {
               event_type: trigger._type,
               event_name: trigger.name,
               emitter_id: trigger.emitter_id,
-              //emitter: trigger.emitter,
+              emitter_type: trigger.emitter_type,
               task_id: task.source_model_id
             })
 
@@ -477,6 +480,7 @@ const detectTaskTriggersOfSameHost = async (triggers, host) => {
         _type: trigger._type,
         name: trigger.name,
         emitter_id: trigger.emitter._id,
+        emitter_type: trigger.emitter._type,
         //emitter: { // required by mongoose to populate schema
         //  _id: trigger.emitter._id,
         //  _type: trigger.emitter._type,

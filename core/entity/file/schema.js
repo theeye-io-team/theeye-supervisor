@@ -41,12 +41,6 @@ function FileSchema (props) {
     return this.keyname.replace(/\[ts:.*\]/,'')
   }
 
-  this.methods.publish = function (next) {
-    var data = this.toObject()
-    next(null, data)
-    return data
-  }
-
   this.methods.templateProperties = function () {
     let values = this.toObject()
 
@@ -64,30 +58,6 @@ function FileSchema (props) {
     delete values.customer_id
     delete values.customer_name
     return values
-  }
-
-  this.statics.fetchBy = function (filter, next) {
-    var publishedScripts = []
-    FetchBy.call(this,filter,function(err,scripts){
-      var notFound = (scripts===null||scripts instanceof Array && scripts.length===0)
-      if (notFound) {
-        next(null,[])
-      } else {
-        var asyncTasks = []
-        scripts.forEach(function(script){
-          asyncTasks.push(function(callback){
-            script.publish(function(error, data){
-              publishedScripts.push(data)
-              callback()
-            })
-          })
-        })
-
-        async.parallel(asyncTasks,function(){
-          next(null,publishedScripts)
-        })
-      }
-    })
   }
 
   return this

@@ -19,7 +19,7 @@ const ScriptSchema = new BaseSchema({
 module.exports = ScriptSchema
 
 const serialize = ScriptSchema.methods.serialize
-ScriptSchema.methods.serialize = function (options) {
+ScriptSchema.methods.serialize = function (options = {}) {
   const values = serialize.apply(this, arguments)
   //delete values.script_arguments
 

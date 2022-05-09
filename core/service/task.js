@@ -1,6 +1,8 @@
 
 const App = require('../app')
 
+const ObjectId = require('mongoose').Types.ObjectId
+
 const isMongoId = require('validator/lib/isMongoId')
 const logger = require('../lib/logger')('service:task')
 
@@ -19,7 +21,7 @@ const TaskTemplate = require('../entity/task/template')
 // var filter = require('../router/param-filter');
 const FetchBy = require('../lib/fetch-by')
 const ErrorHandler = require('../lib/error-handler')
-const { ClientError, ServerError } = ErrorHandler
+const { ClientError, ServerError, ValidationError } = ErrorHandler
 
 module.exports = {
   /**
@@ -411,7 +413,7 @@ module.exports = {
     const templates = []
     for (let task of tasks) {
       if (Object.keys(task).length === 0) {
-        throw new Error('invalid task definition')
+        throw new ValidationError('invalid task definition')
       }
 
       const data = Object.assign({}, task, {
@@ -421,7 +423,6 @@ module.exports = {
         customer: customer,
         user_id: user.id,
         user: user,
-        source_model_id: task.id,
         _id: undefined,
         secret: undefined
       })
@@ -585,23 +586,45 @@ FactoryMethod[ TaskConstants.TYPE_SCRIPT ] = async function (input) {
     }
   }
 
-  if (input.script_id) {
-    task.script = input.script_id
-  } else if (input.script) {
-    if (input.script.id) {
-      const id = input.script.id
-      task.script = id
-      task.script_id = id
-    } else {
-      const attrs = input.script 
-      attrs.customer = input.customer
+  // the script was created or determined in a previous phase.
+  // no further actions are required. skip this
+  if (!ObjectId.isValid(input.script_id)) {
+    let script
+    if (input.script_id) { // string
+      script = await App.Models.File.File.findById(input.script_id)
+    } else if (input.script?.id) { // file model
+      script = await App.Models.File.File.findById(input.script.id)
+    }
 
-      const script = await App.file.create(attrs)
+    if (
+      !script &&
+      (input.script?.data || input.script?.md5 || input.script?.source_model_id)
+    ) {
+      script = await App.file.locateFile(input.customer, input.script)
+      // can't create the file without the data
+      if (!script && input.script?.data) {
+        const attrs = input.script 
+        attrs.customer = input.customer
+        script = await App.file.create(attrs)
+      }
+    }
+
+    if (script?._id) {
+      if (
+        !task.template_id ||
+        (task.template_id.toString() !== script.template_id.toString())
+      ) {
+        // remove from the template
+        script.template = null
+        script.template_id = null
+        await script.save()
+      }
       task.script_id = script._id
       task.script = script._id
+    } else {
+      task.script_id = null
+      task.script = null
     }
-  } else {
-    // ?? 
   }
 
   return task
