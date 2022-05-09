@@ -1,13 +1,12 @@
-'use strict'
 
 const App = require('../app')
 const after = require('lodash/after')
-const async = require('async')
 const router = require('../router')
 const logger = require('../lib/logger')('eye:controller:hostgroup')
 const HostGroup = require('../entity/host/group').Entity
 const audit = require('../lib/audit')
 const TopicsConstants = require('../constants/topics')
+const Recipe = require('../entity/recipe').Recipe
 
 /**
  *
@@ -25,34 +24,39 @@ module.exports = function(server) {
   ]
 
   server.get('/:customer/hostgroup', middleware, controller.fetch)
-  server.post(
-    '/:customer/hostgroup',
+  server.post('/:customer/hostgroup',
     middleware,
     controller.create,
     audit.afterCreate('group', { display: 'name', topic: crudTopic })
   )
 
-  server.get(
-    '/:customer/hostgroup/:group',
+  server.get('/:customer/hostgroup/:group',
     middleware,
     router.resolve.idToEntity({ param: 'group', entity: 'host/group', required: true }),
     controller.get
   )
 
-  server.put(
-    '/:customer/hostgroup/:group',
+  server.put('/:customer/hostgroup/:group',
     middleware,
     router.resolve.idToEntity({ param: 'group', entity: 'host/group', required: true }),
     controller.replace,
     audit.afterReplace('group', { display: 'name', topic: crudTopic })
   )
 
-  server.del(
-    '/:customer/hostgroup/:group',
+  server.del('/:customer/hostgroup/:group',
     middleware,
     router.resolve.idToEntity({ param: 'group', entity: 'host/group', required: true }),
     controller.remove,
     audit.afterRemove('group', { display: 'name', topic: crudTopic })
+  )
+
+  server.get('/hostgroup/:group/serialize',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param: 'group', entity: 'host/group', required: true }),
+    controller.serialize
   )
 }
 
@@ -64,6 +68,19 @@ module.exports = function(server) {
  *
  */
 const controller = {
+  async serialize (req, res, next) {
+    try {
+      const { customer, group } = req
+      const recipe = await Recipe.findOne({
+        customer_id: customer.id,
+        hostgroup_id: group._id
+      })
+
+      res.send(200, recipe?.instructions)
+    } catch (err) {
+      res.sendError(err)
+    }
+  },
   /**
    *
    * @author Facundo
