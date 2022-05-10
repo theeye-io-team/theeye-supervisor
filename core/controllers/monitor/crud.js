@@ -28,15 +28,13 @@ module.exports = (server) => {
     router.ensureCustomer
   ]
 
-  server.get(
-    '/monitor',
+  server.get('/monitor',
     middlewares,
     router.requireCredential('viewer'),
     controller.fetch
   )
 
-  server.get(
-    '/monitor/:resource',
+  server.get('/monitor/:resource',
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'resource', required: true }),
@@ -44,8 +42,7 @@ module.exports = (server) => {
     controller.get
   )
 
-  server.del(
-    '/monitor/:resource',
+  server.del('/monitor/:resource',
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'resource', required: true }),
@@ -53,8 +50,7 @@ module.exports = (server) => {
     audit.afterRemove('resource', { display: 'name', topic: crudTopic })
   )
 
-  server.post(
-    '/monitor',
+  server.post('/monitor',
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({
@@ -68,8 +64,7 @@ module.exports = (server) => {
     //audit.afterCreate('resource', { display: 'name', topic: crudTopic })
   )
 
-  server.put(
-    '/monitor/:resource',
+  server.put('/monitor/:resource',
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'resource', required: true }),
@@ -87,8 +82,7 @@ module.exports = (server) => {
   /**
    * update single properties with custom behaviour
    */
-  server.patch(
-    '/monitor/:resource/alerts',
+  server.patch('/monitor/:resource/alerts',
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'resource', required: true }),
@@ -208,27 +202,28 @@ const controller = {
    * @method DELETE
    *
    */
-  remove (req, res, next) {
-    const resource = req.resource
+  async remove (req, res, next) {
+    try {
+      const { customer, resource, user } = req
 
-    if (resource.type == 'host') {
-      logger.log('removing host resource')
-      App.host.removeHostResource({
-        resource,
-        user: req.user
-      })
-      res.send(200,{})
-      next()
-    } else {
-      logger.log('removing resource')
-      App.resource.remove({
-        resource: resource,
-        notifyAgents: true,
-        user: req.user
-      }, (err) => {
-      })
-      res.send(200,{})
-      next()
+      if (resource.type == 'host') {
+        logger.log('removing host resource')
+        await App.host.remove({ id: resource.host_id, customer, user })
+        res.send(204)
+        next()
+      } else {
+        logger.log('removing resource')
+        App.resource.remove({
+          resource: resource,
+          notifyAgents: true,
+          user
+        }, (err) => {
+        })
+        res.send(200,{})
+        next()
+      }
+    } catch (err) {
+      res.sendError(err)
     }
   },
   /**

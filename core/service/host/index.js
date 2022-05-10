@@ -53,131 +53,53 @@ HostService.provisioning = async (input) => {
  * @param {Object} input
  * @property {Resource} input.resource the resource to be removed
  * @property {User} input.user requesting user
- * @param {Function(Error)} done
  *
  */
-HostService.removeHostResource = function (input, done) {
-  const resource = input.resource
-  const user = input.user
-  const host_id = resource.host_id
+HostService.remove = async (input) => {
+  const { id, user } = input
 
-  logger.log('removing host "%s" resource "%s"', host_id, resource._id)
+  logger.log('removing host "%s"', id)
 
   // find and remove host
-  logger.log('removing host')
-  Host
-    .findById(host_id)
-    .exec(function(err, item){
-      if (err) {
-        logger.error(err)
-        return
-      }
-      if (!item) return
-      item.remove((err) => {
-        if (err) logger.error(err)
-      })
-    })
-
-  logger.log('removing host stats')
-  // find and remove saved cached host stats
-  HostStats
-    .find({ host_id: host_id })
-    .exec(function(err, items){
-      if (err) {
-        logger.error(err)
-        return
-      }
-      if (!Array.isArray(items)||items.length===0) return
-      for (var i=0; i<items.length; i++) {
-        items[i].remove((err) => {})
-      }
-    })
-
-  // find and remove resources
-  const removeResource = (resource, done) => {
-    App.resource.remove({
-      resource: resource,
-      notifyAgents: false,
-      user: user
-    },(err) => {
-      if (err) {
-        logger.error(err)
-        return
-      }
-      //else logger.log('resource "%s" removed', resource.name)
-      done(err)
-    });
+  const host = await App.Models.Host.Entity.findById(id)
+  if (!host) {
+    throw new Error(`Host ${id} not found`)
   }
 
-  logger.log('removing host resources')
-  Resource
-    .find({ host_id: host_id })
-    .exec(function(err, resources){
-      if (err) {
-        logger.error(err)
-        return
-      }
-      if (!Array.isArray(resources)||resources.length===0) return
-      const resourceRemoved = after(resources.length, () => {
-        // all resources && monitors removed
-      })
+  const host_id = host._id.toString()
 
-      for (var i=0; i<resources.length; i++) {
-        removeResource(resources[i], resourceRemoved)
-      }
-    })
+  // find and remove saved cached host stats
+  await HostStats.deleteMany({ host_id })
+
+  logger.log('removing host resources')
+  const resources = await App.Models.Resource.Entity.find({ host_id })
+  const toRemove = []
+  for (let resource of resources) {
+    toRemove.push( App.Models.Resource.Entity.remove({ resource, user, notifyAgents: false }) )
+  }
+  await Promise.all(toRemove)
 
   // find and remove host jobs
   logger.log('removing host jobs')
-  JobModel
-    .find({ host_id: host_id })
-    .exec(function(err, items){
-      if (err) {
-        logger.error(err)
-        return
-      }
-      if (!Array.isArray(items)||items.length===0) return
-      for (var i=0; i<items.length; i++) {
-        items[i].remove((err) => {})
-      }
-    })
+  const jobs = await App.Models.Job.Job.deleteMany({ host_id })
+
+  logger.log('removing host from groups')
+  const groups = await HostGroup.find({ hosts: host_id })
+  if (groups.length > 0) {
+    for (let group of groups) {
+      const idx = group.hosts.indexOf(host_id)
+      group.hosts.splice(idx, 1)
+      group.save()
+    }
+  }
 
   // find and remove host tasks
   logger.log('removing the host from the tasks')
-  Task
-    .find({ host_id: host_id })
-    .exec(function(err, items){
-      if (err) {
-        logger.error(err)
-        return
-      }
-      if (!Array.isArray(items)||items.length===0) return
-      for (var i=0; i<items.length; i++) {
-        items[i].host_id = null
-        items[i].save()
-      }
-    });
+  await App.Models.Task
+    .Entity
+    .updateMany({ host_id }, { host_id: null, host: null })
 
-  const removeFromGroup = (group) => {
-    const idx = group.hosts.indexOf(host_id)
-    if (idx === -1) return
-    group.hosts.splice(idx,1)
-    group.save()
-  }
-
-  logger.log('removing host from groups')
-  HostGroup
-    .find({ hosts: host_id })
-    .exec((err,groups) => {
-      if (err) {
-        logger.error(err)
-        return
-      }
-      if (!Array.isArray(groups) || groups.length===0) return
-      for (var i=0; i<groups.length; i++) {
-        removeFromGroup(groups[i])
-      }
-    })
+  await host.remove()
 }
 
 /**

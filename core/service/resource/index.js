@@ -702,7 +702,7 @@ Service.fetchBy = function (filter,next) {
 
 /**
  *
- * @author Facundo
+ * @author Facugon
  *
  */
 Service.remove = function (input, done) {
