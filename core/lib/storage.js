@@ -164,6 +164,8 @@ const LocalStorage = {
     return stream
   },
   remove (file, next) {
+    next || (next = (() => {}))
+
     const storagePath = systemConfig.file_upload_folder
     try {
       const filepath = path.join(storagePath, file.customer_name, 'scripts', file.keyname)
