@@ -4,15 +4,6 @@ const logger = require('./logger')('lib:file')
 const storage = require('./storage').get()
 const filenameRegexp = /^[A-Za-z0-9._][0-9a-zA-Z-_.]*$/
 
-function isValidFilename (filename) {
-  if (!filename) { return false }
-  return filenameRegexp.test(filename)
-}
-
-function keynamegen (filename) {
-  return filename + '[ts:' + Date.now() + ']'
-}
-
 module.exports = {
   /**
    *
@@ -35,10 +26,10 @@ module.exports = {
     }
 
     // filename has changed
-    if (input.model.filename !== filename) {
-      logger.log('new file uploaded. removing old one')
-      storage.remove(input.model)
-    }
+    //if (input.model.filename !== filename) {
+    //  logger.log('new file uploaded. removing old one')
+    //  storage.remove(input.model)
+    //}
 
     storage.save({
       filename: keyname,
@@ -163,3 +154,13 @@ module.exports = {
     })
   }
 }
+
+function isValidFilename (filename) {
+  if (!filename) { return false }
+  return filenameRegexp.test(filename)
+}
+
+function keynamegen (filename) {
+  return filename + '[ts:' + Date.now() + ']'
+}
+
