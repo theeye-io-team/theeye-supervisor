@@ -1,7 +1,7 @@
 
 const App = require('../app')
 
-const ObjectId = require('mongoose').Types.ObjectId
+const ObjectID = require('mongoose').Types.ObjectId
 
 const isMongoId = require('validator/lib/isMongoId')
 const logger = require('../lib/logger')('service:task')
@@ -587,9 +587,13 @@ FactoryMethod[ TaskConstants.TYPE_SCRIPT ] = async function (input) {
   }
 
   // the script was created or determined in a previous phase.
-  // no further actions are required. skip this
-  if (!ObjectId.isValid(input.script_id)) {
-    let script
+  // ensure it is an ObjectID instance and not a MongoID
+  let script
+  if (input.script_id instanceof ObjectID) {
+    script = await App.Models.File.File.findById(input.script_id)
+  }
+
+  if (!script) {
     if (input.script_id) { // string
       script = await App.Models.File.File.findById(input.script_id)
     } else if (input.script?.id) { // file model
@@ -608,23 +612,25 @@ FactoryMethod[ TaskConstants.TYPE_SCRIPT ] = async function (input) {
         script = await App.file.create(attrs)
       }
     }
+  }
 
-    if (script?._id) {
+  if (script?._id) {
+    if (script.template_id) {
       if (
         !task.template_id ||
-        (task.template_id.toString() !== script.template_id.toString())
+        (task.template_id.toString() !== script.template_id?.toString())
       ) {
         // remove from the template
         script.template = null
         script.template_id = null
         await script.save()
       }
-      task.script_id = script._id
-      task.script = script._id
-    } else {
-      task.script_id = null
-      task.script = null
     }
+    task.script_id = script._id
+    task.script = script._id
+  } else {
+    task.script_id = null
+    task.script = null
   }
 
   return task
