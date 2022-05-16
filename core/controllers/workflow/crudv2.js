@@ -18,8 +18,22 @@ module.exports = {
   create: AsyncController(async (req, res, next) => {
     const { customer, user, body } = req
 
-    if (body.graph.nodes.length === 0) {
+    const inputGraph = body.graph
+    if (
+      !inputGraph ||
+      !inputGraph.nodes ||
+      !Array.isArray(inputGraph.nodes) ||
+      inputGraph.nodes.length === 0
+    ) {
       throw new ClientError('invalid graph definition')
+    }
+
+    if (
+      !body.tasks ||
+      !Array.isArray(body.tasks) ||
+      body.tasks.length === 0
+    ) {
+      throw new ClientError('cannot create a workflow without tasks')
     }
 
     const workflow = new App.Models.Workflow.Workflow(
@@ -208,12 +222,11 @@ const createTasks = async ({ workflow, customer, user, body }) => {
     const model = await App.task.factory(
       Object.assign({}, props, {
         customer_id: customer._id,
-        customer: customer,
-        user: user,
+        customer,
+        user,
         user_id: user.id,
         workflow_id: workflow._id,
-        workflow: workflow,
-        id: undefined
+        workflow
       })
     )
 

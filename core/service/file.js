@@ -129,6 +129,10 @@ module.exports = {
         customer: customer._id,
         customer_id: customer._id,
         customer_name: customer.name,
+        last_update: new Date(),
+        creation_date: new Date(),
+        id: null,
+        _id: null,
         template: null,
         template_id: null
       })
