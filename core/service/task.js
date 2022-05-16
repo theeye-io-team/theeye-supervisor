@@ -551,6 +551,10 @@ const Factory = {
     delete input.creation_date
     delete input.last_update
     delete input.secret
+    delete input._id
+    delete input.id
+    //delete input.template_id
+    //delete input.template
 
     if (input.hasOwnProperty('allows_dynamic_settings') === false) {
       input.allows_dynamic_settings = false
@@ -568,6 +572,7 @@ const Factory = {
       }
       return task.save()
     }
+
     throw new Error('Invalid type error: ' + input.type)
   }
 }
@@ -590,14 +595,24 @@ FactoryMethod[ TaskConstants.TYPE_SCRIPT ] = async function (input) {
   // ensure it is an ObjectID instance and not a MongoID
   let script
   if (input.script_id instanceof ObjectID) {
-    script = await App.Models.File.File.findById(input.script_id)
+    script = await App.Models.File.File.findOne({
+      _id: input.script_id, 
+      customer: input.customer._id
+    })
   }
 
   if (!script) {
     if (input.script_id) { // string
-      script = await App.Models.File.File.findById(input.script_id)
-    } else if (input.script?.id) { // file model
-      script = await App.Models.File.File.findById(input.script.id)
+      script = await App.Models.File.File.findOne({
+        _id: input.script_id,
+        customer_id: input.customer._id
+      })
+    } else if (input.script?.id || input.script?._id) { // file model
+      const id = input.script?.id || input.script?._id
+      script = await App.Models.File.File.findOne({
+        _id: id,
+        customer_id: input.customer._id
+      })
     }
 
     if (
