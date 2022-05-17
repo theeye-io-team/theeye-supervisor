@@ -130,12 +130,13 @@ module.exports = {
         customer_id: customer._id,
         customer_name: customer.name,
         last_update: new Date(),
-        creation_date: new Date(),
-        id: null,
-        _id: null,
-        template: null,
-        template_id: null
+        creation_date: new Date()
       })
+
+      delete props.id
+      delete props._id
+      delete props.template_id
+      delete props.template
 
       let text = fileDataDecode(input.data)
 

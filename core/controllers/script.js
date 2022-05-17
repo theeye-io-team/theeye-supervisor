@@ -63,10 +63,7 @@ const controller = {
    *
    */
   get (req, res, next) {
-    var script = req.script
-    script.publish(function(error, data){
-      res.send(200, data)
-    })
+    res.send(200, req.script)
     next()
   },
   download (req, res, next) {
