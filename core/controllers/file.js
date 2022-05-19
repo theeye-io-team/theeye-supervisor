@@ -6,7 +6,6 @@ const config = require('config')
 const App = require('../app')
 const router = require('../router')
 const logger = require('../lib/logger')('eye:controller:file')
-const audit = require('../lib/audit')
 const dbFilter = require('../lib/db-filter')
 const FileHandler = require('../lib/file')
 
@@ -46,7 +45,8 @@ module.exports = (server) => {
     router.requireCredential('admin'),
     upload.single('file'),
     createFile,
-    audit.afterCreate('file', { display: 'filename' })
+    App.state.postCreate('file')
+    //audit.afterCreate('file', { display: 'filename' })
   )
 
   // UPDATE
@@ -58,8 +58,9 @@ module.exports = (server) => {
     router.resolve.idToEntity({ param:'file', required:true }),
     upload.single('file'),
     updateFile,
+    App.state.postUpdate('file'),
     checkAfectedModels,
-    audit.afterUpdate('file', { display: 'filename' })
+    //audit.afterUpdate('file', { display: 'filename' })
   )
 
   // DELETE
@@ -70,7 +71,8 @@ module.exports = (server) => {
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'file', required: true }),
     removeFile,
-    audit.afterRemove('file', { display: 'filename' })
+    App.state.postRemove('file')
+    //audit.afterRemove('file', { display: 'filename' })
   )
 
   // DOWNLOAD SCRIPTS
@@ -227,7 +229,7 @@ const createFile = async (req, res, next) => {
 
     const model = App.Models.File.FactoryCreate(data)
     model.save()
-    req.file = model // assign to the route to audit
+    req.file = model // assign to the route for state post processing
     res.send(200, model)
     next()
   } catch (err) {
@@ -282,6 +284,7 @@ const removeFile = async (req, res, next) => {
     })
 
     res.send(204)
+    next()
   } catch (err) {
     res.sendError(err)
   }
