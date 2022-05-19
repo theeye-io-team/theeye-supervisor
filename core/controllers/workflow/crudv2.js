@@ -190,6 +190,8 @@ module.exports = {
 
     await checkRemovedNodes()
     await checkCreatedNodes()
+    await updateTasksAcl(newgraphplain, workflow)
+
 
     workflow.graph = newgraphplain
     await workflow.save()
@@ -197,6 +199,25 @@ module.exports = {
     createTags(req)
     return workflow
   })
+}
+
+const updateTasksAcl = (graph, workflow) => {
+  const updateAcls = []
+  for (let node of graph.nodes) {
+    updateAcls.push(
+      App.Models.Task.Task
+      .findById(node.value.id)
+      .then(task => {
+        task.acl = workflow.acl
+        return task.save()
+      })
+      .catch(err => {
+        logger.error(err)
+        return err
+      })
+    )
+  }
+  return Promise.all(updateAcls)
 }
 
 const createTags = ({ body, customer }) => {
