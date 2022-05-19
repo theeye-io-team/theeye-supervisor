@@ -127,7 +127,8 @@ const getFile = (req, res, next) => {
  */
 const updateFile = async (req, res, next) => {
   try {
-    const fileModel = req.file || req.script
+    //const fileModel = (req.file || req.script)
+    const fileModel = req.file
     const fileUploaded = req.files.file
     const description = req.params.description
     const isPublic = (req.params.public || false)
@@ -174,6 +175,7 @@ const updateFile = async (req, res, next) => {
     await fileModel.save()
 
     res.send(200, fileModel)
+    next()
   } catch (err) {
     res.sendError(err)
   }

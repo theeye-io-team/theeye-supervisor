@@ -552,14 +552,6 @@ module.exports = {
       done(err)
     }
   },
-  finishedPostprocessing ({ job, user }) {
-    process.nextTick(() => {
-      RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
-      App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
-      dispatchFinishedJobExecutionEvent(job)
-      emitJobFinishedNotification({ job })
-    })
-  },
   /**
    *
    * @summary Cancel Job execution.
@@ -595,6 +587,14 @@ module.exports = {
     } catch (err) {
       next(err)
     }
+  },
+  finishedPostprocessing ({ job, user }) {
+    process.nextTick(() => {
+      RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
+      App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
+      dispatchFinishedJobExecutionEvent(job)
+      emitJobFinishedNotification({ job })
+    })
   },
   jobMustHaveATask (job) {
     var result = (
