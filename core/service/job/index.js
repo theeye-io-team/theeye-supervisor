@@ -532,6 +532,8 @@ module.exports = {
         } catch (err) {
           //logger.log(err)
         }
+      } else if (input.eventName) {
+        eventName = input.eventName
       }
 
       if (eventName) {
