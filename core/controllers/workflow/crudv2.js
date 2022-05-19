@@ -18,6 +18,10 @@ module.exports = {
   create: AsyncController(async (req, res, next) => {
     const { customer, user, body } = req
 
+    if (!body) {
+      throw new ClientError('no payload to process')
+    }
+
     const inputGraph = body.graph
     if (
       !inputGraph ||

@@ -191,20 +191,24 @@ const controller = {
     res.send(200, req.job.lifecycle)
   },
   cancel (req, res, next) {
-    const job = req.job
-    const user = req.user
+    const { job, user, customer } = req
 
-    App.jobDispatcher.cancel({
+    const who = {
+      email: user.email,
+      id: user.id,
+      username: user.username
+    }
+
+    App.jobDispatcher.finish({
       result: {
-        user: {
-          email: user.email,
-          id: user.id,
-          username: user.username
-        },
+        user: who,
+        output: [ who ]
       },
+      state: StateConstants.CANCELED,
+      eventName: StateConstants.CANCELED,
       job,
-      user: req.user,
-      customer: req.customer
+      user,
+      customer
     }, (err) => {
       if (err) {
         logger.error('Failed to cancel job')
@@ -216,22 +220,27 @@ const controller = {
     })
   },
   approve (req, res, next) {
-    const job = req.job
-    const user = req.user
+    const { job, user, customer } = req
+
+    const who = {
+      email: user.email,
+      id: user.id,
+      username: user.username
+    }
+
+    const output = job.task_arguments_values
+    output.push( who )
 
     App.jobDispatcher.finish({
       result: {
-        user: {
-          email: user.email,
-          id: user.id,
-          username: user.username
-        },
-        output: job.task_arguments_values
+        user: who,
+        output
       },
+      eventName: StateConstants.SUCCESS,
       state: StateConstants.SUCCESS,
       job,
-      user: req.user,
-      customer: req.customer
+      user,
+      customer
     }, err => {
       if (err) { return res.send(500) }
       res.send(204)
@@ -239,22 +248,27 @@ const controller = {
     })
   },
   reject (req, res, next) {
-    const job = req.job
-    const user = req.user
+    const { job, user, customer } = req
+
+    const who = {
+      email: user.email,
+      id: user.id,
+      username: user.username
+    }
+
+    const output = job.task_arguments_values
+    output.push( approver )
 
     App.jobDispatcher.finish({
       result: {
-        user: {
-          email: user.email,
-          id: user.id,
-          username: user.username
-        },
-        output: job.task_arguments_values
+        user: who,
+        output
       },
+      eventName: StateConstants.FAILURE,
       state: StateConstants.FAILURE,
       job,
       user,
-      customer: req.customer
+      customer
     }, err => {
       if (err) { return res.send(500) }
       res.send(204)
