@@ -4,9 +4,9 @@ const logger = require('../lib/logger')('app')
 const App = {}
 const AWS = require('aws-sdk')
 const { v5: uuidv5 } = require('uuid')
+const StateHandler = require('./state')
 
 module.exports = App
-
 
 App.boot = async (config) => {
 
@@ -23,6 +23,7 @@ App.boot = async (config) => {
   const start = async () => {
     configureAws(config.integrations.aws)
 
+    App.state = StateHandler(App)
     App.user = getApplicationUser()
     StartServices()
 
