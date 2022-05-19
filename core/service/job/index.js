@@ -488,11 +488,12 @@ module.exports = {
 
       let state
       let lifecycle
-      let trigger_name
+      let eventName
 
       if (result.killed === true) {
         state = StateConstants.TIMEOUT
         lifecycle = LifecycleConstants.TERMINATED
+        eventName = StateConstants.TIMEOUT
       } else {
         if (input.state) {
           state = input.state
@@ -503,8 +504,8 @@ module.exports = {
         lifecycle = LifecycleConstants.FINISHED
       }
 
-      job.state = state
       job.lifecycle = lifecycle
+      job.state = state
       job.result = result
       // parse result output
       if (result.output) {
@@ -513,7 +514,6 @@ module.exports = {
         //job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
       }
 
-      let eventName
       if (result.lastline) {
         try {
           const jsonLastline = JSON.parse(result.lastline)
@@ -543,18 +543,22 @@ module.exports = {
       }
 
       await job.save()
-      done(null, job) // continue processing in paralell
 
-      process.nextTick(() => {
-        RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
-        App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
-        dispatchFinishedJobExecutionEvent(job)
-        emitJobFinishedNotification({ job })
-      })
+      this.finishedPostprocessing({ job, user })
+
+      done(null, job)
     } catch (err) {
       logger.error(err)
       done(err)
     }
+  },
+  finishedPostprocessing ({ job, user }) {
+    process.nextTick(() => {
+      RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
+      App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
+      dispatchFinishedJobExecutionEvent(job)
+      emitJobFinishedNotification({ job })
+    })
   },
   /**
    *
@@ -566,97 +570,32 @@ module.exports = {
    * @property {Job} input.job
    *
    */
-  cancel (input, next) {
-    next || (next=()=>{})
+  async cancel (input, next) {
+    try {
+      next || (next=()=>{})
 
-    const { job, user, state } = input
-    const result = (input.result ||{})
+      const { job, user, state } = input
+      const result = (input.result ||{})
 
-    const lifecycle = cancelJobNextLifecycle(job)
-    if (!lifecycle) {
-      let err = new Error(`cannot cancel job. current state lifecycle "${job.lifecycle}" does not allow the transition`)
-      err.statusCode = 400
-      return next(err)
-    }
-
-    job.lifecycle = lifecycle
-    job.result = result
-    job.output = this.parseOutputParameters(result.output)
-    job.state = (state || StateConstants.CANCELED)
-    job.save(err => {
-      if (err) {
-        logger.error('fail to cancel job %s', job._id)
-        logger.data(job)
-        logger.error(err)
-        return next(err)
+      const lifecycle = cancelJobNextLifecycle(job)
+      if (!lifecycle) {
+        throw new ClientError(`cannot cancel job. current state lifecycle "${job.lifecycle}" does not allow the transition`)
       }
+
+      job.lifecycle = lifecycle
+      job.state = StateConstants.CANCELED
+      job.eventName = StateConstants.CANCELED
+      job.result = result
+      job.output = this.parseOutputParameters(result.output)
+      await job.save()
+
+      this.finishedPostprocessing({ job, user })
 
       next(null, job)
-
-      logger.log('job %s terminated', job._id)
-
-      RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
-    })
+    } catch (err) {
+      next(err)
+    }
   },
-  /**
-   *
-   * @summary create an integration job for the agent.
-   *
-   * @param {Object}
-   * @property {String} integration
-   * @property {String} operation
-   * @property {Host} host
-   * @property {Object} config integration options and configuration
-   *
-   */
-  /**
-  createIntegrationJob ({ integration, operation, host, config }, next) {
-    const factoryCreate = JobModels.IntegrationsFactory.create
-
-    let props = Object.assign(
-      {
-        lifecycle: LifecycleConstants.READY,
-        origin: JobConstants.ORIGIN_USER,
-        operation,
-        host,
-        host_id: host._id,
-        notify: true
-      },
-      config
-    )
-
-    const job = factoryCreate({ integration, props })
-    currentIntegrationJob(job, (err, currentJob) => {
-      if (err) { return next(err) }
-      if (jobInProgress(currentJob) === true) {
-        err = new Error('integration job in progress')
-        err.statusCode = 423
-        logger.error('%o',err)
-        return next(err, currentJob)
-      }
-
-      // remove old/finished integration job of the same type.
-      // cannot be more than one integration job, in the same host at the same time.
-      JobModels.Job
-        .remove({
-          _type: job._type,
-          host_id: job.host_id
-        })
-        .exec(err => {
-          if (err) {
-            logger.error('Failed to remove old jobs')
-            logger.error('%o',err)
-            return next(err)
-          }
-
-          job.save(err => {
-            if (err) logger.error('%o', err)
-            next(err, job)
-          })
-        })
-    })
-  },
-  */
   jobMustHaveATask (job) {
     var result = (
       job._type === JobConstants.SCRAPER_TYPE ||
@@ -1054,7 +993,7 @@ const cancelJobNextLifecycle = (job) => {
   } else if (job.lifecycle === LifecycleConstants.ASSIGNED) {
     return LifecycleConstants.TERMINATED
   } else {
-    // current state cannot be canceled or terminated
+    // job is done. cannot be canceled or terminated
     return null
   }
 }

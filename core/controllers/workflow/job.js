@@ -423,7 +423,10 @@ const cancelWorkflowJobs = ({ job, user, customer }) => {
 
         App.jobDispatcher.cancel({
           result: {
-            user: { email: user.email, id: user.id },
+            user: {
+              email: user.email,
+              id: user.id
+            },
           },
           job: jobs[0],
           user,
