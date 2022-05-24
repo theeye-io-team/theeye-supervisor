@@ -464,8 +464,11 @@ module.exports = {
 const validateProperties = (input) => {
   const errors = new ErrorHandler()
 
-  if (!input.name) { errors.required('name', input.name) }
   if (!input.type) { errors.required('type', input.type) }
+  if (!input.name) {
+    const ts = new Date().getTime()
+    input.name = `unamed ${ts}`
+  }
 
   //if (
   //  input.type === TaskConstants.TYPE_SCRIPT ||
@@ -476,15 +479,14 @@ const validateProperties = (input) => {
   //  }
   //}
 
-  if (input.type === TaskConstants.TYPE_SCRIPT) {
-    if (!input.script_id && !input.script) {
-      errors.required('script', [input.script_id, input.script])
-    }
-
-    if (!input.script_runas) {
-      errors.required('script_runas', input.script_runas)
-    }
-  }
+  //if (input.type === TaskConstants.TYPE_SCRIPT) {
+  //  if (!input.script_id && !input.script) {
+  //    errors.required('script', [input.script_id, input.script])
+  //  }
+  //  if (!input.script_runas) {
+  //    errors.required('script_runas', input.script_runas)
+  //  }
+  //}
 
   if (input.type === TaskConstants.TYPE_APPROVAL) { }
   if (input.type === TaskConstants.TYPE_SCRAPER) { }

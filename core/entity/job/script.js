@@ -7,7 +7,7 @@ const ScriptSchema = new BaseSchema({
   script: { type: Object }, // this is embedded, not a reference
   env: { type: Object, default: () => { return {} }},
   timeout: { type: Number },
-  logging: { type: Boolean, default: false }
+  agent_logging: { type: Boolean, default: false }
 })
 
 module.exports = ScriptSchema
