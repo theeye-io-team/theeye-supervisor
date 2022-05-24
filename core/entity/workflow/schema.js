@@ -16,6 +16,7 @@ function WorkflowSchema (props) {
     tags: { type: Array, default: [] },
     triggers: [{ type: ObjectId, ref: 'Event' }],
     graph: { type: Object },
+    node_positions: { type: Object },
     lifecycle: { type: String },
     state: { type: String },
     current_task_id: { type: ObjectId }, // current task being executed
