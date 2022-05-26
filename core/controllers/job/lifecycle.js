@@ -257,7 +257,7 @@ const controller = {
     }
 
     const output = job.task_arguments_values
-    output.push( approver )
+    output.push( who )
 
     App.jobDispatcher.finish({
       result: {
