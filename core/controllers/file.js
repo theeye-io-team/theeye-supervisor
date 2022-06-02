@@ -75,11 +75,25 @@ module.exports = (server) => {
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param:'file', required:true }),
+    //router.ensureAllowed({ entity: { name: 'file' } }),
+    upload.single('file'),
+    updateFile,
+    App.state.postUpdate('file'),
+    checkAfectedModels,
+    //audit.afterUpdate('file', { display: 'filename' })
+  )
+
+  server.put('/:customer/file/:file/upload',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
     router.requireCredential('user'),
     router.resolve.idToEntity({ param:'file', required:true }),
     router.ensureAllowed({ entity: { name: 'file' } }),
     upload.single('file'),
-    updateFile,
+    uploadFile,
     App.state.postUpdate('file'),
     checkAfectedModels,
     //audit.afterUpdate('file', { display: 'filename' })
@@ -128,6 +142,51 @@ const fetchFiles = (req, res, next) => {
  */
 const getFile = (req, res, next) => {
   res.send(200, req.file)
+}
+
+/**
+ *
+ * @method PUT/PATCH
+ *
+ */
+const uploadFile = async (req, res, next) => {
+  try {
+    //const fileModel = (req.file || req.script)
+    const fileModel = req.file
+    const fileUploaded = req.files.file
+    if (!fileUploaded) {
+      throw new ClientError('file required')
+    }
+
+    logger.log('Updating file content')
+    const storeData = await new Promise((resolve, reject) => {
+      FileHandler.replace({
+        model: fileModel,
+        filepath: fileUploaded.path,
+        filename: fileUploaded.name,
+        storename: req.customer.name
+      }, (err, data) => {
+        if (err) { reject(err) }
+        else { resolve(data) }
+      })
+    })
+
+    const buf = fs.readFileSync(fileUploaded.path)
+
+    const data = {
+      size: fileUploaded.size,
+      md5: md5(buf)
+    }
+
+    logger.log('updating file metadata')
+    fileModel.set(data)
+    await fileModel.save()
+
+    res.send(200, fileModel)
+    next()
+  } catch (err) {
+    res.sendError(err)
+  }
 }
 
 /**
