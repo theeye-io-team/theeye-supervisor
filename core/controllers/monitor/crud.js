@@ -28,15 +28,13 @@ module.exports = (server) => {
     router.ensureCustomer
   ]
 
-  server.get(
-    '/monitor',
+  server.get('/monitor',
     middlewares,
     router.requireCredential('viewer'),
     controller.fetch
   )
 
-  server.get(
-    '/monitor/:resource',
+  server.get('/monitor/:resource',
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'resource', required: true }),
@@ -44,8 +42,7 @@ module.exports = (server) => {
     controller.get
   )
 
-  server.del(
-    '/monitor/:resource',
+  server.del('/monitor/:resource',
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'resource', required: true }),
@@ -53,8 +50,7 @@ module.exports = (server) => {
     audit.afterRemove('resource', { display: 'name', topic: crudTopic })
   )
 
-  server.post(
-    '/monitor',
+  server.post('/monitor',
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({
@@ -68,8 +64,7 @@ module.exports = (server) => {
     //audit.afterCreate('resource', { display: 'name', topic: crudTopic })
   )
 
-  server.put(
-    '/monitor/:resource',
+  server.put('/monitor/:resource',
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'resource', required: true }),
@@ -87,8 +82,7 @@ module.exports = (server) => {
   /**
    * update single properties with custom behaviour
    */
-  server.patch(
-    '/monitor/:resource/alerts',
+  server.patch('/monitor/:resource/alerts',
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'resource', required: true }),
@@ -182,6 +176,15 @@ const controller = {
       input.host_id = host._id
       input.host = host._id
       input.hostname = host.hostname
+      // ensure severity
+      if (
+        !body.failure_severity ||
+        params.data?.failure_severity !== MonitorConstants.MONITOR_SEVERITY_LOW ||
+        params.data?.failure_severity !== MonitorConstants.MONITOR_SEVERITY_HIGH ||
+        params.data?.failure_severity !== MonitorConstants.MONITOR_SEVERITY_CRITICAL
+      ) {
+        input.failure_severity = MonitorConstants.MONITOR_SEVERITY_LOW
+      }
 
       delete input.template
       delete input.monitor
@@ -275,9 +278,17 @@ const replace = async (req, res, next) => {
       updates.description = body.description
       updates.tags = body.tags
       updates.acl = req.acl
-      updates.failure_severity = body.failure_severity
     } else {
       Object.assign(updates, params.data, { acl: req.acl })
+    }
+
+    if (
+      !body.failure_severity ||
+      body.failure_severity !== MonitorConstants.MONITOR_SEVERITY_LOW ||
+      body.failure_severity !== MonitorConstants.MONITOR_SEVERITY_HIGH ||
+      body.failure_severity !== MonitorConstants.MONITOR_SEVERITY_CRITICAL
+    ) {
+      updates.failure_severity = MonitorConstants.MONITOR_SEVERITY_LOW
     }
 
     await updateResource(resource, updates)

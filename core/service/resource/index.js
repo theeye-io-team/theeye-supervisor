@@ -90,41 +90,49 @@ function Service (resource) {
    * @property {Object} input.data
    *
    */
-  const dispatchStateChangeEvent = (resource, input) => {
-    var resource_id = resource._id
-    var trigger = input.event_name
+  const dispatchStateChangedEvent = async (resource, input) => {
+    try {
+      const resource_id = resource._id
+      const event_name = input.event_name
 
-    MonitorModel.findOne({ resource_id }, function (err,monitor) {
+      const monitor = await MonitorModel.findOne({ resource_id })
       if (!monitor) {
-        logger.error('resource monitor not found %s', resource_id)
-        return
+        throw new Error(`resource ${resource_id} monitor not found`)
       }
 
-      logger.log('searching monitor [%s] event [%s] ', monitor.name, trigger)
+      logger.log('searching monitor [%s] event [%s] ', monitor.name, event_name)
 
-      MonitorEvent.findOne({
+      const event = await MonitorEvent.findOne({
         emitter_id: monitor._id,
         enable: true,
-        name: trigger
-      }, function (err, event) {
-        if (err) {
-          return logger.error(err)
-        } else if (!event) {
-          return
-        }
-
-        App.eventDispatcher.dispatch({
-          topic: TopicsConstants.monitor.state,
-          event,
-          resource,
-          data: (resource.last_event.output || resource.last_event.data)
-        })
+        name: event_name 
       })
-    })
+
+      if (!event) {
+        throw new Error(`monitor event ${event_name} not found `)
+      }
+
+      const config = monitor.config
+      const data = [{
+        last_event: resource.last_event?.data,
+        event_name,
+        type: resource.type,
+        id: resource._id.toString(),
+        config
+      }]
+
+      App.eventDispatcher.dispatch({
+        topic: TopicsConstants.monitor.state,
+        event,
+        resource,
+        data
+      })
+    } catch (err) {
+      logger.error(err)
+    }
   }
 
-  const resourceEmailAlert = async (resource, input) => {
-    let details
+  const generateStateChangedMessage = async (resource, input) => {
     try {
       if (resource.alerts === false) {
         let err = new Error('MonitorEventIgnored')
@@ -141,46 +149,17 @@ function Service (resource) {
       await resource.populate('monitor').execPopulate()
       const specs = Object.assign({}, input, { resource })
 
-      details = ResourcesNotifications(specs)
+      return ResourcesNotifications(specs)
     } catch (err) {
       if (/MonitorEventIgnored/.test(err.message) === true) {
         logger.log(err.message)
         logger.log(err.reason)
+        return
       } else {
         logger.error(err.message)
         return err
       }
     }
-
-      //App.notifications.sendEmailNotification({
-      //  bcc: 'facugon@theeye.io',
-      //  customer_name: resource.customer_name,
-      //  subject: details.subject,
-      //  content: details.content
-      //})
-    return details
-
-    //@TODO: DEPRECATED: MOVE TO NOTIFICATIONS API.
-    //App.customer.getAlertEmails( resource.customer_name, (err, emails) => {
-    //  if (err) {
-    //    logger.error(err)
-    //    return
-    //  }
-    //  logger.log('sending email alerts')
-    //  var mailTo, extraEmail=[]
-    //  if (Array.isArray(resource.acl) && resource.acl.length>0) {
-    //    extraEmail = resource.acl.filter(email => {
-    //      emails.indexOf(email) === -1
-    //    })
-    //  }
-    //  mailTo = (extraEmail.length>0) ? emails.concat(extraEmail) : emails
-    //  App.notifications.sendEmailNotification({
-    //    bcc: mailTo.join(','),
-    //    customer_name: resource.customer_name,
-    //    subject: details.subject,
-    //    content: details.content
-    //  })
-    //})
   }
 
   const getEventSeverity = (resource) => {
@@ -262,10 +241,10 @@ function Service (resource) {
         input.failure_severity = getEventSeverity(resource)
         resource.state = MonitorConstants.RESOURCE_FAILURE
 
-        let message = await resourceEmailAlert(resource, input)
+        let message = await generateStateChangedMessage(resource, input)
         sendStateChangeEventNotification(resource, input, message)
         logStateChange(resource, input)
-        dispatchStateChangeEvent(resource, input)
+        dispatchStateChangedEvent(resource, input)
       }
     }
   }
@@ -292,12 +271,12 @@ function Service (resource) {
     let message
     if (isRecoveredFromFailure) {
       input.event_name = MonitorConstants.RESOURCE_RECOVERED
-      message = await resourceEmailAlert(resource, input)
+      message = await generateStateChangedMessage(resource, input)
     } else {
       // is recovered from updates_stopped
       input.event_name = MonitorConstants.RESOURCE_STARTED
       if (needToSendUpdatesStoppedEmail(resource)) {
-        message = await resourceEmailAlert(resource, input)
+        message = await generateStateChangedMessage(resource, input)
       }
     }
 
@@ -307,7 +286,7 @@ function Service (resource) {
 
     sendStateChangeEventNotification(resource, input, message)
     logStateChange(resource, input)
-    dispatchStateChangeEvent(resource, input)
+    dispatchStateChangedEvent(resource, input)
     // reset state
     logger.log('monitor "%s" recovered', resource.name)
   }
@@ -330,12 +309,12 @@ function Service (resource) {
 
     const dispatchNotifications = async () => {
       logStateChange(resource, input) // Logger/Streaming
-      dispatchStateChangeEvent(resource, input) // Trigger/Workflow
+      dispatchStateChangedEvent(resource, input) // Trigger/Workflow
 
       //@TODO unify
       let message
       if (needToSendUpdatesStoppedEmail(resource)) {
-        message = await resourceEmailAlert(resource, input) // Notification System
+        message = await generateStateChangedMessage(resource, input) // Notification System
       }
       sendStateChangeEventNotification(resource, input, message) // Notification System
     }
@@ -371,15 +350,16 @@ function Service (resource) {
     const newState = MonitorConstants.RESOURCE_NORMAL
     updateResourceLastEvent(resource, input)
     resource.state = newState
+
     input.event_name = MonitorConstants.RESOURCE_CHANGED
     input.custom_event = input.event
     input.failure_severity = getEventSeverity(resource)
 
     logStateChange(resource, input) // Logger/Streaming
-    dispatchStateChangeEvent(resource, input) // Trigger/Workflow
+    dispatchStateChangedEvent(resource, input) // Trigger/Workflow
 
     //@TODO unify
-    let message = await resourceEmailAlert(resource, input) // Notification System
+    let message = await generateStateChangedMessage(resource, input) // Notification System
     sendStateChangeEventNotification(resource, input, message) // Notification System
   }
 

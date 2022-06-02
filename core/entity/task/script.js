@@ -13,7 +13,7 @@ const ScriptSchema = new BaseSchema({
   script_runas: { type: String },
   script: { type: ObjectId, ref: 'Script' },
   env: { type: Object, default: () => { return {} }},
-  logging: { type: Boolean, default: false }
+  agent_logging: { type: Boolean, default: false }
 })
 
 module.exports = ScriptSchema

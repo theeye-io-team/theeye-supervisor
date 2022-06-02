@@ -2,13 +2,12 @@ const fs = require('fs')
 const md5 = require('md5')
 const multer = require('multer')
 const config = require('config')
-
 const App = require('../app')
 const router = require('../router')
+const ACL = require('../lib/acl')
 const logger = require('../lib/logger')('eye:controller:file')
 const dbFilter = require('../lib/db-filter')
 const FileHandler = require('../lib/file')
-
 const { ClientError, ServerError } = require('../lib/error-handler')
 
 module.exports = (server) => {
@@ -34,7 +33,29 @@ module.exports = (server) => {
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     router.resolve.idToEntity({ param: 'file', required: true }),
+    router.ensureAllowed({ entity: { name: 'file' } }),
     getFile
+  )
+
+  // DOWNLOAD SCRIPTS
+  server.get('/:customer/file/:file/download',
+    server.auth.bearerMiddleware,
+    router.requireCredential('user'),
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.resolve.idToEntity({ param: 'file', required: true }),
+    router.ensureAllowed({ entity: { name: 'file' } }),
+    downloadFile
+  )
+
+  // GET LINKED MODELS
+  server.get('/:customer/file/:file/linkedmodels',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.resolve.idToEntity({ param:'file', required:true }),
+    router.ensureAllowed({ entity: { name: 'file' } }),
+    getLinkedModels
   )
 
   // CREATE
@@ -54,8 +75,9 @@ module.exports = (server) => {
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
-    router.requireCredential('admin'),
+    router.requireCredential('user'),
     router.resolve.idToEntity({ param:'file', required:true }),
+    router.ensureAllowed({ entity: { name: 'file' } }),
     upload.single('file'),
     updateFile,
     App.state.postUpdate('file'),
@@ -74,25 +96,6 @@ module.exports = (server) => {
     App.state.postRemove('file')
     //audit.afterRemove('file', { display: 'filename' })
   )
-
-  // DOWNLOAD SCRIPTS
-  server.get('/:customer/file/:file/download',
-    server.auth.bearerMiddleware,
-    router.requireCredential('user'),
-    router.resolve.customerSessionToEntity(),
-    router.ensureCustomer,
-    router.resolve.idToEntity({param:'file',required:true}),
-    downloadFile
-  )
-
-  // GET LINKED MODELS
-  server.get('/:customer/file/:file/linkedmodels',
-    server.auth.bearerMiddleware,
-    router.resolve.customerSessionToEntity(),
-    router.ensureCustomer,
-    router.resolve.idToEntity({ param:'file', required:true }),
-    getLinkedModels
-  )
 }
 
 /**
@@ -105,6 +108,11 @@ const fetchFiles = (req, res, next) => {
   const query = req.query
   const filter = dbFilter(query, { sort: { filename: 1 } })
   filter.where.customer_id = customer.id
+
+  if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
+    // find what this user can access
+    filter.where.acl = req.user.email
+  }
 
   App.Models.File.File.fetchBy(filter, (error, files) => {
     if (!files) { files = [] }
@@ -132,10 +140,7 @@ const updateFile = async (req, res, next) => {
     //const fileModel = (req.file || req.script)
     const fileModel = req.file
     const fileUploaded = req.files.file
-    const description = req.params.description
-    const isPublic = (req.params.public || false)
-    const mimetype = req.params.mimetype
-    const extension = req.params.extension
+    const params = req.params
 
     if (!fileUploaded) {
       throw new ClientError('File and filename are required')
@@ -158,13 +163,13 @@ const updateFile = async (req, res, next) => {
 
     const data = {
       filename: fileUploaded.name,
-      mimetype: mimetype,
-      extension: extension,
+      acl: params.acl,
+      mimetype: params.mimetype,
+      extension: params.extension,
+      description: params.description,
       size: fileUploaded.size,
-      description: description,
       keyname: storeData.keyname,
-      md5: md5(buf),
-      public: isPublic
+      md5: md5(buf)
     }
 
     if (fileModel.template || fileModel.template_id) {

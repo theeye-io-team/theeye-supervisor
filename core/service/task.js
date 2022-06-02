@@ -25,6 +25,7 @@ const { ClientError, ServerError, ValidationError } = ErrorHandler
 
 module.exports = {
   /**
+   * Factory create.
    * @return {Promise}
    */
   factory (props) {
@@ -62,25 +63,25 @@ module.exports = {
         .find({ _id: task._id })
         .remove()
         .exec(err => {
-          if (err) { return options.fail(err) }
-
+          if (err) { logger.error(err) }
           App.scheduler.unscheduleTask(task)
-
-          TaskEvent
-            .find({ emitter_id: task._id })
-            .remove()
-            .exec(err => {
-              if (err) { return options.fail(err) }
-
-              Job
-                .find({ task_id: task._id.toString() })
-                .remove()
-                .exec(err => {
-                  if (err) { return options.fail(err) }
-                  options.done()
-                })
-            })
         })
+
+      Job
+        .find({ task_id: task._id.toString() })
+        .remove()
+        .exec(err => {
+          if (err) { logger.error(err) }
+        })
+
+      TaskEvent
+        .find({ emitter_id: task._id })
+        .remove()
+        .exec(err => {
+          if (err) { logger.error(err) }
+        })
+
+      options.done()
     }
   },
   /**
@@ -464,8 +465,11 @@ module.exports = {
 const validateProperties = (input) => {
   const errors = new ErrorHandler()
 
-  if (!input.name) { errors.required('name', input.name) }
   if (!input.type) { errors.required('type', input.type) }
+  if (!input.name) {
+    const ts = new Date().getTime()
+    input.name = `unamed ${ts}`
+  }
 
   //if (
   //  input.type === TaskConstants.TYPE_SCRIPT ||
@@ -476,15 +480,14 @@ const validateProperties = (input) => {
   //  }
   //}
 
-  if (input.type === TaskConstants.TYPE_SCRIPT) {
-    if (!input.script_id && !input.script) {
-      errors.required('script', [input.script_id, input.script])
-    }
-
-    if (!input.script_runas) {
-      errors.required('script_runas', input.script_runas)
-    }
-  }
+  //if (input.type === TaskConstants.TYPE_SCRIPT) {
+  //  if (!input.script_id && !input.script) {
+  //    errors.required('script', [input.script_id, input.script])
+  //  }
+  //  if (!input.script_runas) {
+  //    errors.required('script_runas', input.script_runas)
+  //  }
+  //}
 
   if (input.type === TaskConstants.TYPE_APPROVAL) { }
   if (input.type === TaskConstants.TYPE_SCRAPER) { }

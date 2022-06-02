@@ -1,5 +1,3 @@
-//const format = require('util').format;
-//const debug = require('debug')('service:resource:notifications');
 const ResourceTypes = require('./event-details')
 const Constants = require('../../../constants/monitors');
 
@@ -88,27 +86,6 @@ function defaultTypeEvent (event_name) {
         }
       }
       break
-      //spec = {
-      //  message: function(resource, event_data) {
-      //    var message, data = event_data;
-
-      //    if (data.error) {
-      //      if (typeof data.error === 'string') {
-      //        message = data.error;
-      //      } else if (typeof data.error.message === 'string') {
-      //        message = data.error.message;
-      //      }
-      //    } else {
-      //      message = event_name;
-      //    }
-
-      //    return `${resource.hostname} ${resource.name} reported an error "${message}".`
-      //  } ,
-      //  subject: function(resource, event_data) {
-      //    return `[${this.severity}] ${resource.name} error`
-      //  }
-      //};
-      //break;
   }
   return spec;
 }
