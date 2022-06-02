@@ -25,6 +25,7 @@ const { ClientError, ServerError, ValidationError } = ErrorHandler
 
 module.exports = {
   /**
+   * Factory create.
    * @return {Promise}
    */
   factory (props) {
@@ -62,25 +63,25 @@ module.exports = {
         .find({ _id: task._id })
         .remove()
         .exec(err => {
-          if (err) { return options.fail(err) }
-
+          if (err) { logger.error(err) }
           App.scheduler.unscheduleTask(task)
-
-          TaskEvent
-            .find({ emitter_id: task._id })
-            .remove()
-            .exec(err => {
-              if (err) { return options.fail(err) }
-
-              Job
-                .find({ task_id: task._id.toString() })
-                .remove()
-                .exec(err => {
-                  if (err) { return options.fail(err) }
-                  options.done()
-                })
-            })
         })
+
+      Job
+        .find({ task_id: task._id.toString() })
+        .remove()
+        .exec(err => {
+          if (err) { logger.error(err) }
+        })
+
+      TaskEvent
+        .find({ emitter_id: task._id })
+        .remove()
+        .exec(err => {
+          if (err) { logger.error(err) }
+        })
+
+      options.done()
     }
   },
   /**
