@@ -18,7 +18,6 @@ function FileSchema (props) {
     this,
     Object.assign(
       {
-        content_schema: { type: Object, default: () => { return {} } },
         template_id: { type: ObjectId },
         template: { type: ObjectId, ref: 'FileTemplate' },
       },

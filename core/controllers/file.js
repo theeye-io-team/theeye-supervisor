@@ -44,7 +44,13 @@ module.exports = (server) => {
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     router.resolve.idToEntity({ param: 'file', required: true }),
-    router.ensureAllowed({ entity: { name: 'file' } }),
+    (req, res, next) => {
+      if (req.user.credential === 'agent') {
+        return next()
+      } else {
+        return router.ensureAllowed({ entity: { name: 'file' } })(req, res, next)
+      }
+    },
     downloadFile
   )
 
@@ -94,6 +100,18 @@ module.exports = (server) => {
     router.ensureAllowed({ entity: { name: 'file' } }),
     upload.single('file'),
     uploadFile,
+    App.state.postUpdate('file'),
+    checkAfectedModels,
+    //audit.afterUpdate('file', { display: 'filename' })
+  )
+
+  server.put('/:customer/file/:file/schema',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    router.resolve.idToEntity({ param: 'file', required: true }),
+    updateContentSchema,
     App.state.postUpdate('file'),
     checkAfectedModels,
     //audit.afterUpdate('file', { display: 'filename' })
@@ -175,6 +193,7 @@ const uploadFile = async (req, res, next) => {
 
     const data = {
       size: fileUploaded.size,
+      keyname: storeData.keyname,
       md5: md5(buf)
     }
 
@@ -242,6 +261,18 @@ const updateFile = async (req, res, next) => {
 
     res.send(200, fileModel)
     next()
+  } catch (err) {
+    res.sendError(err)
+  }
+}
+
+const updateContentSchema = async (req, res, next) => {
+  try {
+    const file = req.file
+    file.content_schema = req.body
+    await file.save()
+    res.send(200, file.content_schema)
+    return next()
   } catch (err) {
     res.sendError(err)
   }
