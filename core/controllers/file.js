@@ -269,9 +269,9 @@ const updateFile = async (req, res, next) => {
 const updateContentSchema = async (req, res, next) => {
   try {
     const file = req.file
-    file.content_schema = req.body.content_schema
+    file.content_schema = req.body
     await file.save()
-    res.send(200, file)
+    res.send(200, file.content_schema)
     return next()
   } catch (err) {
     res.sendError(err)
