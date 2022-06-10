@@ -23,6 +23,11 @@ const TextSchema = new BaseSchema({
   type: { type: String, default: 'text' }
 })
 
+const HtmlSchema = new BaseSchema({
+  value: { type: String, default: '' },
+  type: { type: String, default: 'html' }
+})
+
 const ChartSchema = new BaseSchema({
   value: { type: Object, default: () => { return {} } },
   type: { type: String, default: 'chart' }
@@ -36,6 +41,7 @@ const FileSchema = new BaseSchema({
 const Indicator = mongodb.model('Indicator', IndicatorSchema)
 const ProgressIndicator = Indicator.discriminator('ProgressIndicator', ProgressSchema)
 const TextIndicator = Indicator.discriminator('TextIndicator', TextSchema)
+const HtmlIndicator = Indicator.discriminator('HtmlIndicator', HtmlSchema)
 const CounterIndicator = Indicator.discriminator('CounterIndicator', CounterSchema)
 const ChartIndicator = Indicator.discriminator('ChartIndicator', ChartSchema)
 const FileIndicator = Indicator.discriminator('FileIndicator', FileSchema)
