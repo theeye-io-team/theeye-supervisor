@@ -23,7 +23,7 @@ const TextSchema = new BaseSchema({
   type: { type: String, default: 'text' }
 })
 
-const HtmlSchema = new BaseSchema({
+const HTMLSchema = new BaseSchema({
   value: { type: String, default: '' },
   type: { type: String, default: 'html' }
 })
@@ -41,7 +41,7 @@ const FileSchema = new BaseSchema({
 const Indicator = mongodb.model('Indicator', IndicatorSchema)
 const ProgressIndicator = Indicator.discriminator('ProgressIndicator', ProgressSchema)
 const TextIndicator = Indicator.discriminator('TextIndicator', TextSchema)
-const HtmlIndicator = Indicator.discriminator('HtmlIndicator', HtmlSchema)
+const HTMLIndicator = Indicator.discriminator('HTMLIndicator', HTMLSchema)
 const CounterIndicator = Indicator.discriminator('CounterIndicator', CounterSchema)
 const ChartIndicator = Indicator.discriminator('ChartIndicator', ChartSchema)
 const FileIndicator = Indicator.discriminator('FileIndicator', FileSchema)
@@ -50,6 +50,7 @@ Indicator.ensureIndexes()
 CounterIndicator.ensureIndexes()
 ProgressIndicator.ensureIndexes()
 TextIndicator.ensureIndexes()
+HTMLIndicator.ensureIndexes()
 ChartIndicator.ensureIndexes()
 FileIndicator.ensureIndexes()
 
@@ -69,6 +70,9 @@ const IndicatorFactory = function (attrs) {
   if (attrs.type === IndicatorConstants.SHORT_TYPE_TEXT) {
     return new TextIndicator(attrs)
   }
+  if (attrs.type === IndicatorConstants.SHORT_TYPE_HTML) {
+    return new HTMLIndicator(attrs)
+  }
   if (attrs.type === IndicatorConstants.SHORT_TYPE_COUNTER) {
     return new CounterIndicator(attrs)
   }
@@ -83,5 +87,6 @@ exports.Indicator = Indicator
 exports.Progress = ProgressIndicator
 exports.Counter = CounterIndicator
 exports.Text = TextIndicator
+exports.HTML = HTMLIndicator
 exports.Chart = ChartIndicator
 exports.File = FileIndicator
