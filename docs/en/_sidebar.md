@@ -5,7 +5,7 @@
 - [Jobs](en/jobs/)
 - [Sync](en/sync/)
 - Tasks
-  - [Basics](en/tasks/)
+  - [Introduction](en/tasks/)
   - [Arguments](en/tasks/arguments.md)
   - [Runtime Information](en/tasks/runtime.md)
 - [Webhooks](en/webhooks/)
