@@ -1,5 +1,6 @@
-'use strict'
-const ObjectId = require('mongoose').Types.ObjectId
+const mongoose = require('mongoose')
+const ObjectId = mongoose.Types.ObjectId
+const Schema = mongoose.Schema
 const randomSecret = require('../../lib/random-secret')
 module.exports = {
   order: { type: Number, default: 0 },
@@ -53,4 +54,10 @@ module.exports = {
   version: { type: Number, 'default': 1 },
   fingerprint: { type: String, 'default': '' }, 
   //handle_errors: { type: Boolean }
+  gateway: {
+    openapi_spec: new Schema({
+      operation: { type: String },
+      parameters: [{ type: Object }]
+    })
+  }
 }

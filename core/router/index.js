@@ -43,6 +43,7 @@ module.exports = {
     require('../controllers/task')(server)
     require('../controllers/webhook')(server)
     require('../controllers/workflow')(server)
+    require('../controllers/gateway')(server)
     //require('../controllers/integrations')(server)
     require('../controllers/usage')(server)
     // DEPRECATED - In Progress

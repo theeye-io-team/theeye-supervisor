@@ -43,16 +43,3 @@ module.exports = (server) => {
     createJob
   )
 }
-
-//const createFromFiles = (req, res, next) => {
-//
-//  const form = formidable({ multiples: true })
-//
-//  form.parse(req, (err, fields, files) => {
-//    if (err) {
-//      res.sendError(err)
-//      return;
-//    }
-//    res.send(200,{ fields, files })
-//  })
-//}
