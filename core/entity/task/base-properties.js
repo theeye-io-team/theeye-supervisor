@@ -55,6 +55,9 @@ module.exports = {
   fingerprint: { type: String, 'default': '' }, 
   //handle_errors: { type: Boolean }
   gateway: {
+    //
+    // Docs https://swagger.io/docs/specification/basic-structure/
+    //
     openapi_spec: new Schema({
       openapi: { type: String }, // openapi spec version
       path: { type: String }, // UUID auto generated to identify this path
