@@ -1,4 +1,5 @@
 const App = require('../../app')
+const logger = require('../../lib/logger')('controller:task:acl')
 const router = require('../../router')
 const { ClientError, ServerError } = require('../../lib/error-handler')
 const audit = require('../../lib/audit')

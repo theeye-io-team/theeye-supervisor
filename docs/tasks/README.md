@@ -2,11 +2,11 @@
 
 # Tasks API
 
-## Direcciones de API
+## Endpoints de API
 
 | Method | Path                                                  | Description                                | ACL       |
 | ------ | ----------------------------------------------------- | ------------------------------------------ | --------- |
-| GET    | /${customer}/task                                     | [Enlistar tareas](#ejemplo-1)              | viewer    |
+| GET    | /${customer}/task                                     | [Listar tareas](#ejemplo-1)                | viewer    |
 | GET    | /${customer}/task/${id}                               | [Buscar por ID](#ejemplo-2)                | viewer    |
 | DELETE | /${customer}/task/${id}                               | Eliminar tarea                             | admin     |
 | GET    | /${customer}/task/:task/recipe                        | Buscar receta                              | admin     |
@@ -99,7 +99,7 @@ Revise el [ejemplo 4](#ejemplo-4) para más información
 
 ### **Ejemplo 1** 
 
-#### Enlistar tareas
+#### Listar tareas
 
 En este ejemplo enviaremos un GET request que nos devolverá una lista de todas las tareas disponibles en una organización, con toda la información asociada a cada una de las mismas
 
