@@ -1,6 +1,5 @@
 - [API for developers](en/)
 - [Enable access to APIs](en/auth.md)
-- [Runtime Information](en/runtime-info.md)
 - [Indicators](en/indicators/)
 - [Monitors](en/monitors/)
 - [Jobs](en/jobs/)
@@ -8,4 +7,5 @@
 - Tasks
   - [Basics](en/tasks/)
   - [Arguments](en/tasks/arguments.md)
+  - [Runtime Information](en/tasks/runtime.md)
 - [Webhooks](en/webhooks/)

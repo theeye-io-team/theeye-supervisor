@@ -1,4 +1,4 @@
-[![theeye.io](images/logo-theeye-theOeye-logo2.png)](https://theeye.io/en/index.html)
+[![theeye.io](../../images/logo-theeye-theOeye-logo2.png)](https://theeye.io/index.html)
 
 # Información de Runtime
 
@@ -19,6 +19,12 @@ Contiene la información del job que se está ejecutando.
 
 <!-- tabs:start -->
 
+#### **Node.JS**
+
+```javascript
+console.log(JSON.parse(process.env.THEEYE_JOB))
+```
+
 #### **Bash**
 
 Para analizar un objeto JSON en una string haremos uso del paquete `jq`. [Mas información](https://stedolan.github.io/jq/)
@@ -31,12 +37,6 @@ echo "$THEEYE_JOB" || jq .
 
 ```powershell
 $env:THEEYE_JOB | convertfrom-json | convertto-json -depth 100 | Write-Host
-```
-
-#### **Node.JS**
-
-```javascript
-console.log(JSON.parse(process.env.THEEYE_JOB))
 ```
 
 #### **Python**
@@ -68,6 +68,12 @@ Este es el usuario que ejecutó la task y creó el job. Esta variable va a conte
 
 <!-- tabs:start -->
 
+#### **Node.JS**
+
+```javascript
+console.log(JSON.parse(process.env.THEEYE_JOB_USER))
+```
+
 #### **Bash**
 
 Para analizar un objeto JSON en una string haremos uso del paquete `jq`. [Mas información](https://stedolan.github.io/jq/)
@@ -80,12 +86,6 @@ echo "$THEEYE_JOB_USER" || jq .
 
 ```powershell
 $env:THEEYE_JOB_USER | convertfrom-json | convertto-json -depth 100 | Write-Host
-```
-
-#### **Node.JS**
-
-```javascript
-console.log(JSON.parse(process.env.THEEYE_JOB_USER))
 ```
 
 #### **Python**
@@ -112,6 +112,12 @@ Cuando las tareas son parte de un Workflow, esta variable contendrá informació
 
 <!-- tabs:start -->
 
+#### **Node.JS**
+
+```javascript
+console.log(JSON.parse(process.env.THEEYE_JOB_WORKFLOW))
+```
+
 #### **Bash**
 
 Para analizar un objeto JSON en una string haremos uso del paquete `jq`. [Mas información](https://stedolan.github.io/jq/)
@@ -124,12 +130,6 @@ echo "$THEEYE_JOB_WORKFLOW" || jq .
 
 ```powershell
 $env:THEEYE_JOB_WORKFLOW | convertfrom-json | convertto-json -depth 100 | Write-Host
-```
-
-#### **Node.JS**
-
-```javascript
-console.log(JSON.parse(process.env.THEEYE_JOB_WORKFLOW))
 ```
 
 #### **Python**
@@ -151,6 +151,12 @@ La URL de la API por defecto
 
 <!-- tabs:start -->
 
+#### **Node.JS**
+
+```javascript
+console.log(process.env.THEEYE_API_URL)
+```
+
 #### **Bash**
 
 ```bash
@@ -161,12 +167,6 @@ echo "$THEEYE_API_URL"
 
 ```powershell
 $env:THEEYE_API_URL 
-```
-
-#### **Node.JS**
-
-```javascript
-console.log(process.env.THEEYE_API_URL)
 ```
 
 #### **Python**
@@ -187,6 +187,12 @@ El nombre de la organización dueña del script que se está ejecutando
 
 <!-- tabs:start -->
 
+#### **Node.JS**
+
+```javascript
+console.log(process.env.THEEYE_ORGANIZATION_NAME)
+```
+
 #### **Bash**
 
 ```bash
@@ -197,12 +203,6 @@ echo "$THEEYE_ORGANIZATION_NAME"
 
 ```powershell
 $env:THEEYE_ORGANIZATION_NAME 
-```
-
-#### **Node.JS**
-
-```javascript
-console.log(process.env.THEEYE_ORGANIZATION_NAME)
 ```
 
 #### **Python**
