@@ -9,28 +9,6 @@ const OpenAPIRequestValidator = require('openapi-request-validator').default
 
 
 module.exports = (server) => {
-  // GATEWAY METHODS
-  const workflowMiddlewares = [
-    server.auth.bearerMiddleware,
-    router.resolve.customerSessionToEntity(),
-    router.resolve.idToEntity({ param: 'workflow', required: true }),
-    router.ensureCustomer,
-    router.requireCredential('user'),
-    router.ensureAllowed({ entity: { name: 'workflow' } }),
-    (req, res, next) => {
-      const workflow = req.workflow
-      const method = req.method
-      next()
-    },
-    createJob
-  ]
-
-  server.get('/gateway/workflow/:workflow', workflowMiddlewares)
-  server.post('/gateway/workflow/:workflow', workflowMiddlewares)
-  server.put('/gateway/workflow/:workflow', workflowMiddlewares)
-  server.del('/gateway/workflow/:workflow', workflowMiddlewares)
-  server.patch('/gateway/workflow/:workflow', workflowMiddlewares)
-
   const tasksMiddlewares = [
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -64,9 +42,10 @@ module.exports = (server) => {
     createJob
   ]
 
-  server.get('/gateway/task/:task', tasksMiddlewares)
-  server.post('/gateway/task/:task', tasksMiddlewares)
-  server.put('/gateway/task/:task', tasksMiddlewares)
-  server.del('/gateway/task/:task', tasksMiddlewares)
-  server.patch('/gateway/task/:task', tasksMiddlewares)
+  //server.get('/task/:task/path/:pathuuid', tasksMiddlewares)
+  server.get('/task/:task/gateway', tasksMiddlewares)
+  server.post('/task/:task/gateway', tasksMiddlewares)
+  server.put('/task/:task/gateway', tasksMiddlewares)
+  server.del('/task/:task/gateway', tasksMiddlewares)
+  server.patch('/task/:task/gateway', tasksMiddlewares)
 }

@@ -1,5 +1,6 @@
 const crud = require('./crud')
 const graph = require('./graph')
+const gateway = require('./gateway')
 const job = require('./job')
 const acl = require('./acl')
 const triggers = require('./triggers')
@@ -8,6 +9,7 @@ const scheduler = require('./scheduler')
 const serialization = require('./serialization')
 
 module.exports = (server) => {
+  gateway(server)
   job(server)
   serialization(server)
   acl(server)

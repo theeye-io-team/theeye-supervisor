@@ -56,8 +56,10 @@ module.exports = {
   //handle_errors: { type: Boolean }
   gateway: {
     openapi_spec: new Schema({
-      operation: { type: String },
-      parameters: [{ type: Object }]
+      openapi: { type: String }, // openapi spec version
+      path: { type: String }, // UUID auto generated to identify this path
+      operation: { type: String }, // method
+      parameters: [{ type: Object }] // task arguments using openapi spec
     })
   }
 }
