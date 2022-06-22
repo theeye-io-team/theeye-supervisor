@@ -39,34 +39,6 @@ En este ejemplo enviaremos un GET request que nos devolverá la lista ACL de la 
 
 <!-- tabs:start -->
 
-##### **Javascript**
-
-```javascript
-const theeyeAccessToken = ''
-const taskId = ''
-
-let xhr = new XMLHttpRequest();
-xhr.open('GET', `https://supervisor.theeye.io/task/${taskId}/acl?access_token=${theeyeAccessToken}`);
-
-xhr.onload = () => {
-  console.log(JSON.parse(xhr.response))
-}
-
-xhr.send(null)
-```
-
-##### **Bash**
-
-```bash
-#!/bin/bash
-
-taskId=""
-theeyAccessToken=""
-
-curl -sS "https://supervisor.theeye.io/task/${taskId}/acl?access_token=${theeyAccessToken}"
-
-```
-
 ##### **Node.js**
 
 ```javascript
@@ -98,6 +70,34 @@ req.on('error', error => {
 })
 
 req.end()
+```
+
+##### **Javascript**
+
+```javascript
+const theeyeAccessToken = ''
+const taskId = ''
+
+let xhr = new XMLHttpRequest();
+xhr.open('GET', `https://supervisor.theeye.io/task/${taskId}/acl?access_token=${theeyeAccessToken}`);
+
+xhr.onload = () => {
+  console.log(JSON.parse(xhr.response))
+}
+
+xhr.send(null)
+```
+
+##### **Bash**
+
+```bash
+#!/bin/bash
+
+taskId=""
+theeyAccessToken=""
+
+curl -sS "https://supervisor.theeye.io/task/${taskId}/acl?access_token=${theeyAccessToken}"
+
 ```
 
 ##### **Python**
@@ -132,38 +132,6 @@ En este ejemplo enviaremos un PUT request para reemplazar la lista ACL de la tar
 
 <!-- tabs:start -->
 
-##### **Javascript**
-
-```javascript
-const theeyeAccessToken = ''
-const taskId = ''
-
-let list = {"acl": [
-  // Lista de correos de acls
-]}
-
-let xhr = new XMLHttpRequest();
-xhr.open('PUT', `https://supervisor.theeye.io/task/${taskId}/acl?access_token=${theeyeAccessToken}`);
-
-xhr.onload = () => {
-  console.log(JSON.parse(xhr.response))
-}
-
-xhr.send(JSON.stringify(list))
-```
-
-##### **Bash**
-
-```bash
-#!/bin/bash
-
-taskId=""
-theeyAccessToken=""
-
-curl -sS "https://supervisor.theeye.io/task/${taskId}/acl?access_token=${theeyAccessToken}"
-
-```
-
 ##### **Node.js**
 
 ```javascript
@@ -172,7 +140,7 @@ const https = require('https')
 const taskId = ''
 const theeyeAccessToken = ''
 
-let list = {"acl": [
+let list = {"users": [
   // Lista de correos de acls
 ]}
 
@@ -209,6 +177,38 @@ req.write(strList)
 req.end()
 ```
 
+##### **Javascript**
+
+```javascript
+const theeyeAccessToken = ''
+const taskId = ''
+
+let list = {"users": [
+  // Lista de correos de acls
+]}
+
+let xhr = new XMLHttpRequest();
+xhr.open('PUT', `https://supervisor.theeye.io/task/${taskId}/acl?access_token=${theeyeAccessToken}`);
+
+xhr.onload = () => {
+  console.log(JSON.parse(xhr.response))
+}
+
+xhr.send(JSON.stringify(list))
+```
+
+##### **Bash**
+
+```bash
+#!/bin/bash
+
+taskId=""
+theeyAccessToken=""
+
+curl -sS "https://supervisor.theeye.io/task/${taskId}/acl?access_token=${theeyAccessToken}"
+
+```
+
 ##### **Python**
 
 ##### Nota:
@@ -226,7 +226,7 @@ url = "https://supervisor.theeye.io/task/" + taskId + "/acl"
 
 params = {
   "access_token": theeyeAccessToken,
-  "acl": [
+  "users": [
     ## Lista de correos de acls
   ]
 
