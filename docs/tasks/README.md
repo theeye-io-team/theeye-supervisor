@@ -105,35 +105,6 @@ En este ejemplo enviaremos un GET request que nos devolverá una lista de todas 
 
 <!-- tabs:start -->
 
-##### **Bash**
-
-##### Nota:
-
-> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la Secret Key de la tarea
-
-```bash
-#!/bin/bash
-
-curl -sS "https://supervisor.theeye.io/$THEEYE_ORGANIZATION_NAME/task?access_token=$THEEYE_TOKEN"
-```
-
-##### **Javascript**
-
-##### Nota:
-
-> Se asume que están declaradas las variables `window.THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `window.THEEYE_TOKEN` como la Secret Key de la tarea
-
-```javascript
-let xhr = new XMLHttpRequest();
-xhr.open('GET', `https://supervisor.theeye.io/${window.THEEYE_ORGANIZATION_NAME}/task?access_token=${window.THEEYE_TOKEN}`);
-
-xhr.onload = () => {
-  console.log(JSON.parse(xhr.response))
-}
-
-xhr.send(null)
-```
-
 ##### **Node.js**
 
 ##### Nota:
@@ -168,6 +139,71 @@ req.on('error', error => {
 req.end()
 ```
 
+La consulta admite filtros adicionales para limitar los resultados obtenidos.
+
+Para obtener todas las tareas asignadas a un usuario especifico, podemos consultar por las acl utilizando el parámetro `where` de la siguiente manera
+
+
+```javascript
+const https = require('https')
+
+const options = {
+  host: 'supervisor.theeye.io',
+  path: `/${process.env.THEEYE_ORGANIZATION_NAME}/task?access_token=${process.env.THEEYE_TOKEN}&where\[acl\]=professor@planetexpress.com`,
+  method: 'GET'
+}
+
+const req = https.request(options, res => {
+  let data = ''
+
+  res.on('data', d => {
+    data = data + d
+  })
+
+  res.on('end', () => {
+    console.log(JSON.parse(data))
+  })
+})
+
+req.on('error', error => {
+  console.error(error)
+})
+
+req.end()
+```
+
+De la mismo forma se pueden filtrar las tareas por type, name, etc
+
+
+##### **Bash**
+
+##### Nota:
+
+> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la Secret Key de la tarea
+
+```bash
+#!/bin/bash
+
+curl -sS "https://supervisor.theeye.io/$THEEYE_ORGANIZATION_NAME/task?access_token=$THEEYE_TOKEN"
+```
+
+##### **Javascript**
+
+##### Nota:
+
+> Se asume que están declaradas las variables `window.THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `window.THEEYE_TOKEN` como la Secret Key de la tarea
+
+```javascript
+let xhr = new XMLHttpRequest();
+xhr.open('GET', `https://supervisor.theeye.io/${window.THEEYE_ORGANIZATION_NAME}/task?access_token=${window.THEEYE_TOKEN}`);
+
+xhr.onload = () => {
+  console.log(JSON.parse(xhr.response))
+}
+
+xhr.send(null)
+```
+
 ##### **Python**
 
 ##### Nota:
@@ -198,42 +234,6 @@ print(r.json())
 En este ejemplo enviaremos un GET request que nos devolverá una tarea con toda la información asociada a la misma
 
 <!-- tabs:start -->
-
-##### **Bash**
-
-##### Nota:
-
-> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la Secret Key de la tarea
-
-```bash
-#!/bin/bash
-
-# El ID de la tarea que se quiere solicitar
-task_id="61098ee1a3013300120c687b"
-
-curl -sS "https://supervisor.theeye.io/$THEEYE_ORGANIZATION_NAME/task/${task_id}?access_token=$THEEYE_TOKEN"
-```
-
-##### **Javascript**
-
-##### Nota:
-
-> Se asume que están declaradas las variables `window.THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `window.THEEYE_TOKEN` como la Secret Key de la tarea
-
-```javascript
-let xhr = new XMLHttpRequest();
-
-// El ID de la tarea que se quiere solicitar
-const task_id = "61098ee1a3013300120c687b"
-
-xhr.open('GET', `https://supervisor.theeye.io/${window.THEEYE_ORGANIZATION_NAME}/task/${task_id}?access_token=${window.THEEYE_TOKEN}`);
-
-xhr.onload = () => {
-  console.log(JSON.parse(xhr.response))
-}
-
-xhr.send(null)
-```
 
 ##### **Node.js**
 
@@ -273,6 +273,43 @@ req.on('error', error => {
 req.end()
 ```
 
+
+##### **Bash**
+
+##### Nota:
+
+> Se asume que están declaradas las variables de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `THEEYE_TOKEN` como la Secret Key de la tarea
+
+```bash
+#!/bin/bash
+
+# El ID de la tarea que se quiere solicitar
+task_id="61098ee1a3013300120c687b"
+
+curl -sS "https://supervisor.theeye.io/$THEEYE_ORGANIZATION_NAME/task/${task_id}?access_token=$THEEYE_TOKEN"
+```
+
+##### **Javascript**
+
+##### Nota:
+
+> Se asume que están declaradas las variables `window.THEEYE_ORGANIZATION_NAME` como el nombre de la organización y `window.THEEYE_TOKEN` como la Secret Key de la tarea
+
+```javascript
+let xhr = new XMLHttpRequest();
+
+// El ID de la tarea que se quiere solicitar
+const task_id = "61098ee1a3013300120c687b"
+
+xhr.open('GET', `https://supervisor.theeye.io/${window.THEEYE_ORGANIZATION_NAME}/task/${task_id}?access_token=${window.THEEYE_TOKEN}`);
+
+xhr.onload = () => {
+  console.log(JSON.parse(xhr.response))
+}
+
+xhr.send(null)
+```
+
 ##### **Python**
 
 ##### Nota:
@@ -306,6 +343,56 @@ print(r.json())
 En este ejemplo enviaremos un POST request que ejecutará una tarea de nuestra elección, creando un Job para el agente. Debe proveerse el ID de la tarea y su Secret Key, ilustrado como argumentos de función. Devuelve información del Job que se creó.
 
 <!-- tabs:start -->
+
+##### **Node.js**
+
+##### Nota:
+
+> Se asume que está declaradas las variable de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización
+> 
+> En este ejemplo, la función devuelve una `Promise` que se resuelve al completar el request
+
+```javascript
+const https = require('https')
+
+const execTask = (task_id, task_secret_key) => {
+  return new Promise((resolve, reject) => {
+    const body = {
+      customer: process.env.THEEYE_ORGANIZATION_NAME,
+      task: task_id
+    }
+
+    const options = {
+      host: 'supervisor.theeye.io',
+      path: `/job/secret/${task_secret_key}`,
+      method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+    }
+
+    const req = https.request(options, res => {
+      let data = ''
+
+      res.on('data', d => {
+        data = data + d
+      })
+
+      res.on('end', () => {
+        resolve(JSON.parse(data))
+      })
+    })
+
+    req.on('error', error => {
+      reject(error)
+    })
+
+    req.write(JSON.stringify(body))
+    req.end()
+  })
+}
+```
 
 ##### **Bash**
 
@@ -368,56 +455,6 @@ const execTask = (task_id, task_secret_key) => {
 }
 ```
 
-##### **Node.js**
-
-##### Nota:
-
-> Se asume que está declaradas las variable de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización
-> 
-> En este ejemplo, la función devuelve una `Promise` que se resuelve al completar el request
-
-```javascript
-const https = require('https')
-
-const execTask = (task_id, task_secret_key) => {
-  return new Promise((resolve, reject) => {
-    const body = {
-      customer: process.env.THEEYE_ORGANIZATION_NAME,
-      task: task_id
-    }
-
-    const options = {
-      host: 'supervisor.theeye.io',
-      path: `/job/secret/${task_secret_key}`,
-      method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-    }
-
-    const req = https.request(options, res => {
-      let data = ''
-
-      res.on('data', d => {
-        data = data + d
-      })
-
-      res.on('end', () => {
-        resolve(JSON.parse(data))
-      })
-    })
-
-    req.on('error', error => {
-      reject(error)
-    })
-
-    req.write(JSON.stringify(body))
-    req.end()
-  })
-}
-```
-
 ##### **Python**
 
 ##### Nota:
@@ -452,6 +489,57 @@ En este ejemplo enviaremos un POST request que ejecutará una tarea de nuestra e
 TODO: PROBARLOS
 
 <!-- tabs:start -->
+
+##### **Node.js**
+
+##### Nota:
+
+> Se asume que está declaradas las variable de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización
+> 
+> En este ejemplo, la función devuelve una `Promise` que se resuelve al completar el request
+
+```javascript
+const https = require('https')
+
+const execTask = (task_id, access_token) => {
+  return new Promise((resolve, reject) => {
+    const body = {
+      customer: process.env.THEEYE_ORGANIZATION_NAME,
+      task: task_id,
+      access_token: access_token
+    }
+
+    const options = {
+      host: 'supervisor.theeye.io',
+      path: '/job',
+      method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+    }
+
+    const req = https.request(options, res => {
+      let data = ''
+
+      res.on('data', d => {
+        data = data + d
+      })
+
+      res.on('end', () => {
+        resolve(JSON.parse(data))
+      })
+    })
+
+    req.on('error', error => {
+      reject(error)
+    })
+
+    req.write(JSON.stringify(body))
+    req.end()
+  })
+}
+```
 
 ##### **Bash**
 
@@ -511,57 +599,6 @@ const execTask = (task_id, access_token) => {
     }
 
     xhr.send(JSON.stringify(body))
-  })
-}
-```
-
-##### **Node.js**
-
-##### Nota:
-
-> Se asume que está declaradas las variable de entorno `THEEYE_ORGANIZATION_NAME` como el nombre de la organización
-> 
-> En este ejemplo, la función devuelve una `Promise` que se resuelve al completar el request
-
-```javascript
-const https = require('https')
-
-const execTask = (task_id, access_token) => {
-  return new Promise((resolve, reject) => {
-    const body = {
-      customer: process.env.THEEYE_ORGANIZATION_NAME,
-      task: task_id,
-      access_token: access_token
-    }
-
-    const options = {
-      host: 'supervisor.theeye.io',
-      path: '/job',
-      method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-    }
-
-    const req = https.request(options, res => {
-      let data = ''
-
-      res.on('data', d => {
-        data = data + d
-      })
-
-      res.on('end', () => {
-        resolve(JSON.parse(data))
-      })
-    })
-
-    req.on('error', error => {
-      reject(error)
-    })
-
-    req.write(JSON.stringify(body))
-    req.end()
   })
 }
 ```
