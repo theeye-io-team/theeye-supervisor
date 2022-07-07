@@ -3,11 +3,12 @@ const ObjectId = require('mongoose').Types.ObjectId
 const isMongoId = require('validator/lib/isMongoId')
 const graphlib = require('graphlib')
 const App = require('../../app')
-//const logger = require('../../lib/logger')('controller:workflow:crudv2')
+const logger = require('../../lib/logger')('controller:workflow:crudv2')
 const AsyncController = require('../../lib/async-controller')
 const { ClientError, ServerError } = require('../../lib/error-handler')
 //const formidable = require('formidable')
 //const form = formidable({ multiples: true })
+const WorkflowConstants = require('../../constants/workflow')
 
 module.exports = {
   /**
@@ -78,7 +79,7 @@ module.exports = {
 
     const keepTasks = (query?.keepTasks==='true' || query?.keepTasks===true)
 
-    await Promise.all([
+    await Promise.allSettled([
       workflow.remove(),
       App.Models.Job.Workflow.deleteMany({ workflow_id: workflow._id.toString() }),
       App.scheduler.unscheduleWorkflow(workflow),
@@ -134,60 +135,62 @@ module.exports = {
     const checkCreatedNodes = async () => {
       // add new nodes
       for (let node of newgraphplain.nodes) {
-        if (!oldgraphlib.node(node.v)) { // is not in the workflow
+        if (isTaskNode(node)) {
+          if (!oldgraphlib.node(node.v)) { // is not in the workflow
 
-          const props = tasks.find(task => {
-            return (task.id === node.value.id)
-          })
-
-          const model = await App.task.factory(
-            Object.assign({}, props, {
-              customer_id: customer._id,
-              customer: customer,
-              user: user,
-              user_id: user.id,
-              workflow_id: workflow._id,
-              workflow: workflow,
-              id: undefined
+            const props = tasks.find(task => {
+              return (task.id === node.value.id)
             })
-          )
 
-          if (props.id === start_task_id) {
-            workflow.start_task = model._id
-            workflow.start_task_id = model._id
-          }
-
-          // update node and edges
-          const newid = model._id.toString()
-
-          // first: update the edges.
-          for (let edge of newgraphplain.edges) {
-            const eventName = edge.value
-
-            if (edge.v === node.v) {
-              edge.v = newid
-
-              await createTaskEvent({
+            const model = await App.task.factory(
+              Object.assign({}, props, {
                 customer_id: customer._id,
-                name: eventName,
-                task_id: model._id
+                customer: customer,
+                user: user,
+                user_id: user.id,
+                workflow_id: workflow._id,
+                workflow: workflow,
+                id: undefined
               })
-            } else if (edge.w === node.v) {
-              edge.w = newid
+            )
 
-              if (isMongoId(edge.v)) {
-                const task_id = ObjectId(edge.v)
+            if (props.id === start_task_id) {
+              workflow.start_task = model._id
+              workflow.start_task_id = model._id
+            }
+
+            // update node and edges
+            const newid = model._id.toString()
+
+            // first: update the edges.
+            for (let edge of newgraphplain.edges) {
+              const eventName = edge.value
+
+              if (edge.v === node.v) {
+                edge.v = newid
+
                 await createTaskEvent({
                   customer_id: customer._id,
                   name: eventName,
-                  task_id
+                  task_id: model._id
                 })
+              } else if (edge.w === node.v) {
+                edge.w = newid
+
+                if (isMongoId(edge.v)) {
+                  const task_id = ObjectId(edge.v)
+                  await createTaskEvent({
+                    customer_id: customer._id,
+                    name: eventName,
+                    task_id
+                  })
+                }
               }
             }
-          }
 
-          // second: update the node.
-          node.value.id = node.v = newid
+            // second: update the node.
+            node.value.id = node.v = newid
+          }
         }
       }
     }
@@ -195,7 +198,6 @@ module.exports = {
     await checkRemovedNodes()
     await checkCreatedNodes()
     await updateTasksAcl(newgraphplain, workflow)
-
 
     workflow.graph = newgraphplain
     await workflow.save()
@@ -208,20 +210,18 @@ module.exports = {
 const updateTasksAcl = (graph, workflow) => {
   const updateAcls = []
   for (let node of graph.nodes) {
-    updateAcls.push(
-      App.Models.Task.Task
-      .findById(node.value.id)
-      .then(task => {
-        task.acl = workflow.acl
-        return task.save()
-      })
-      .catch(err => {
-        logger.error(err)
-        return err
-      })
-    )
+    if (isTaskNode(node)) {
+      updateAcls.push(
+        App.Models.Task.Task
+          .findById(node.value.id)
+          .then(task => {
+            task.acl = workflow.acl
+            return task.save()
+          })
+      )
+    }
   }
-  return Promise.all(updateAcls)
+  return Promise.allSettled(updateAcls)
 }
 
 const createTags = ({ body, customer }) => {
@@ -243,57 +243,59 @@ const createTasks = async ({ workflow, customer, user, body }) => {
   const models = []
 
   for (let node of graph.nodes) {
-    const props = tasks.find(task => task.id === node.value.id)
-    const model = await App.task.factory(
-      Object.assign({}, props, {
-        customer_id: customer._id,
-        customer,
-        user,
-        user_id: user.id,
-        workflow_id: workflow._id,
-        workflow
-      })
-    )
-
-    if (props.id === body.start_task_id) {
-      workflow.start_task = model._id
-      workflow.start_task_id = model._id
-    }
-
-    // update node and edges
-    const id = model._id.toString()
-
-    // first: update the edges.
-    for (let edge of graph.edges) {
-      const eventName = edge.value
-
-      if (edge.v === node.v) {
-        edge.v = id
-
-        await createTaskEvent({
+    if (isTaskNode(node)) {
+      const props = tasks.find(task => task.id === node.value.id)
+      const model = await App.task.factory(
+        Object.assign({}, props, {
           customer_id: customer._id,
-          name: eventName,
-          task_id: model._id
+          customer,
+          user,
+          user_id: user.id,
+          workflow_id: workflow._id,
+          workflow
         })
+      )
+
+      if (props.id === body.start_task_id) {
+        workflow.start_task = model._id
+        workflow.start_task_id = model._id
       }
 
-      if (edge.w === node.v) {
-        edge.w = id
+      // update node and edges
+      const id = model._id.toString()
 
-        if (isMongoId(edge.v)) {
-          const task_id = ObjectId(edge.v)
+      // first: update the edges.
+      for (let edge of graph.edges) {
+        const eventName = edge.value
+
+        if (edge.v === node.v) {
+          edge.v = id
+
           await createTaskEvent({
             customer_id: customer._id,
             name: eventName,
-            task_id
+            task_id: model._id
           })
         }
-      }
-    }
 
-    // second: update the node.
-    node.value.id = node.v = id
-    models.push( model )
+        if (edge.w === node.v) {
+          edge.w = id
+
+          if (isMongoId(edge.v)) {
+            const task_id = ObjectId(edge.v)
+            await createTaskEvent({
+              customer_id: customer._id,
+              name: eventName,
+              task_id
+            })
+          }
+        }
+      }
+
+      // second: update the node.
+      node.value.id = node.v = id
+      models.push( model )
+    }
   }
 
   return { tasks: models, graph }
@@ -333,5 +335,9 @@ const removeWorkflowTasks = async (workflow, keepTasks = false) => {
     }
   }
 
-  return Promise.all(promises)
+  return Promise.allSettled(promises)
+}
+
+const isTaskNode = (node) => {
+  return node.v && /Task$/.test(node.value._type) === true
 }
