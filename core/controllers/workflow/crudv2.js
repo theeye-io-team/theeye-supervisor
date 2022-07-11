@@ -41,6 +41,10 @@ module.exports = {
       throw new ClientError('cannot create a workflow without tasks')
     }
 
+    if (!body.start_task_id) {
+      throw new ClientError('start task id is required')
+    }
+
     const workflow = new App.Models.Workflow.Workflow(
       Object.assign({}, body, {
         _type: 'Workflow',
