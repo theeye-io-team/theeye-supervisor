@@ -53,7 +53,8 @@ App.boot = async (config) => {
     App.gateway = new Gateway()
   }
 
-  const Api = require('./api')
+  //const Api = require('./api')
+  const Api = require('./api-sentry')
   const Commander = require('./commander')
   const Monitoring = require('./monitoring')
 
