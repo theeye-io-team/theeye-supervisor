@@ -56,7 +56,11 @@
     "readable-stream": "~1.0.34",
     "redis": "~4.6.5",
     "restify": "~8.5.1",
+    "restify-swagger-jsdoc": "^3.3.0",
     "stream-buffers": "~2.2.0",
+    "swagger-jsdoc": "^6.2.1",
+    "swagger-ui": "^4.13.0",
+    "swagger-ui-dist": "^4.13.0",
     "uuid": "~8.3.0",
     "valid-data-url": "~4.0.0",
     "validator": "8.2.0"
