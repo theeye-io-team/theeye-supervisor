@@ -237,19 +237,19 @@ const controller = {
       const query = req.query
 
       logger.log('querying jobs counters')
-
-      const $match = {
-        customer_id: customer._id.toString(),
-        lifecycle: {
-          $in: [
-            LifecycleConstants.READY,
-            LifecycleConstants.ASSIGNED,
-            LifecycleConstants.ONHOLD,
-            LifecycleConstants.SYNCING,
-            LifecycleConstants.LOCKED
-          ]
-        }
+      const filters = dbFilter(query, { /** default **/ })
+      filters.where.customer_id = customer._id.toString()
+      filters.where.lifecycle = {
+        $in: [
+          LifecycleConstants.READY,
+          LifecycleConstants.ASSIGNED,
+          LifecycleConstants.ONHOLD,
+          LifecycleConstants.SYNCING,
+          LifecycleConstants.LOCKED
+        ]
       }
+
+      const $match = filters.where
 
       if ( !ACL.hasAccessLevel(req.user.credential, 'admin') ) {
         // find what this user can access
@@ -260,11 +260,9 @@ const controller = {
         { $match }, {
           $group: {
             _id: {
-              task_id: "$task_id",
-              workflow_id: "$workflow_id"
+              task: "$task_id",
+              workflow: "$workflow_id"
             },
-            task_id: { $first: "$task_id" },
-            workflow_id: { $first: "$workflow_id" },
             count: { $sum: 1 }
           }
         }
