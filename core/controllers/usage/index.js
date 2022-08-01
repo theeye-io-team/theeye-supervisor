@@ -1,6 +1,7 @@
 const App = require('../../app')
 const router = require('../../router')
 const logger = require('../../lib/logger')('eye:controller:usage')
+const dbFilter = require('../../lib/db-filter')
 
 module.exports = function (server) {
   const middlewares = [
@@ -51,6 +52,46 @@ module.exports = function (server) {
     router.resolve.customerToEntity({ required: true }), // use customer name or id to resolve
     usageDetails
   )
+
+  server.get('/admin/usage/jobs',
+    server.auth.bearerMiddleware,
+    router.requireCredential('root'),
+    jobUsageDetails
+  )
+}
+
+const jobUsageDetails = async (req, res, next) => {
+  try {
+    const input = req.query
+    const filters = dbFilter(input, { /** default **/ })
+
+    const jobs = await new Promise((resolve, reject) => {
+      App.Models.Job.Job.fetchBy(filters, (err, jobs) => {
+        if (err) reject(err)
+        else resolve(jobs)
+      })
+    })
+
+    const sizes = []
+    for (let index = 0; index < jobs.length; index++) {
+      const job = jobs[index]
+
+      const data = [
+        job.output,
+        job.result,
+        job.task_arguments_values
+      ]
+
+      const iosize = Buffer.byteLength(JSON.stringify(data), 'utf8')
+      if (iosize > 3000) {
+        sizes.push({ _id: job._id, customer_name: job.customer_name, name: job.name, iosize })
+      }
+    }
+
+    res.send(200, sizes)
+  } catch (err) {
+    res.sendError(err)
+  }
 }
 
 const usageCount = async (req, res, next) => {
