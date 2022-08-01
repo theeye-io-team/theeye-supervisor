@@ -12,6 +12,12 @@ module.exports = (server) => {
    *    responses: 
    *      200:
    *        description: The API is running.
+   *        content:
+   *          text/plain:
+   *            schema:
+   *              type: string
+   *              example: 'Hi, I am ok. Thanks for asking'
+   *
   */
 
   server.get('/api', (req, res, next) => {
@@ -26,6 +32,10 @@ module.exports = (server) => {
    *    responses: 
    *      200:
    *        description: JSON object with supervisor and host machine information.
+   *        content:
+   *          application/json:
+   *            schema: 
+   *              $ref: "#definitions/task/components/schemas/ScriptTask"
   */
 
   server.get('/api/status', nodeStatus)

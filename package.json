@@ -46,6 +46,7 @@
     "moment": "~2.24.0",
     "mongoose": "~5.12.3",
     "mongoose-lifecycle": "1.0.0",
+    "mongoose-to-swagger": "^1.4.0",
     "multer": "~1.4.2",
     "nodemailer": "~6.7.0",
     "nodemon": "~2.0.4",
