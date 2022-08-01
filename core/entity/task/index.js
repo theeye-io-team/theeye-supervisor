@@ -1,4 +1,6 @@
 const mongodb = require('../../lib/mongodb').db
+const m2s = require('mongoose-to-swagger');
+const fs = require('fs')
 const TaskConstants = require('../../constants/task')
 const BaseSchema = require('./schema')
 
@@ -15,6 +17,28 @@ const ScraperTask = Task.discriminator('ScraperTask', ScraperSchema)
 const ApprovalTask = Task.discriminator('ApprovalTask', ApprovalSchema)
 const DummyTask = Task.discriminator('DummyTask', DummySchema)
 const NotificationTask = Task.discriminator('NotificationTask', NotificationSchema)
+
+const swaggermodels = {
+  components: {
+    schemas: {
+      Task: m2s(Task),
+      ScriptTask: m2s(ScriptTask),
+      ScraperTask: m2s(ScraperTask),
+      ApprovalTask: m2s(ApprovalTask),
+      DummyTask: m2s(DummyTask),
+      NotificationTask: m2s(NotificationTask)
+    }      
+  }
+}
+
+// fs.writeFileSync('swagger.json', JSON.stringify(swaggermodels))
+
+Task.ensureIndexes()
+ApprovalTask.ensureIndexes()
+DummyTask.ensureIndexes()
+NotificationTask.ensureIndexes()
+ScriptTask.ensureIndexes()
+ScraperTask.ensureIndexes()
 
 // called for both inserts and updates
 Task.on('afterSave', function(model) {
