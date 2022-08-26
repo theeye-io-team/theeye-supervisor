@@ -144,7 +144,7 @@ class ValidationError extends ExtendedError {
     super(message || 'Validation Error')
     options||(options={})
     this.name = this.constructor.name
-    this.code = options.code || ''
+    this.code = options.code || 400
     this.statusCode = this.status = options.statusCode || 400
   }
 }

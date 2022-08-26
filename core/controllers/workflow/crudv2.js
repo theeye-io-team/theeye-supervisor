@@ -16,7 +16,7 @@ module.exports = {
    * @method POST
    *
    */
-  create: AsyncController(async (req, res, next) => {
+  create: AsyncController(async (req, res) => {
     const { customer, user, body } = req
 
     if (!body) {
@@ -93,7 +93,7 @@ module.exports = {
    * @method PUT
    *
    */
-  replace: AsyncController(async (req, res, next) => {
+  replace: AsyncController(async (req, res) => {
     const { workflow, customer, user } = req
     const { tasks, start_task_id } = req.body
 
