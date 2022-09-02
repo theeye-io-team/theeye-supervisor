@@ -21,6 +21,7 @@ module.exports = (server) => {
   */
 
   server.get('/api', (req, res, next) => {
+    // TODO: return text/plain header 
     res.send(200, `Hi, I am ok. Thanks for asking`)
   })
 

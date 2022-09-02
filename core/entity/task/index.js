@@ -29,7 +29,7 @@ const swaggermodels = {
       ApprovalTask: m2s(ApprovalTask),
       DummyTask: m2s(DummyTask),
       NotificationTask: m2s(NotificationTask)
-    }      
+    }
   }
 }
 
