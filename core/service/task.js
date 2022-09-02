@@ -367,6 +367,9 @@ module.exports = {
     })
   },
   assignWorkflowAclToTask (taskId, workflow, next) {
+    if (typeof taskId !== 'string' || !isMongoId(taskId)) {
+      return next()
+    }
     next || (next=()=>{})
     Task.findById(taskId, (err, task) => {
       if (err) {

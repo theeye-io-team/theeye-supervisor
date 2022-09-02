@@ -182,7 +182,7 @@ const assignWorkflowAclToTasks = async (workflow) => {
   const nodes = graph.nodes()
   for (let id of nodes) {
     let node = graph.node(id)
-    if (!/Event/.test(node._type)) {
+    if (/Task/.test(node._type)) {
       await new Promise( (resolve, reject) => {
         App.task.assignWorkflowAclToTask(id, workflow, err => {
           if (err) reject(err)
