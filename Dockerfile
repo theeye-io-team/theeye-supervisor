@@ -6,6 +6,7 @@ RUN mkdir -p ${destDir}
 WORKDIR ${destDir}
 COPY . ${destDir}
 # Install app dependencies
+RUN apt update; apt install git
 RUN cd ${destDir}; npm install
 #Export and run.
 EXPOSE 60080
