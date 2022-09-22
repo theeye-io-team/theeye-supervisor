@@ -34,6 +34,7 @@ module.exports = {
     require('../controllers/job')(server)
     require('../controllers/psaux')(server)
     require('../controllers/resource')(server)
+    require('../controllers/marketplace')(server)
     require('../controllers/monitor')(server)
     require('../controllers/script')(server)
     require('../controllers/file')(server)

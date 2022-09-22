@@ -82,5 +82,9 @@ module.exports = {
         bucket: "theeye.dev"
       }
     }
+  },
+  marketplace: {
+    enabled: true,
+    customer_id: '6328bcd0276ebdc8ccb87d49'
   }
 }

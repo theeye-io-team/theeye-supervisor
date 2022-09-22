@@ -12,4 +12,5 @@ Workflow.on('afterSave', function(model) {
   // do more stuff
 })
 
+exports.Entity = Workflow
 exports.Workflow = Workflow

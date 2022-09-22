@@ -42,6 +42,7 @@ App.boot = async (config) => {
     App.jobDispatcher = require('../service/job')
     App.resource = require('../service/resource')
     App.task = require('../service/task')
+    App.workflow = require('../service/workflow')
     App.file = require('../service/file')
     App.host = require('../service/host')
     App.logger = require('../service/logger')

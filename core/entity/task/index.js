@@ -16,13 +16,6 @@ const ApprovalTask = Task.discriminator('ApprovalTask', ApprovalSchema)
 const DummyTask = Task.discriminator('DummyTask', DummySchema)
 const NotificationTask = Task.discriminator('NotificationTask', NotificationSchema)
 
-Task.ensureIndexes()
-ApprovalTask.ensureIndexes()
-DummyTask.ensureIndexes()
-NotificationTask.ensureIndexes()
-ScriptTask.ensureIndexes()
-ScraperTask.ensureIndexes()
-
 // called for both inserts and updates
 Task.on('afterSave', function(model) {
   model.last_update = new Date();
