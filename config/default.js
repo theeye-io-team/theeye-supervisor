@@ -184,5 +184,9 @@ module.exports = {
         bucket: 'theeye.scripts'
       }
     }
+  },
+  marketplace: {
+    enabled: true,
+    customer_id: '6328bcd0276ebdc8ccb87d49'
   }
 }

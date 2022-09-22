@@ -269,6 +269,14 @@ module.exports = {
         getSerializedFile(model)
       })
     }
+  },
+  serializePromise (file, options) {
+    return new Promise((resolve, reject) => {
+      this.serialize(file, options, (err, data) => {
+        if (err) { reject(err) }
+        else { resolve(data) }
+      })
+    })
   }
 }
 
