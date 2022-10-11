@@ -13,6 +13,10 @@ function WorkflowSchema (props) {
     order: { type: Number, default: 0 },
     name: { type: String, required: true },
     description: { type: String, default: '' },
+    // marketplace
+    short_description : { type: String },
+    icon_color: { type: String },
+    icon_image: { type: String },
     tags: { type: Array, default: [] },
     triggers: [{ type: ObjectId, ref: 'Event' }],
     graph: { type: Object },

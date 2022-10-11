@@ -10,6 +10,9 @@ module.exports = {
   public: { type: Boolean, default: false },
   tags: { type: Array },
   description : { type: String },
+  short_description : { type: String },
+  icon_color: { type: String },
+  icon_image: { type: String },
   triggers: [{ type: ObjectId, ref: 'Event' }],
   secret: { type: String, default: randomSecret }, // one way hash
   grace_time: { type: Number, default: 0 },
