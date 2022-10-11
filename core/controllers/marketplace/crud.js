@@ -148,13 +148,13 @@ const transform = (serial) => {
   return Object.assign({}, {
     name: serial.name,
     id: serial._id?.toString(),
-    short_description: serial.short_description,
     type,
     creator: serial.user_id?.toString(),
     rating: serial.rating,
     tags: serial.tags,
     icon_color: serial.icon_color,
     icon_image: serial.icon_image,
+    short_description: serial.short_description,
     description: serial.description,
   })
 }
