@@ -166,8 +166,6 @@ id="$1"
 curl -X PUT "https://supervisor.theeye.io/${customer}/job/${id}/approve?access_token=${token}"
 ```
 
-
-
 ### **Ejemplo 8**
 #### Reject Approval job
 
