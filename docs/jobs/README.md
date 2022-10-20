@@ -36,16 +36,16 @@ Reemplace la palabra clave `${customer}` con el nombre de su organización
 
 `https://supervisor.theeye.io/job?access_token={token}&customer={organization_name}`
 
-  | Método | Dirección           | Descripción                                             | ACL     | 
-  | ------ | ------------------- | ------------------------------------------------------- | ------- |
-  | POST   | /job                | Crear un job                                            | user    |
-  | GET    | /job/running        | Listar todos los jobs que están en ejecución            | user    |
-  | GET    | /job/running_count  | Cantidad de jobs que están en ejecución                 | user    |
-  | POST   | /job/secret/:secret | [Crear un job con la clave secreta](#ejemplo-5)         | anónimo |
-  | DELETE | /job/finished       | [Eliminar el historial de jobs completados](#ejemplo-6) | admin   |
-  | PUT    | /job/${id}/approve  | [Aprovar un job de aprobación](#ejemplo-7)              | viewer  |
-  | PUT    | /job/${id}/reject   | [Rechazar un job de aprobación](#ejemplo-8)             | viewer  |
-  | PUT    | /job/${id}/input    | Completar los inputs del job de una tarea               | user    |
+  | Método | Dirección           | Descripción                                                | ACL     | 
+  | ------ | ------------------- | ---------------------------------------------------------- | ------- |
+  | POST   | /job                | Crear un job                                               | user    |
+  | GET    | /job/running        | [Listar todos los jobs que están en ejecución](#ejemplo-9) | user    |
+  | GET    | /job/running_count  | [Cantidad de jobs que están en ejecución](#ejemplo-10)     | user    |
+  | POST   | /job/secret/:secret | [Crear un job con la clave secreta](#ejemplo-5)            | anónimo |
+  | DELETE | /job/finished       | [Eliminar el historial de jobs completados](#ejemplo-6)    | admin   |
+  | PUT    | /job/${id}/approve  | [Aprovar un job de aprobación](#ejemplo-7)                 | viewer  |
+  | PUT    | /job/${id}/reject   | [Rechazar un job de aprobación](#ejemplo-8)                | viewer  |
+  | PUT    | /job/${id}/input    | Completar los inputs del job de una tarea                  | user    |
 
 
 -----
@@ -177,6 +177,28 @@ token="${THEEYE_ACCESS_TOKEN}"
 id="$1"
 
 curl -X PUT "https://supervisor.theeye.io/${customer}/job/${id}/reject?access_token=${token}"
+```
+
+#### **Ejemplo 9**
+
+##### Listar todos los jobs que están en ejecución
+
+```bash
+customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
+token=$THEEYE_ACCESS_TOKEN
+
+curl -sS --request GET "https://supervisor.theeye.io/${customer}//job/running?access_token=${token}"
+```
+
+#### **Ejemplo 10**
+
+##### Cantidad de jobs que están en ejecución
+
+```bash
+customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
+token=$THEEYE_ACCESS_TOKEN
+
+curl -sS --request GET "https://supervisor.theeye.io/${customer}//job/running_count?access_token=${token}"
 ```
 
 -----
