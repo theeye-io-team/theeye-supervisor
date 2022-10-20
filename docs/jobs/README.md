@@ -80,9 +80,9 @@ Los parámetros admitidos son los siguientes
 
 ## Ejemplos
 
-#### **Ejemplo 1**
+### **Ejemplo 1**
 
-##### Buscar job por su ID
+#### Buscar job por su ID
 
 ```bash
 customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
@@ -93,8 +93,8 @@ curl -sS --request GET "https://supervisor.theeye.io/${customer}/job/${id}?acces
 ```
 
 
-#### **Ejemplo 2**
-##### Lista de jobs
+### **Ejemplo 2**
+#### Lista de jobs
 ```bash
 access_token=$THEEYE_ACCESS_TOKEN
 customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
@@ -105,7 +105,7 @@ echo "using: $customer"
 curl -sS "https://supervisor.theeye.io/${customer}/job?access_token=${access_token}&where\[task_id\]=${task_id}&include\[state\]=1&include\[creation_date\]=1&include\[lifecycle\]=1"
 ```
 
-#### **Ejemplo 3**
+### **Ejemplo 3**
 #### Buscar el estado de un job
 ```bash
 customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
@@ -115,8 +115,8 @@ id=$1
 curl -sS --request GET "https://supervisor.theeye.io/${customer}/job/${id}/lifecycle?access_token=${token}"
 ```
 
-#### **Ejemplo 4**
-##### Cancelar un job
+### **Ejemplo 4**
+#### Cancelar un job
 
 ```bash
 customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
@@ -128,7 +128,7 @@ curl -sS --request PUT "https://supervisor.theeye.io/${customer}/job/${id}/cance
 
 
 ### **Ejemplo 5**
-### Crear un job con la clave secreta
+#### Crear un job con la clave secreta
 
 ```bash
 task="$1"
@@ -142,7 +142,7 @@ curl -i -sS -X POST "https://supervisor.theeye.io/job/secret/${secret}" \
 
 
 ### **Ejemplo 6**
-### Delete completed jobs history
+#### Delete completed jobs history
 
 ```bash
 access_token=$THEEYE_ACCESS_TOKEN
@@ -155,8 +155,8 @@ curl -sS  --request DELETE "https://supervisor.theeye.io/${customer}/job?access_
 ```
 
 
-#### **Ejemplo 7**
-##### Approve Approval job
+### **Ejemplo 7**
+#### Approve Approval job
 
 ```bash
 customer=$(echo ${THEEYE_ORGANIZATION_NAME} | jq -r '.')
@@ -168,8 +168,8 @@ curl -X PUT "https://supervisor.theeye.io/${customer}/job/${id}/approve?access_t
 
 
 
-#### **Ejemplo 8**
-##### Reject Approval job
+### **Ejemplo 8**
+#### Reject Approval job
 
 ```bash
 customer=$(echo ${THEEYE_ORGANIZATION_NAME} | jq -r '.')
@@ -179,9 +179,8 @@ id="$1"
 curl -X PUT "https://supervisor.theeye.io/${customer}/job/${id}/reject?access_token=${token}"
 ```
 
-#### **Ejemplo 9**
-
-##### Listar todos los jobs que están en ejecución
+### **Ejemplo 9**
+#### Listar todos los jobs que están en ejecución
 
 ```bash
 customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
@@ -190,9 +189,8 @@ token=$THEEYE_ACCESS_TOKEN
 curl -sS --request GET "https://supervisor.theeye.io/${customer}//job/running?access_token=${token}"
 ```
 
-#### **Ejemplo 10**
-
-##### Cantidad de jobs que están en ejecución
+### **Ejemplo 10**
+#### Cantidad de jobs que están en ejecución
 
 ```bash
 customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
@@ -203,7 +201,7 @@ curl -sS --request GET "https://supervisor.theeye.io/${customer}//job/running_co
 
 -----
 
-### Sample API Usage
+## Sample API Usage
 
 NodeJS Api helper: <a target="_black" href="https://github.com/theeye-io/recipes/tree/master/api/jobs">Fetch and Cancel jobs using TheEye API</a>
 
