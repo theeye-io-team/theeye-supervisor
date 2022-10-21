@@ -1,18 +1,17 @@
 [![theeye.io](../images/logo-theeye-theOeye-logo2.png)](https://theeye.io/en/index.html)
 
-# Jobs API
+# API de Jobs
 
 -----
 
-## Model Properties
+## Propiedades del modelo
 
-    | Property Name         | Type   | Default | Description | 
-    | -----                 | -----  |         | -----       | 
-    | name                  | string |         |             | 
-    | state                 | string |         |             | 
-    | lifecycle             | string |         |             | 
-    | task_arguments_values | array |         |             | 
-    |                       |        |         |             | 
+  | Nombre de la propiedad | Tipo   | Default | Descripción                             | 
+  | ---------------------- | ------ | ------- | --------------------------------------- | 
+  | name                   | string |         | El nombre de la task                    | 
+  | state                  | string |         | El estado del reslultado del job        | 
+  | lifecycle              | string |         | El estado de ejecución del job          | 
+  | task_arguments_values  | array  |         | Los argumentos de ejecución de la tarea | 
 
 -----
 
@@ -20,31 +19,33 @@
 
 ### V1 
 
-Replace the `${customer}` keyword with your organization name
+Reemplace la palabra clave `${customer}` con el nombre de su organización
 
 `https://supervisor.theeye.io/${customer}/job?access_token=${token}`
 
- | Method | Path                             | Description                           | ACL    | 
- | -----  | -----                            | -----                                 | -----  | 
- | GET    | /${customer}/job                 | Fetch [Get all jobs](#example-2)            | viewer | 
- | GET    | /${customer}/job/${id}           | [Get job by id](#example-1)           | viewer | 
- | PUT    | /${customer}/job/${id}           | Finish a job, update execution status | \*agent | 
- | POST   | /${customer}/job                 | Create a new job instance             | user   |
- | GET    | /${customer}/job/${id}/lifecycle | [Get job lifecycle](#example-3)       | user   | 
- | PUT    | /${customer}/job/${id}/cancel    | [Cancel job](#example-4)              | user   | 
+  | Método | Dirección                        | Descripción                              | ACL    |
+  | ------ | -------------------------------- | ---------------------------------------- | ------ |
+  | GET    | /${customer}/job                 | [Lista de jobs](#ejemplo-2)              | viewer |
+  | GET    | /${customer}/job/${id}           | [Buscar job por su ID](#ejemplo-1)       | viewer |
+  | PUT    | /${customer}/job/${id}           | Marcar un job como finalizado            | agent  |
+  | POST   | /${customer}/job                 | Crear un nuevo job (ejecutar tarea)      | user   |
+  | GET    | /${customer}/job/${id}/lifecycle | [Buscar el estado de un job](#ejemplo-3) | user   |
+  | PUT    | /${customer}/job/${id}/cancel    | [Cancelar un job](#ejemplo-4)            | user   |
 
 ### V2
 
 `https://supervisor.theeye.io/job?access_token={token}&customer={organization_name}`
 
-  | Method | Path                | Description                                 | ACL       |
-  | -----  | -----               | -----                                       | -----     |
-  | POST   | /job                | [Creates a job](#example-5)                 | user      |
-  | POST   | /job/secret/:secret | [Creates a job using the secret key](#example-9) | anonymous |
-  | DELETE | /job/finished       | [Delete completed jobs history](#example-6) | admin     |
-  | PUT    | /job/${id}/approve  | [Approve Approval job](#example-7)          | viewer    |
-  | PUT    | /job/${id}/reject   | [Reject Approval job](#example-8)           | viewer    |
-  | PUT    | /job/${id}/input    | Submit script job input                     | user      |
+  | Método | Dirección           | Descripción                                                | ACL     | 
+  | ------ | ------------------- | ---------------------------------------------------------- | ------- |
+  | POST   | /job                | Crear un job                                               | user    |
+  | GET    | /job/running        | [Listar todos los jobs que están en ejecución](#ejemplo-9) | user    |
+  | GET    | /job/running_count  | [Cantidad de jobs que están en ejecución](#ejemplo-10)     | user    |
+  | POST   | /job/secret/:secret | [Crear un job con la clave secreta](#ejemplo-5)            | anónimo |
+  | DELETE | /job/finished       | [Eliminar el historial de jobs completados](#ejemplo-6)    | admin   |
+  | PUT    | /job/${id}/approve  | [Aprovar un job de aprobación](#ejemplo-7)                 | viewer  |
+  | PUT    | /job/${id}/reject   | [Rechazar un job de aprobación](#ejemplo-8)                | viewer  |
+  | PUT    | /job/${id}/input    | Completar los inputs del job de una tarea                  | user    |
 
 
 -----
@@ -77,11 +78,11 @@ Los parámetros admitidos son los siguientes
 
 -----
 
-## EXAMPLES
+## Ejemplos
 
-#### **Example 1**
+### **Ejemplo 1**
 
-##### Get job by id
+#### Buscar job por su ID
 
 ```bash
 customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
@@ -92,8 +93,8 @@ curl -sS --request GET "https://supervisor.theeye.io/${customer}/job/${id}?acces
 ```
 
 
-#### **Example 2**
-##### Get all jobs of specific task
+### **Ejemplo 2**
+#### Lista de jobs
 ```bash
 access_token=$THEEYE_ACCESS_TOKEN
 customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
@@ -104,8 +105,8 @@ echo "using: $customer"
 curl -sS "https://supervisor.theeye.io/${customer}/job?access_token=${access_token}&where\[task_id\]=${task_id}&include\[state\]=1&include\[creation_date\]=1&include\[lifecycle\]=1"
 ```
 
-#### **Example 3**
-#### Get job lifecycle
+### **Ejemplo 3**
+#### Buscar el estado de un job
 ```bash
 customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
 token=$THEEYE_ACCESS_TOKEN
@@ -114,8 +115,8 @@ id=$1
 curl -sS --request GET "https://supervisor.theeye.io/${customer}/job/${id}/lifecycle?access_token=${token}"
 ```
 
-#### **Example 4**
-##### Cancel Job
+### **Ejemplo 4**
+#### Cancelar un job
 
 ```bash
 customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
@@ -126,8 +127,8 @@ curl -sS --request PUT "https://supervisor.theeye.io/${customer}/job/${id}/cance
 ```
 
 
-### **Example 5**
-### Create a job using the task secret key
+### **Ejemplo 5**
+#### Crear un job con la clave secreta
 
 ```bash
 task="$1"
@@ -140,8 +141,8 @@ curl -i -sS -X POST "https://supervisor.theeye.io/job/secret/${secret}" \
 ```
 
 
-### **Example 6**
-### Delete completed jobs history
+### **Ejemplo 6**
+#### Delete completed jobs history
 
 ```bash
 access_token=$THEEYE_ACCESS_TOKEN
@@ -154,8 +155,8 @@ curl -sS  --request DELETE "https://supervisor.theeye.io/${customer}/job?access_
 ```
 
 
-#### **Example 7**
-##### Approve Approval job
+### **Ejemplo 7**
+#### Approve Approval job
 
 ```bash
 customer=$(echo ${THEEYE_ORGANIZATION_NAME} | jq -r '.')
@@ -165,10 +166,8 @@ id="$1"
 curl -X PUT "https://supervisor.theeye.io/${customer}/job/${id}/approve?access_token=${token}"
 ```
 
-
-
-#### **Example 8**
-##### Reject Approval job
+### **Ejemplo 8**
+#### Reject Approval job
 
 ```bash
 customer=$(echo ${THEEYE_ORGANIZATION_NAME} | jq -r '.')
@@ -178,9 +177,29 @@ id="$1"
 curl -X PUT "https://supervisor.theeye.io/${customer}/job/${id}/reject?access_token=${token}"
 ```
 
+### **Ejemplo 9**
+#### Listar todos los jobs que están en ejecución
+
+```bash
+customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
+token=$THEEYE_ACCESS_TOKEN
+
+curl -sS --request GET "https://supervisor.theeye.io/${customer}//job/running?access_token=${token}"
+```
+
+### **Ejemplo 10**
+#### Cantidad de jobs que están en ejecución
+
+```bash
+customer=$(echo $THEEYE_ORGANIZATION_NAME | jq -r '.')
+token=$THEEYE_ACCESS_TOKEN
+
+curl -sS --request GET "https://supervisor.theeye.io/${customer}//job/running_count?access_token=${token}"
+```
+
 -----
 
-### Sample API Usage
+## Sample API Usage
 
 NodeJS Api helper: <a target="_black" href="https://github.com/theeye-io/recipes/tree/master/api/jobs">Fetch and Cancel jobs using TheEye API</a>
 
