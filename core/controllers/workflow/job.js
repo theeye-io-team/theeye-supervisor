@@ -339,6 +339,26 @@ const controller = {
 
     res.send(202, {})
 
+    const lifecycleQuery = {
+      $or: [
+        { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.FINISHED ] },
+        { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.TERMINATED ] },
+        { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.CANCELED ] },
+        { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.EXPIRED ] },
+        { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.COMPLETED ] }
+      ]
+    }
+
+    if (Array.isArray(query.lifecycle)) {
+      query.lifecycle.forEach(lifecycle => {
+        if (LifecycleConstants.VALUES.indexOf(lifecycle) !== -1) {
+          lifecycleQuery["$or"].push({
+            $eq: [ '$$taskjob.lifecycle', lifecycle ]
+          })
+        }
+      })
+    }
+
     process.nextTick(() => {
       Job.aggregate([
         {
@@ -361,15 +381,7 @@ const controller = {
                 $map: {
                   input: '$tasksJobs',
                   as: 'taskjob',
-                  in: {
-                    $or: [
-                      { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.FINISHED ] },
-                      { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.TERMINATED ] },
-                      { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.CANCELED ] },
-                      { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.EXPIRED ] },
-                      { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.COMPLETED ] }
-                    ]
-                  }
+                  in: lifecycleQuery
                 }
               }
             },
