@@ -1,13 +1,19 @@
 - [API para desarrolladores](/)
 - [Habilitar acceso a las APIs](/auth.md)
-- [Hosts](/hosts/)
-- [Indicadores](/indicators/)
-- [Jobs](/jobs/)
-- [Monitores](/monitors/)
-- [Sync](/sync/)
-- Tareas
-  - [Introducción](/tasks/)
-  - [Argumentos](/tasks/arguments.md)
-  - [Información en Tiempo de Ejecución](/tasks/runtime.md)
-  - [ACL's](/tasks/acls.md)
-- [Webhooks](/webhooks/)
+- APIS Disponibles
+  - [Hosts](/hosts/)
+  - [Indicadores](/indicators/)
+  - [Jobs](/jobs/)
+  - [Monitores](/monitors/)
+  - [Sync](/sync/)
+  - Tareas
+    - [Introducción](/tasks/)
+    - [Argumentos](/tasks/arguments.md)
+    - [Información en Tiempo de Ejecución](/tasks/runtime.md)
+    - [ACL's](/tasks/acls.md)
+  - Webhooks
+    - [Incomming](/webhooks/)
+  - [Eventis](/events/)
+- Avanzado
+  - [Instalacion](/setup/install.md)
+  - [Configuracion](/setup/config.md)
