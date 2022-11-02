@@ -1,6 +1,8 @@
 - [API para desarrolladores](/)
 - [Habilitar acceso a las APIs](/auth.md)
-- APIS Disponibles
+- [Instalacion](/setup/install.md)
+- [Configuracion](/setup/config.md)
+- API Rest
   - [Hosts](/hosts/)
   - [Indicadores](/indicators/)
   - [Jobs](/jobs/)
@@ -14,6 +16,3 @@
   - Webhooks
     - [Incomming](/webhooks/)
   - [Eventis](/events/)
-- Avanzado
-  - [Instalacion](/setup/install.md)
-  - [Configuracion](/setup/config.md)

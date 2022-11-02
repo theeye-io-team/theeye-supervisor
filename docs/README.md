@@ -32,46 +32,6 @@ Técnicamente, TheEye es un orquestrador.
 
 Para más información por favor revise la documentación en https://documentation.theeye.io/
 
-## Opciones de entorno
-
-Modifique estas variables de entorno para cambiar el comportamiento inicial de la API. No se pueden cambiar luego de la inicialización.
-
-* Rest API - API para interactuar con los recursos de TheEye. https://documentation.theeye.io/api/auth/
-
-* Sistema de Monitoreo - Funciona como un proceso en segundo plano. Chequea el estado de los Monitores.
-
-* API comandante interna (Solo escucha en el puerto 6666 en localhost) - Esta API no está documentada. Se usa solamente con propósitos de administración interna.
-
-### Configuración de entorno
-
-#### Configuración básica
-
-| Nombre de la Variable        | Uso |
-| ---------------------------- | --- |
-| PORT                         | Cambia el puerto de la Rest API. Por defecto 60080 |
-| NODE_ENV                     | El archivo del que la API debe sacar la configuración. |
-| DEBUG                        | Activa/desactiva el módulo debug. [Más información](https://www.npmjs.com/package/debug) |
-| THEEYE_NODE_HOSTNAME         | Extiende el módulo debug. Agrega el hostname para depurar el output y define el Hostname en contenedores Docker |
-| VERSION                      | Versión de la API. Si no se provee se intentará usar la versión definida en git. |
-| CONFIG_NOTIFICATIONS_API_URL | URL de destino para el sistema de notificaciones |
-
-
-#### Control de componentes
-
-Puede configurarse para una o más cosas (o ninguna)
-
-
-| Nombre de la Variable   | Uso |
-| ----------------------- | --- |
-| COMMANDER_DISABLED      | Desactiva la API comandante interna |
-| MONITORING_DISABLED     | Desactiva el monitoreo del sistema. Los monitores del sistema no van a revisarse más, solo van a actualizarse cuando los bots y agentes envíen updates |
-| API_DISABLED            | Desactiva la Rest API |
-| SCHEDULER_JOBS_DISABLED | Desactiva la ejecución del scheduler interno. Los jobs programados se seguiran creando usando la Rest API pero la tarea nunca se ejecutará. El timeout de la ejecución nunca se revisará. |
-
-### Ejemplo para iniciar el desarrollo
-
-`DEBUG=*eye* NODE_ENV=localdev MONITORING_DISABLED= SCHEDULER_JOBS_DISABLED= npx nodemon --inspect $PWD/core/main.js`
-
 ## Changelog
 
 TheEye se actualiza frecuentemente. En caso de hostear su propio entorno, es recomendable revisar periódicamente si hay actualizaciones disponibles para mantener su instalación al día con los últimos parches y features.
