@@ -3,7 +3,7 @@ const join = require('path').join
 module.exports = {
   server: {
     name: 'TheEye Core',
-    version: process.env.VERSION || undefined,
+    version: process.env.APP_VERSION || undefined,
     port: process.env.PORT || 60080
   },
   system: {
@@ -13,7 +13,6 @@ module.exports = {
     secret: 'b28d9f2a4d52ace6e5d3ac1dd3e5c2a0e7e66472ec7276ca501b8c4fa1f07679',
     secret_uuid: 'a2a29a19-aba1-412b-a9ba-c29668e3c17b',
     logs: `${__dirname}/../logs`,
-    view_teamplates_path: __dirname + '/../core/view/template',
     user: {
       username: 'theeye-automatic',
       email: 'info@theeye.io',
@@ -21,14 +20,6 @@ module.exports = {
       client_id: null,
       client_secret: null,
       token: null
-    }
-  },
-  agent: {
-    core_workers: {
-      host_ping: {
-        type: 'keepAlive',
-        looptime: 30000
-      }
     }
   },
   /**
@@ -85,6 +76,14 @@ module.exports = {
     fails_count_alert: 3,
     disabled: false,
     check_interval: 10000
+  },
+  agent: {
+    core_workers: {
+      host_ping: {
+        type: 'keepAlive',
+        looptime: 30000
+      }
+    }
   },
   /**
    *
