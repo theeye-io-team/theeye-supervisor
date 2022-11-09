@@ -807,29 +807,32 @@ const removeExceededJobsCountByTask = async (task) => {
   const task_id = task._id.toString()
   const count = await JobModels.Job.countDocuments({ task_id })
 
-  // if count > limit allowed, then search top 6
-  // and destroy the 6th and left the others
+  // if count > limit allowed, then search top ${limit}
+  // destroy the oldest jobs
   if (count > limit) {
     const jobs = await JobModels.Job
       .find({ task_id })
       .sort({ _id: -1 })
       .limit(limit)
 
-    const lastDoc = jobs[limit - 1]
+    if (limit === jobs.length) { // we got the ammount of jobs we asked for
+      const lastDoc = jobs[limit - 1]
+      // only remove finished jobs
+      const result = await JobModels.Job.remove({
+        task_id,
+        _id: { $lt: lastDoc._id.toString() }, // remove the oldest than the last documents
+        $and: [
+          { lifecycle: { $ne: LifecycleConstants.LOCKED } },
+          { lifecycle: { $ne: LifecycleConstants.SYNCING } },
+          { lifecycle: { $ne: LifecycleConstants.READY } },
+          { lifecycle: { $ne: LifecycleConstants.ASSIGNED } },
+          { lifecycle: { $ne: LifecycleConstants.ONHOLD } }
+        ]
+      })
 
-        // only remove finished jobs
-    const result = await JobModels.Job.remove({
-      task_id,
-      _id: { $lt: lastDoc._id.toString() }, // remove older documents than last
-      $and: [
-        { lifecycle: { $ne: LifecycleConstants.READY } },
-        { lifecycle: { $ne: LifecycleConstants.ASSIGNED } },
-        { lifecycle: { $ne: LifecycleConstants.ONHOLD } }
-      ]
-    })
-
-    logger.debug('exceeded task jobs execution logs removed')
-    logger.debug(result)
+      logger.debug('exceeded task jobs execution logs removed')
+      logger.debug(result)
+    }
   }
 }
 
