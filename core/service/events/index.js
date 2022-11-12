@@ -1,4 +1,7 @@
 const Dispatcher = require ('./dispatcher')
+const TasksTrigger = require('./task-trigger-by')
+const WorkflowsTrigger = require('./workflow')
+const NestedMonitorsHandler = require('./nested-monitor')
 
 module.exports.createDispatcher = (props) => {
   const dispatcher = new Dispatcher(props)
@@ -7,7 +10,7 @@ module.exports.createDispatcher = (props) => {
 }
 
 const registerCallbacks = (dispatcher) => {
-  dispatcher.register( require('./task-trigger-by') )
-  dispatcher.register( require('./workflow') )
-  dispatcher.register( require('./nested-monitor') )
+  dispatcher.register(TasksTrigger)
+  dispatcher.register(WorkflowsTrigger)
+  dispatcher.register(NestedMonitorsHandler)
 }

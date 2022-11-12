@@ -102,22 +102,36 @@ function Service (resource) {
 
       logger.log('searching monitor [%s] event [%s] ', monitor.name, event_name)
 
-      const event = await MonitorEvent.findOne({
+      let event = await MonitorEvent.findOne({
         emitter_id: monitor._id,
         enable: true,
         name: event_name 
       })
 
       if (!event) {
-        throw new Error(`monitor event ${event_name} not found `)
+        event = new MonitorEvent({
+          emitter_id: resource._id,
+          name: event_name,
+          creation_date: new Date(),
+          last_update: new Date()
+        })
       }
 
       const config = monitor.config
+      const output = Object.assign({},
+        resource.last_event?.data,
+        {
+          log: undefined,
+          lastline: undefined
+        }
+      )
+
       const data = [{
-        last_event: resource.last_event?.data,
+        output,
         event_name,
         type: resource.type,
-        id: resource._id.toString(),
+        monitor_id: resource._id.toString(),
+        hostname: resource.hostname,
         config
       }]
 
