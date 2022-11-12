@@ -118,6 +118,7 @@ function Service (resource) {
       }
 
       const config = monitor.config
+      // remove log and lastline
       const output = Object.assign({},
         resource.last_event?.data,
         {
