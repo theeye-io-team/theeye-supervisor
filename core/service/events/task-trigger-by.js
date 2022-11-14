@@ -25,7 +25,7 @@ module.exports = async function (payload) {
       payload.topic === TopicConstants.webhook.triggered ||
       payload.topic === TopicConstants.workflow.execution
     ) {
-      await triggeredTaskByEvent(payload)
+      await triggeredByEvent(payload)
     }
   } catch (err) {
     logger.error(err)
@@ -37,7 +37,7 @@ module.exports = async function (payload) {
  * @param {Mixed} data event data, this is the job.output
  * @param {Job} job the job that generates the event
  */
-const triggeredTaskByEvent = async ({ event, data, job }) => {
+const triggeredByEvent = async ({ event, data, job }) => {
 
   if (!event||!event._id) {
     return
