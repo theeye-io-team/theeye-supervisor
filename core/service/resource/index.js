@@ -59,7 +59,7 @@ function Service (resource) {
 
   const sendStateChangeEventNotification = (resource, input, message) => {
     const topic = TopicsConstants.monitor.state
-    let payload = {
+    const payload = {
       model_type: 'Resource',
       model: resource,
       model_id: resource._id,
@@ -108,40 +108,46 @@ function Service (resource) {
         name: event_name 
       })
 
-      if (!event) {
-        event = new MonitorEvent({
-          emitter_id: resource._id,
-          name: event_name,
-          creation_date: new Date(),
-          last_update: new Date()
+      //if (!event) {
+      //  event = new MonitorEvent({
+      //    emitter_id: resource._id,
+      //    name: event_name,
+      //    creation_date: new Date(),
+      //    last_update: new Date()
+      //  })
+      //}
+
+      // the monitor doesn't has events attached to it.
+      // will not trigger anything
+      if (event) {
+        const config = (monitor.config || {})
+
+        // remove log and lastline
+        const output = Object.assign(
+          {},
+          resource.last_event?.data || {},
+          {
+            log: undefined,
+            lastline: undefined
+          }
+        )
+
+        const data = [{
+          type: resource.type,
+          monitor_id: resource._id.toString(),
+          hostname: resource.hostname,
+          output,
+          event_name,
+          config
+        }]
+
+        App.eventDispatcher.dispatch({
+          topic: TopicsConstants.monitor.state,
+          event,
+          resource,
+          data
         })
       }
-
-      const config = monitor.config
-      // remove log and lastline
-      const output = Object.assign({},
-        resource.last_event?.data,
-        {
-          log: undefined,
-          lastline: undefined
-        }
-      )
-
-      const data = [{
-        output,
-        event_name,
-        type: resource.type,
-        monitor_id: resource._id.toString(),
-        hostname: resource.hostname,
-        config
-      }]
-
-      App.eventDispatcher.dispatch({
-        topic: TopicsConstants.monitor.state,
-        event,
-        resource,
-        data
-      })
     } catch (err) {
       logger.error(err)
     }
@@ -319,8 +325,10 @@ function Service (resource) {
       failure_threshold
     )
 
-    const resourceUpdatesStopped = resource.state != newState &&
+    const resourceUpdatesStopped = (
+      resource.state != newState &&
       resource.fails_count >= failure_threshold
+    )
 
     const dispatchNotifications = async () => {
       logStateChange(resource, input) // Logger/Streaming
@@ -339,7 +347,7 @@ function Service (resource) {
       logger.log('resource "%s" notifications stopped', resource.name)
 
       input.event_name = MonitorConstants.RESOURCE_STOPPED // generic event
-      input.custom_event = input.event // specific event reported
+      input.custom_event = input.event // to report a specific event 
       input.failure_severity = getEventSeverity(resource)
       resource.state = newState
       dispatchNotifications()
