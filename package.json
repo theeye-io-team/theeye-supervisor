@@ -54,6 +54,7 @@
     "passport-http-bearer": "~1.0.1",
     "qs": "~6.9.4",
     "readable-stream": "~1.0.34",
+    "redis": "~4.6.5",
     "restify": "~8.5.1",
     "stream-buffers": "~2.2.0",
     "uuid": "~8.3.0",

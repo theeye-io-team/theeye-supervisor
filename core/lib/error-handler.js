@@ -89,6 +89,12 @@ class ErrorHandler {
 module.exports = ErrorHandler
 
 class ExtendedError extends Error {
+  constructor (message, details) {
+    super(message)
+    this.details = details
+    this.name = this.constructor.name
+  }
+
   toJSON () {
     let alt = {}
     let storeKey = function (key) {
@@ -154,3 +160,14 @@ ErrorHandler.ValidationError = ValidationError
 ErrorHandler.ClientError = ClientError
 
 ErrorHandler.ServerError = ServerError
+
+///////////////////////////////////////////////
+class AsyncMiddlewareEmptyResult extends ExtendedError {
+  constructor (message) {
+    super('AsyncMiddleware result is undefined', message)
+    this.code = 40000
+  }
+}
+ErrorHandler.AsyncMiddlewareEmptyResult = AsyncMiddlewareEmptyResult
+
+///////////////////////////////////////////////

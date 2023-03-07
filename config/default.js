@@ -187,5 +187,10 @@ module.exports = {
   marketplace: {
     enabled: true,
     customer_id: '6328bcd0276ebdc8ccb87d49'
+  },
+  redis: {
+    //url: 'redis[s]://[[username][:password]@][host][:port][/db-number]'
+    url: 'redis://127.0.0.1:6379/3'
   }
+
 }
