@@ -1,5 +1,6 @@
 const MongoDB = require('../lib/mongodb')
 const logger = require('../lib/logger')('app')
+const redis = require('redis')
 //const User = require('../entity/user').Entity
 const App = {}
 const AWS = require('aws-sdk')
@@ -20,21 +21,28 @@ App.boot = async (config) => {
 
   Object.assign(App, Models)
 
-  const start = async () => {
+  const start = () => {
     configureAws(config.integrations.aws)
 
     App.state = StateHandler(App)
     App.user = getApplicationUser()
-    StartServices()
+    return StartServices().then(() => {
 
-    Api()
-    Commander()
-    Monitoring()
+      Api()
+      Commander()
+      Monitoring()
 
-    logger.log('App is ready')
+      logger.log('App is ready')
+
+      return
+
+    })
   }
 
   const StartServices = async () => {
+
+    await createRedisClient(App)
+
     logger.log('initializing scheduler')
     App.scheduler = require('../service/scheduler')
     await App.scheduler.initialize(config.scheduler)
@@ -71,4 +79,16 @@ App.boot = async (config) => {
   }
 
   start()
+}
+
+const createRedisClient = async (App) => {
+  const redisClient = redis.createClient(App.config.redis)
+  await redisClient.connect()
+
+  redisClient.on('error', (err) => {
+    console.log('Redis Client Error', err)
+  })
+
+  // services
+  App.redis = redisClient
 }

@@ -15,6 +15,15 @@ const RegisterOperation = require('./register')
 const { ClientError, ServerError } = require('../../lib/error-handler')
 
 module.exports = {
+  hasFinished (job) {
+    return (
+      job.lifecycle === LifecycleConstants.FINISHED ||
+      job.lifecycle === LifecycleConstants.TERMINATED ||
+      job.lifecycle === LifecycleConstants.CANCELED ||
+      job.lifecycle === LifecycleConstants.EXPIRED ||
+      job.lifecycle === LifecycleConstants.COMPLETED
+    )
+  },
   fetchBy (filter, next) {
     return JobModels.Job.fetchBy(filter, (err, jobs) => {
       if (err) {
@@ -837,7 +846,6 @@ const removeExceededJobsCountByTask = async (task) => {
 }
 
 const removeExceededJobsCountByWorkflow = async (workflow, task) => {
-
   if (task._id.toString() !== workflow.start_task_id.toString()) {
     return
   }
@@ -905,7 +913,6 @@ const removeExceededJobsCountByWorkflow = async (workflow, task) => {
 }
 
 const actuallyRemoveWorkflowJobs = async (jobs, limit) => {
-
   if (jobs.length > limit) {
 
     // remove exceeded items

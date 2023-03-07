@@ -1,10 +1,13 @@
 const App = require('../app')
-const { ServerError, ClientError } = require('./error-handler')
+const { ServerError, ClientError, AsyncMiddlewareEmptyResult } = require('./error-handler')
 
 module.exports = (fn, options = {}) => {
   const controller = async (req, res, next) => {
     try {
       const result = await fn(req, res)
+      if (result === undefined) {
+        throw new AsyncMiddlewareEmptyResult('Internal Server Error')
+      }
       const body = (result||'ok')
       res.send(body)
       next()

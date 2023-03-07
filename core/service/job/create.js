@@ -2,6 +2,7 @@ const App = require('../../app')
 const logger = require('../../lib/logger')('service:job:create')
 const LifecycleConstants = require('../../constants/lifecycle')
 const jobPayloadValidationMiddleware = require('./payload-validation')
+const qs = require('qs')
 
 /**
  *
@@ -36,10 +37,25 @@ module.exports = async (req, res, next) => {
       })
     }
 
-    res.send(200, data)
     req.job = job
-    next()
+    if (waitResult(req)) {
+      const query = Object.assign({}, req.query)
+      query.counter = 0
+      query.limit = (req.query.limit || 10)
+      query.timeout = (req.query.timeout || 5)
+      const encodedquerystring = qs.stringify(query)
+
+      res.header('Location', `/job/${job.id}/result?${encodedquerystring}`)
+      res.send(303, data)
+    } else {
+      res.send(200, data)
+      next()
+    }
   } catch (err) {
     res.sendError(err)
   }
+}
+
+const waitResult = (req) => {
+  return req.query.wait_result === 'true' || req.body.wait_result === true
 }
