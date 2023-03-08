@@ -69,7 +69,6 @@ module.exports = (server) => {
     router.requireCredential('agent', { exactMatch: true }),
     router.resolve.idToEntity({ param: 'job', required: true }),
     controller.finish,
-    afterFinishJobHook
   )
 
   server.put('/job/:job/assignee',
@@ -449,80 +448,4 @@ const membersToUsers = (members) => {
   }
 
   return users
-}
-
-const afterFinishJobHook = (req, res, next) => {
-  const job = req.job
-
-  const updateHostIntegration = () => {
-    switch (job._type) {
-      case 'NgrokIntegrationJob':
-        updateNgrokHostIntegration()
-        break;
-      default:
-        // any other integration ?
-        break;
-    }
-  }
-
-  const updateNgrokHostIntegration = () => {
-    const host = job.host
-    var ngrok = host.integrations.ngrok
-    ngrok.result = job.result
-    ngrok.last_update = new Date()
-
-    if (job.state === StateConstants.INTEGRATION_STARTED) {
-      // obtain tunnel url
-      if (job.result && job.result.url) {
-        ngrok.active = true
-        ngrok.url = job.result.url
-      }
-    } else if (job.state === StateConstants.INTEGRATION_STOPPED) {
-      // tunnel closed. url is no longer valid
-      ngrok.active = false
-      ngrok.url = ''
-    } else if (job.state === StateConstants.FAILURE) {
-      logger.error('integration job failed to ejecute. %o', job)
-    }
-
-    let integrations = Object.assign({}, host.integrations, { ngrok })
-    Host.update(
-      { _id: host._id },
-      {
-        $set: { integrations: integrations.toObject() }
-      },
-      (err) => {
-        if (err) logger.error('%o', err)
-
-        App.notifications.generateSystemNotification({
-          topic: TopicsConstants.host.integrations.crud,
-          data: {
-            hostname: host.hostname,
-            organization: req.customer.name,
-            organization_id: req.customer._id,
-            operation: Constants.UPDATE,
-            model_type: host._type,
-            model_id: host._id,
-            model: {
-              id: host._id,
-              integrations: { ngrok: host.integrations.ngrok }
-            }
-          }
-        })
-
-        next()
-      }
-    )
-  }
-
-  // is an integration job ?
-  if (job.isIntegrationJob()===true) {
-    if (job.populated('host')===undefined) {
-      job.populate('host', () => {
-        updateHostIntegration()
-      })
-    } else {
-      updateHostIntegration()
-    }
-  }
 }

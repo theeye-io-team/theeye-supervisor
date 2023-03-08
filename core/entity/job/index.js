@@ -40,29 +40,3 @@ exports.Approval = ApprovalJob
 exports.Dummy = DummyJob
 exports.Notification = NotificationJob
 exports.Workflow = WorkflowJob
-
-/**
- *
- *
- * Integrations
- *
- *
- */
-const NgrokIntegrationJobSchema = require('./integrations/ngrok')
-const NgrokIntegrationJob = Job.discriminator('NgrokIntegrationJob', NgrokIntegrationJobSchema)
-NgrokIntegrationJob.ensureIndexes()
-
-exports.IntegrationsFactory = {
-  create ({ integration, props }) {
-    let job = null
-    switch (integration) {
-      case IntegrationConstants.NGROK:
-        job = new NgrokIntegrationJob(props)
-        break;
-      //default:
-      //  ERROR !!!
-      //  break
-    }
-    return job
-  }
-}
