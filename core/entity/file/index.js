@@ -30,7 +30,6 @@ const File = mongodb.model('File', new FileSchema({
   _type: { type: String, default: 'File' }
 }))
 const Script = File.discriminator('Script', ScriptSchema)
-File.ensureIndexes()
 
 // called for both inserts and updates
 File.on('afterSave', function(model) {

@@ -62,7 +62,6 @@ EntitySchema.statics.create = (tags, customer, next) => {
 EntitySchema.index({ name: 1, customer: 1 },{ unique: true });
 
 const Entity = mongodb.db.model('Tag', EntitySchema)
-Entity.ensureIndexes()
 
 exports.Entity = Entity
 exports.Tag = Entity

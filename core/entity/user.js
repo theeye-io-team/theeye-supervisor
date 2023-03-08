@@ -80,6 +80,5 @@ EntitySchema.statics.fetchBy = function () {
 }
 
 var Entity = mongodb.db.model('User', EntitySchema)
-Entity.ensureIndexes();
 
 exports.Entity = Entity;

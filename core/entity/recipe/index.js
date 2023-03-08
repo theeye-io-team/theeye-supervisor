@@ -5,8 +5,6 @@ const RecipeSchema = require('./schema')
 
 const Recipe = mongodb.model('Recipe', new RecipeSchema())
 
-Recipe.ensureIndexes()
-
 // called for both inserts and updates
 Recipe.on('afterSave', function(model) {
   model.last_update = new Date()

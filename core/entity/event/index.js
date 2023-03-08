@@ -12,7 +12,6 @@ const TaskEvent = Event.discriminator('TaskEvent', TaskEventSchema)
 const MonitorEvent = Event.discriminator('MonitorEvent', MonitorEventSchema)
 const WebhookEvent = Event.discriminator('WebhookEvent', WebhookEventSchema)
 
-Event.ensureIndexes()
 exports.Event = Event
 exports.TaskEvent = TaskEvent
 exports.MonitorEvent = MonitorEvent

@@ -37,5 +37,4 @@ TemplateSchema.methods.populate = function(next){
 }
 
 var Entity = mongodb.model('MonitorTemplate', TemplateSchema);
-Entity.ensureIndexes();
 exports.Entity = Entity;

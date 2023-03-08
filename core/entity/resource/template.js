@@ -22,5 +22,4 @@ TemplateSchema.methods.updateInstancesOfGroupHosts = function (done) {
 }
 
 var Entity = mongodb.model('ResourceTemplate', TemplateSchema);
-Entity.ensureIndexes();
 exports.Entity = Entity;
