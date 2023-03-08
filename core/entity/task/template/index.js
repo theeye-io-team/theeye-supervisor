@@ -15,13 +15,6 @@ const ApprovalTemplate = Template.discriminator('ApprovalTaskTemplate', Approval
 const DummyTemplate = Template.discriminator('DummyTaskTemplate', DummySchema)
 const NotificationTemplate = Template.discriminator('NotificationTaskTemplate', NotificationSchema)
 
-Template.ensureIndexes()
-ScriptTemplate.ensureIndexes()
-ScraperTemplate.ensureIndexes()
-ApprovalTemplate.ensureIndexes()
-DummyTemplate.ensureIndexes()
-NotificationTemplate.ensureIndexes()
-
 // called for both inserts and updates
 Template.on('beforeSave', function(model) {
   model.last_update = new Date()

@@ -72,5 +72,4 @@ function Schema () {
 util.inherits(Schema, mongoose.Schema);
 
 var Entity = mongodb.db.model('Customer', new Schema());
-Entity.ensureIndexes();
 exports.Entity = Entity;

@@ -8,6 +8,5 @@ var EntitySchema = Schema({
 })
 
 var Entity = mongodb.db.model('ResourceStats', EntitySchema)
-Entity.ensureIndexes()
 
 exports.Entity = Entity

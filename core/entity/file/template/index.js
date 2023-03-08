@@ -6,8 +6,6 @@ const TemplateSchema = require('./schema') // base file
 const FileTemplate = mongodb.model('FileTemplate', new TemplateSchema())
 const ScriptTemplate = FileTemplate.discriminator('ScriptTemplate', new TemplateSchema({}))
 
-FileTemplate.ensureIndexes()
-
 // called for both inserts and updates
 FileTemplate.on('beforeSave', function (model) {
   model.last_update = new Date()

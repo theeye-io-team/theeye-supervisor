@@ -53,5 +53,4 @@ EntitySchema.methods.populateAll = function(next) {
 }
 
 var Entity = mongodb.db.model('HostGroup', EntitySchema)
-Entity.ensureIndexes()
 exports.Entity = Entity
