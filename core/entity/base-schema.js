@@ -10,7 +10,11 @@ function BaseSchema (props, specs) {
   // Schema constructor
   Schema.call(this, Object.assign({}, baseProperties, props), {
     collection: specs.collection,
-    discriminatorKey: '_type'
+    discriminatorKey: '_type',
+    timestamps: {
+      createdAt: 'creation_date',
+      updatedAt: 'last_update'
+    }
   })
 
   // Duplicate the ID field.
