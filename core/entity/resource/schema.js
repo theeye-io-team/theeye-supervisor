@@ -2,7 +2,6 @@ const util = require('util')
 const Schema = require('mongoose').Schema
 const Constants = require('../../constants/monitors')
 const FetchBy = require('../../lib/fetch-by')
-const lifecicle = require('mongoose-lifecycle')
 
 const properties = {
   order: { type: Number, default: 0 },
@@ -29,7 +28,6 @@ function BaseSchema (props, opts) {
 
   Schema.call(this, Object.assign({}, properties, props), specs)
 
-  this.plugin(lifecicle)
 
   // Duplicate the ID field.
   this.virtual('id').get(function(){

@@ -1,4 +1,3 @@
-"use strict";
 
 var WebhookEvent = require('../event').WebhookEvent;
 

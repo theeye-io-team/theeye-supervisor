@@ -123,23 +123,31 @@ const controller = {
   /**
    * @method POST
    */
-  create (req, res, next) {
-    const input = Object.assign({},req.body,{
-      customer: req.customer,
-      customer_id: req.customer._id
-    });
+  async create (req, res, next) {
+    try {
+      const input = Object.assign({}, req.body, {
+        customer: req.customer,
+        customer_id: req.customer._id
+      })
 
-    const webhook = new Webhook(input)
-    webhook.save(err => {
-      if(err){
-        if( err.name == 'ValidationError' )
-          return res.send(400, err);
-        else return res.send(500);
-      }
-      res.send(200, webhook);
-      req.webhook = webhook;
-      next();
-    });
+      const webhook = new Webhook(input)
+      await webhook.save()
+
+      const wEvent = new WebhookEvent({
+        name: 'trigger',
+        customer: customer._id,
+        emitter: webhook,
+        emitter_id: webhook._id,
+      })
+
+      await wEvent.save()
+
+      req.webhook = webhook
+      res.send(200, webhook)
+      next()
+    } catch (err) {
+      res.sendError(err)
+    }
   },
   /**
    * @method PUT
@@ -168,13 +176,16 @@ const controller = {
   /**
    * @method DELETE
    */
-  remove (req, res, next) {
-    var webhook = req.webhook;
-    webhook.remove(err => {
-      if(err) return res.send(500);
-      res.send(200,webhook);
-      next();
-    });
+  async remove (req, res, next) {
+    try {
+      const webhook = req.webhook
+      await WebhookEvent.remove({ emitter_id: webhook._id })
+      await webhook.remove()
+      res.send(200, webhook)
+      next()
+    } catch (err) {
+      res.sendError(err)
+    }
   },
   /**
    * @method POST

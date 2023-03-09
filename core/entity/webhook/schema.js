@@ -2,7 +2,6 @@
 
 const util = require('util');
 const Schema = require('mongoose').Schema;
-const lifecicle = require('mongoose-lifecycle');
 const randomSecret = require('../../lib/random-secret');
 
 function BaseSchema (specs) {
@@ -43,8 +42,6 @@ function BaseSchema (specs) {
 
   this.set('toJSON'  , def);
   this.set('toObject', def);
-
-  this.plugin(lifecicle);
 
   return this;
 }

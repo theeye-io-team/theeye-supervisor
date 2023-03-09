@@ -31,17 +31,6 @@ const File = mongodb.model('File', new FileSchema({
 }))
 const Script = File.discriminator('Script', ScriptSchema)
 
-// called for both inserts and updates
-File.on('afterSave', function(model) {
-  model.last_update = new Date()
-  // do more stuff
-})
-
-// create event
-//File.on('afterInsert',function(model){ });
-//File.on('afterUpdate',function(model){ });
-//File.on('afterRemove',function(model){ });
-
 exports.File = File
 exports.Script = Script
 exports.Template = Template

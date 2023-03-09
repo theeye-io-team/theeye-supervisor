@@ -16,11 +16,6 @@ const ApprovalTask = Task.discriminator('ApprovalTask', ApprovalSchema)
 const DummyTask = Task.discriminator('DummyTask', DummySchema)
 const NotificationTask = Task.discriminator('NotificationTask', NotificationSchema)
 
-// called for both inserts and updates
-Task.on('afterSave', function(model) {
-  model.last_update = new Date();
-})
-
 exports.Entity = Task
 exports.Task = Task
 exports.ScriptTask = ScriptTask

@@ -46,12 +46,6 @@ const CounterIndicator = Indicator.discriminator('CounterIndicator', CounterSche
 const ChartIndicator = Indicator.discriminator('ChartIndicator', ChartSchema)
 const FileIndicator = Indicator.discriminator('FileIndicator', FileSchema)
 
-// called for both inserts and updates
-Indicator.on('afterSave', function (model) {
-  model.last_update = new Date()
-  // do more stuff
-})
-
 const IndicatorFactory = function (attrs) {
   if (attrs.type === IndicatorConstants.SHORT_TYPE_CHART) {
     return new ChartIndicator(attrs)
