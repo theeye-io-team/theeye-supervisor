@@ -10,7 +10,11 @@ function BaseSchema (props) {
   // Schema constructor
   Schema.call(this, Object.assign({}, baseProperties, props), {
     collection: 'jobs',
-    discriminatorKey: '_type'
+    discriminatorKey: '_type',
+    timestamps: {
+      createdAt: 'creation_date',
+      updatedAt: 'last_update'
+    }
   })
 
   this.statics.fetchBy = function (filter, next = null) {

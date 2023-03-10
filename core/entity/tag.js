@@ -7,8 +7,14 @@ const after = require('lodash/after')
 const EntitySchema = Schema({
   name: { type: String },
   creation_date: { type: Date, 'default': new Date() },
+  last_update: { type: Date, 'default': new Date() },
   customer_id: { type: Schema.Types.ObjectId, ref: 'Customer' },
   customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
+},{
+  timestamps: {
+    createdAt: 'creation_date',
+    updatedAt: 'last_update'
+  }
 });
 
 EntitySchema.virtual('id').get(function(){

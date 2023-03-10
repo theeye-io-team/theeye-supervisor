@@ -20,7 +20,11 @@ function BaseSchema (specs) {
       secret: { type: String, 'default': randomSecret }
     }, specs), {
       collection: 'webhooks',
-      discriminatorKey: '_type'
+      discriminatorKey: '_type',
+      timestamps: {
+        createdAt: 'creation_date',
+        updatedAt: 'last_update'
+      }
     }
   )
 

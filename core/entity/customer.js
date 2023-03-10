@@ -3,7 +3,7 @@ const mongoose = require('mongoose')
 const util = require('util')
 
 function Schema () {
-  mongoose.Schema.call(this,{
+  mongoose.Schema.call(this, {
     disabled: { type: Boolean },
     name: {
       type: String,
@@ -37,6 +37,11 @@ function Schema () {
     },
     creation_date: { type: Date, default: new Date() },
     last_update: { type: Date, default: new Date() },
+  },{
+    timestamps: {
+      createdAt: 'creation_date',
+      updatedAt: 'last_update'
+    }
   })
 
   // Duplicate the ID field.

@@ -9,6 +9,7 @@ function WorkflowSchema (props) {
   props || (props={})
 
   const specs = { collection: 'workflows' }
+
   const properties = {
     order: { type: Number, default: 0 },
     name: { type: String, required: true },

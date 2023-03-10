@@ -23,7 +23,11 @@ function BaseSchema (props, opts) {
 
   const specs = {
     collection: opts.collection || 'resources',
-    discriminatorKey: '_type'
+    discriminatorKey: '_type',
+    timestamps: {
+      createdAt: 'creation_date',
+      updatedAt: 'last_update'
+    }
   }
 
   Schema.call(this, Object.assign({}, properties, props), specs)

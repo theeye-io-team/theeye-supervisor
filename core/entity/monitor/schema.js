@@ -24,7 +24,11 @@ function BaseSchema (specs, opts) {
   // Schema constructor
   Schema.call(this, Object.assign({}, properties, specs), {
     collection: opts.collection,
-    discriminatorKey: '_type'
+    discriminatorKey: '_type',
+    timestamps: {
+      createdAt: 'creation_date', // Use `created_at` to store the created date
+      updatedAt: 'last_update' // and `updated_at` to store the last updated date
+    }
   })
 
   // Duplicate the ID field.

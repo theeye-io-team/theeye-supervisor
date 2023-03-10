@@ -4,7 +4,7 @@ const mongodb = require("../lib/mongodb")
 const Schema  = require('mongoose').Schema
 const FetchBy = require('../lib/fetch-by')
 
-const EntitySchema = Schema({
+const EntitySchema = new Schema({
   token: { type: String, index: true },
   client_id: { type: String, index: true },
   client_secret: { type: String },
@@ -22,6 +22,11 @@ const EntitySchema = Schema({
   last_update: { type: Date, 'default': new Date() },
   creation_date: { type: Date, 'default': new Date() },
   timestamp: { type: String, 'default': Date.now() },
+},{
+  timestamps: {
+    createdAt: 'creation_date',
+    updatedAt: 'last_update'
+  }
 })
 
 // Duplicate the ID field.
