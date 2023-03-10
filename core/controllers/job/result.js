@@ -12,7 +12,7 @@ module.exports = (server) => {
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'job', required: true }),
     router.ensureAllowed({ entity: { name: 'job' } }),
-    resultHandler
+    resultPolling
   )
 
   server.post('/job/:job/result',
@@ -22,12 +22,12 @@ module.exports = (server) => {
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'job', required: true }),
     router.ensureAllowed({ entity: { name: 'job' } }),
-    resultHandler
+    resultPolling
   )
 
 }
 
-const resultHandler = (req, res, next) => {
+const resultPolling = (req, res, next) => {
   try {
     const { job, customer } = req
     if (!job) {
@@ -39,8 +39,10 @@ const resultHandler = (req, res, next) => {
       res.send(200, result.data)
       next()
     } else {
-      waitJobResult(job, customer, req.query.timeout, (err, message) => {
-        if (!message) {
+      waitJobResult(req, job, customer, req.query.timeout, (err, message) => {
+        if (err) {
+          res.send(408, 'Request Timeout')
+        } else if (!message) {
           if (req.query.limit === req.query.counter) {
             res.send(408, 'Request Timeout')
           } else {
@@ -71,10 +73,14 @@ const resultHandler = (req, res, next) => {
   }
 }
 
-const waitJobResult = async (job, customer, timeout, next) => {
+const waitJobResult = async (req, job, customer, timeout, next) => {
 
-  if (!timeout || timeout < 5 || timeout > job.timeout) {
-    timeout = job.timeout // seconds. arbitrary
+  let isWaiting
+
+  if (!timeout || timeout > 60) {
+    timeout = 60 // seconds. arbitrary
+  } else if (timeout < 10) {
+    timeout = 10
   }
 
   timeout = (timeout * 1000)
@@ -82,10 +88,11 @@ const waitJobResult = async (job, customer, timeout, next) => {
   let timerId
   let channel
 
-  const stopWaiting = async (message) => {
+  const stopWaiting = async (err, message) => {
     try {
       clearTimeout(timerId)
       App.redis.unsubscribe(channel)
+      isWaiting = false
     } catch (err) {
       console.log(err)
     }
@@ -96,16 +103,24 @@ const waitJobResult = async (job, customer, timeout, next) => {
       message = undefined
     }
 
-    if (message === undefined) {
-      next()
-    } else {
-      // we got the result
-      next(null, message)
-    }
+    next(err, message)
   }
 
+  req.socket.on("error", function() {
+    if (isWaiting === true) {
+      stopWaiting(new Error('connection closed. stop waiting'))
+    }
+  })
+  // this event is always emitted
+  req.socket.on("end", function() {
+    if (isWaiting === true) {
+      stopWaiting(new Error('connection closed. stop waiting'))
+    }
+  })
+
+  isWaiting = true
   channel = `${customer.id}:job-finished:${job.id}`
-  App.redis.subscribe(channel, stopWaiting)
+  App.redis.subscribe(channel, message => stopWaiting(null, message))
 
   timerId = setTimeout(() => {
     stopWaiting()
