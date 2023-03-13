@@ -36,7 +36,7 @@ const resultPolling = (req, res, next) => {
 
     if (App.jobDispatcher.hasFinished(job) === true) {
       const result = prepareJobResponse(job, req.query)
-      res.send(200, result.data)
+      res.send(result.statusCode, result.data)
       next()
     } else {
       waitJobResult(req, job, customer, req.query.timeout, (err, message) => {
@@ -62,7 +62,7 @@ const resultPolling = (req, res, next) => {
             .findById(job._id)
             .then(job => {
               const result = prepareJobResponse(job, req.query)
-              res.send(200, result.data)
+              res.send(result.statusCode, result.data)
               next()
             })
         }
@@ -142,7 +142,7 @@ const prepareJobResponse = (job, options) => {
         try {
           const respData = JSON.parse(output[index]) // first index
           result.data = respData
-          result.statusCode = respData?.statusCode
+          result.statusCode = (respData?.statusCode || respData?.status)
         } catch (jsonErr) {
           logger.log('output cannot be parsed')
           result.data = output
