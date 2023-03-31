@@ -241,27 +241,6 @@ const parseArgumentText = (found) => {
   return value
 }
 
-/**
- *
- * @param {Object} input controlled internal input
- * @property {Object} input.vars request/process provided arguments
- * @property {Task} input.task
- * @property {Object} input.taskOptionals
- *
- * @return Promise
- *
- */
-//const createJob = (input) => {
-//  const { task } = input
-//
-//  if ( ! JobsBuilderMap[ task.type ] ) {
-//    throw new Error(`Invalid or undefined task type ${task.type}`)
-//  }
-//
-//  const builder = new JobsBuilderMap[ task.type ]( input )
-//  return builder.create()
-//}
-
 const searchInputArgumentValueByOrder = (values, searchOrder) => {
   if (!values || !Array.isArray(values)) { return undefined }
 
@@ -764,6 +743,7 @@ class ScriptJob extends AbstractJob {
         })
     })
 
+    // use previous env
     job.env = Object.assign({}, job.env, {
       THEEYE_JOB_USER: JSON.stringify({
         id: user.id,
@@ -805,6 +785,9 @@ class ScriptJob extends AbstractJob {
     job.script_arguments = job.task_arguments_values
     job.script_runas = task.script_runas
     job.timeout = task.timeout
+
+    const wfCons = (vars.workflow?.global_constants||{})
+    const tskEnv = task.env
     job.env = Object.assign({
       THEEYE_JOB: JSON.stringify({
         id: job._id,
@@ -821,7 +804,7 @@ class ScriptJob extends AbstractJob {
       }),
       THEEYE_ORGANIZATION_NAME: JSON.stringify(vars.customer.name),
       THEEYE_API_URL: JSON.stringify(App.config.system.base_url)
-    }, task.env)
+    }, wfCons, tskEnv)
   }
 }
 
