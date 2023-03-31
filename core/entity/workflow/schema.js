@@ -28,6 +28,7 @@ function WorkflowSchema (props) {
     start_task: { type: ObjectId, ref: 'Task' },
     secret: { type: String, default: randomSecret }, // one way hash
     table_view: { type: Boolean, default: false },
+    global_constants: { type: Object, default: () => { return {} }},
 
     // send activity to the logger system
     logger: { type: Boolean },

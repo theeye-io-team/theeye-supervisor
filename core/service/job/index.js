@@ -363,7 +363,7 @@ module.exports = {
     let job
 
     if (!task) {
-      throw new Error('task is required')
+      throw new ClientError('task is required')
     }
 
     verifyTaskBeforeExecution(task)
@@ -382,11 +382,11 @@ module.exports = {
     if (workflow) {
       if (workflow.autoremove_completed_jobs !== false) {
         //await removeExceededJobsCountByWorkflow(workflow, task)
-         removeExceededJobsCountByWorkflow(workflow, task)
+        removeExceededJobsCountByWorkflow(workflow, task)
       }
     } else if (task.autoremove_completed_jobs !== false) {
       //await removeExceededJobsCountByTask(task)
-       removeExceededJobsCountByTask(task)
+      removeExceededJobsCountByTask(task)
     }
 
     return job
@@ -953,20 +953,6 @@ const actuallyRemoveWorkflowJobs = async (jobs, limit) => {
   }
 }
 
-/*
-const jobInProgress = (job) => {
-  if (!job) {
-    return false
-  }
-  let inProgress = (
-    job.lifecycle === LifecycleConstants.READY ||
-    job.lifecycle === LifecycleConstants.ASSIGNED ||
-    job.lifecycle === LifecycleConstants.ONHOLD
-  )
-  return inProgress
-}
-*/
-
 /**
  *
  * @summary remove old job status, the history is kept in historical database.
@@ -1121,32 +1107,6 @@ const WorkflowJobCreatedNotification = ({ job, customer }) => {
       model_id: job._id,
       model_type: job._type,
       model: RegisterOperation.jobToEventModel(job)
-      //model: {
-      //  _id: job._id.toString(),
-      //  _type: job._type,
-      //  id: job._id.toString(),
-      //  type: job.type,
-      //  name: job.name,
-      //  acl: job.acl,
-      //  lifecycle: job.lifecycle,
-      //  state: job.state,
-      //  workflow_id: job.workflow_id,
-      //  workflow_job_id: job.workflow_job_id,
-      //  creation_date: job.creation_date,
-      //  customer_id: job.customer_id,
-      //  order: job.order,
-      //  user_id: job.user_id,
-      //  user_inputs: job.user_inputs,
-      //  user_inputs_members: job.user_inputs_members,
-      //  task_id: job.task._id,
-      //  task: {
-      //    id: job.task._id.toString(),
-      //    _id: job.task._id.toString(),
-      //    type: job.task.type,
-      //    _type: job.task._type,
-      //    name: job.task.name,
-      //  }
-      //}
     }
   })
 }
@@ -1171,24 +1131,6 @@ const emitJobFinishedNotification = ({ job }) => {
       model_id: job._id,
       model_type: job._type,
       model: RegisterOperation.jobToEventModel(job)
-      //model: job
-      //model: {
-      //  _id: job._id.toString(),
-      //  _type: job._type,
-      //  id: job._id.toString(),
-      //  type: job.type,
-      //  name: job.name,
-      //  acl: job.acl,
-      //  lifecycle: job.lifecycle,
-      //  state: job.state,
-      //  workflow_id: job.workflow_id,
-      //  workflow_job_id: job.workflow_job_id,
-      //  task: {
-      //    id: job.task_id.toString(),
-      //    _id: job.task_id.toString(),
-      //  }
-      //}
-      //task_id: job.task_id
     }
   })
 }
@@ -1224,29 +1166,3 @@ const parseRecipients = (values) => {
 
   return recipients
 }
-
-//const users2members = async (users, customer) => {
-//  const members = await App.gateway.member.fetch(users, { customer_id: customer.id })
-//  if (!members || members.length === 0) {
-//    throw new ClientError(`Invalid members. ${JSON.stringify(users)}`)
-//  }
-//
-//  if (users.length !== members.length) {
-//    const invalid = []
-//    for (let user of users) {
-//      const elem = members.find(member => {
-//        return member.user.username === user || member.user.email === user
-//      })
-//
-//      if (!elem) {
-//        invalid.push(user)
-//      }
-//    }
-//
-//    if (invalid.length > 0) {
-//      throw new ClientError(`Invalid members. ${JSON.stringify(invalid)}`)
-//    }
-//  }
-//
-//  return members
-//}
