@@ -16,7 +16,54 @@ module.exports = function (server) {
     router.ensureCustomer
   ]
 
+
+  /** 
+   * @openapi
+   * /indicator:
+   *  get:
+   *    summary: Get all Indicators
+   *    tags: 
+   *      - Indicators
+   *    description: Get all indicator from an organization.
+   *    responses: 
+   *      200:
+   *        description: OK.
+   *        content:
+   *          application/json:
+   *            schema:
+   *              $ref: "#definitions/indicator/components/schemas/Indicator"
+   *
+  */
+
   server.get('/indicator', middlewares, controller.fetch)
+
+  /** 
+   * @openapi
+   * /indicator/{indicatorId}:
+   *  get:
+   *    summary: Get one Indicator
+   *    tags: 
+   *      - Indicators
+   *    description: Get only one indicator.
+   *    parameters:
+   *      - name: Id
+   *        in: query
+   *        description: Specific Indicator Id
+   *        required: true
+   *        schema:
+   *          type: string
+   *          example: 6329f36078a97174fd4ae7c6
+   *    responses: 
+   *      200:
+   *        description: OK.
+   *        content:
+   *          application/json:
+   *            schema:
+   *              $ref: "#definitions/indicator/components/schemas/Indicator"
+   *      400:
+   *        description: Indicator invalid value
+   *
+  */
 
   server.get('/indicator/:indicator',
     server.auth.bearerMiddleware,
@@ -25,6 +72,34 @@ module.exports = function (server) {
     router.resolve.idToEntityByCustomer({ param:'indicator', required:true }),
     controller.get
   )
+
+  /** 
+   * @openapi
+   * /indicator/title/{title}:
+   *  get:
+   *    summary: Get Indicator by title
+   *    tags: 
+   *      - Indicators
+   *    description: Get one indicator by it's title.
+   *    parameters:
+   *      - name: Title
+   *        in: query
+   *        description: Indicator title
+   *        required: true
+   *        schema:
+   *          type: string
+   *          example: MikeTheIndicator
+   *    responses: 
+   *      200:
+   *        description: OK.
+   *        content:
+   *          application/json:
+   *            schema:
+   *              $ref: "#definitions/indicator/components/schemas/Indicator"
+   *      400:
+   *        description: Indicator invalid title value
+   *
+  */
 
   server.get('/indicator/title/:title',
     server.auth.bearerMiddleware,
@@ -44,6 +119,38 @@ module.exports = function (server) {
     }
   }
 
+  /** 
+   * @openapi
+   * /indicator:
+   *  post:
+   *    summary: Create an Indicator
+   *    tags: 
+   *      - Indicators
+   *    description: Create an idicator.
+   *    parameters:
+   *      - in: body
+   *        name: Parameters
+   *        description: Indicator values
+   *        required: true
+   *        schema:
+   *          type: object
+   *          requiered: 
+   *            - userName
+   *          properties:
+   *            type:
+   *              type: string
+   *            name: 
+   *              type:   string
+   *    responses: 
+   *      200:
+   *        description: OK.
+   *        content:
+   *          application/json:
+   *            schema:
+   *              $ref: "#definitions/indicator/components/schemas/Indicator"
+   *
+  */
+
   server.post('/indicator',
     middlewares,
     router.requireCredential('admin'),
@@ -53,6 +160,40 @@ module.exports = function (server) {
     createTags,
   )
 
+/** 
+   * @openapi
+   * /indicator/{indicatorId}:
+   *  put:
+   *    summary: Update an existing Indicator by Id
+   *    tags: 
+   *      - Indicators
+   *    description: Change an Indicator.
+   *    parameters:
+   *      - name: Indicator Id
+   *        in: query
+   *        description: Indicator Id
+   *        required: true
+   *        schema:
+   *          type: string
+   *          example: 633ae702877ba623cd2626df
+   *    requestBody:
+   *      description: Optional description in *Markdown*
+   *      required: true
+   *      content:
+   *        application/json:
+   *          schema:
+   *            $ref: "#definitions/indicator/components/schemas/Indicator"
+   *    responses: 
+   *      200:
+   *        description: OK.
+   *        content:
+   *          application/json:
+   *            schema:
+   *              $ref: "#definitions/indicator/components/schemas/Indicator"
+   *      400:
+   *        description: Indicator invalid value
+   *
+  */
   server.put('/indicator/:indicator',
     middlewares,
     router.requireCredential('admin'),
@@ -62,6 +203,41 @@ module.exports = function (server) {
     notifyEvent({ operation: Constants.REPLACE }),
     createTags,
   )
+
+  /** 
+   * @openapi
+   * /indicator/title/{title}:
+   *  put:
+   *    summary: Update an existing Indicator by title
+   *    description: Change an Indicator
+   *    tags: 
+   *      - Indicators
+   *    parameters:
+   *      - name: Title
+   *        in: query
+   *        description: Indicator title
+   *        required: true
+   *        schema:
+   *          type: string
+   *          example: "indicator_1"
+   *    requestBody:
+   *      description: Optional description in *Markdown*
+   *      required: true
+   *      content:
+   *        application/json:
+   *          schema:
+   *            $ref: "#definitions/indicator/components/schemas/Indicator"
+   *    responses: 
+   *      200:
+   *        description: OK.
+   *        content:
+   *          application/json:
+   *            schema:
+   *              $ref: "#definitions/indicator/components/schemas/Indicator"
+   *      400:
+   *        description: Indicator invalid value
+   *
+  */
 
   server.put('/indicator/title/:title',
     middlewares,
@@ -73,6 +249,41 @@ module.exports = function (server) {
     createTags,
   )
 
+  /** 
+   * @openapi
+   * /indicator/title/{title}:
+   *  patch:
+   *    summary: Update an existing Indicator by title
+   *    description: Change an Indicator
+   *    tags: 
+   *      - Indicators
+   *    parameters:
+   *      - name: Title
+   *        in: query
+   *        description: Indicator title
+   *        required: true
+   *        schema:
+   *          type: string
+   *          example: "indicator_1"
+   *    requestBody:
+   *      description: Optional description in *Markdown*
+   *      required: true
+   *      content:
+   *        application/json:
+   *          schema:
+   *            $ref: "#definitions/indicator/components/schemas/Indicator"
+   *    responses: 
+   *      200:
+   *        description: OK.
+   *        content:
+   *          application/json:
+   *            schema:
+   *              $ref: "#definitions/indicator/components/schemas/Indicator"
+   *      400:
+   *        description: Indicator invalid value
+   *
+  */
+
   server.patch('/indicator/title/:title',
     middlewares,
     router.requireCredential('admin'),
@@ -82,6 +293,41 @@ module.exports = function (server) {
     notifyEvent({ operation: Constants.UPDATE }),
     createTags,
   )
+
+  /** 
+   * @openapi
+   * /indicator/{indicatorId}:
+   *  patch:
+   *    summary: Update an existing Indicator by Id
+   *    description: Change an Indicator
+   *    tags: 
+   *      - Indicators
+   *    parameters:
+   *      - name: Id
+   *        in: query
+   *        description: Indicator Id
+   *        required: true
+   *        schema:
+   *          type: string
+   *          example: "6329f36078a97174fd4ae7c6"
+   *    requestBody:
+   *      description: Optional description in *Markdown*
+   *      required: true
+   *      content:
+   *        application/json:
+   *          schema:
+   *            $ref: "#definitions/indicator/components/schemas/Indicator"
+   *    responses: 
+   *      200:
+   *        description: OK.
+   *        content:
+   *          application/json:
+   *            schema:
+   *              $ref: "#definitions/indicator/components/schemas/Indicator"
+   *      400:
+   *        description: Indicator invalid value
+   *
+  */
 
   server.patch('/indicator/:indicator',
     middlewares,
@@ -93,6 +339,41 @@ module.exports = function (server) {
     createTags,
   )
 
+  /** 
+   * @openapi
+   * /indicator/{indicatorId}/state:
+   *  patch:
+   *    summary: Update an existing Indicator's state
+   *    description: Change an Indicator
+   *    tags: 
+   *      - Indicators
+   *    parameters:
+   *      - name: Id
+   *        in: query
+   *        description: Indicator Id
+   *        required: true
+   *        schema:
+   *          type: string
+   *          example: "6329f36078a97174fd4ae7c6"
+   *    requestBody:
+   *      description: Optional description in *Markdown*
+   *      required: true
+   *      content:
+   *        application/json:
+   *          schema:
+   *            $ref: "#definitions/indicator/components/schemas/Indicator"
+   *    responses: 
+   *      200:
+   *        description: OK.
+   *        content:
+   *          application/json:
+   *            schema:
+   *              $ref: "#definitions/indicator/components/schemas/Indicator"
+   *      400:
+   *        description: Indicator invalid value
+   *
+  */
+
   server.patch('/indicator/:indicator/state',
     middlewares,
     router.requireCredential('agent'),
@@ -102,6 +383,30 @@ module.exports = function (server) {
     notifyEvent({ operation: Constants.UPDATE })
   )
 
+  /** 
+   * @openapi
+   * /indicator/{indicatorId}:
+   *  delete:
+   *    summary: Delete one Indicator
+   *    tags: 
+   *      - Indicators
+   *    description: Delete only one indicator.
+   *    parameters:
+   *      - name: Id
+   *        in: query
+   *        description: Specific Indicator Id
+   *        required: true
+   *        schema:
+   *          type: string
+   *          example: 6329f36078a97174fd4ae7c6
+   *    responses: 
+   *      200:
+   *        description: OK.
+   *      400:
+   *        description: Indicator invalid value
+   *
+  */
+
   server.del('/indicator/:indicator',
     middlewares,
     router.requireCredential('admin'),
@@ -110,6 +415,30 @@ module.exports = function (server) {
     audit.afterRemove('indicator', { display: 'title' }),
     notifyEvent({ operation: Constants.DELETE })
   )
+
+  /** 
+   * @openapi
+   * /indicator/title/{title}:
+   *  delete:
+   *    summary: Delete one Indicator
+   *    tags: 
+   *      - Indicators
+   *    description: Delete only one indicator.
+   *    parameters:
+   *      - name: Title
+   *        in: query
+   *        description: Indicator Title
+   *        required: true
+   *        schema:
+   *          type: string
+   *          example: 6329f36078a97174fd4ae7c6
+   *    responses: 
+   *      200:
+   *        description: OK.
+   *      400:
+   *        description: Indicator invalid value
+   *
+  */
 
   server.del('/indicator/title/:title',
     middlewares,
