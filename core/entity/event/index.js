@@ -1,5 +1,6 @@
 
 const mongodb = require('../../lib/mongodb').db
+const m2s = require('mongoose-to-swagger');
 
 const BaseSchema = require('./schema')
 const TaskEventSchema = require('./task')
@@ -17,3 +18,14 @@ exports.Event = Event
 exports.TaskEvent = TaskEvent
 exports.MonitorEvent = MonitorEvent
 exports.WebhookEvent = WebhookEvent
+
+exports.swagger = {
+  components: {
+    schemas: {
+      Event: m2s(Event),
+      TaskEvent: m2s(TaskEvent),
+      MonitorEvent: m2s(MonitorEvent),
+      WebhookEvent: m2s(WebhookEvent)
+    }
+  }
+}
