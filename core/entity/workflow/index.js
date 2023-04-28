@@ -1,5 +1,5 @@
-'use strict'
 
+const m2s = require('mongoose-to-swagger');
 const mongodb = require('../../lib/mongodb').db
 const WorkflowSchema = require('./schema')
 
@@ -14,3 +14,11 @@ Workflow.on('afterSave', function(model) {
 
 exports.Entity = Workflow
 exports.Workflow = Workflow
+
+exports.swagger = {
+  components: {
+    schemas: {
+      Workflow: m2s(Workflow)
+    }
+  }
+}

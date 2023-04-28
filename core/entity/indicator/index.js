@@ -2,6 +2,7 @@
 const IndicatorConstants = require('../../constants/indicator')
 const mongodb = require('../../lib/mongodb').db
 const BaseSchema = require('./schema')
+const m2s = require('mongoose-to-swagger');
 
 // this is the base indicator schema
 const IndicatorSchema = new BaseSchema({
@@ -45,9 +46,6 @@ const HTMLIndicator = Indicator.discriminator('HTMLIndicator', HTMLSchema)
 const CounterIndicator = Indicator.discriminator('CounterIndicator', CounterSchema)
 const ChartIndicator = Indicator.discriminator('ChartIndicator', ChartSchema)
 const FileIndicator = Indicator.discriminator('FileIndicator', FileSchema)
-
-const m2s = require('mongoose-to-swagger');
-const fs = require('fs')
 
 const swaggermodels = {
   components: {
@@ -99,3 +97,17 @@ exports.Text = TextIndicator
 exports.HTML = HTMLIndicator
 exports.Chart = ChartIndicator
 exports.File = FileIndicator
+
+exports.swagger = {
+  components: {
+    schemas: {
+      Indicator: m2s(Indicator),
+      ProgressIndicator: m2s(ProgressIndicator),
+      CounterIndicator: m2s(CounterIndicator),
+      TextIndicator: m2s(TextIndicator),
+      HTMLIndicator: m2s(HTMLIndicator),
+      ChartIndicator: m2s(ChartIndicator),
+      FileIndicator: m2s(FileIndicator)
+    }
+  }
+}

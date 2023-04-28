@@ -1,6 +1,5 @@
 const mongodb = require('../../lib/mongodb').db
 const m2s = require('mongoose-to-swagger');
-const fs = require('fs')
 const TaskConstants = require('../../constants/task')
 const BaseSchema = require('./schema')
 
@@ -19,21 +18,6 @@ const ScraperTask = Task.discriminator('ScraperTask', ScraperSchema)
 const ApprovalTask = Task.discriminator('ApprovalTask', ApprovalSchema)
 const DummyTask = Task.discriminator('DummyTask', DummySchema)
 const NotificationTask = Task.discriminator('NotificationTask', NotificationSchema)
-
-const swaggermodels = {
-  components: {
-    schemas: {
-      Task: m2s(Task),
-      ScriptTask: m2s(ScriptTask),
-      ScraperTask: m2s(ScraperTask),
-      ApprovalTask: m2s(ApprovalTask),
-      DummyTask: m2s(DummyTask),
-      NotificationTask: m2s(NotificationTask)
-    }
-  }
-}
-
-// fs.writeFileSync('swagger.json', JSON.stringify(swaggermodels))
 
 Task.ensureIndexes()
 ApprovalTask.ensureIndexes()
@@ -97,5 +81,18 @@ exports.Factory = {
       return new ClassesMap[input.type](input)
     }
     throw new Error('invalid error type ' + input.type)
+  }
+}
+
+exports.swagger = {
+  components: {
+    schemas: {
+      Task: m2s(Task),
+      ScriptTask: m2s(ScriptTask),
+      ScraperTask: m2s(ScraperTask),
+      ApprovalTask: m2s(ApprovalTask),
+      DummyTask: m2s(DummyTask),
+      NotificationTask: m2s(NotificationTask)
+    }
   }
 }
