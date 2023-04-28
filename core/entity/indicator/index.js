@@ -46,6 +46,23 @@ const CounterIndicator = Indicator.discriminator('CounterIndicator', CounterSche
 const ChartIndicator = Indicator.discriminator('ChartIndicator', ChartSchema)
 const FileIndicator = Indicator.discriminator('FileIndicator', FileSchema)
 
+const m2s = require('mongoose-to-swagger');
+const fs = require('fs')
+
+const swaggermodels = {
+  components: {
+    schemas: {
+      Indicator: m2s(Indicator),
+      ProgressIndicator: m2s(ProgressIndicator),
+      CounterIndicator: m2s(CounterIndicator),
+      TextIndicator: m2s(TextIndicator),
+      HTMLIndicator: m2s(HTMLIndicator),
+      ChartIndicator: m2s(ChartIndicator),
+      FileIndicator: m2s(FileIndicator)
+    }
+  }
+}
+
 // called for both inserts and updates
 Indicator.on('afterSave', function (model) {
   model.last_update = new Date()

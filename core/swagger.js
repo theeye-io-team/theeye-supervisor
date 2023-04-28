@@ -12,12 +12,14 @@ const options = {
     },
   },
   apis: [
-    'core/controllers/index.js'
+    'core/controllers/index.js',
+    'core/controllers/indicator/crud.js'
   ]  // files containing annotations as above
 };
 
 const spec = swaggerJsdoc(options);
 spec.definitions = {}
 spec.definitions.task = require('./entity/task/swagger.json')
+spec.definitions.indicator = require('./entity/indicator/swagger.json')
 
 module.exports = spec
