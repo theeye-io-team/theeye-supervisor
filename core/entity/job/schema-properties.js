@@ -75,5 +75,6 @@ module.exports = {
 
   // can be canceled by users
   cancellable: { type: Boolean, 'default': true },
+  finished_state_required: { type: Boolean, 'default': false }
   //handle_errors: { type: Boolean }
 }

@@ -504,13 +504,19 @@ module.exports = {
         lifecycle = LifecycleConstants.TERMINATED
         eventName = StateConstants.TIMEOUT
       } else {
-        if (input.state) {
-          state = input.state
+        if (job.finished_state_required === true) {
+          // finished state must be present
+          if (input.state === StateConstants.SUCCESS) {
+            state = StateConstants.SUCCESS // success only if input.state is present
+          } else {
+            state = StateContants.FAILURE
+          }
         } else {
           // assuming success
-          state = StateConstants.SUCCESS
+          state = (input.state || StateConstants.SUCCESS)
         }
-        lifecycle = LifecycleConstants.FINISHED
+
+        job.lifecycle = LifecycleConstants.FINISHED
       }
 
       job.lifecycle = lifecycle

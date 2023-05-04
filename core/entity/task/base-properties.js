@@ -1,4 +1,3 @@
-'use strict'
 const ObjectId = require('mongoose').Types.ObjectId
 const randomSecret = require('../../lib/random-secret')
 module.exports = {
@@ -55,5 +54,6 @@ module.exports = {
   autoremove_completed_jobs_limit: { type: Number, 'default': 5 },
   version: { type: Number, 'default': 1 },
   fingerprint: { type: String, 'default': '' }, 
+  finished_state_required: { type: Boolean, 'default': false }
   //handle_errors: { type: Boolean }
 }
