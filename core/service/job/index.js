@@ -500,10 +500,11 @@ module.exports = {
       let eventName
 
       if (result.killed === true) {
-        state = StateConstants.TIMEOUT
         lifecycle = LifecycleConstants.TERMINATED
+        state = StateConstants.TIMEOUT
         eventName = StateConstants.TIMEOUT
       } else {
+        lifecycle = LifecycleConstants.FINISHED
         if (
           input.state === StateConstants.SUCCESS ||
           input.state === StateConstants.FAILURE
@@ -513,8 +514,6 @@ module.exports = {
           // assuming success for backward compatibility
           state = (job.default_state_evaluation || StateConstants.SUCCESS)
         }
-
-        job.lifecycle = LifecycleConstants.FINISHED
       }
 
       job.lifecycle = lifecycle
