@@ -1,5 +1,6 @@
 const Schema = require('mongoose').Schema;
 const ObjectId = Schema.Types.ObjectId;
+const StateConstants = require('../../constants/states')
 
 module.exports = {
   order: { type: Number, default: 0 },
@@ -75,6 +76,6 @@ module.exports = {
 
   // can be canceled by users
   cancellable: { type: Boolean, 'default': true },
-  finished_state_required: { type: Boolean, 'default': false }
+  default_state_evaluation: { type: String, 'default': StateConstants.SUCCESS }
   //handle_errors: { type: Boolean }
 }

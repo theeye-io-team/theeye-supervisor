@@ -504,16 +504,14 @@ module.exports = {
         lifecycle = LifecycleConstants.TERMINATED
         eventName = StateConstants.TIMEOUT
       } else {
-        if (job.finished_state_required === true) {
-          // finished state must be present
-          if (input.state === StateConstants.SUCCESS) {
-            state = StateConstants.SUCCESS // success only if input.state is present
-          } else {
-            state = StateContants.FAILURE
-          }
+        if (
+          input.state === StateConstants.SUCCESS ||
+          input.state === StateConstants.FAILURE
+        ) {
+          state = input.state
         } else {
-          // assuming success
-          state = (input.state || StateConstants.SUCCESS)
+          // assuming success for backward compatibility
+          state = (job.default_state_evaluation || StateConstants.SUCCESS)
         }
 
         job.lifecycle = LifecycleConstants.FINISHED
@@ -551,11 +549,7 @@ module.exports = {
         eventName = input.eventName
       }
 
-      if (eventName) {
-        job.trigger_name = eventName
-      } else {
-        job.trigger_name = (state === StateConstants.FAILURE) ? StateConstants.FAILURE : StateConstants.SUCCESS
-      }
+      job.trigger_name = (eventName || state)
 
       await job.save()
 
