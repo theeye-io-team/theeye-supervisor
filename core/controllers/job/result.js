@@ -151,7 +151,7 @@ const prepareJobResponse = (job, options) => {
           result.statusCode = (respData?.statusCode || respData?.status)
         } catch (jsonErr) {
           result.data = {
-            message: 'task ejecution result cannot be obtained',
+            message: 'task ejecution result cannot be parsed',
             result: job.result
           }
           result.statusCode = 500
