@@ -1,5 +1,6 @@
 const App = require('../../app')
 const router = require('../../router')
+const logger = require('../../lib/logger')('controller:job')
 const AsyncMiddleware = require('../../lib/async-controller')
 const qs = require('qs')
 
@@ -140,12 +141,20 @@ const prepareJobResponse = (job, options) => {
       const index = (options.parse || 0)
       if (Array.isArray(output)) {
         try {
-          const respData = JSON.parse(output[index]) // first index
-          result.data = respData
+          const arg = output[index]
+          let respData
+          if (arg) {
+            respData = JSON.parse(arg) // first index
+          }
+
+          result.data = respData || null
           result.statusCode = (respData?.statusCode || respData?.status)
         } catch (jsonErr) {
-          logger.log('output cannot be parsed')
-          result.data = output
+          result.data = {
+            message: 'task ejecution result cannot be obtained',
+            result: job.result
+          }
+          result.statusCode = 500
         }
       }
     } else {
