@@ -500,17 +500,20 @@ module.exports = {
       let eventName
 
       if (result.killed === true) {
-        state = StateConstants.TIMEOUT
         lifecycle = LifecycleConstants.TERMINATED
+        state = StateConstants.TIMEOUT
         eventName = StateConstants.TIMEOUT
       } else {
-        if (input.state) {
+        lifecycle = LifecycleConstants.FINISHED
+        if (
+          input.state === StateConstants.SUCCESS ||
+          input.state === StateConstants.FAILURE
+        ) {
           state = input.state
         } else {
-          // assuming success
-          state = StateConstants.SUCCESS
+          // assuming success for backward compatibility
+          state = (job.default_state_evaluation || StateConstants.SUCCESS)
         }
-        lifecycle = LifecycleConstants.FINISHED
       }
 
       job.lifecycle = lifecycle
@@ -545,11 +548,7 @@ module.exports = {
         eventName = input.eventName
       }
 
-      if (eventName) {
-        job.trigger_name = eventName
-      } else {
-        job.trigger_name = (state === StateConstants.FAILURE) ? StateConstants.FAILURE : StateConstants.SUCCESS
-      }
+      job.trigger_name = (eventName || state)
 
       await job.save()
 

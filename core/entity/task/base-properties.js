@@ -1,6 +1,7 @@
-'use strict'
 const ObjectId = require('mongoose').Types.ObjectId
 const randomSecret = require('../../lib/random-secret')
+const StateConstants = require('../../constants/states')
+
 module.exports = {
   order: { type: Number, default: 0 },
   customer_id: { type: String, required: true },
@@ -55,5 +56,6 @@ module.exports = {
   autoremove_completed_jobs_limit: { type: Number, 'default': 5 },
   version: { type: Number, 'default': 1 },
   fingerprint: { type: String, 'default': '' }, 
+  default_state_evaluation: { type: String, 'default': StateConstants.SUCCESS }
   //handle_errors: { type: Boolean }
 }
