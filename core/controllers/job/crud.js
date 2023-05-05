@@ -293,7 +293,11 @@ const controller = {
 
     App.jobDispatcher.finish({
       result: Object.assign({}, (payload.data || {}), {
-        user: { email: user.email, id: user.id }
+        user: {
+          email: user.email,
+          username: user.username,
+          id: user.id
+        }
       }),
       state: payload.state,
       job,
