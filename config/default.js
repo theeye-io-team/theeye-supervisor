@@ -165,7 +165,7 @@ module.exports = {
     },
     // role base access control authorization (tmp)
     authorize: {
-      url: process.env.CONFIG_USER_API_URL || 'http://127.0.0.1:6080/api/auth/rbac/authorize'
+      url: process.env.CONFIG_USER_API_URL || 'http://127.0.0.1:6080/api/accesscontrol/authorize'
     }
   },
   /**

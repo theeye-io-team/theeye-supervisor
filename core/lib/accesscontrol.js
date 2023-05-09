@@ -18,15 +18,15 @@ const Roles = [
 const AccessControl = {
   middleware (app) {
     return function (req, res, next) {
-      const action = `${req.route.method}_${req.url}@${req.customer?.name}`
+      const action = `${req.route.method}_${req.url}`
 
       const attrs = Object.assign({}, req.body, req.params, req.query)
 
       app.gateway
         .accesscontrol
-        .authorize(req.user.id, action, attrs)
-        .then(access => {
-          req.access = access
+        .authorize(req, action, attrs)
+        .then(rbac => {
+          req.rbac = rbac
           next()
         })
         .catch(err => {

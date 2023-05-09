@@ -28,14 +28,13 @@ App.boot = async (config) => {
     App.user = getApplicationUser()
     return StartServices().then(() => {
 
-      Api()
-      Commander()
+      App.api = Api()
+      App.commanderApi = Commander()
       Monitoring()
 
       logger.log('App is ready')
 
       return
-
     })
   }
 

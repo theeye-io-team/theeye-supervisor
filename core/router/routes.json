@@ -1,0 +1,827 @@
+[
+  {
+    "method": "GET",
+    "path": "/indicator",
+    "action": "GET_/indicator"
+  },
+  {
+    "method": "GET",
+    "path": "/indicator/:indicator",
+    "action": "GET_/indicator/:indicator"
+  },
+  {
+    "method": "GET",
+    "path": "/indicator/title/:title",
+    "action": "GET_/indicator/title/:title"
+  },
+  {
+    "method": "POST",
+    "path": "/indicator",
+    "action": "POST_/indicator"
+  },
+  {
+    "method": "PUT",
+    "path": "/indicator/:indicator",
+    "action": "PUT_/indicator/:indicator"
+  },
+  {
+    "method": "PUT",
+    "path": "/indicator/title/:title",
+    "action": "PUT_/indicator/title/:title"
+  },
+  {
+    "method": "PATCH",
+    "path": "/indicator/title/:title",
+    "action": "PATCH_/indicator/title/:title"
+  },
+  {
+    "method": "PATCH",
+    "path": "/indicator/:indicator",
+    "action": "PATCH_/indicator/:indicator"
+  },
+  {
+    "method": "PATCH",
+    "path": "/indicator/:indicator/state",
+    "action": "PATCH_/indicator/:indicator/state"
+  },
+  {
+    "method": "DELETE",
+    "path": "/indicator/:indicator",
+    "action": "DELETE_/indicator/:indicator"
+  },
+  {
+    "method": "DELETE",
+    "path": "/indicator/title/:title",
+    "action": "DELETE_/indicator/title/:title"
+  },
+  {
+    "method": "PATCH",
+    "path": "/indicator/:indicator/increase",
+    "action": "PATCH_/indicator/:indicator/increase"
+  },
+  {
+    "method": "PATCH",
+    "path": "/indicator/title/:title/increase",
+    "action": "PATCH_/indicator/title/:title/increase"
+  },
+  {
+    "method": "PATCH",
+    "path": "/indicator/:indicator/decrease",
+    "action": "PATCH_/indicator/:indicator/decrease"
+  },
+  {
+    "method": "PATCH",
+    "path": "/indicator/title/:title/decrease",
+    "action": "PATCH_/indicator/title/:title/decrease"
+  },
+  {
+    "method": "PATCH",
+    "path": "/indicator/:indicator/restart",
+    "action": "PATCH_/indicator/:indicator/restart"
+  },
+  {
+    "method": "PATCH",
+    "path": "/indicator/title/:title/restart",
+    "action": "PATCH_/indicator/title/:title/restart"
+  },
+  {
+    "method": "GET",
+    "path": "/api",
+    "action": "GET_/api"
+  },
+  {
+    "method": "GET",
+    "path": "/api/status",
+    "action": "GET_/api/status"
+  },
+  {
+    "method": "PUT",
+    "path": "/:customer/agent/:hostname",
+    "action": "PUT_/:customer/agent/:hostname"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/agent/:hostname/config",
+    "action": "GET_/:customer/agent/:hostname/config"
+  },
+  {
+    "method": "POST",
+    "path": "/:customer/dstat/:hostname",
+    "action": "POST_/:customer/dstat/:hostname"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/event",
+    "action": "GET_/:customer/event"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/event/:event",
+    "action": "GET_/:customer/event/:event"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/host/:host/stats",
+    "action": "GET_/:customer/host/:host/stats"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/host",
+    "action": "GET_/:customer/host"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/host/:host",
+    "action": "GET_/:customer/host/:host"
+  },
+  {
+    "method": "PUT",
+    "path": "/:customer/host/:host/reconfigure",
+    "action": "PUT_/:customer/host/:host/reconfigure"
+  },
+  {
+    "method": "POST",
+    "path": "/:customer/host/:hostname",
+    "action": "POST_/:customer/host/:hostname"
+  },
+  {
+    "method": "POST",
+    "path": "/host/:hostname",
+    "action": "POST_/host/:hostname"
+  },
+  {
+    "method": "POST",
+    "path": "/host",
+    "action": "POST_/host"
+  },
+  {
+    "method": "PUT",
+    "path": "/host/:host/disable",
+    "action": "PUT_/host/:host/disable"
+  },
+  {
+    "method": "PUT",
+    "path": "/host/:host/enable",
+    "action": "PUT_/host/:host/enable"
+  },
+  {
+    "method": "PUT",
+    "path": "/host/:host/fingerprints",
+    "action": "PUT_/host/:host/fingerprints"
+  },
+  {
+    "method": "GET",
+    "path": "/host/:host/template",
+    "action": "GET_/host/:host/template"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/hostgroup",
+    "action": "GET_/:customer/hostgroup"
+  },
+  {
+    "method": "POST",
+    "path": "/:customer/hostgroup",
+    "action": "POST_/:customer/hostgroup"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/hostgroup/:group",
+    "action": "GET_/:customer/hostgroup/:group"
+  },
+  {
+    "method": "PUT",
+    "path": "/:customer/hostgroup/:group",
+    "action": "PUT_/:customer/hostgroup/:group"
+  },
+  {
+    "method": "DELETE",
+    "path": "/:customer/hostgroup/:group",
+    "action": "DELETE_/:customer/hostgroup/:group"
+  },
+  {
+    "method": "GET",
+    "path": "/hostgroup/:group/serialize",
+    "action": "GET_/hostgroup/:group/serialize"
+  },
+  {
+    "method": "POST",
+    "path": "/:customer/job",
+    "action": "POST_/:customer/job"
+  },
+  {
+    "method": "POST",
+    "path": "/job",
+    "action": "POST_/job"
+  },
+  {
+    "method": "POST",
+    "path": "/job/secret/:secret",
+    "action": "POST_/job/secret/:secret"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/job/:job",
+    "action": "GET_/:customer/job/:job"
+  },
+  {
+    "method": "GET",
+    "path": "/job/running_count",
+    "action": "GET_/job/running_count"
+  },
+  {
+    "method": "GET",
+    "path": "/job/running",
+    "action": "GET_/job/running"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/job",
+    "action": "GET_/:customer/job"
+  },
+  {
+    "method": "PUT",
+    "path": "/:customer/job/:job",
+    "action": "PUT_/:customer/job/:job"
+  },
+  {
+    "method": "PUT",
+    "path": "/job/:job/assignee",
+    "action": "PUT_/job/:job/assignee"
+  },
+  {
+    "method": "GET",
+    "path": "/job/:job/participants",
+    "action": "GET_/job/:job/participants"
+  },
+  {
+    "method": "GET",
+    "path": "/job/:job/input",
+    "action": "GET_/job/:job/input"
+  },
+  {
+    "method": "GET",
+    "path": "/job/:job/output",
+    "action": "GET_/job/:job/output"
+  },
+  {
+    "method": "PUT",
+    "path": "/job/:job/acl",
+    "action": "PUT_/job/:job/acl"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/job/:job/lifecycle",
+    "action": "GET_/:customer/job/:job/lifecycle"
+  },
+  {
+    "method": "PUT",
+    "path": "/job/:job/synced",
+    "action": "PUT_/job/:job/synced"
+  },
+  {
+    "method": "PUT",
+    "path": "/:customer/job/:job/cancel",
+    "action": "PUT_/:customer/job/:job/cancel"
+  },
+  {
+    "method": "PUT",
+    "path": "/:customer/job/:job/approve",
+    "action": "PUT_/:customer/job/:job/approve"
+  },
+  {
+    "method": "PUT",
+    "path": "/:customer/job/:job/reject",
+    "action": "PUT_/:customer/job/:job/reject"
+  },
+  {
+    "method": "PUT",
+    "path": "/:customer/job/:job/input",
+    "action": "PUT_/:customer/job/:job/input"
+  },
+  {
+    "method": "PUT",
+    "path": "/:customer/job/:job/restart",
+    "action": "PUT_/:customer/job/:job/restart"
+  },
+  {
+    "method": "GET",
+    "path": "/job/:job/result",
+    "action": "GET_/job/:job/result"
+  },
+  {
+    "method": "POST",
+    "path": "/job/:job/result",
+    "action": "POST_/job/:job/result"
+  },
+  {
+    "method": "POST",
+    "path": "/:customer/psaux/:hostname",
+    "action": "POST_/:customer/psaux/:hostname"
+  },
+  {
+    "method": "POST",
+    "path": "/psaux/:hostname",
+    "action": "POST_/psaux/:hostname"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/resource",
+    "action": "GET_/:customer/resource"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/resource/:resource",
+    "action": "GET_/:customer/resource/:resource"
+  },
+  {
+    "method": "PATCH",
+    "path": "/:customer/resource/:resource/state",
+    "action": "PATCH_/:customer/resource/:resource/state"
+  },
+  {
+    "method": "PUT",
+    "path": "/:customer/resource/:resource",
+    "action": "PUT_/:customer/resource/:resource"
+  },
+  {
+    "method": "GET",
+    "path": "/marketplace/:model",
+    "action": "GET_/marketplace/:model"
+  },
+  {
+    "method": "GET",
+    "path": "/marketplace/:model/:id",
+    "action": "GET_/marketplace/:model/:id"
+  },
+  {
+    "method": "GET",
+    "path": "/marketplace/:model/:id/serialize",
+    "action": "GET_/marketplace/:model/:id/serialize"
+  },
+  {
+    "method": "POST",
+    "path": "/marketplace/:model/:id/rate",
+    "action": "POST_/marketplace/:model/:id/rate"
+  },
+  {
+    "method": "GET",
+    "path": "/monitor/runner",
+    "action": "GET_/monitor/runner"
+  },
+  {
+    "method": "POST",
+    "path": "/monitor/runner",
+    "action": "POST_/monitor/runner"
+  },
+  {
+    "method": "DELETE",
+    "path": "/monitor/runner/:monitor",
+    "action": "DELETE_/monitor/runner/:monitor"
+  },
+  {
+    "method": "GET",
+    "path": "/monitor",
+    "action": "GET_/monitor"
+  },
+  {
+    "method": "GET",
+    "path": "/monitor/:resource",
+    "action": "GET_/monitor/:resource"
+  },
+  {
+    "method": "DELETE",
+    "path": "/monitor/:resource",
+    "action": "DELETE_/monitor/:resource"
+  },
+  {
+    "method": "POST",
+    "path": "/monitor",
+    "action": "POST_/monitor"
+  },
+  {
+    "method": "PUT",
+    "path": "/monitor/:resource",
+    "action": "PUT_/monitor/:resource"
+  },
+  {
+    "method": "PATCH",
+    "path": "/monitor/:resource/alerts",
+    "action": "PATCH_/monitor/:resource/alerts"
+  },
+  {
+    "method": "GET",
+    "path": "/monitor/nested/:resource",
+    "action": "GET_/monitor/nested/:resource"
+  },
+  {
+    "method": "PUT",
+    "path": "/monitor/nested/:resource",
+    "action": "PUT_/monitor/nested/:resource"
+  },
+  {
+    "method": "POST",
+    "path": "/monitor/nested",
+    "action": "POST_/monitor/nested"
+  },
+  {
+    "method": "DELETE",
+    "path": "/monitor/nested/:resource",
+    "action": "DELETE_/monitor/nested/:resource"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/script",
+    "action": "GET_/:customer/script"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/script/:script",
+    "action": "GET_/:customer/script/:script"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/script/:script/download",
+    "action": "GET_/:customer/script/:script/download"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/file",
+    "action": "GET_/:customer/file"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/file/:file",
+    "action": "GET_/:customer/file/:file"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/file/:file/download",
+    "action": "GET_/:customer/file/:file/download"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/file/:file/linkedmodels",
+    "action": "GET_/:customer/file/:file/linkedmodels"
+  },
+  {
+    "method": "POST",
+    "path": "/:customer/file",
+    "action": "POST_/:customer/file"
+  },
+  {
+    "method": "PUT",
+    "path": "/:customer/file/:file",
+    "action": "PUT_/:customer/file/:file"
+  },
+  {
+    "method": "PUT",
+    "path": "/:customer/file/:file/upload",
+    "action": "PUT_/:customer/file/:file/upload"
+  },
+  {
+    "method": "PUT",
+    "path": "/:customer/file/:file/schema",
+    "action": "PUT_/:customer/file/:file/schema"
+  },
+  {
+    "method": "DELETE",
+    "path": "/:customer/file/:file",
+    "action": "DELETE_/:customer/file/:file"
+  },
+  {
+    "method": "GET",
+    "path": "/recipe/:recipe",
+    "action": "GET_/recipe/:recipe"
+  },
+  {
+    "method": "GET",
+    "path": "/recipe",
+    "action": "GET_/recipe"
+  },
+  {
+    "method": "DELETE",
+    "path": "/:customer/scheduler/:schedule",
+    "action": "DELETE_/:customer/scheduler/:schedule"
+  },
+  {
+    "method": "DELETE",
+    "path": "/scheduler/:schedule",
+    "action": "DELETE_/scheduler/:schedule"
+  },
+  {
+    "method": "PUT",
+    "path": "/scheduler/:schedule/stop",
+    "action": "PUT_/scheduler/:schedule/stop"
+  },
+  {
+    "method": "PUT",
+    "path": "/scheduler/:schedule/start",
+    "action": "PUT_/scheduler/:schedule/start"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/tag",
+    "action": "GET_/:customer/tag"
+  },
+  {
+    "method": "GET",
+    "path": "/tag",
+    "action": "GET_/tag"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/task",
+    "action": "GET_/:customer/task"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/task/:task",
+    "action": "GET_/:customer/task/:task"
+  },
+  {
+    "method": "GET",
+    "path": "/task/version",
+    "action": "GET_/task/version"
+  },
+  {
+    "method": "POST",
+    "path": "/:customer/task",
+    "action": "POST_/:customer/task"
+  },
+  {
+    "method": "PATCH",
+    "path": "/:customer/task/:task",
+    "action": "PATCH_/:customer/task/:task"
+  },
+  {
+    "method": "PUT",
+    "path": "/:customer/task/:task",
+    "action": "PUT_/:customer/task/:task"
+  },
+  {
+    "method": "DELETE",
+    "path": "/:customer/task/:task",
+    "action": "DELETE_/:customer/task/:task"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/task/:task/schedule",
+    "action": "GET_/:customer/task/:task/schedule"
+  },
+  {
+    "method": "POST",
+    "path": "/:customer/task/:task/schedule",
+    "action": "POST_/:customer/task/:task/schedule"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/task/:task/serialize",
+    "action": "GET_/:customer/task/:task/serialize"
+  },
+  {
+    "method": "POST",
+    "path": "/:customer/task/import",
+    "action": "POST_/:customer/task/import"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/task/:task/credentials",
+    "action": "GET_/:customer/task/:task/credentials"
+  },
+  {
+    "method": "GET",
+    "path": "/task/:task/job/queue",
+    "action": "GET_/task/:task/job/queue"
+  },
+  {
+    "method": "DELETE",
+    "path": "/:customer/task/:task/job",
+    "action": "DELETE_/:customer/task/:task/job"
+  },
+  {
+    "method": "POST",
+    "path": "/:customer/task/:task/job",
+    "action": "POST_/:customer/task/:task/job"
+  },
+  {
+    "method": "POST",
+    "path": "/task/:task/job",
+    "action": "POST_/task/:task/job"
+  },
+  {
+    "method": "POST",
+    "path": "/:customer/task/:task/secret/:secret/job",
+    "action": "POST_/:customer/task/:task/secret/:secret/job"
+  },
+  {
+    "method": "POST",
+    "path": "/task/:task/secret/:secret/job",
+    "action": "POST_/task/:task/secret/:secret/job"
+  },
+  {
+    "method": "GET",
+    "path": "/task/:task/acl",
+    "action": "GET_/task/:task/acl"
+  },
+  {
+    "method": "PUT",
+    "path": "/task/:task/acl",
+    "action": "PUT_/task/:task/acl"
+  },
+  {
+    "method": "PATCH",
+    "path": "/task/:task/acl",
+    "action": "PATCH_/task/:task/acl"
+  },
+  {
+    "method": "DELETE",
+    "path": "/task/:task/acl",
+    "action": "DELETE_/task/:task/acl"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/webhook",
+    "action": "GET_/:customer/webhook"
+  },
+  {
+    "method": "GET",
+    "path": "/:customer/webhook/:webhook",
+    "action": "GET_/:customer/webhook/:webhook"
+  },
+  {
+    "method": "POST",
+    "path": "/:customer/webhook",
+    "action": "POST_/:customer/webhook"
+  },
+  {
+    "method": "PUT",
+    "path": "/:customer/webhook/:webhook",
+    "action": "PUT_/:customer/webhook/:webhook"
+  },
+  {
+    "method": "DELETE",
+    "path": "/:customer/webhook/:webhook",
+    "action": "DELETE_/:customer/webhook/:webhook"
+  },
+  {
+    "method": "POST",
+    "path": "/:customer/webhook/:webhook/trigger",
+    "action": "POST_/:customer/webhook/:webhook/trigger"
+  },
+  {
+    "method": "POST",
+    "path": "/:customer/webhook/:webhook/trigger/secret/:secret",
+    "action": "POST_/:customer/webhook/:webhook/trigger/secret/:secret"
+  },
+  {
+    "method": "POST",
+    "path": "/workflows/:workflow/job",
+    "action": "POST_/workflows/:workflow/job"
+  },
+  {
+    "method": "POST",
+    "path": "/workflows/:workflow/secret/:secret/job",
+    "action": "POST_/workflows/:workflow/secret/:secret/job"
+  },
+  {
+    "method": "DELETE",
+    "path": "/workflows/:workflow/job",
+    "action": "DELETE_/workflows/:workflow/job"
+  },
+  {
+    "method": "GET",
+    "path": "/workflows/:workflow/job/:job",
+    "action": "GET_/workflows/:workflow/job/:job"
+  },
+  {
+    "method": "GET",
+    "path": "/workflows/:workflow/job/:job/jobs",
+    "action": "GET_/workflows/:workflow/job/:job/jobs"
+  },
+  {
+    "method": "GET",
+    "path": "/workflows/:workflow/job",
+    "action": "GET_/workflows/:workflow/job"
+  },
+  {
+    "method": "GET",
+    "path": "/workflows/:workflow/jobs/input",
+    "action": "GET_/workflows/:workflow/jobs/input"
+  },
+  {
+    "method": "PUT",
+    "path": "/workflows/:workflow/job/:job/cancel",
+    "action": "PUT_/workflows/:workflow/job/:job/cancel"
+  },
+  {
+    "method": "PUT",
+    "path": "/workflows/:workflow/job/:job/acl",
+    "action": "PUT_/workflows/:workflow/job/:job/acl"
+  },
+  {
+    "method": "GET",
+    "path": "/workflows/:workflow/serialize",
+    "action": "GET_/workflows/:workflow/serialize"
+  },
+  {
+    "method": "POST",
+    "path": "/workflows/import",
+    "action": "POST_/workflows/import"
+  },
+  {
+    "method": "GET",
+    "path": "/workflows/:workflow/acl",
+    "action": "GET_/workflows/:workflow/acl"
+  },
+  {
+    "method": "PUT",
+    "path": "/workflows/:workflow/acl",
+    "action": "PUT_/workflows/:workflow/acl"
+  },
+  {
+    "method": "PATCH",
+    "path": "/workflows/:workflow/acl",
+    "action": "PATCH_/workflows/:workflow/acl"
+  },
+  {
+    "method": "DELETE",
+    "path": "/workflows/:workflow/acl",
+    "action": "DELETE_/workflows/:workflow/acl"
+  },
+  {
+    "method": "GET",
+    "path": "/workflows",
+    "action": "GET_/workflows"
+  },
+  {
+    "method": "GET",
+    "path": "/workflows/:workflow",
+    "action": "GET_/workflows/:workflow"
+  },
+  {
+    "method": "POST",
+    "path": "/workflows",
+    "action": "POST_/workflows"
+  },
+  {
+    "method": "DELETE",
+    "path": "/workflows/:workflow",
+    "action": "DELETE_/workflows/:workflow"
+  },
+  {
+    "method": "PUT",
+    "path": "/workflows/:workflow",
+    "action": "PUT_/workflows/:workflow"
+  },
+  {
+    "method": "GET",
+    "path": "/workflows/:id/graph",
+    "action": "GET_/workflows/:id/graph"
+  },
+  {
+    "method": "GET",
+    "path": "/workflows/triggers",
+    "action": "GET_/workflows/triggers"
+  },
+  {
+    "method": "GET",
+    "path": "/workflows/:workflow/credentials",
+    "action": "GET_/workflows/:workflow/credentials"
+  },
+  {
+    "method": "GET",
+    "path": "/workflows/:workflow/schedule",
+    "action": "GET_/workflows/:workflow/schedule"
+  },
+  {
+    "method": "POST",
+    "path": "/workflows/:workflow/schedule",
+    "action": "POST_/workflows/:workflow/schedule"
+  },
+  {
+    "method": "GET",
+    "path": "/usage/counters",
+    "action": "GET_/usage/counters"
+  },
+  {
+    "method": "GET",
+    "path": "/usage/details",
+    "action": "GET_/usage/details"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/usage/counters",
+    "action": "GET_/admin/usage/counters"
+  },
+  {
+    "method": "GET",
+    "path": "/admin/usage/details",
+    "action": "GET_/admin/usage/details"
+  },
+  {
+    "method": "POST",
+    "path": "/token",
+    "action": "POST_/token"
+  }
+]

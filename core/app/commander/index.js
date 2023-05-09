@@ -26,6 +26,8 @@ module.exports = function () {
   server.listen(6666, () => {
     logger.log('TheEye Commander started. Listening at "%s"', server.url)
   })
+
+  return server
 }
 
 const routes = (server) => {

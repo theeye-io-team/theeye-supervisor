@@ -7,28 +7,25 @@ class GatewayAccessControl {
   /**
    * @param {Array<String>} values can be email or username
    * @param {Object} context information about inprogress request
+   * @return {Promise}
    */
-  authorize (userId, action, attrs) {
-    const url = config.gateway.authorize.url + '?gateway_token=' + Token.create({})
+  authorize (req, action, attrs) {
+    const url = config.gateway.authorize.url + '?access_token=' + req.token
 
-    return got.post(url, {
+    const request = got.post(url, {
       retry: { limit: 0 },
+      json: { action, attrs },
       headers: {
         'content-type': 'application/json'
       },
       responseType: 'json'
     })
+
+    return request
       .then(res => res.body)
       .catch(err => {
         // notify us
         if (!err.response) { throw err }
-
-        //if (
-        //  err.response.statusCode >= 400 &&
-        //  err.response.statusCode < 500
-        //) {
-        //} 
-
         throw err
       })
   }
