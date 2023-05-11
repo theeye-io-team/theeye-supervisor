@@ -8,16 +8,6 @@ const dbFilter = require('../../lib/db-filter');
 const ACL = require('../../lib/acl');
 
 module.exports = function (server) {
-  const crudTopic = TopicsConstants.monitor.crud
-
-  const middlewares = [
-    server.auth.bearerMiddleware,
-    router.resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer,
-    router.requireCredential('agent', { exactMatch: true }),
-    router.resolve.idToEntity({ param: 'resource', required: true })
-  ]
-
   const execution_logger = (req, res, next) => {
     const resource = req.resource
     let payload = {
@@ -37,8 +27,7 @@ module.exports = function (server) {
     next()
   }
 
-  server.get(
-    '/:customer/resource',
+  server.get('/:customer/resource',
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,
@@ -46,8 +35,7 @@ module.exports = function (server) {
     resources_fetch
   )
 
-  server.get(
-    '/:customer/resource/:resource',
+  server.get('/:customer/resource/:resource',
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,
@@ -57,24 +45,30 @@ module.exports = function (server) {
     resources_fetch_by_id
   )
 
-  server.patch(
-    '/:customer/resource/:resource/state',
-    middlewares,
+  server.patch('/:customer/resource/:resource/state',
+    server.auth.bearerMiddleware,
+    router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
+    router.requireCredential('agent', { exactMatch: true }),
+    router.resolve.idToEntity({ param: 'resource', required: true }),
     update_state,
     execution_logger,
-    audit.afterUpdate('resource', { display: 'name', topic: crudTopic })
+    audit.afterUpdate('resource', { display: 'name', topic: TopicsConstants.monitor.crud })
   )
 
   //
   // KEEP BACKWARD COMPATIBILITY WITH OLDER AGENT VERSIONS.
   // SUPPORTED FROM VERSION v0.9.3-beta-11-g8d1a93b
   //
-  server.put(
-    '/:customer/resource/:resource',
-    middlewares,
+  server.put('/:customer/resource/:resource',
+    server.auth.bearerMiddleware,
+    router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
+    router.requireCredential('agent', { exactMatch: true }),
+    router.resolve.idToEntity({ param: 'resource', required: true }),
     update_state,
     execution_logger,
-    audit.afterReplace('resource', { display: 'name', topic: crudTopic })
+    audit.afterReplace('resource', { display: 'name', topic: TopicsConstants.monitor.crud })
   )
 }
 

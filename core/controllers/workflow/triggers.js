@@ -7,15 +7,10 @@ const Workflow = require('../../lib/workflow')
 const logger = require('../../lib/logger')('controller:workflow')
 
 module.exports = (server) => {
-  var middlewares = [
+  server.get('/workflows/triggers',
     server.auth.bearerMiddleware,
     resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer // requesting user is authorized to access the customer
-  ]
-
-  server.get(
-    '/workflows/triggers',
-    middlewares,
+    router.ensureCustomer, // requesting user is authorized to access the customer
     controller.get
   )
 }

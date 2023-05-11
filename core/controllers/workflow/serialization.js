@@ -2,8 +2,7 @@ const App = require('../../app')
 const router = require('../../router');
 
 module.exports = (server) => {
-  server.get(
-    '/workflows/:workflow/serialize',
+  server.get('/workflows/:workflow/serialize',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
@@ -13,8 +12,7 @@ module.exports = (server) => {
     serialize
   )
 
-  server.post(
-    '/workflows/import',
+  server.post('/workflows/import',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,

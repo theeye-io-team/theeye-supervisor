@@ -2,9 +2,6 @@
 const logger = require('../lib/logger')(':router')
 const auth = require('../lib/auth')
 
-//const routes = require('./routes')
-//const controllers = require('../controllers')
-
 /**
  *
  * router middlewares

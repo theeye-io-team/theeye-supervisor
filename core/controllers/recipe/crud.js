@@ -8,6 +8,7 @@ const dbFilter = require('../../lib/db-filter')
 module.exports = (server) => {
   server.get('/recipe/:recipe',
     server.auth.bearerMiddleware,
+    router.requireCredential('admin'),
     router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer,
     router.resolve.idToEntity({ param: 'recipe', required: true }),
@@ -16,6 +17,7 @@ module.exports = (server) => {
 
   server.get('/recipe',
     server.auth.bearerMiddleware,
+    router.requireCredential('admin'),
     router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer,
     controller.fetch

@@ -5,14 +5,14 @@ const { ClientError, ServerError } = require('./error-handler')
 const ForbiddenError = new ClientError('Forbidden', { statusCode: 403 })
 
 const Roles = [
-  'basic:viewer',
-  'basic:user',
-  'basic:agent',
-  'basic:manager',
-  'basic:admin',
-  'basic:integration',
-  'basic:owner',
-  'basic:root'
+  'basic.viewer',
+  'basic.user',
+  'basic.agent',
+  'basic.manager',
+  'basic.admin',
+  'basic.integration',
+  'basic.owner',
+  'basic.root'
 ]
 
 const AccessControl = {
