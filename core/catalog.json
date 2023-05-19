@@ -257,7 +257,7 @@
         "method": "POST",
         "path": "/workflows/:workflow/schedule",
         "role": "basic.admin",
-        "name": "CreateWorkflowSchedule"
+        "name": "ScheduleWorkflow"
       }
     ]
   },
@@ -399,7 +399,7 @@
         "method": "POST",
         "path": "/:customer/task/:task/job",
         "role": "basic.user",
-        "name": "CreateTaskJob"
+        "name": "CustomerCreateTaskJob"
       },
       {
         "method": "POST",
@@ -411,7 +411,7 @@
         "method": "POST",
         "path": "/:customer/task/:task/secret/:secret/job",
         "role": null,
-        "name": "CreateTaskJobWithSecret"
+        "name": "CustomerCreateTaskJobWithSecret"
       },
       {
         "method": "POST",
@@ -452,7 +452,7 @@
         "method": "DELETE",
         "path": "/:customer/scheduler/:schedule",
         "role": "basic.admin",
-        "name": "DeleteSchedule"
+        "name": "DeleteCustomerSchedule"
       },
       {
         "method": "DELETE",
@@ -676,7 +676,7 @@
         "method": "POST",
         "path": "/:customer/job",
         "role": "basic.user",
-        "name": "CreateJob"
+        "name": "CreateCustomerJob"
       },
       {
         "method": "POST",
@@ -805,7 +805,7 @@
         "method": "POST",
         "path": "/job/:job/result",
         "role": "basic.viewer",
-        "name": "UpdateJobResult"
+        "name": "SubmitJobResult"
       }
     ]
   },
