@@ -6,19 +6,19 @@
         "method": "GET",
         "path": "/indicator",
         "role": "basic.viewer",
-        "name": "GetIndicators"
+        "name": "ViewIndicators"
       },
       {
         "method": "GET",
         "path": "/indicator/:indicator",
         "role": "basic.viewer",
-        "name": "GetIndicatorById"
+        "name": "ViewIndicator"
       },
       {
         "method": "GET",
         "path": "/indicator/title/:title",
         "role": "basic.viewer",
-        "name": "GetIndicatorByTitle"
+        "name": "ViewIndicatorByTitle"
       },
       {
         "method": "POST",
@@ -48,19 +48,19 @@
         "method": "PATCH",
         "path": "/indicator/:indicator",
         "role": "basic.admin",
-        "name": "UpdateIndicatorById"
+        "name": "UpdateIndicator"
       },
       {
         "method": "PATCH",
         "path": "/indicator/:indicator/state",
         "role": "basic.agent",
-        "name": "UpdateIndicatorStateById"
+        "name": "UpdateIndicatorState"
       },
       {
         "method": "DELETE",
         "path": "/indicator/:indicator",
         "role": "basic.admin",
-        "name": "DeleteIndicatorById"
+        "name": "DeleteIndicator"
       },
       {
         "method": "DELETE",
@@ -72,7 +72,7 @@
         "method": "PATCH",
         "path": "/indicator/:indicator/increase",
         "role": "basic.agent",
-        "name": "IncreaseCounterIndicatorById"
+        "name": "IncreaseCounterIndicator"
       },
       {
         "method": "PATCH",
@@ -84,7 +84,7 @@
         "method": "PATCH",
         "path": "/indicator/:indicator/decrease",
         "role": "basic.agent",
-        "name": "DecreaseCounterIndicatorById"
+        "name": "DecreaseCounterIndicator"
       },
       {
         "method": "PATCH",
@@ -96,7 +96,7 @@
         "method": "PATCH",
         "path": "/indicator/:indicator/restart",
         "role": "basic.agent",
-        "name": "RestartCounterIndicatorById"
+        "name": "RestartCounterIndicator"
       },
       {
         "method": "PATCH",
@@ -112,127 +112,152 @@
       {
         "method": "POST",
         "path": "/workflows/:workflow/job",
-        "role": "basic.user"
+        "role": "basic.user",
+        "name": "CreateWorkflowJob"
       },
       {
         "method": "POST",
         "path": "/workflows/:workflow/secret/:secret/job",
-        "role": null
+        "role": null,
+        "name": "CreateWorkflowJobUsingSecret"
       },
       {
         "method": "DELETE",
         "path": "/workflows/:workflow/job",
-        "role": "basic.admin"
+        "role": "basic.admin",
+        "name": "DeleteWorkflowJobsHistory"
       },
       {
         "method": "GET",
         "path": "/workflows/:workflow/job/:job",
-        "role": "basic.viewer"
+        "role": "basic.viewer",
+        "name": "ViewWorkflowJob"
       },
       {
         "method": "GET",
         "path": "/workflows/:workflow/job/:job/jobs",
-        "role": "basic.viewer"
+        "role": "basic.viewer",
+        "name": "ViewWorkflowJobTaskJobs"
       },
       {
         "method": "GET",
         "path": "/workflows/:workflow/job",
-        "role": "basic.viewer"
+        "role": "basic.viewer",
+        "name": "ViewWorkflowJobs"
       },
       {
         "method": "GET",
         "path": "/workflows/:workflow/jobs/input",
-        "role": "basic.viewer"
+        "role": "basic.viewer",
+        "name": "ViewWorkflowJobsInput"
       },
       {
         "method": "PUT",
         "path": "/workflows/:workflow/job/:job/cancel",
-        "role": "basic.admin"
+        "role": "basic.admin",
+        "name": "CancelWorkflowJob"
       },
       {
         "method": "PUT",
         "path": "/workflows/:workflow/job/:job/acl",
-        "role": "basic.admin"
+        "role": "basic.admin",
+        "name": "ChangeWorkflowJobAcl"
       },
       {
         "method": "GET",
         "path": "/workflows/:workflow/serialize",
-        "role": "basic.admin"
+        "role": "basic.admin",
+        "name": "ExportWorkflowDefinition"
       },
       {
         "method": "POST",
         "path": "/workflows/import",
-        "role": "basic.admin"
+        "role": "basic.admin",
+        "name": "CreateImpotWorkflow"
       },
       {
         "method": "GET",
         "path": "/workflows/:workflow/acl",
-        "role": "basic.manager"
+        "role": "basic.manager",
+        "name": "ViewWorkflowAcl"
       },
       {
         "method": "PUT",
         "path": "/workflows/:workflow/acl",
-        "role": "basic.manager"
+        "role": "basic.manager",
+        "name": "ReplaceWorkflowAcl"
       },
       {
         "method": "PATCH",
         "path": "/workflows/:workflow/acl",
-        "role": "basic.manager"
+        "role": "basic.manager",
+        "name": "UpdateWorkflowAcl"
       },
       {
         "method": "DELETE",
         "path": "/workflows/:workflow/acl",
-        "role": "basic.manager"
+        "role": "basic.manager",
+        "name": "DeleteWorkflowAcl"
       },
       {
         "method": "GET",
         "path": "/workflows",
-        "role": "basic.viewer"
+        "role": "basic.viewer",
+        "name": "ViewWorkflows"
       },
       {
         "method": "GET",
         "path": "/workflows/:workflow",
-        "role": "basic.viewer"
+        "role": "basic.viewer",
+        "name": "ViewWorkflow"
       },
       {
         "method": "POST",
         "path": "/workflows",
-        "role": "basic.admin"
+        "role": "basic.admin",
+        "name": "CreateWorkflow"
       },
       {
         "method": "DELETE",
         "path": "/workflows/:workflow",
-        "role": "basic.admin"
+        "role": "basic.admin",
+        "name": "DeleteWorkflow"
       },
       {
         "method": "PUT",
         "path": "/workflows/:workflow",
-        "role": "basic.admin"
+        "role": "basic.admin",
+        "name": "ReplaceWorkflow"
       },
       {
         "method": "GET",
         "path": "/workflows/:id/graph",
-        "role": null
+        "role": null,
+        "name": "ViewWorkflowGraph"
       },
       {
         "method": "GET",
         "path": "/workflows/triggers",
-        "role": null
+        "role": null,
+        "name": "ViewWorkflowTriggers"
       },
       {
         "method": "GET",
         "path": "/workflows/:workflow/credentials",
-        "role": "basic.admin"
+        "role": "basic.admin",
+        "name": "ViewWorkflowSecrets"
       },
       {
         "method": "GET",
         "path": "/workflows/:workflow/schedule",
-        "role": "basic.viewer"
+        "role": "basic.viewer",
+        "name": "ViewWorkflowSchedules"
       },
       {
         "method": "POST",
         "path": "/workflows/:workflow/schedule",
-        "role": "basic.admin"
+        "role": "basic.admin",
+        "name": "CreateWorkflowSchedule"
       }
     ]
   },
