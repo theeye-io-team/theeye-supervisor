@@ -203,7 +203,7 @@
         "method": "GET",
         "path": "/workflows",
         "role": "basic.viewer",
-        "name": "ViewWorkflows"
+        "name": "ViewAllWorkflows"
       },
       {
         "method": "GET",
@@ -315,7 +315,7 @@
         "method": "GET",
         "path": "/:customer/task",
         "role": "basic.viewer",
-        "name": "ViewTasks"
+        "name": "ViewAllTasks"
       },
       {
         "method": "GET",
@@ -481,7 +481,7 @@
         "method": "GET",
         "path": "/:customer/script",
         "role": "basic.viewer",
-        "name": "ViewScripts"
+        "name": "ViewAllScripts"
       },
       {
         "method": "GET",
@@ -499,7 +499,7 @@
         "method": "GET",
         "path": "/:customer/file",
         "role": "basic.viewer",
-        "name": "ViewFiles"
+        "name": "ViewAllFiles"
       },
       {
         "method": "GET",
@@ -576,7 +576,7 @@
         "method": "GET",
         "path": "/monitor",
         "role": "basic.viewer",
-        "name": "ViewMonitors"
+        "name": "ViewAllMonitors"
       },
       {
         "method": "GET",
@@ -641,7 +641,7 @@
         "method": "GET",
         "path": "/:customer/resource",
         "role": "basic.viewer",
-        "name": "ViewResources"
+        "name": "ViewAllResources"
       },
       {
         "method": "GET",
@@ -700,19 +700,19 @@
         "method": "GET",
         "path": "/job/running_count",
         "role": "basic.viewer",
-        "name": "ViewRunningJobCount"
+        "name": "ViewRunningJobsCount"
       },
       {
         "method": "GET",
         "path": "/job/running",
         "role": "basic.viewer",
-        "name": "ViewRunningJobs"
+        "name": "ViewAllRunningJobs"
       },
       {
         "method": "GET",
         "path": "/:customer/job",
         "role": "basic.viewer",
-        "name": "ViewJobs"
+        "name": "ViewAllJobs"
       },
       {
         "method": "PUT",
@@ -816,7 +816,7 @@
         "method": "GET",
         "path": "/:customer/hostgroup",
         "role": "basic.admin",
-        "name": "ViewHostGroups"
+        "name": "ViewAllHostGroups"
       },
       {
         "method": "POST",
@@ -863,7 +863,7 @@
         "method": "GET",
         "path": "/:customer/host",
         "role": "basic.viewer",
-        "name": "VewHosts"
+        "name": "ViewAllHosts"
       },
       {
         "method": "GET",
@@ -1003,7 +1003,7 @@
         "method": "GET",
         "path": "/:customer/event",
         "role": null,
-        "name": "ViewEvents"
+        "name": "ViewAllEvents"
       },
       {
         "method": "GET",
