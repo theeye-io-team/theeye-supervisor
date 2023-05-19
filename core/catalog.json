@@ -1,0 +1,953 @@
+[
+  {
+    "name": "indicator",
+    "actions": [
+      {
+        "method": "GET",
+        "path": "/indicator",
+        "role": "basic.viewer",
+        "name": "GetIndicators"
+      },
+      {
+        "method": "GET",
+        "path": "/indicator/:indicator",
+        "role": "basic.viewer",
+        "name": "GetIndicatorById"
+      },
+      {
+        "method": "GET",
+        "path": "/indicator/title/:title",
+        "role": "basic.viewer",
+        "name": "GetIndicatorByTitle"
+      },
+      {
+        "method": "POST",
+        "path": "/indicator",
+        "role": "basic.admin",
+        "name": "CreateIndicator"
+      },
+      {
+        "method": "PUT",
+        "path": "/indicator/:indicator",
+        "role": "basic.admin",
+        "name": "UpdateOrCreateIndicator"
+      },
+      {
+        "method": "PUT",
+        "path": "/indicator/title/:title",
+        "role": "basic.admin",
+        "name": "UpdateOrCreateIndicatorByTitle"
+      },
+      {
+        "method": "PATCH",
+        "path": "/indicator/title/:title",
+        "role": "basic.admin",
+        "name": "UpdateIndicatorByTitle"
+      },
+      {
+        "method": "PATCH",
+        "path": "/indicator/:indicator",
+        "role": "basic.admin",
+        "name": "UpdateIndicatorById"
+      },
+      {
+        "method": "PATCH",
+        "path": "/indicator/:indicator/state",
+        "role": "basic.agent",
+        "name": "UpdateIndicatorStateById"
+      },
+      {
+        "method": "DELETE",
+        "path": "/indicator/:indicator",
+        "role": "basic.admin",
+        "name": "DeleteIndicatorById"
+      },
+      {
+        "method": "DELETE",
+        "path": "/indicator/title/:title",
+        "role": "basic.admin",
+        "name": "DeleteIndicatorByTitle"
+      },
+      {
+        "method": "PATCH",
+        "path": "/indicator/:indicator/increase",
+        "role": "basic.agent",
+        "name": "IncreaseCounterIndicatorById"
+      },
+      {
+        "method": "PATCH",
+        "path": "/indicator/title/:title/increase",
+        "role": "basic.agent",
+        "name": "IncreaseCounterIndicatorByTitle"
+      },
+      {
+        "method": "PATCH",
+        "path": "/indicator/:indicator/decrease",
+        "role": "basic.agent",
+        "name": "DecreaseCounterIndicatorById"
+      },
+      {
+        "method": "PATCH",
+        "path": "/indicator/title/:title/decrease",
+        "role": "basic.agent",
+        "name": "DecreaseCounterIndicatorByTitle"
+      },
+      {
+        "method": "PATCH",
+        "path": "/indicator/:indicator/restart",
+        "role": "basic.agent",
+        "name": "RestartCounterIndicatorById"
+      },
+      {
+        "method": "PATCH",
+        "path": "/indicator/title/:title/restart",
+        "role": "basic.agent",
+        "name": "RestartCounterIndicatorByTitle"
+      }
+    ]
+  },
+  {
+    "name":"workflow",
+    "actions": [
+      {
+        "method": "POST",
+        "path": "/workflows/:workflow/job",
+        "role": "basic.user"
+      },
+      {
+        "method": "POST",
+        "path": "/workflows/:workflow/secret/:secret/job",
+        "role": null
+      },
+      {
+        "method": "DELETE",
+        "path": "/workflows/:workflow/job",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/workflows/:workflow/job/:job",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/workflows/:workflow/job/:job/jobs",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/workflows/:workflow/job",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/workflows/:workflow/jobs/input",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "PUT",
+        "path": "/workflows/:workflow/job/:job/cancel",
+        "role": "basic.admin"
+      },
+      {
+        "method": "PUT",
+        "path": "/workflows/:workflow/job/:job/acl",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/workflows/:workflow/serialize",
+        "role": "basic.admin"
+      },
+      {
+        "method": "POST",
+        "path": "/workflows/import",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/workflows/:workflow/acl",
+        "role": "basic.manager"
+      },
+      {
+        "method": "PUT",
+        "path": "/workflows/:workflow/acl",
+        "role": "basic.manager"
+      },
+      {
+        "method": "PATCH",
+        "path": "/workflows/:workflow/acl",
+        "role": "basic.manager"
+      },
+      {
+        "method": "DELETE",
+        "path": "/workflows/:workflow/acl",
+        "role": "basic.manager"
+      },
+      {
+        "method": "GET",
+        "path": "/workflows",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/workflows/:workflow",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "POST",
+        "path": "/workflows",
+        "role": "basic.admin"
+      },
+      {
+        "method": "DELETE",
+        "path": "/workflows/:workflow",
+        "role": "basic.admin"
+      },
+      {
+        "method": "PUT",
+        "path": "/workflows/:workflow",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/workflows/:id/graph",
+        "role": null
+      },
+      {
+        "method": "GET",
+        "path": "/workflows/triggers",
+        "role": null
+      },
+      {
+        "method": "GET",
+        "path": "/workflows/:workflow/credentials",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/workflows/:workflow/schedule",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "POST",
+        "path": "/workflows/:workflow/schedule",
+        "role": "basic.admin"
+      }
+    ]
+  },
+  {
+    "name": "webhook",
+    "actions": [
+      {
+        "method": "GET",
+        "path": "/:customer/webhook",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/webhook/:webhook",
+        "role": "basic.admin"
+      },
+      {
+        "method": "POST",
+        "path": "/:customer/webhook",
+        "role": "basic.admin"
+      },
+      {
+        "method": "PUT",
+        "path": "/:customer/webhook/:webhook",
+        "role": "basic.admin"
+      },
+      {
+        "method": "DELETE",
+        "path": "/:customer/webhook/:webhook",
+        "role": "basic.admin"
+      },
+      {
+        "method": "POST",
+        "path": "/:customer/webhook/:webhook/trigger",
+        "role": "basic.user"
+      },
+      {
+        "method": "POST",
+        "path": "/:customer/webhook/:webhook/trigger/secret/:secret",
+        "role": null
+      }
+    ]
+  },
+  {
+    "name":"task",
+    "actions": [
+      {
+        "method": "GET",
+        "path": "/:customer/task",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/task/:task",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/task/version",
+        "role": "basic.admin"
+      },
+      {
+        "method": "POST",
+        "path": "/:customer/task",
+        "role": "basic.admin"
+      },
+      {
+        "method": "PATCH",
+        "path": "/:customer/task/:task",
+        "role": "basic.admin"
+      },
+      {
+        "method": "PUT",
+        "path": "/:customer/task/:task",
+        "role": "basic.admin"
+      },
+      {
+        "method": "DELETE",
+        "path": "/:customer/task/:task",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/task/:task/schedule",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "POST",
+        "path": "/:customer/task/:task/schedule",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/task/:task/serialize",
+        "role": "basic.admin"
+      },
+      {
+        "method": "POST",
+        "path": "/:customer/task/import",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/task/:task/credentials",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/task/:task/job/queue",
+        "role": "basic.agent"
+      },
+      {
+        "method": "DELETE",
+        "path": "/:customer/task/:task/job",
+        "role": "basic.admin"
+      },
+      {
+        "method": "POST",
+        "path": "/:customer/task/:task/job",
+        "role": "basic.user"
+      },
+      {
+        "method": "POST",
+        "path": "/task/:task/job",
+        "role": "basic.user"
+      },
+      {
+        "method": "POST",
+        "path": "/:customer/task/:task/secret/:secret/job",
+        "role": null
+      },
+      {
+        "method": "POST",
+        "path": "/task/:task/secret/:secret/job",
+        "role": null
+      },
+      {
+        "method": "GET",
+        "path": "/task/:task/acl",
+        "role": "basic.manager"
+      },
+      {
+        "method": "PUT",
+        "path": "/task/:task/acl",
+        "role": "basic.manager"
+      },
+      {
+        "method": "PATCH",
+        "path": "/task/:task/acl",
+        "role": "basic.manager"
+      },
+      {
+        "method": "DELETE",
+        "path": "/task/:task/acl",
+        "role": "basic.manager"
+      }
+    ]
+  },
+  {
+    "name":"scheduler",
+    "actions": [
+      {
+        "method": "DELETE",
+        "path": "/:customer/scheduler/:schedule",
+        "role": "basic.admin"
+      },
+      {
+        "method": "DELETE",
+        "path": "/scheduler/:schedule",
+        "role": "basic.admin"
+      },
+      {
+        "method": "PUT",
+        "path": "/scheduler/:schedule/stop",
+        "role": "basic.admin"
+      },
+      {
+        "method": "PUT",
+        "path": "/scheduler/:schedule/start",
+        "role": "basic.admin"
+      }
+    ]
+  },
+  {
+    "name":"file",
+    "actions": [
+      {
+        "method": "GET",
+        "path": "/:customer/script",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/script/:script",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/script/:script/download",
+        "role": "basic.user"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/file",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/file/:file",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/file/:file/download",
+        "role": "basic.user"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/file/:file/linkedmodels",
+        "role": "basic.admin"
+      },
+      {
+        "method": "POST",
+        "path": "/:customer/file",
+        "role": "basic.admin"
+      },
+      {
+        "method": "PUT",
+        "path": "/:customer/file/:file",
+        "role": "basic.admin"
+      },
+      {
+        "method": "PUT",
+        "path": "/:customer/file/:file/upload",
+        "role": "basic.user"
+      },
+      {
+        "method": "PUT",
+        "path": "/:customer/file/:file/schema",
+        "role": "basic.admin"
+      },
+      {
+        "method": "DELETE",
+        "path": "/:customer/file/:file",
+        "role": "basic.admin"
+      }
+    ]
+  },
+  {
+    "name":"monitor",
+    "actions": [
+      {
+        "method": "GET",
+        "path": "/monitor/runner",
+        "role": "basic.admin"
+      },
+      {
+        "method": "POST",
+        "path": "/monitor/runner",
+        "role": "basic.admin"
+      },
+      {
+        "method": "DELETE",
+        "path": "/monitor/runner/:monitor",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/monitor",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/monitor/:resource",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "DELETE",
+        "path": "/monitor/:resource",
+        "role": "basic.admin"
+      },
+      {
+        "method": "POST",
+        "path": "/monitor",
+        "role": "basic.admin"
+      },
+      {
+        "method": "PUT",
+        "path": "/monitor/:resource",
+        "role": "basic.admin"
+      },
+      {
+        "method": "PATCH",
+        "path": "/monitor/:resource/alerts",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/monitor/nested/:resource",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "PUT",
+        "path": "/monitor/nested/:resource",
+        "role": "basic.admin"
+      },
+      {
+        "method": "POST",
+        "path": "/monitor/nested",
+        "role": "basic.admin"
+      },
+      {
+        "method": "DELETE",
+        "path": "/monitor/nested/:resource",
+        "role": "basic.admin"
+      }
+    ]
+  },
+  {
+    "name": "resource",
+    "actions": [
+      {
+        "method": "GET",
+        "path": "/:customer/resource",
+        "role":"basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/resource/:resource",
+        "role":"basic.viewer"
+      },
+      {
+        "method": "PATCH",
+        "path": "/:customer/resource/:resource/state",
+        "role": {
+          "name": "basic.agent",
+          "condition": "exact_match"
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/:customer/resource/:resource",
+        "role": {
+          "name": "basic.agent",
+          "condition": "exact_match"
+        }
+      }
+    ]
+  },
+  {
+    "name": "job",
+    "actions": [
+      {
+        "method": "POST",
+        "path": "/:customer/job",
+        "role": "basic.user"
+      },
+      {
+        "method": "POST",
+        "path": "/job",
+        "role": "basic.user"
+      },
+      {
+        "method": "POST",
+        "path": "/job/secret/:secret",
+        "role": "basic.user"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/job/:job",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/job/running_count",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/job/running",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/job",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "PUT",
+        "path": "/:customer/job/:job",
+        "role": {
+          "name": "basic.agent",
+          "condition": "exact_match"
+        }
+      },
+      {
+        "method": "PUT",
+        "path": "/job/:job/assignee",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/job/:job/participants",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/job/:job/input",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/job/:job/output",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "PUT",
+        "path": "/job/:job/acl",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/job/:job/lifecycle",
+        "role": "basic.user"
+      },
+      {
+        "method": "PUT",
+        "path": "/job/:job/synced",
+        "role": "basic.user"
+      },
+      {
+        "method": "PUT",
+        "path": "/:customer/job/:job/cancel",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "PUT",
+        "path": "/:customer/job/:job/approve",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "PUT",
+        "path": "/:customer/job/:job/reject",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "PUT",
+        "path": "/:customer/job/:job/input",
+        "role":"basic.viewer"
+      },
+      {
+        "method": "PUT",
+        "path": "/:customer/job/:job/restart",
+        "role":"basic.user"
+      },
+      {
+        "method": "GET",
+        "path": "/job/:job/result",
+        "role":"basic.viewer"
+      },
+      {
+        "method": "POST",
+        "path": "/job/:job/result",
+        "role":"basic.viewer"
+      }
+    ]
+  },
+  {
+    "name": "templates",
+    "actions": [
+      {
+        "method": "GET",
+        "path": "/:customer/hostgroup",
+        "role": "basic.admin"
+      },
+      {
+        "method": "POST",
+        "path": "/:customer/hostgroup",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/hostgroup/:group",
+        "role": "basic.admin"
+      },
+      {
+        "method": "PUT",
+        "path": "/:customer/hostgroup/:group",
+        "role": "basic.admin"
+      },
+      {
+        "method": "DELETE",
+        "path": "/:customer/hostgroup/:group",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/hostgroup/:group/serialize",
+        "role": "basic.admin"
+      }
+    ]
+  },
+  {
+    "name": "host",
+    "actions": [
+      {
+        "method": "GET",
+        "path": "/:customer/host/:host/stats",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/host",
+        "role": "basic.viewer"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/host/:host",
+        "role": "basic.admin"
+      },
+      {
+        "method": "PUT",
+        "path": "/:customer/host/:host/reconfigure",
+        "role": "basic.admin"
+      },
+      {
+        "method": "POST",
+        "path": "/:customer/host/:hostname",
+        "role": "basic.agent"
+      },
+      {
+        "method": "POST",
+        "path": "/host/:hostname",
+        "role": "basic.agent"
+      },
+      {
+        "method": "POST",
+        "path": "/host",
+        "role": "basic.agent"
+      },
+      {
+        "method": "PUT",
+        "path": "/host/:host/disable",
+        "role": "basic.admin"
+      },
+      {
+        "method": "PUT",
+        "path": "/host/:host/enable",
+        "role": "basic.admin"
+      },
+      {
+        "method": "PUT",
+        "path": "/host/:host/fingerprints",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/host/:host/template",
+        "role": null
+      }
+    ]
+  },
+  {
+    "name": "usage",
+    "actions": [
+      {
+        "method": "GET",
+        "path": "/usage/counters",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/usage/details",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/admin/usage/counters",
+        "role": "basic.root"
+      },
+      {
+        "method": "GET",
+        "path": "/admin/usage/details",
+        "role": "basic.root"
+      }
+    ]
+  },
+  {
+    "name": "marketplace",
+    "actions": [
+      {
+        "method": "GET",
+        "path": "/marketplace/:model",
+        "role": null
+      },
+      {
+        "method": "GET",
+        "path": "/marketplace/:model/:id",
+        "role": null
+      },
+      {
+        "method": "GET",
+        "path": "/marketplace/:model/:id/serialize",
+        "role": null
+      },
+      {
+        "method": "POST",
+        "path": "/marketplace/:model/:id/rate",
+        "role": null
+      }
+    ]
+  },
+  {
+    "name": "recipe",
+    "actions": [
+      {
+        "method": "GET",
+        "path": "/recipe/:recipe",
+        "role": "basic.admin"
+      },
+      {
+        "method": "GET",
+        "path": "/recipe",
+        "role": "basic.admin"
+      }
+    ]
+  },
+  {
+    "name": "event",
+    "actions": [
+      {
+        "method": "GET",
+        "path": "/:customer/event",
+        "role": null
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/event/:event",
+        "role": null
+      }
+    ]
+  },
+  {
+    "name": "agent",
+    "actions": [
+      {
+        "method": "PUT",
+        "path": "/:customer/agent/:hostname",
+        "role": "basic.agent"
+      },
+      {
+        "method": "GET",
+        "path": "/:customer/agent/:hostname/config",
+        "role": "basic.agent"
+      },
+      {
+        "method": "POST",
+        "path": "/:customer/dstat/:hostname",
+        "role": "basic.agent"
+      },
+      {
+        "method": "POST",
+        "path": "/:customer/psaux/:hostname",
+        "role": {
+          "name": "basic.agent",
+          "condition": "exact_match"
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/psaux/:hostname",
+        "role": {
+          "name": "basic.agent",
+          "condition": "exact_match"
+        }
+      }
+    ]
+  },
+  {
+    "name": "status",
+    "actions": [
+      {
+        "method": "GET",
+        "path": "/api",
+        "role": null
+      },
+      {
+        "method": "GET",
+        "path": "/api/status",
+        "role": null
+      }
+    ]
+  },
+  {
+    "name": "tag",
+    "actions": [
+      {
+        "method": "GET",
+        "path": "/:customer/tag",
+        "role": null
+      },
+      {
+        "method": "GET",
+        "path": "/tag",
+        "role": null
+      }
+    ]
+  },
+  {
+    "name":"auth",
+    "actions": [
+      {
+        "method": "POST",
+        "path": "/token"
+      }
+    ]
+  }
+]

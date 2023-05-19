@@ -1,4 +1,5 @@
 
+const App = require('../app')
 const os = require('os')
 const exec = require('child_process').exec
 
@@ -8,6 +9,11 @@ module.exports = (server) => {
   })
 
   server.get('/api/status', nodeStatus)
+
+  server.get('/api/catalog', (req, res, next) => {
+    res.send(200, App.catalog)
+  })
+
 }
 
 const nodeStatus = async (req, res, next) => {
