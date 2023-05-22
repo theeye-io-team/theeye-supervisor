@@ -19,24 +19,24 @@ module.exports = function (server) {
 
   /** 
    * @openapi
-   * /indicator:
-   *  summary: Get all indicators.
-   *     description: Returns a list of all indicators.
-   *     responses:
-   *       '200':
-   *         description: Successfully retrieved the list of indicators.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: array
-   *               items:
-   *                 $ref: '#/components/schemas/Indicator'
-   *       '401':
-   *         description: Authentication failed.
-   *         content:
-   *           application/json:
-   *               $ref: '#/components/schemas/Error'
-   *             schema:
+ * /indicator:
+ *   summary: Get all indicators.
+ *   description: Returns a list of all indicators.
+ *   responses:
+ *     '200':
+ *       description: Successfully retrieved the list of indicators.
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: array
+ *             items:
+ *               $ref: '#/components/schemas/Indicator'
+ *     '401':
+ *       description: Authentication failed.
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Indicator'
    *
   */
 
@@ -45,29 +45,29 @@ module.exports = function (server) {
   /** 
    * @openapi
    * /indicator/{indicator}:
-   *  summary: Get one Indicator
-   *     description: Get only one indicator.
-   *     parameters:
-   *       - name: indicator
-   *         in: query
-   *         description: Indicator title
-   *         schema:
-   *          type: string
-   *     responses:
-   *       '200':
-   *         description: Successfully retrieved the indicator.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: array
-   *               items:
-   *                 $ref: '#/components/schemas/Indicator'
-   *       '401':
-   *         description: Authentication failed.
-   *         content:
-   *           application/json:
-   *               $ref: '#/components/schemas/Error'
-   *             schema:
+   *   summary: Get one Indicator
+   *   description: Get only one indicator.
+   *   parameters:
+   *     - name: indicator
+   *       in: query
+   *       description: Indicator title
+   *       schema:
+   *         type: string
+   *   responses:
+   *     '200':
+   *       description: Successfully retrieved the indicator.
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: array
+   *             items:
+   *               $ref: '#/components/schemas/Indicator'
+   *     '401':
+   *       description: Authentication failed.
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/Error'
    *
   */
  
@@ -82,29 +82,29 @@ module.exports = function (server) {
 /** 
    * @openapi
    * /indicator/title/{title}:
-   *  summary: Get one Indicator by title 
-   *     description: Get only one indicator.
-   *     parameters:
-   *       - name: title
-   *         in: query
-   *         description: Indicator title
-   *         schema:
-   *          type: string
-   *     responses:
-   *       '200':
-   *         description: Successfully retrieved the indicator.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               type: array
-   *               items:
-   *                 $ref: '#/components/schemas/Indicator'
-   *       '401':
-   *         description: Authentication failed.
-   *         content:
-   *           application/json:
-   *               $ref: '#/components/schemas/Error'
-   *             schema:
+   *   summary: Get one Indicator by title
+   *   description: Get only one indicator.
+   *   parameters:
+   *     - name: title
+   *       in: query
+   *       description: Indicator title
+   *       schema:
+   *         type: string
+   *   responses:
+   *     '200':
+   *       description: Successfully retrieved the indicator.
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: array
+   *             items:
+   *               $ref: '#/components/schemas/Indicator'
+   *     '401':
+   *       description: Authentication failed.
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/Error'
    *
   */
 
@@ -129,7 +129,7 @@ module.exports = function (server) {
   /** 
    * @openapi
    * /indicator:
-   *  post:
+   *   post:
    *     summary: Create a new indicator.
    *     description: Creates a new indicator and returns the indicator ID.
    *     requestBody:
@@ -170,44 +170,44 @@ module.exports = function (server) {
 
 /** 
    * @openapi
-   * /indicator/{indicatorId}:
-   *  put:
-   *    summary: Update an existing Indicator by Id
-   *    tags: 
-   *      - Indicators
-   *    description: Change an Indicator.
-   *    parameters:
-   *      - name: indicatorId
-   *        in: query
-   *        description: Indicator Id
-   *        required: true
-   *        schema:
-   *          type: string
-   *          example: 633ae702877ba623cd2626df
-   *    requestBody:
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/Indicator'
-   *    responses: 
-   *      '201':
-   *         description: Successfully updated a indicator.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Indicator'
-   *       '400':
-   *         description: Invalid request data.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
-   *       '401':
-   *         description: Authentication failed.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
+ * /indicator/{indicatorId}:
+ *   put:
+ *     summary: Update an existing Indicator by Id
+ *     tags:
+ *       - Indicators
+ *     description: Change an Indicator.
+ *     parameters:
+ *       - name: indicatorId
+ *         in: query
+ *         description: Indicator Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: 633ae702877ba623cd2626df
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Indicator'
+ *     responses:
+ *       '201':
+ *         description: Successfully updated an indicator.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Indicator'
+ *       '400':
+ *         description: Invalid request data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       '401':
+ *         description: Authentication failed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
    *
   */
   server.put('/indicator/:indicator',
@@ -222,44 +222,44 @@ module.exports = function (server) {
 
   /** 
    * @openapi
-   * /indicator/title/{title}:
-   *  put:
-   *    summary: Update an existing Indicator by title
-   *    description: Change an Indicator
-   *    tags: 
-   *      - Indicators
-   *    parameters:
-   *      - name: title
-   *        in: query
-   *        description: Indicator Id
-   *        required: true
-   *        schema:
-   *          type: string
-   *          example: 633ae702877ba623cd2626df
-   *    requestBody:
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/Indicator'
-   *    responses: 
-   *      '201':
-   *         description: Successfully updated a indicator.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Indicator'
-   *       '400':
-   *         description: Invalid request data.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
-   *       '401':
-   *         description: Authentication failed.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
+ * /indicator/title/{title}:
+ *   put:
+ *     summary: Update an existing Indicator by title
+ *     description: Change an Indicator
+ *     tags:
+ *       - Indicators
+ *     parameters:
+ *       - name: title
+ *         in: query
+ *         description: Indicator Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: 633ae702877ba623cd2626df
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Indicator'
+ *     responses:
+ *       '201':
+ *         description: Successfully updated an indicator.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Indicator'
+ *       '400':
+ *         description: Invalid request data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       '401':
+ *         description: Authentication failed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
    *
   */
 
@@ -275,44 +275,44 @@ module.exports = function (server) {
 
   /** 
    * @openapi
-   * /indicator/title/{title}:
-   *  patch:
-   *    summary: Update an existing Indicator by title
-   *    description: Change an Indicator
-   *    tags: 
-   *      - Indicators
-   *    parameters:
-   *      - name: title
-   *        in: query
-   *        description: Indicator Id
-   *        required: true
-   *        schema:
-   *          type: string
-   *          example: 633ae702877ba623cd2626df
-   *    requestBody:
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/Indicator'
-   *    responses: 
-   *      '201':
-   *         description: Successfully updated a indicator.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Indicator'
-   *       '400':
-   *         description: Invalid request data.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
-   *       '401':
-   *         description: Authentication failed.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
+ * /indicator/title/{title}:
+ *   patch:
+ *     summary: Update an existing Indicator by title
+ *     description: Change an Indicator
+ *     tags:
+ *       - Indicators
+ *     parameters:
+ *       - name: title
+ *         in: query
+ *         description: Indicator Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: 633ae702877ba623cd2626df
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Indicator'
+ *     responses:
+ *       '201':
+ *         description: Successfully updated an indicator.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Indicator'
+ *       '400':
+ *         description: Invalid request data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       '401':
+ *         description: Authentication failed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
    *
   */
 
@@ -328,44 +328,44 @@ module.exports = function (server) {
 
   /** 
    * @openapi
-   * /indicator/{indicatorId}:
-   *  patch:
-   *    summary: Update an existing Indicator by Id
-   *    description: Change an Indicator
-   *    tags: 
-   *      - Indicators
-   *    parameters:
-   *      - name: indicatorId
-   *        in: query
-   *        description: Indicator Id
-   *        required: true
-   *        schema:
-   *          type: string
-   *          example: 633ae702877ba623cd2626df
-   *    requestBody:
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/Indicator'
-   *    responses: 
-   *      '201':
-   *         description: Successfully updated a indicator.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Indicator'
-   *       '400':
-   *         description: Invalid request data.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
-   *       '401':
-   *         description: Authentication failed.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
+ * /indicator/{indicatorId}:
+ *   patch:
+ *     summary: Update an existing Indicator by Id
+ *     description: Change an Indicator
+ *     tags:
+ *       - Indicators
+ *     parameters:
+ *       - name: indicatorId
+ *         in: query
+ *         description: Indicator Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: 633ae702877ba623cd2626df
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Indicator'
+ *     responses:
+ *       '201':
+ *         description: Successfully updated an indicator.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Indicator'
+ *       '400':
+ *         description: Invalid request data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       '401':
+ *         description: Authentication failed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
    *
   */
 
@@ -381,44 +381,44 @@ module.exports = function (server) {
 
   /** 
    * @openapi
-   * /indicator/{indicatorId}/state:
-   *  patch:
-   *    summary: Update an existing Indicator's state
-   *    description: Change an Indicator
-   *    tags: 
-   *      - Indicators
-   *    parameters:
-   *      - name: indicatorId
-   *        in: query
-   *        description: Indicator Id
-   *        required: true
-   *        schema:
-   *          type: string
-   *          example: 633ae702877ba623cd2626df
-   *    requestBody:
-   *       content:
-   *         application/json:
-   *           schema:
-   *             $ref: '#/components/schemas/Indicator'
-   *    responses: 
-   *      '201':
-   *         description: Successfully updated a indicator.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Indicator'
-   *       '400':
-   *         description: Invalid request data.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
-   *       '401':
-   *         description: Authentication failed.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
+ * /indicator/{indicatorId}/state:
+ *   patch:
+ *     summary: Update an existing Indicator's state
+ *     description: Change an Indicator
+ *     tags:
+ *       - Indicators
+ *     parameters:
+ *       - name: indicatorId
+ *         in: query
+ *         description: Indicator Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: 633ae702877ba623cd2626df
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/Indicator'
+ *     responses:
+ *       '201':
+ *         description: Successfully updated an indicator.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Indicator'
+ *       '400':
+ *         description: Invalid request data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       '401':
+ *         description: Authentication failed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
    *
   */
 
@@ -433,35 +433,35 @@ module.exports = function (server) {
 
   /** 
    * @openapi
-   * /indicator/{indicatorId}:
-   *  delete:
-   *    summary: Delete one Indicator
-   *    tags: 
-   *      - Indicators
-   *    description: Delete only one indicator.
-   *    parameters:
-   *      - name: indicatorId
-   *        in: query
-   *        description: Specific Indicator Id
-   *        required: true
-   *        schema:
-   *          type: string
-   *          example: 6329f36078a97174fd4ae7c6
-   *    responses: 
-   *      204:
-   *        description: Successfully deleted a indicator.
-   *      '400':
-   *         description: Invalid request data.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
-   *       '401':
-   *         description: Authentication failed.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
+ * /indicator/{indicatorId}:
+ *   delete:
+ *     summary: Delete one Indicator
+ *     tags:
+ *       - Indicators
+ *     description: Delete only one indicator.
+ *     parameters:
+ *       - name: indicatorId
+ *         in: query
+ *         description: Specific Indicator Id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: 6329f36078a97174fd4ae7c6
+ *     responses:
+ *       204:
+ *         description: Successfully deleted an indicator.
+ *       '400':
+ *         description: Invalid request data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       '401':
+ *         description: Authentication failed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
    *
   */
 
@@ -476,35 +476,35 @@ module.exports = function (server) {
 
   /** 
    * @openapi
-   * /indicator/title/{title}:
-   *  delete:
-   *    summary: Delete one Indicator
-   *    tags: 
-   *      - Indicators
-   *    description: Delete only one indicator.
-   *    parameters:
-   *      - name: title
-   *        in: query
-   *        description: Indicator Title
-   *        required: true
-   *        schema:
-   *          type: string
-   *          example: 6329f36078a97174fd4ae7c6
-   *    responses: 
-   *      204:
-   *        description: Successfully deleted a indicator.
-   *      '400':
-   *         description: Invalid request data.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
-   *       '401':
-   *         description: Authentication failed.
-   *         content:
-   *           application/json:
-   *             schema:
-   *               $ref: '#/components/schemas/Error'
+ * /indicator/title/{title}:
+ *   delete:
+ *     summary: Delete one Indicator
+ *     tags:
+ *       - Indicators
+ *     description: Delete only one indicator.
+ *     parameters:
+ *       - name: title
+ *         in: query
+ *         description: Indicator Title
+ *         required: true
+ *         schema:
+ *           type: string
+ *           example: 6329f36078a97174fd4ae7c6
+ *     responses:
+ *       204:
+ *         description: Successfully deleted an indicator.
+ *       '400':
+ *         description: Invalid request data.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       '401':
+ *         description: Authentication failed.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
    *
   */
 
