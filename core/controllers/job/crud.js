@@ -20,9 +20,45 @@ module.exports = (server) => {
     router.ensureCustomer
   ]
 
-  /**
-   * get a single job information
-   */
+  /** 
+  * @openapi
+  * /{customer}/job/{job}:
+  *   summary: Get information on a single job
+  *   description: Get only one indicator.
+  *   requestBody:
+  *     content:
+  *       application/json:
+  *         schema:
+  *           $ref: '#/components/schemas/Job'
+  *   parameters:
+  *     - name: customer
+  *       in: query
+  *       description: customer id
+  *       schema:
+  *         type: string
+  *     - name: job
+  *       in: query
+  *       description: job id
+  *       schema:
+  *         type: string
+  *   responses:
+  *     '200':
+  *       description: Successfully retrieved job information.
+  *       content:
+  *         application/json:
+  *           schema:
+  *             type: array
+  *             items:
+  *               $ref: '#/components/schemas/Job'
+  *     '401':
+  *       description: Authentication failed.
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.get('/:customer/job/:job',
     middlewares,
     router.requireCredential('viewer'),
