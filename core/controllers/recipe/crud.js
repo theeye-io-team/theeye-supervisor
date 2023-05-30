@@ -6,6 +6,39 @@ const router = require('../../router')
 const dbFilter = require('../../lib/db-filter')
 
 module.exports = (server) => {
+
+  /** 
+  * @openapi
+  * /recipe/{recipe}:
+  *   summary: Get specific recipe by Id
+  *   description: Get only one recipe by it's id.
+  *   tags:
+  *     - Recipe
+  *   parameters:
+  *     - name: recipe
+  *       in: query
+  *       description: recipe id
+  *       required: true
+  *       schema:
+  *         type: string
+  *   responses:
+  *     '200':
+  *       description: Successfully retrieved recipe information.
+  *       content:
+  *         application/json:
+  *           schema:
+  *             type: array
+  *             items:
+  *               $ref: '#/components/schemas/Recipe'
+  *     '401':
+  *       description: Authentication failed.
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.get('/recipe/:recipe',
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
@@ -13,6 +46,31 @@ module.exports = (server) => {
     router.resolve.idToEntity({ param: 'recipe', required: true }),
     controller.get
   )
+
+  /** 
+  * @openapi
+  * /recipe:
+  *   summary: Get all recipes
+  *   description: Get all recipes
+  *   tags:
+  *     - Recipe
+  *   responses:
+  *     '200':
+  *       description: Successfully retrieved recipe information.
+  *       content:
+  *         application/json:
+  *           schema:
+  *             type: array
+  *             items:
+  *               $ref: '#/components/schemas/Recipe'
+  *     '401':
+  *       description: Authentication failed.
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.get('/recipe',
     server.auth.bearerMiddleware,
