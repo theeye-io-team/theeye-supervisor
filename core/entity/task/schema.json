@@ -1,0 +1,41 @@
+{
+  "components": {
+    "schemas": {
+      "script": {
+        "template_id": {
+          "type": "string"
+        },
+        "host_id": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string",
+          "default": "script"
+        },
+        "host": {
+          "type": "string"
+        },
+        "template": {
+          "type": "string"
+        },
+        "script_id": {
+          "type": "string"
+        },
+        "script_runas": {
+          "type": "string"
+        },
+        "script": {
+          "type": "string"
+        },
+        "env": {
+          "type": "object",
+          "default": {}
+        },
+        "agent_logging": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    }
+  }
+}
