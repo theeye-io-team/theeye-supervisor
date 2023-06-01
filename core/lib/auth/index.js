@@ -43,16 +43,11 @@ module.exports = {
     })
 
     const bearerStrategy = new BearerStrategy(async (token, done) => {
-      let decoded
-      try {
-        decoded = verifyToken(token)
-      } catch (err) {
-        console.log(err)
-      }
-
+      const decoded = verifyToken(token)
       if (decoded) {
         // verify using decoded payload. redis/memcache
       } else {
+        logger.log('token not verified')
         // the token is old version
       }
 
@@ -103,7 +98,7 @@ module.exports = {
       try {
         decoded = jwt.verify(token, jwtPubKey, { algorithms: ['RS256'] })
       } catch (jwtErr) {
-        logger.log(jwtErr)
+        logger.error(jwtErr)
       }
       logger.log(decoded)
       return decoded
