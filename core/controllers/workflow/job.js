@@ -163,14 +163,16 @@ module.exports = (server) => {
       filter.where.customer_id = customer.id
       filter.where.workflow_id = workflow._id.toString()
 
-      filter.include = Object.assign(filter.include, {
-        script_arguments: 0,
-        output: 0,
-        result: 0,
-        script: 0,
-        task_arguments_values: 0, // input
-        task: 0
-      })
+      if (Object.keys(filter.include).length === 0) {
+        filter.include = {
+          script_arguments: 0,
+          output: 0,
+          result: 0,
+          script: 0,
+          task_arguments_values: 0, // input
+          task: 0
+        }
+      }
 
       //if (workflow.table_view !== true) {
       //  filter.include.task_arguments_values = 0
