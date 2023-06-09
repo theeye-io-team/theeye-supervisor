@@ -1,8 +1,6 @@
 const passport = require('passport')
 const BearerStrategy = require('passport-http-bearer').Strategy
 const BasicStrategy = require('passport-http').BasicStrategy
-const jwt = require('jsonwebtoken')
-const fs = require('fs')
 
 const logger = require('../logger')(':auth')
 const http = require('http')
@@ -19,12 +17,10 @@ module.exports = {
       port: config.api.port
     }
 
-    const jwtPubKey = fs.readFileSync(config.rs256.pub)
-
-    const basicStrategy = new BasicStrategy(async (client_id, client_secret, done) => {
+    const basicStrategyMiddleware = new BasicStrategy(async (client_id, client_secret, done) => {
       logger.log('new connection [basic]')
       try {
-        let response = await createSession(client_id, client_secret)
+        let response = await createGatewaySession(client_id, client_secret)
         if (response.statusCode === 200) {
           let json = JSON.parse(response.rawBody)
           return done(null, json.access_token)
@@ -42,18 +38,14 @@ module.exports = {
       }
     })
 
-    const bearerStrategy = new BearerStrategy(async (token, done) => {
-      //const decoded = verifyToken(token)
-      //if (decoded) {
-      //  // verify using decoded payload. redis/memcache
-      //} else {
-      //  logger.log('token not verified')
-      //  // the token is old version
-      //}
-
+    const bearerStrategyMiddleware = new BearerStrategy(async (token, done) => {
       try {
+        //
+        // WARNING!! Integration Tokens cannot be verified using JWT.verify
+        //
+        // 2023/09/06. Most of the Integration tokens were issued with the wrong expiration date and are all expired.
+        //
         logger.log('new connection [bearer]')
-        //sessionVerify(token).then(profile => {})
         const response = await fetchProfile(token)
         if (response.statusCode === 200) {
           let profile = JSON.parse(response.rawBody)
@@ -71,8 +63,8 @@ module.exports = {
       }
     })
 
-    passport.use(basicStrategy)
-    passport.use(bearerStrategy)
+    passport.use(basicStrategyMiddleware)
+    passport.use(bearerStrategyMiddleware)
 
     const bearerMiddleware = (req, res, next) => {
       passport.authenticate('bearer', (err, profile) => {
@@ -91,17 +83,6 @@ module.exports = {
           next()
         }
       }, { session: false })(req, res, next)
-    }
-
-    const verifyToken = (token) => {
-      let decoded
-      try {
-        decoded = jwt.verify(token, jwtPubKey, { algorithms: ['RS256'] })
-      } catch (jwtErr) {
-        logger.error(jwtErr)
-      }
-      logger.log(decoded)
-      return decoded
     }
 
     const fetchProfile = (token) => {
@@ -129,7 +110,7 @@ module.exports = {
       })
     }
 
-    const createSession = (user, pass) => {
+    const createGatewaySession = (user, pass) => {
       return new Promise((resolve, reject) => {
         const creds = Buffer.from(`${user}:${pass}`).toString('base64')
         let reqOpts = Object.assign({
@@ -151,35 +132,6 @@ module.exports = {
           })
         })
         req.on('error', error => reject(error))
-        req.end()
-      })
-    }
-
-    const sessionVerify = (token) => {
-      return new Promise((resolve, reject) => {
-        let reqOpts = Object.assign({
-          path: `${config.api.path.verify}?access_token=${token}`,
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          }
-        }, requestOptions)
-
-        const req = request(reqOpts, res => {
-          let str = ''
-          res.on('data', d => { if (d) { str += d } })
-          res.on('end', () =>  {
-            try {
-              resolve(JSON.parse(str))
-            } catch (error) {
-              reject(error)
-            }
-          })
-        })
-
-        req.on('error', error => reject(error))
-        //req.write(JSON.stringify(payload))
         req.end()
       })
     }
