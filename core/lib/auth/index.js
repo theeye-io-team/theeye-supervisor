@@ -43,13 +43,13 @@ module.exports = {
     })
 
     const bearerStrategy = new BearerStrategy(async (token, done) => {
-      const decoded = verifyToken(token)
-      if (decoded) {
-        // verify using decoded payload. redis/memcache
-      } else {
-        logger.log('token not verified')
-        // the token is old version
-      }
+      //const decoded = verifyToken(token)
+      //if (decoded) {
+      //  // verify using decoded payload. redis/memcache
+      //} else {
+      //  logger.log('token not verified')
+      //  // the token is old version
+      //}
 
       try {
         logger.log('new connection [bearer]')
