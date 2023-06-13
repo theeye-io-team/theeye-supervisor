@@ -37,7 +37,7 @@ const resultPolling = (req, res, next) => {
 
     if (App.jobDispatcher.hasFinished(job) === true) {
       const result = prepareJobResponse(job, req.query)
-      res.send(result.statusCode, result.data)
+      res.send(result?.statusCode, result?.data)
       next()
     } else {
       waitJobResult(req, job, customer, req.query.timeout, (err, message) => {
@@ -62,8 +62,12 @@ const resultPolling = (req, res, next) => {
             .Job
             .findById(job._id)
             .then(job => {
+              if (!job) {
+                throw new ClientError('Job result is no longer available', { statusCode: 404 })
+              }
+
               const result = prepareJobResponse(job, req.query)
-              res.send(result.statusCode, result.data)
+              res.send(result?.statusCode, result?.data)
               next()
             })
         }
