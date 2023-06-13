@@ -5,7 +5,8 @@ const os = require('os')
 function Logger (name) {
   const self = {}
 
-  let message = `theeye:%LEVEL%:${name}`
+  const timestamp = new Date().toISOString()
+  let message = `${timestamp}:theeye:%LEVEL%:${name}`
   if (process.env.THEEYE_NODE_HOSTNAME) {
     message = `${process.env.THEEYE_NODE_HOSTNAME} ${message}`
   }
