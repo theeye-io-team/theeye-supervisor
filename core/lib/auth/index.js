@@ -43,10 +43,11 @@ module.exports = {
         //
         // WARNING!! Integration Tokens cannot be verified using JWT.verify
         //
-        // 2023/09/06. Most of the Integration tokens were issued with the wrong expiration date and are all expired.
+        // 2023/09/06. Most of the Integration tokens were issued with the wrong expiration date and are all expired. Tokens can be verified against living session that exists in db and cache. This is being checked using the Gateway API.
         //
         logger.log('new connection [bearer]')
-        const response = await fetchProfile(token)
+        // @TODO use cache
+        const response = await fetchGatewayProfile(token)
         if (response.statusCode === 200) {
           let profile = JSON.parse(response.rawBody)
           return done(null, profile)
@@ -85,7 +86,7 @@ module.exports = {
       }, { session: false })(req, res, next)
     }
 
-    const fetchProfile = (token) => {
+    const fetchGatewayProfile = (token) => {
       return new Promise((resolve, reject) => {
         let reqOpts = Object.assign({
           path: `${config.api.path.profile}?access_token=${token}`,
