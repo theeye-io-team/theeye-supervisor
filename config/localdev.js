@@ -2,6 +2,8 @@
  * replace here the default configuration values for your
  * local development environment
  */
+const { join } = require('path')
+
 module.exports = {
   storage: {
     driver: "local"
@@ -47,6 +49,10 @@ module.exports = {
   },
   authentication: {
     // same key must be in every internal service
+    rs256: {
+      pub: join(__dirname, 'jwtRS256.key.pub'),
+      priv: join(__dirname, 'jwtRS256.key')
+    },
     secret: '692fc164a0c06a9fd02575cf17688c9e',
     protocol: 'http', // http or https
     api: {
