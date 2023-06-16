@@ -100,4 +100,6 @@ module.exports = function () {
   server.listen(PORT, () => {
     logger.log('TheEye API started. Listening at "%s"', server.url)
   })
+
+  return server
 }

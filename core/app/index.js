@@ -2,10 +2,12 @@ const MongoDB = require('../lib/mongodb')
 const logger = require('../lib/logger')('app')
 const redis = require('redis')
 //const User = require('../entity/user').Entity
-const App = {}
 const AWS = require('aws-sdk')
 const { v5: uuidv5 } = require('uuid')
 const StateHandler = require('./state')
+
+const App = {}
+App.catalog = require('../catalog') // replace/integrate with swagger
 
 module.exports = App
 
@@ -28,14 +30,13 @@ App.boot = async (config) => {
     App.user = getApplicationUser()
     return StartServices().then(() => {
 
-      Api()
-      Commander()
+      App.api = Api()
+      App.commanderApi = Commander()
       Monitoring()
 
       logger.log('App is ready')
 
       return
-
     })
   }
 

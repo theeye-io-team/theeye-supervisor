@@ -9,43 +9,46 @@ const Webhook = require('../entity/webhook').Webhook;
 const Constants = require('../constants')
 const TopicsConstants = require('../constants/topics')
 
+const RBAC = require('../lib/accesscontrol')
+
 module.exports = function (server) {
   const middlewares = [
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer
+    router.ensureCustomer,
   ]
 
-  server.get('/:customer/webhook', middlewares, controller.fetch)
-
-  server.get(
-    '/:customer/webhook/:webhook',
+  server.get('/:customer/webhook',
     middlewares,
+    RBAC.middleware(App, 'admin'),
+    controller.fetch
+  )
+
+  server.get('/:customer/webhook/:webhook',
+    middlewares,
+    RBAC.middleware(App, 'admin'),
     router.resolve.idToEntity({ param:'webhook', required:true }),
     controller.get
   )
 
-  server.post(
-    '/:customer/webhook',
+  server.post('/:customer/webhook',
     middlewares,
-    router.requireCredential('admin'),
+    RBAC.middleware(App, 'admin'),
     controller.create,
     audit.afterCreate('webhook',{display:'name'})
   )
 
-  server.put(
-    '/:customer/webhook/:webhook',
+  server.put('/:customer/webhook/:webhook',
     middlewares,
-    router.requireCredential('admin'),
+    RBAC.middleware(App, 'admin'),
     router.resolve.idToEntity({ param:'webhook', required: true }),
     controller.update,
     audit.afterUpdate('webhook',{display:'name'})
   )
 
-  server.del(
-    '/:customer/webhook/:webhook',
+  server.del('/:customer/webhook/:webhook',
     middlewares,
-    router.requireCredential('admin'),
+    RBAC.middleware(App, 'admin'),
     router.resolve.idToEntity({ param:'webhook', required: true }),
     controller.remove,
     audit.afterRemove('webhook',{display:'name'})
@@ -74,10 +77,9 @@ module.exports = function (server) {
    * trigger webhook event
    *
    */
-  server.post(
-    '/:customer/webhook/:webhook/trigger',
+  server.post('/:customer/webhook/:webhook/trigger',
     middlewares,
-    router.requireCredential('user'),
+    RBAC.middleware(App, 'user'),
     router.resolve.idToEntity({ param:'webhook', required:true }),
     router.ensureAllowed({ entity:{name:'webhook'} }),
     controller.trigger,
@@ -86,8 +88,7 @@ module.exports = function (server) {
 
   // use custom middleware.
   // requesting user is anonymous, only need to provide secret token
-  server.post(
-    '/:customer/webhook/:webhook/trigger/secret/:secret',
+  server.post('/:customer/webhook/:webhook/trigger/secret/:secret',
     router.resolve.customerNameToEntity({ required: true }),
     router.resolve.idToEntity({ param:'webhook', required: true }),
     router.requireSecret('webhook'),

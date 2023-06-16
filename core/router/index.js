@@ -19,12 +19,11 @@ module.exports = {
   ensureHeader: require('./ensure-header'),
   load (server) {
     logger.log('loading controllers')
-
     server.auth = auth.initialize()
 
     // @TODO avoiding dynamic linker
     require('../controllers/indicator')(server)
-    require('../controllers/index')(server)
+    require('../controllers/status')(server)
     require('../controllers/agent')(server)
     require('../controllers/dstat')(server)
     require('../controllers/event')(server)

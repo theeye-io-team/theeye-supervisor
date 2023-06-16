@@ -15,8 +15,7 @@ module.exports = (server) => {
     router.ensureCustomer
   ]
 
-  server.get(
-    '/monitor/nested/:resource',
+  server.get('/monitor/nested/:resource',
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.idToEntity({ param: 'resource', required: true }),
@@ -24,8 +23,7 @@ module.exports = (server) => {
     controller.get
   )
 
-  server.put(
-    '/monitor/nested/:resource',
+  server.put('/monitor/nested/:resource',
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'resource', required: true }),
@@ -33,16 +31,14 @@ module.exports = (server) => {
     controller.replace
   )
 
-  server.post(
-    '/monitor/nested',
+  server.post('/monitor/nested',
     middlewares,
     router.requireCredential('admin'),
     router.filter.spawn({ filter: 'emailArray', param: 'acl' }),
     controller.create
   )
 
-  server.del(
-    '/monitor/nested/:resource',
+  server.del('/monitor/nested/:resource',
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({param:'resource',required:true}),

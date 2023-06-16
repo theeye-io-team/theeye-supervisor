@@ -50,7 +50,7 @@ module.exports = {
         const response = await fetchGatewayProfile(token)
         if (response.statusCode === 200) {
           let profile = JSON.parse(response.rawBody)
-          return done(null, profile)
+          return done(null, profile, token)
         } else {
           logger.error(response.rawBody, response.statusCode)
           let err = new Error(`authentication failed`)
@@ -68,7 +68,7 @@ module.exports = {
     passport.use(bearerStrategyMiddleware)
 
     const bearerMiddleware = (req, res, next) => {
-      passport.authenticate('bearer', (err, profile) => {
+      passport.authenticate('bearer', (err, profile, token) => {
         if (err) {
           if (err.status >= 400) {
             return res.send(401, 'Unauthorized')
@@ -78,6 +78,7 @@ module.exports = {
           res.send(401, 'Unauthorized')
           //next(null, false)
         } else {
+          req.token = token
           req.user = profile
           // get customer for the session
           req.session = { customer: profile.current_customer.name }

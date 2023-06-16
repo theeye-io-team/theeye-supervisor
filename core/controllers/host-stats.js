@@ -4,14 +4,14 @@ var router = require('../router');
 var HostStats = require('../entity/host/stats').Entity;
 
 module.exports = function (server) {
-  var middlewares = [
+  server.get('/:customer/host/:host/stats',
     server.auth.bearerMiddleware,
     router.requireCredential('viewer'),
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,
-    router.resolve.idToEntity({param:'host',required:true})
-  ]
-  server.get('/:customer/host/:host/stats', middlewares, controller.fetch)
+    router.resolve.idToEntity({param:'host',required:true}),
+    controller.fetch
+  )
 }
 
 const controller = {

@@ -1,7 +1,6 @@
 const got = require('got')
 const qs = require('qs')
 const config = require('config')
-const isEmail = require('validator/lib/isEmail')
 const Token = require('./token')
 const { ClientError, ServerError } = require('../../lib/error-handler')
 

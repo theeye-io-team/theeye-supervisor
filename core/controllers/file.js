@@ -22,6 +22,7 @@ module.exports = (server) => {
   // FETCH
   server.get('/:customer/file',
     server.auth.bearerMiddleware,
+    router.requireCredential('viewer'),
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     fetchFiles
@@ -30,6 +31,7 @@ module.exports = (server) => {
   // GET
   server.get('/:customer/file/:file',
     server.auth.bearerMiddleware,
+    router.requireCredential('viewer'),
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     router.resolve.idToEntity({ param: 'file', required: true }),
@@ -57,6 +59,7 @@ module.exports = (server) => {
   // GET LINKED MODELS
   server.get('/:customer/file/:file/linkedmodels',
     server.auth.bearerMiddleware,
+    router.requireCredential('admin'),
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     router.resolve.idToEntity({ param:'file', required:true }),
