@@ -42,6 +42,13 @@ module.exports = {
       }
     }
   },
+  authentication: {
+    rs256: {
+      pub: join(__dirname, 'jwtRS256.key.pub'),
+      priv: join(__dirname, 'jwtRS256.key')
+    },
+    secret: '692fc164a0c06a9fd02575cf17688c9e'
+  },
   monitor: {
     disabled: true,
     fails_count_alert: 3,
