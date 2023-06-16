@@ -154,8 +154,8 @@ module.exports = {
       }
     },
     rs256: {
-      pub: '/home/facugon/workspace/theeye/theeye-supervisor/config/jwtRS256.key.pub',
-      priv: '/home/facugon/workspace/theeye/theeye-supervisor/config/jwtRS256.key'
+      pub: null,
+      priv: null
     },
     secret: '692fc164a0c06a9fd02575cf17688c9e'
   },
