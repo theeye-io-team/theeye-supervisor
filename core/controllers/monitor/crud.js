@@ -177,14 +177,9 @@ const controller = {
       input.host = host._id
       input.hostname = host.hostname
       // ensure severity
-      if (
-        !body.failure_severity ||
-        params.data?.failure_severity !== MonitorConstants.MONITOR_SEVERITY_LOW ||
-        params.data?.failure_severity !== MonitorConstants.MONITOR_SEVERITY_HIGH ||
-        params.data?.failure_severity !== MonitorConstants.MONITOR_SEVERITY_CRITICAL
-      ) {
-        input.failure_severity = MonitorConstants.MONITOR_SEVERITY_LOW
-      }
+
+      const sev = input?.failure_severity || body?.failure_severity
+      input.failure_severity = verifyFailureSeverity(sev)
 
       delete input.template
       delete input.monitor
@@ -282,14 +277,7 @@ const replace = async (req, res, next) => {
       Object.assign(updates, params.data, { acl: req.acl })
     }
 
-    if (
-      !body.failure_severity ||
-      body.failure_severity !== MonitorConstants.MONITOR_SEVERITY_LOW ||
-      body.failure_severity !== MonitorConstants.MONITOR_SEVERITY_HIGH ||
-      body.failure_severity !== MonitorConstants.MONITOR_SEVERITY_CRITICAL
-    ) {
-      updates.failure_severity = MonitorConstants.MONITOR_SEVERITY_LOW
-    }
+    updates.failure_severity = verifyFailureSeverity(body.failure_severity)
 
     await updateResource(resource, updates)
     res.send(200, resource)
@@ -319,4 +307,16 @@ const updateResource = async (resource, updates) => {
   }
 
   return await App.resource.update({ resource, updates })
+}
+
+const verifyFailureSeverity = (value) => {
+  if (!value || (
+    value !== MonitorConstants.MONITOR_SEVERITY_LOW &&
+    value !== MonitorConstants.MONITOR_SEVERITY_HIGH &&
+    value !== MonitorConstants.MONITOR_SEVERITY_CRITICAL
+  )) {
+    return MonitorConstants.MONITOR_SEVERITY_LOW
+  } else {
+    return value
+  }
 }
