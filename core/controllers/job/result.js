@@ -5,7 +5,6 @@ const AsyncMiddleware = require('../../lib/async-controller')
 const qs = require('qs')
 
 module.exports = (server) => {
-
   server.get('/job/:job/result',
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({required:true}),
@@ -25,7 +24,6 @@ module.exports = (server) => {
     router.ensureAllowed({ entity: { name: 'job' } }),
     resultPolling
   )
-
 }
 
 const resultPolling = (req, res, next) => {

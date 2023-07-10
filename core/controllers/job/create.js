@@ -5,7 +5,6 @@ const router = require('../../router')
 const JobConstants = require('../../constants/jobs')
 
 module.exports = (server) => {
-
   server.post('/:customer/job',
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
