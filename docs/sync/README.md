@@ -209,23 +209,3 @@ Keep-Alive: timeout=5
 
 ```
 
-
-
-http://restalk-patterns.org/long-running-operation-polling.html
-
-
-curl -i -sS -X POST "http://localhost:60080/task/${task}/job?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjE3YmYzNzAxNGMyNmQxNTg3YmIzOGYxIiwiaWF0IjoxNjM1NTEzMjAwLCJleHAiOjE2MzU1MjQwMDB9.6j5SC4lJfChdlSzaiiC0XanjAM_DeeySADS4DorqRUw&wait_result=true&timeout=5"   --header 'Content-Type: application/json' --data  '{"task_arguments":['120']}'  -L
-
-wait_result: al iniciar el job devuelve 200 o 303
-
-timeout: controlar cantidad de segundos esperar antes de terminar el request e iniciar la siguiente redirección
-counter: cantidad de loops actuales
-limit: cantidad de loops limite para cortar la espera del resultado
-
-result
-full
-parse
-
-curl -X GET 'http://localhost:60080/job/6407954d5fa6fabce97917ed/result?access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjE3YmYzNzAxNGMyNmQxNTg3YmIzOGYxIiwiaWF0IjoxNjM1NTEzMjAwLCJleHAiOjE2MzU1MjQwMDB9.6j5SC4lJfChdlSzaiiC0XanjAM_DeeySADS4DorqRUw&wait_result=true&counter=0&limit=10&timeout=5' -L -i
-
-
