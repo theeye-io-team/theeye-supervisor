@@ -136,7 +136,6 @@ module.exports = {
    */
   notifications: {
     api: {
-      secret: '77E0EAF3B83DD7A7A4004602626446EADED31BF794956FC9BBAD051FA5A25038',
       url: process.env.CONFIG_NOTIFICATIONS_API_URL || 'http://127.0.0.1:6080/api/notification',
       timeout: 5000
     }
@@ -160,7 +159,6 @@ module.exports = {
     secret: '692fc164a0c06a9fd02575cf17688c9e'
   },
   gateway: {
-    secret: '77E0EAF3B83DD7A7A4004602626446EADED31BF794956FC9BBAD051FA5A25038',
     member: {
       url: process.env.CONFIG_MEMBER_API_URL || 'http://127.0.0.1:6080/api/internal/member/resolve'
     },

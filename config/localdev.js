@@ -67,7 +67,6 @@ module.exports = {
     }
   },
   gateway: {
-    secret: '77E0EAF3B83DD7A7A4004602626446EADED31BF794956FC9BBAD051FA5A25038',
     member: {
       url: 'http://localhost:8080/api/internal/member/resolve'
     },

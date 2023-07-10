@@ -4,6 +4,7 @@ const mailer = require('../lib/mailer')
 const logger = require('../lib/logger')('service:notification')
 const { v1: uuidv1 } = require('uuid')
 const TopicsConstants = require('../constants/topics')
+const Token = require('./gateway/token')
 
 module.exports = {
   sendEmailNotification (options) {
@@ -87,7 +88,7 @@ module.exports = {
         },
         body: JSON.stringify(payload),
         searchParams: {
-          secret: config.gateway.secret
+          gateway_token: Token.create({})
         }
       })
 
@@ -139,7 +140,7 @@ module.exports = {
         },
         body: JSON.stringify(payload),
         searchParams: {
-          secret: config.gateway.secret
+          gateway_token: Token.create({})
         }
       })
 
