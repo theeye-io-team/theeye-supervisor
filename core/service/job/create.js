@@ -42,7 +42,7 @@ module.exports = async (req, res, next) => {
       const query = Object.assign({}, req.query)
       query.counter = 0
       query.limit = (req.query.limit || 10)
-      query.timeout = (req.query.timeout || 5)
+      query.timeout = (req.query.timeout || 10)
       const encodedquerystring = qs.stringify(query)
 
       res.header('Location', `/job/${job.id}/result?${encodedquerystring}`)
@@ -57,5 +57,7 @@ module.exports = async (req, res, next) => {
 }
 
 const waitResult = (req) => {
-  return req.query.wait_result === 'true' || req.body.wait_result === true
+  if (req.query?.wait_result === "true") { return true }
+  if (req.body?.wait_result === true) { return true }
+  return false
 }
