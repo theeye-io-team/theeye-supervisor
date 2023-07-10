@@ -9,10 +9,11 @@
   - [Monitores](/monitors/)
   - [Sync](/sync/)
   - Tareas
-    - [Introducción](/tasks/)
+    - [ACL's](/tasks/acls.md)
     - [Argumentos](/tasks/arguments.md)
     - [Información en Tiempo de Ejecución](/tasks/runtime.md)
-    - [ACL's](/tasks/acls.md)
+    - [Introducción](/tasks/)
+    - [Sync](/tasks/sync)
   - Webhooks
     - [Incomming](/webhooks/)
-  - [Eventis](/events/)
+  - [Events](/events/)
