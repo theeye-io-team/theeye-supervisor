@@ -22,7 +22,8 @@
     "devel": "/bin/bash ./run.debug.sh",
     "test": "NODE_ENV=localdev ./node_modules/.bin/mocha --exit",
     "workspace": "./workspace/start.sh",
-    "build": "docker build . --tag 'theeye-supervisor:2.0.0'"
+    "build": "docker build . --tag 'theeye-supervisor:2.0.0'",
+    "release":"npx standard-version"
   },
   "dependencies": {
     "@sentry/node": "~7.7.0",
@@ -56,6 +57,7 @@
     "readable-stream": "~1.0.34",
     "redis": "~4.6.5",
     "restify": "~8.5.1",
+    "standard-version": "~9.5.0",
     "stream-buffers": "~2.2.0",
     "uuid": "~8.3.0",
     "valid-data-url": "~4.0.0",
