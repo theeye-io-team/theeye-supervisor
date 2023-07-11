@@ -7,7 +7,6 @@
   - [Indicadores](/indicators/)
   - [Jobs](/jobs/)
   - [Monitores](/monitors/)
-  - [Sync](/sync/)
   - Tareas
     - [Introducción](/tasks/)
     - [Argumentos](/tasks/arguments.md)
