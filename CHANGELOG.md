@@ -1,4 +1,22 @@
-# CHANGELOG
+# Changelog
+
+All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+
+## [4.6.0](https://github.com/theeye/theeye-supervisor/compare/4.5.4...4.6.0) (2023-07-11)
+
+
+### Features
+
+* better jwt tokens encryption ([#88](https://github.com/theeye/theeye-supervisor/issues/88)) ([139f2ae](https://github.com/theeye/theeye-supervisor/commit/139f2aef0e4de6c4110e8f8a04633c20a68b681f))
+* finished jobs state evaluation ([#87](https://github.com/theeye/theeye-supervisor/issues/87)) ([7bc0b1a](https://github.com/theeye/theeye-supervisor/commit/7bc0b1a5d4498a08a07e62ac05e4c878f4f1ee8e))
+* standard-version package ([c2a01b2](https://github.com/theeye/theeye-supervisor/commit/c2a01b2533d760ead3858e7e963dafd098638767))
+
+
+### Bug Fixes
+
+* api sync error with empty body ([#97](https://github.com/theeye/theeye-supervisor/issues/97)) ([1fdd61a](https://github.com/theeye/theeye-supervisor/commit/1fdd61aab1d15cd9843bd3bf1ea56e89587fbaea))
+* auth creds selection ([#91](https://github.com/theeye/theeye-supervisor/issues/91)) ([080d635](https://github.com/theeye/theeye-supervisor/commit/080d63507693b6390179d884396e6f92189ac9d3))
+* cannot include and exclude at the same time ([bc923db](https://github.com/theeye/theeye-supervisor/commit/bc923dbac9a604cc8718eb55a6c7f1b24d11d6a9))
 
 ### 0.8.1 - 2017-02-24
 
