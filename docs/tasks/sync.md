@@ -407,7 +407,7 @@ El polling automático se inicia con una solicitud a la URL de obtención de res
 
 Utilizando todos estos parámetro en combinación se puede configurar el tiempo máximo de espera del resultado.
 
-## Ejemplo
+## Primer ejemplo de invocación
 
 6 iteraciones (limit=6) de 10 segundos cada una (timeout=10) nos dara como resultado una espera de 1 minuto.
 
@@ -478,3 +478,156 @@ Keep-Alive: timeout=5
 {"message":"Hello world!"}
 
 ```
+
+## Respuesta Rest
+
+
+Por defecto la API Sync responde con el output obtenido de la ejecución de la tarea.
+El output es lo que desde la interfaz se visualiza en la sección "output" del resultado de la ejecución.
+
+Un job representa una instancia de ejecución de una tarea.  El output esta asociado al documento job y será accesible mientras el job exista en la base de datos.
+
+
+| State | HTTP Status Code | 
+| ---- |  ---- |
+| success | 200 | 
+| failure | 500 | 
+
+
+### Nota
+
+* Por el momento solo es posible la ejecución de _Tareas Individuales_ .
+
+
+
+## Mas ejemplos
+
+Para los ejemplos usamos la siguiente receta.
+
+Puede descargar e importa [esta receta utilizada para todos los ejemplos](/tasks/Rest_API_Response.json ":ignore")
+
+
+### Resultado "failure"
+
+
+```bash
+
+curl -i -X POST \
+     --url "http://localhost:60080/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&limit=6&timeout=10&wait_result=true" \
+       --header 'content-type: application/json' \
+       --data '{"task_arguments":[200]}'
+
+```
+
+
+```http
+
+HTTP/1.1 500 Internal Server Error
+Server: restify
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET,PUT,PATCH,POST,DELETE,OPTIONS
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Headers: Origin, Accept, User-Agent, Accept-Charset, Cache-Control, Accept-Encoding, Content-Type, Authorization, Content-Length, X-Requested-With
+Content-Type: application/json; charset=utf-8
+Content-Length: 135
+Date: Fri, 28 Jan 2022 16:59:54 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+["{\"message\":\"Validation Error. Invalid Argument Value\",\"statusCode\":418,\"name\":\"ClientError\",\"code\":\"\",\"status\":418}"]
+
+
+```
+
+### Resultado "success"
+
+
+```bash
+curl -i -X POST \
+     --url "http://localhost:60080/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&limit=6&timeout=10&wait_result=true" \
+       --header 'content-type: application/json' \
+       --data '{"task_arguments":[100]}'
+
+```
+
+```http
+
+HTTP/1.1 200 OK
+Server: restify
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET,PUT,PATCH,POST,DELETE,OPTIONS
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Headers: Origin, Accept, User-Agent, Accept-Charset, Cache-Control, Accept-Encoding, Content-Type, Authorization, Content-Length, X-Requested-With
+Content-Type: application/json; charset=utf-8
+Content-Length: 62
+Date: Fri, 28 Jan 2022 17:00:22 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+["{\"name\":\"tomer\",\"date\":\"2022-01-28T17:00:22.676Z\"}"]
+
+```
+
+
+### "success" usando "parse"
+
+
+```bash
+
+curl -i -X POST \
+     --url "http://localhost:60080/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&limit=6&timeout=10&wait_result=true&parse" \
+       --header 'content-type: application/json' \
+       --data '{"task_arguments":[100]}'
+
+```
+
+
+```http
+
+HTTP/1.1 200 OK
+Server: restify
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET,PUT,PATCH,POST,DELETE,OPTIONS
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Headers: Origin, Accept, User-Agent, Accept-Charset, Cache-Control, Accept-Encoding, Content-Type, Authorization, Content-Length, X-Requested-With
+Content-Type: application/json; charset=utf-8
+Content-Length: 50
+Date: Fri, 28 Jan 2022 16:26:41 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"name":"tomer","date":"2022-01-28T16:26:41.201Z"}
+
+```
+
+### "failure" usando "parse"
+
+
+```bash
+
+curl -i -X POST \
+     --url "http://localhost:60080/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&limit=6&timeout=10&wait_result=true&parse" \
+       --header 'content-type: application/json' \
+       --data '{"task_arguments":[200]}'
+
+```
+
+
+```http
+
+HTTP/1.1 418 I'm a Teapot
+Server: restify
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET,PUT,PATCH,POST,DELETE,OPTIONS
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Headers: Origin, Accept, User-Agent, Accept-Charset, Cache-Control, Accept-Encoding, Content-Type, Authorization, Content-Length, X-Requested-With
+Content-Type: application/json; charset=utf-8
+Content-Length: 115
+Date: Fri, 28 Jan 2022 16:56:47 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{"message":"Validation Error. Invalid Argument Value","statusCode":418,"name":"ClientError","code":"","status":418}
+
+```
+
