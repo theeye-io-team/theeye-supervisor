@@ -1,7 +1,7 @@
 
 [![theeye.io](../images/logo-theeye-theOeye-logo2.png)](https://theeye.io/en/index.html)
 
-# Ejecución sincrónica de tareas.
+# Espera de output de ejecución - Api Sync
 
 
 La ejecución de tareas individuales en TheEye es asincrónica por la naturaleza de los procesos.
