@@ -1,6 +1,7 @@
+
 [![theeye.io](../images/logo-theeye-theOeye-logo2.png)](https://theeye.io/en/index.html)
 
-# Ejecución sincrónica de tareas.
+# Espera de output de ejecución - Api Sync
 
 
 La ejecución de tareas individuales en TheEye es asincrónica por la naturaleza de los procesos.
@@ -17,52 +18,52 @@ Un tiempo de respuesta razonable no debe superar los 60 segundos de ejecución.
 
 * Tiempo muy largos pueden producir Timeouts o incluso el orquestador puede cortar la comunicación de forma repentina.
 
-* Respuesta muy grandes puede generar error en el procesamiento por parte de los agentes.
+* Respuestas muy grandes pueden generar errores en el procesamiento por parte de los agentes.
 
 
 
 ## Invocación Sync - Espera de resultado (wait_result)
 
-La ejecución sync se logra utilizando el mimo endpoint utilizado para iniciar la ejecución de tareas.
+La ejecución sync se logra utilizando el mismo endpoint utilizado para iniciar la ejecución de tareas.
 Al momento de crear el job se debe incluir la directiva `wait_result=true`. Esto le indica a la API que se desea esperar el resultado.
 
-### Parametros adicionales
+### Parámetros adicionales
 
- | nombre      | desc                                                                                              | default | 
- | -----       | -----                                                                                             | -----   | 
- | wait_result | espera el resulto. redireccion a /result con los parametros del job iniciado y timeout preseteado | false   | 
- | timeout     |                                                                                                   |         | 
- | counter     |                                                                                                   |         | 
- | limit       |                                                                                                   |         | 
- | output      |  output array de la ejecución sin interpretación | default |
- | result      |   resultado completo, el output y el log de ejecución                |         | 
- | full        |   job completo, con todos los parametros , similar a haber realizado un GET /job/${id}  |        | 
- | parse       |   last line output de la ejecución interpretado. solo JSON esta soportado                |         | 
+ | nombre      | desc                                                                                                | default | 
+ | -----       | -----                                                                                               | -----   | 
+ | wait_result | espera el resultado. redirección a /result con los parámetros del job iniciado y timeout preseteado | false   | 
+ | timeout     |                                                                                                     |         | 
+ | counter     |                                                                                                     |         | 
+ | limit       |                                                                                                     |         | 
+ | output      |   output array de la ejecución sin interpretación                                                   | default |
+ | result      |   resultado completo, el output y el log de ejecución                                               |         | 
+ | full        |   job completo, con todos los parámetros, similar a haber realizado un GET /job/${id}               |         | 
+ | parse       |   last line output de la ejecución interpretada. Solo está soportado JSON                           |         | 
 
   
 
 El cuerpo de la respuesta seguirá siendo el job nuevo creado, con su respectivo ID.
 
-La respuesta de la API será un `status_code: 303` en lugar del `status_code: 200` que respondería normalmente.
+La respuesta de la API será un `status_code: 303` en lugar de `status_code: 200` que respondería normalmente.
 
 La respuesta 303 es una redirección hacia la página donde será devuelto el resultado.
 
 ## URIs
 
-La ejecución con espera se puede realizar utilizando `access_token`. Con `secret` no esta soportado y su uso esta desaconsejado.
+La ejecución con espera se puede realizar utilizando `access_token`. No está soportado con `secret` y su uso está desaconsejado.
 
 | Method | Path | Description | ACL | 
-| ---- |  ----|  ----|  ----|
-| POST | /task/${id}/job | Iniciar ejecución de Tarea | user | 
+| ------ | ---- | ----------- | ----|
+| POST   | /task/${id}/job | Iniciar ejecución de Tarea | user | 
 | GET | /job/${id}/result | Obtener resultado de la ejecución | user | 
 
 
-## Obtencion del resultado Async vs Sync
+## Obtención del resultado Async vs Sync
 
-Mostraremos en este caso una como se realizaría una invocación sin espera y como sería lo mismo utilizando la espera con polling.
+Mostraremos en este caso como se realizaría una invocación sin espera y como sería lo mismo utilizando la espera con polling.
 
 En este caso solo evaluaremos la opciones de iniciar y luego obtener el resultados con GET.
-Exiten otras alternativas, utilizando eventos o socket, que están disponible en diferentes variantes pero quedan fuera del alcance de este documento.
+Exiten otras alternativas, utilizando eventos o socket, que están disponibles en diferentes variantes pero quedan fuera del alcance de este documento.
 
 ## Async - comportamiento por defecto.
 
@@ -74,7 +75,7 @@ La ejecución de una Tarea se realizaría de la siguiente manera
 
 ```bash
 curl --request POST \
-     --url "http://localhost:60080/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}" \
+     --url "https://supervisor.theeye.io/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}" \
      --header 'content-type: application/json' \
      --include \ # include response headers
      --data '["arg1","arg2","arg3"]'
@@ -156,7 +157,7 @@ Keep-Alive: timeout=5
 
 ```
 
-Luego sería necesarío buscar el resultado del la ejecución utilizando el endpoint de resultado especificando el formato deseado.
+Luego sería necesarío buscar el resultado de la ejecución utilizando el endpoint de resultado especificando el formato deseado.
 
 
 ### Formatos de output
@@ -167,7 +168,7 @@ Luego sería necesarío buscar el resultado del la ejecución utilizando el endp
 #### **output**
 
 ```bash
-curl --url "http://localhost:60080/job/64ac6772be08c0252fb5ed1a/result?access_token=${accessToken}" \
+curl --url "https://supervisor.theeye.io/job/64ac6772be08c0252fb5ed1a/result?access_token=${accessToken}" \
        --header 'content-type: application/json' \
 ```
 
@@ -180,7 +181,7 @@ curl --url "http://localhost:60080/job/64ac6772be08c0252fb5ed1a/result?access_to
 
 
 ```bash
-curl --url "http://localhost:60080/job/64ac6772be08c0252fb5ed1a/result?access_token=${accessToken}" \
+curl --url "https://supervisor.theeye.io/job/64ac6772be08c0252fb5ed1a/result?access_token=${accessToken}" \
        --header 'content-type: application/json' \
        -G --data-urlencode 'parse'
 ```
@@ -194,7 +195,7 @@ curl --url "http://localhost:60080/job/64ac6772be08c0252fb5ed1a/result?access_to
 #### **result**
 
 ```bash
-curl --url "http://localhost:60080/job/64ac6772be08c0252fb5ed1a/result?access_token=${accessToken}" \
+curl --url "https://supervisor.theeye.io/job/64ac6772be08c0252fb5ed1a/result?access_token=${accessToken}" \
        --header 'content-type: application/json' \
        -G --data-urlencode 'result'
 ```
@@ -227,7 +228,7 @@ curl --url "http://localhost:60080/job/64ac6772be08c0252fb5ed1a/result?access_to
 #### **full**
 
 ```bash
-curl --url "http://localhost:60080/job/64ac6772be08c0252fb5ed1a/result?access_token=${accessToken}" \
+curl --url "https://supervisor.theeye.io/job/64ac6772be08c0252fb5ed1a/result?access_token=${accessToken}" \
        --header 'content-type: application/json' \
        -G --data-urlencode 'full'
 ```
@@ -320,8 +321,8 @@ curl --url "http://localhost:60080/job/64ac6772be08c0252fb5ed1a/result?access_to
 
 ## Sync - espera con polling
 
-La espera con polling se logra mediante una redirección automática al endpoint de resultado inmediatamente después de la creación de un job.
-Si la ejecución se resuelve antes de llegar a la dirección de resultado el output de la ejecución es devuelto inmediatamente.
+La espera con polling se logra mediante una redirección automática al endpoint de resultado, inmediatamente después de la creación de un job.
+Si la ejecución se resuelve antes de llegar a la redirección de resultado el output de la ejecución es devuelto inmediatamente.
 
 En un caso donde la ejecución demora unos minutos, se inicia un proceso automático de polling con tiempos de espera predefinidos.
 De esta forma se inicia un loop de redirecciones con polling automático.
@@ -331,8 +332,8 @@ De esta forma se inicia un loop de redirecciones con polling automático.
 
 La diferencia entre la ejecución con `wait_result=true` se puede ver en los headers de respuesta de la invocación.
 
-Las dos formas de especificar la espera son por querystring o por json body. 
-El formato utilizado en este caso va a depender de la forma en que seran provistos los argumentos de tarea
+Las dos formas de especificar la espera son o por querystring o por json body. 
+El formato utilizado en este caso va a depender de la forma en que serán provistos los argumentos de tarea
 
 <!-- tabs:start -->
 
@@ -342,7 +343,7 @@ El formato utilizado en este caso va a depender de la forma en que seran provist
  curl --location \
    --include \
    --request POST \
-   --url "http://localhost:60080/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}" \
+   --url "https://supervisor.theeye.io/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}" \
    --header 'content-type: application/json' \
    -d '{"wait_result":true}'
 ```
@@ -354,11 +355,11 @@ El formato utilizado en este caso va a depender de la forma en que seran provist
    --location \
    --include \
    --request POST \
-   --url "http://localhost:60080/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&wait_result=true" 
+   --url "https://supervisor.theeye.io/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&wait_result=true" 
 ```
 <!-- tabs:end -->
 
-En ambos casos la respuesta tendrá el mismo body que la ejecución Async, pero los headers serán distintos.
+En ambos casos la respuesta tendrá el mismo body que la ejecución async, pero los "headers" serán distintos.
 
 ### Headers
 
@@ -382,34 +383,33 @@ Las dos diferencias mas importantes en los headers son
 
 #### HTTP status 303
 
-Esto indica que la solicitud esta siendo redireccionada a otra URL.
+Esto indica que la solicitud está siendo redireccionada a otra URL.
 
-Con el comando curl se deben utilizar los parámetro --location y --max-redirs para el parseo automático de los encabezados,
+Con el comando "curl" se deben utilizar los parámetros --location y --max-redirs para el parseo automático de los encabezados.
 
 
 #### Header Location
 
-La redirección va acompañada del Header Location que indica a donde debe ser redirigido para continuar con el polling.
+La redirección va acompañada del "Header Location" que indica a donde debe ser redirigido para continuar con el polling.
 
-El header Location continue la URL donde se puede obtener la respuesta como vimos anteriormente.
-Además se sumaron algunos parámetros de control adicionales que analizaremos a continuación.
+El header Location contiene la URL donde se puede obtener la respuesta como vimos anteriormente. Además se sumaron algunos parámetros de control adicionales que analizaremos a continuación.
 
 ### Configuración del polling automático
 
 El polling automático se inicia con una solicitud a la URL de obtención de resultado `/job/${id}/result`
 
-| Parametro | Descripcion |
+| Parámetro | Descripción |
 | ----- | ----- |
 | `/job/${id}/result` | URL Bearer con jobId |
-| `counter=0` | cantidad de veces que se ejecuto el GET de resultado. |
+| `counter=0` | cantidad de veces que se ejecutó el GET de resultado. |
 | `limit=10` | cantidad máxima de GET que se van a ejecutar. Cuando `counter === limit` se detendrá el polling. |
-| `timeout=5` | tiempo máximo (request timeout) que el servidor mantendrá viva la conexión esperando el resultado del job antes continuar con los chequeos y avanzar al siguiente loop o dar por terminado el polling. |
+| `timeout=5` | tiempo máximo (request timeout) que el servidor mantendrá viva la conexión, esperando el resultado del job, antes de continuar con los chequeos y avanzar al siguiente loop o dar por terminado el polling. |
 
-Utilizando todos estos parámetro en combinación se puede configurar el tiempo máximo de espera del resultado.
+Utilizando todos estos parámetros en combinación se puede configurar el tiempo máximo de espera del resultado.
 
 ## Primer ejemplo de invocación
 
-6 iteraciones (limit=6) de 10 segundos cada una (timeout=10) nos dara como resultado una espera de 1 minuto.
+6 iteraciones (limit=6) de 10 segundos cada una (timeout=10) nos dará como resultado una espera de 1 minuto.
 
 Para esperar el resultado de la ejecución de una tarea por un máximo de 50 segundos y obtener el output como un objeto en formato JSON, debemos iniciar el nuevo job con los siguientes parámetros
 
@@ -427,7 +427,7 @@ Para esperar el resultado de la ejecución de una tarea por un máximo de 50 seg
 curl --request POST \
      --include \
      --location \
-     --url "http://localhost:60080/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&limit=6&timeout=10&wait_result=true&parse" \
+     --url "https://supervisor.theeye.io/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&limit=6&timeout=10&wait_result=true&parse" \
      --header 'content-type: application/json' \
      --data '["arg1","arg2","arg3"]'
 ```
@@ -483,9 +483,9 @@ Keep-Alive: timeout=5
 
 
 Por defecto la API Sync responde con el output obtenido de la ejecución de la tarea.
-El output es lo que desde la interfaz se visualiza en la sección "output" del resultado de la ejecución.
+El output es, lo que desde la interfaz, se visualiza en la sección "output" del resultado de la ejecución.
 
-Un job representa una instancia de ejecución de una tarea.  El output esta asociado al documento job y será accesible mientras el job exista en la base de datos.
+Un job representa una instancia de ejecución de una tarea.  El output está asociado al "job" y será accesible mientras el job exista en la base de datos.
 
 
 | State | HTTP Status Code | 
@@ -500,11 +500,11 @@ Un job representa una instancia de ejecución de una tarea.  El output esta asoc
 
 
 
-## Mas ejemplos
+## Más ejemplos
 
 Para los ejemplos usamos la siguiente receta.
 
-Puede descargar e importa [esta receta utilizada para todos los ejemplos](/tasks/Rest_API_Response.json ":ignore")
+Puede descargar e importar [esta receta utilizada para todos los ejemplos](/tasks/Rest_API_Response.json ":ignore")
 
 
 ### Resultado "failure"
@@ -513,7 +513,7 @@ Puede descargar e importa [esta receta utilizada para todos los ejemplos](/tasks
 ```bash
 
 curl -i -X POST \
-     --url "http://localhost:60080/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&limit=6&timeout=10&wait_result=true" \
+     --url "https://supervisor.theeye.io/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&limit=6&timeout=10&wait_result=true" \
        --header 'content-type: application/json' \
        --data '{"task_arguments":[200]}'
 
@@ -544,7 +544,7 @@ Keep-Alive: timeout=5
 
 ```bash
 curl -i -X POST \
-     --url "http://localhost:60080/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&limit=6&timeout=10&wait_result=true" \
+     --url "https://supervisor.theeye.io/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&limit=6&timeout=10&wait_result=true" \
        --header 'content-type: application/json' \
        --data '{"task_arguments":[100]}'
 
@@ -575,7 +575,7 @@ Keep-Alive: timeout=5
 ```bash
 
 curl -i -X POST \
-     --url "http://localhost:60080/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&limit=6&timeout=10&wait_result=true&parse" \
+     --url "https://supervisor.theeye.io/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&limit=6&timeout=10&wait_result=true&parse" \
        --header 'content-type: application/json' \
        --data '{"task_arguments":[100]}'
 
@@ -606,7 +606,7 @@ Keep-Alive: timeout=5
 ```bash
 
 curl -i -X POST \
-     --url "http://localhost:60080/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&limit=6&timeout=10&wait_result=true&parse" \
+     --url "https://supervisor.theeye.io/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}&limit=6&timeout=10&wait_result=true&parse" \
        --header 'content-type: application/json' \
        --data '{"task_arguments":[200]}'
 
