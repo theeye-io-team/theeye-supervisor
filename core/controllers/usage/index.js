@@ -9,12 +9,60 @@ module.exports = function (server) {
     router.ensureCustomer
   ]
 
+  /** 
+  * @openapi
+  * /usage/counters:
+  *   summary: Get counters usage
+  *   description: Get counters usage
+  *   tags:
+  *     - Usage
+  *   responses:
+  *     '200':
+  *       description: Successfully retrieved counters information.
+  *       content:
+  *         application/json:
+  *           schema:
+  *             type: array
+  *             items:
+  *               $ref: '#/components/schemas/Usage'
+  *     '401':
+  *       description: Authentication failed.
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Error'
+  *
+  */
   server.get('/usage/counters',
     middlewares,
     router.requireCredential('admin'),
     usageCount
   )
 
+  /** 
+  * @openapi
+  * /usage/counters:
+  *   summary: Get counters details
+  *   description: Get counters details
+  *   tags:
+  *     - Usage
+  *   responses:
+  *     '200':
+  *       description: Successfully retrieved usage details.
+  *       content:
+  *         application/json:
+  *           schema:
+  *             type: array
+  *             items:
+  *               $ref: '#/components/schemas/Usage'
+  *     '401':
+  *       description: Authentication failed.
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Error'
+  *
+  */
   server.get('/usage/details',
     middlewares,
     router.requireCredential('admin'),
@@ -24,6 +72,31 @@ module.exports = function (server) {
   //
   // admin can query different customers with a root token
   //
+
+  /** 
+  * @openapi
+  * /usage/counters:
+  *   summary: Get counters usage
+  *   description: Get counters usage from different customers with a root token
+  *   tags:
+  *     - Usage
+  *   responses:
+  *     '200':
+  *       description: Successfully retrieved counters information.
+  *       content:
+  *         application/json:
+  *           schema:
+  *             type: array
+  *             items:
+  *               $ref: '#/components/schemas/Usage'
+  *     '401':
+  *       description: Authentication failed.
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Error'
+  *
+  */
   server.get('/admin/usage/counters',
     server.auth.bearerMiddleware,
     router.requireCredential('root'),
@@ -31,6 +104,30 @@ module.exports = function (server) {
     usageCount
   )
 
+  /** 
+  * @openapi
+  * /usage/counters:
+  *   summary: Get counters details
+  *   description: Get counters details from different customers with a root token
+  *   tags:
+  *     - Usage
+  *   responses:
+  *     '200':
+  *       description: Successfully retrieved usage details.
+  *       content:
+  *         application/json:
+  *           schema:
+  *             type: array
+  *             items:
+  *               $ref: '#/components/schemas/Usage'
+  *     '401':
+  *       description: Authentication failed.
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Error'
+  *
+  */
   server.get('/admin/usage/details',
     server.auth.bearerMiddleware,
     router.requireCredential('root'),

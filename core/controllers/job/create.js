@@ -5,6 +5,46 @@ const router = require('../../router')
 const JobConstants = require('../../constants/jobs')
 
 module.exports = (server) => {
+
+  /** 
+  * @openapi
+  * /{customer}/job:
+  *   post:
+  *     summary: Create a new job.
+  *     description: Creates a new job by customer name.
+  *     parameters:
+  *     - name: customer
+  *       in: query
+  *       description: customer name
+  *       required: true
+  *       schema:
+  *         type: string
+  *     requestBody:
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Job'
+  *     responses:
+  *       '201':
+  *         description: Successfully created a new job.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Job'
+  *       '400':
+  *         description: Invalid request data.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
   server.post('/:customer/job',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),

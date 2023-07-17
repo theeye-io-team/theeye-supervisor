@@ -178,7 +178,7 @@ module.exports = function (server) {
   }
 
   /** 
-   * @openapi
+  * @openapi
   * /indicator:
   *   post:
   *     summary: Create a new indicator.

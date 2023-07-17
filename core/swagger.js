@@ -13,7 +13,13 @@ const options = {
   },
   apis: [
     'core/controllers/index.js',
-    'core/controllers/indicator/crud.js'
+    'core/controllers/indicator/crud.js',
+    
+    'core/controllers/marketplace/crud.js',
+    'core/controllers/recipe/crud.js',
+    'core/controllers/resource/index.js',
+    'core/controllers/scheduler/index.js',
+    'core/controllers/usage/index.js'
   ]  // files containing annotations as above
 };
 
