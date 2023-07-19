@@ -40,11 +40,83 @@ module.exports = (server) => {
     ])
   }
 
+  /** 
+  * @openapi
+  * /{customer}/task:
+  *   get:
+  *     summary: Get task list
+  *     description: Get a list of tasks from a specific customer.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: Customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved task information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.get('/:customer/task',
     identityMiddleware('viewer'),
     router.resolve.idToEntityByCustomer({ param: 'host', required: false }),
     controller.fetch
   )
+
+  /** 
+  * @openapi
+  * /{customer}/task:
+  *   get:
+  *     summary: Get specific task 
+  *     description: Get information of a task from a specific customer.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: Customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved task information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.get('/:customer/task/:task',
     identityMiddleware('viewer'),
@@ -53,10 +125,69 @@ module.exports = (server) => {
     controller.get
   )
 
+  /** 
+  * @openapi
+  * /task/version:
+  *   get:
+  *     summary: Get task version 
+  *     description: Get a list of tasks.
+  *     tags:
+  *       - Task
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved task information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.get('/task/version',
     identityMiddleware('admin'),
     controller.version
   )
+
+  /** 
+  * @openapi
+  * /{customer}/task:
+  *   post:
+  *     summary: Create task
+  *     description: Create task for a specific customer.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved task information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.post('/:customer/task',
     identityMiddleware('admin'),
@@ -65,6 +196,45 @@ module.exports = (server) => {
     controller.create,
     audit.afterCreate('task', { display: 'name' })
   )
+
+  /** 
+  * @openapi
+  * /{customer}/task/{task}:
+  *   patch:
+  *     summary: Update task
+  *     description: Update task for a specific customer.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated task information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.patch('/:customer/task/:task',
     identityMiddleware('admin'),
@@ -77,6 +247,45 @@ module.exports = (server) => {
     audit.afterUpdate('task', { display: 'name' })
   )
 
+  /** 
+  * @openapi
+  * /{customer}/task/{task}:
+  *   put:
+  *     summary: Update task
+  *     description: Update task for a specific customer.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated task information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.put('/:customer/task/:task',
     identityMiddleware('admin'),
     router.resolve.idToEntityByCustomer({ param: 'script', entity: 'file' }),
@@ -87,6 +296,45 @@ module.exports = (server) => {
     increaseVersion,
     audit.afterReplace('task', { display: 'name' })
   )
+
+  /** 
+  * @openapi
+  * /{customer}/task/{task}:
+  *   put:
+  *     summary: Delete task
+  *     description: Delete task from a specific customer.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully deleted task information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.del('/:customer/task/:task',
     identityMiddleware('admin'),

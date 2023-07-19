@@ -4,6 +4,46 @@ const router = require('../../router');
 const TaskConstants = require('../../constants')
 
 module.exports = (server) => {
+
+  /** 
+  * @openapi
+  * /{customer}/task/{task}/credentials:
+  *   get:
+  *     summary: Get task credentials
+  *     description: Get credentials from specific task.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: Customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved task information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.get(
     '/:customer/task/:task/credentials',
     [

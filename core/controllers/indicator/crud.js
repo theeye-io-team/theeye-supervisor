@@ -20,23 +20,26 @@ module.exports = function (server) {
   /** 
   * @openapi
   * /indicator:
-  *   summary: Get all indicators.
-  *   description: Returns a list of all indicators.
-  *   responses:
-  *     '200':
-  *       description: Successfully retrieved the list of indicators.
-  *       content:
-  *         application/json:
-  *           schema:
-  *             type: array
-  *             items:
+  *   get:
+  *     summary: Get all indicators.
+  *     description: Returns a list of all indicators.
+  *     tags:
+  *         - Indicator
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved the list of indicators.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Indicator'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
   *               $ref: '#/components/schemas/Indicator'
-  *     '401':
-  *       description: Authentication failed.
-  *       content:
-  *         application/json:
-  *           schema:
-  *             $ref: '#/components/schemas/Indicator'
   *
   */
 
@@ -45,31 +48,34 @@ module.exports = function (server) {
   /** 
   * @openapi
   * /indicator/{indicator}:
-  *   summary: Get one Indicator
-  *   description: Get only one indicator.
-  *   parameters:
-  *     - name: indicator
-  *       in: query
-  *       description: Indicator title
-  *       required: true
-  *       schema:
-  *         type: string
-  *   responses:
-  *     '200':
-  *       description: Successfully retrieved the indicator.
-  *       content:
-  *         application/json:
-  *           schema:
-  *             type: array
-  *             items:
-  *               $ref: '#/components/schemas/Indicator'
-  *     '401':
-  *       description: Authentication failed.
-  *       content:
-  *         application/json:
-  *           schema:
-  *             $ref: '#/components/schemas/Error'
-  *
+  *   get:
+  *     summary: Get one Indicator
+  *     description: Get only one indicator.
+  *     tags:
+  *         - Indicator
+  *     parameters:
+  *       - name: indicator
+  *         in: query
+  *         description: Indicator title
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved the indicator.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Indicator'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
   */
  
   server.get('/indicator/:indicator',
@@ -83,30 +89,31 @@ module.exports = function (server) {
   /** 
   * @openapi
   * /indicator/title/{title}:
-  *   summary: Get one Indicator by title
-  *   description: Get only one indicator.
-  *   parameters:
-  *     - name: title
-  *       in: query
-  *       description: Indicator title
-  *       required: true
-  *       schema:
-  *         type: string
-  *   responses:
-  *     '200':
-  *       description: Successfully retrieved the indicator.
-  *       content:
-  *         application/json:
-  *           schema:
-  *             type: array
-  *             items:
-  *               $ref: '#/components/schemas/Indicator'
-  *     '401':
-  *       description: Authentication failed.
-  *       content:
-  *         application/json:
-  *           schema:
-  *             $ref: '#/components/schemas/Error'
+  *   get:
+  *     summary: Get one Indicator by title
+  *     description: Get only one indicator.
+  *     parameters:
+  *       - name: title
+  *         in: query
+  *         description: Indicator title
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved the indicator.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Indicator'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
   *
   */
 
@@ -134,6 +141,8 @@ module.exports = function (server) {
   *   post:
   *     summary: Create a new indicator.
   *     description: Creates a new indicator and returns the indicator ID.
+  *     tags:
+  *       - Indicator
   *     requestBody:
   *       content:
   *         application/json:
@@ -175,9 +184,9 @@ module.exports = function (server) {
   * /indicator/{indicatorId}:
   *   put:
   *     summary: Update an existing Indicator by Id
-  *     tags:
-  *       - Indicators
   *     description: Change an Indicator.
+  *     tags:
+  *       - Indicator
   *     parameters:
   *       - name: indicatorId
   *         in: query
