@@ -49,11 +49,11 @@ module.exports = {
   },
   authentication: {
     // same key must be in every internal service
-    rs256: {
-      pub: join(__dirname, 'jwtRS256.key.pub'),
-      priv: join(__dirname, 'jwtRS256.key')
-    },
-    secret: '692fc164a0c06a9fd02575cf17688c9e',
+    //rs256: {
+    //  pub: join(__dirname, 'jwtRS256.key.pub'),
+    //  priv: join(__dirname, 'jwtRS256.key')
+    //},
+    secret: '2c1000c295ae613b031d3466db34ef021a5ae064',
     protocol: 'http', // http or https
     api: {
       timeout: 5000,

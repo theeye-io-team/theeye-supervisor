@@ -90,6 +90,7 @@ module.exports = {
       return new Promise((resolve, reject) => {
         let reqOpts = Object.assign({
           path: `${config.api.path.profile}?access_token=${token}`,
+          //path: `${config.api.path.profile}?access_token=${token}&scopes[]=id`,
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

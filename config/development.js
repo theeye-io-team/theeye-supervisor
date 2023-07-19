@@ -47,7 +47,7 @@ module.exports = {
       pub: join(__dirname, 'jwtRS256.key.pub'),
       priv: join(__dirname, 'jwtRS256.key')
     },
-    secret: '692fc164a0c06a9fd02575cf17688c9e'
+    secret: '2c1000c295ae613b031d3466db34ef021a5ae064'
   },
   monitor: {
     disabled: true,
