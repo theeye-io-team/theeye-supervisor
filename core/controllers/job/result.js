@@ -6,6 +6,37 @@ const AsyncMiddleware = require('../../lib/async-controller')
 const qs = require('qs')
 
 module.exports = (server) => {
+  /** 
+  * @openapi
+  * /job/{job}/result:
+  *   get:
+  *     summary: Get job result
+  *     description: Get result information from a single job.
+  *     tags:
+  *       - Job
+  *     parameters:
+  *       - name: job
+  *         in: query
+  *         description: job id
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved job information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Job'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.get('/job/:job/result',
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({required:true}),
@@ -16,6 +47,42 @@ module.exports = (server) => {
     resultPolling
   )
 
+  /** 
+  * @openapi
+  * /job/{job}/result:
+  *   post:
+  *     summary: Get job result
+  *     description: Get result information from a single job.
+  *     tags:
+  *       - Job
+  *     parameters:
+  *       - name: job
+  *         in: query
+  *         description: job id
+  *         schema:
+  *           type: string
+  *     requestBody:
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Job'
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved job information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Job'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.post('/job/:job/result',
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({required:true}),

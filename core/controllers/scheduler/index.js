@@ -82,6 +82,7 @@ module.exports = (server) => {
   *               $ref: '#/components/schemas/Error'
   *
   */
+ 
   server.del('/:customer/scheduler/:schedule',
     server.auth.bearerMiddleware,
     Router.requireCredential('admin'),
@@ -125,6 +126,7 @@ module.exports = (server) => {
   *               $ref: '#/components/schemas/Error'
   *
   */
+
   server.del('/scheduler/:schedule',
     server.auth.bearerMiddleware,
     Router.requireCredential('admin'),
@@ -172,6 +174,7 @@ module.exports = (server) => {
   *               $ref: '#/components/schemas/Error'
   *
   */
+
   server.put('/scheduler/:schedule/stop',
     server.auth.bearerMiddleware,
     Router.requireCredential('admin'),
@@ -219,6 +222,7 @@ module.exports = (server) => {
   *               $ref: '#/components/schemas/Error'
   *
   */
+
   server.put('/scheduler/:schedule/start',
     server.auth.bearerMiddleware,
     Router.requireCredential('admin'),

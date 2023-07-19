@@ -12,6 +12,8 @@ module.exports = (server) => {
   *   post:
   *     summary: Create a new job.
   *     description: Creates a new job by customer name.
+  *     tags:
+  *       - Job
   *     parameters:
   *     - name: customer
   *       in: query
@@ -45,6 +47,7 @@ module.exports = (server) => {
   *               $ref: '#/components/schemas/Error'
   *
   */
+
   server.post('/:customer/job',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -55,6 +58,41 @@ module.exports = (server) => {
     router.ensureAllowed({ entity: { name: 'task' } }),
     createJob
   )
+
+  /** 
+  * @openapi
+  * /job:
+  *   post:
+  *     summary: Create a new job.
+  *     description: Creates a new job.
+  *     tags:
+  *       - Job
+  *     requestBody:
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Job'
+  *     responses:
+  *       '201':
+  *         description: Successfully created a new job.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Job'
+  *       '400':
+  *         description: Invalid request data.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.post('/job',
     server.auth.bearerMiddleware,
@@ -72,6 +110,49 @@ module.exports = (server) => {
   )
 
   // create job using task secret key
+
+  /** 
+  * @openapi
+  * /job/secret/{secret}:
+  *   post:
+  *     summary: Create job with secret key.
+  *     description: Creates a new job by secret key.
+  *     tags:
+  *       - Job
+  *     parameters:
+  *     - name: secret
+  *       in: query
+  *       description: scret key
+  *       required: true
+  *       schema:
+  *         type: string
+  *     requestBody:
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Job'
+  *     responses:
+  *       '201':
+  *         description: Successfully created a new job.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Job'
+  *       '400':
+  *         description: Invalid request data.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.post('/job/secret/:secret',
     router.resolve.customerNameToEntity({ required: true }),
     router.resolve.idToEntity({ param: 'task', required: true }),

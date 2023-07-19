@@ -38,35 +38,35 @@ module.exports = function (server) {
   /** 
   * @openapi
   * /{customer}/resource:
-  *   summary: Get resources filtered by customer
-  *   description: Get all resources filtered by customer id.
-  *   tags:
-  *     - Resource
-  *   parameters:
-  *     - name: customer
-  *       in: query
-  *       description: customer id
-  *       required: true
-  *       schema:
-  *         type: string
-  *   responses:
-  *     '200':
-  *       description: Successfully retrieved resource information.
-  *       content:
-  *         application/json:
-  *           schema:
-  *             type: array
-  *             items:
-  *               $ref: '#/components/schemas/Resource'
-  *     '401':
-  *       description: Authentication failed.
-  *       content:
-  *         application/json:
-  *           schema:
-  *             $ref: '#/components/schemas/Error'
-  *
+  *   get:
+  *     summary: Get resources filtered by customer
+  *     description: Get all resources filtered by customer id.
+  *     tags:
+  *       - Resource
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved resource information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Resource'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
   */
-
   server.get(
     '/:customer/resource',
     server.auth.bearerMiddleware,
@@ -81,35 +81,35 @@ module.exports = function (server) {
   /** 
   * @openapi
   * /{customer}/resource/{resource}:
-  *   summary: Get specific resource filtered by customer
-  *   description: Get specific resource filtered by customer id.
-  *   tags:
-  *     - Resource
-  *   parameters:
-  *     - name: customer
-  *       in: query
-  *       description: customer id 
-  *       required: true
-  *       schema:
-  *         type: string
-  *   responses:
-  *     '200':
-  *       description: Successfully retrieved resource information.
-  *       content:
-  *         application/json:
-  *           schema:
-  *             type: array
-  *             items:
-  *               $ref: '#/components/schemas/Resource'
-  *     '401':
-  *       description: Authentication failed.
-  *       content:
-  *         application/json:
-  *           schema:
-  *             $ref: '#/components/schemas/Error'
-  *
+  *   get:
+  *     summary: Get specific resource filtered by customer
+  *     description: Get specific resource filtered by customer id.
+  *     tags:
+  *       - Resource
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: customer id 
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved resource information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Resource'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
   */
-
   server.get(
     '/:customer/resource/:resource',
     server.auth.bearerMiddleware,
@@ -168,7 +168,6 @@ module.exports = function (server) {
   *               $ref: '#/components/schemas/Error'
   *
   */
-
   server.patch(
     '/:customer/resource/:resource/state',
     middlewares,
@@ -229,7 +228,6 @@ module.exports = function (server) {
   *               $ref: '#/components/schemas/Error'
   *
   */
-
   server.put(
     '/:customer/resource/:resource',
     middlewares,
