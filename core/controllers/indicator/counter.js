@@ -7,6 +7,37 @@ const Constants = require('../../constants')
 
 module.exports = function (server) {
 
+  /** 
+  * @openapi
+  * /indicator/{indicator}/increase:
+  *   patch:
+  *     summary: Increase an Indicator
+  *     description: Increase an existing Indicator by Id
+  *     tags:
+  *       - Indicators
+  *     parameters:
+  *       - name: Indicator 
+  *         in: query
+  *         description: Indicator Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '201':
+  *         description: Successfully updated an indicator.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Indicator'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.patch('/indicator/:indicator/increase',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -18,6 +49,37 @@ module.exports = function (server) {
     audit.afterUpdate('indicator', { display: 'title' }),
     notifyEvent({ operation: Constants.UPDATE })
   )
+
+  /** 
+  * @openapi
+  * /indicator/title/{title}/increase:
+  *   patch:
+  *     summary: Increase an Indicator
+  *     description: Increase an existing Indicator by title
+  *     tags:
+  *       - Indicators
+  *     parameters:
+  *       - name: Title 
+  *         in: query
+  *         description: Indicator Name
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '201':
+  *         description: Successfully updated an indicator.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Indicator'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.patch('/indicator/title/:title/increase',
     server.auth.bearerMiddleware,
@@ -31,6 +93,37 @@ module.exports = function (server) {
     notifyEvent({ operation: Constants.UPDATE })
   )
 
+  /** 
+  * @openapi
+  * /indicator/{indicator}/decrease:
+  *   patch:
+  *     summary: Decrease an Indicator
+  *     description: Decrease an existing Indicator by Id
+  *     tags:
+  *       - Indicators
+  *     parameters:
+  *       - name: Indicator 
+  *         in: query
+  *         description: Indicator Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '201':
+  *         description: Successfully updated an indicator.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Indicator'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.patch('/indicator/:indicator/decrease',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -42,6 +135,37 @@ module.exports = function (server) {
     audit.afterUpdate('indicator', { display: 'title' }),
     notifyEvent({ operation: Constants.UPDATE })
   )
+
+  /** 
+  * @openapi
+  * /indicator/title/{title}/decrease:
+  *   patch:
+  *     summary: Decrease an Indicator
+  *     description: Decrease an existing Indicator by title
+  *     tags:
+  *       - Indicators
+  *     parameters:
+  *       - name: Title 
+  *         in: query
+  *         description: Indicator Name
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '201':
+  *         description: Successfully updated an indicator.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Indicator'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.patch('/indicator/title/:title/decrease',
     server.auth.bearerMiddleware,
@@ -55,6 +179,37 @@ module.exports = function (server) {
     notifyEvent({ operation: Constants.UPDATE })
   )
 
+  /** 
+  * @openapi
+  * /indicator/{indicator}/restart:
+  *   patch:
+  *     summary: Restart an Indicator
+  *     description: Restart an existing Indicator by Id
+  *     tags:
+  *       - Indicators
+  *     parameters:
+  *       - name: Indicator 
+  *         in: query
+  *         description: Indicator Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '201':
+  *         description: Successfully updated an indicator.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Indicator'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.patch('/indicator/:indicator/restart',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -66,6 +221,37 @@ module.exports = function (server) {
     audit.afterUpdate('indicator', { display: 'title' }),
     notifyEvent({ operation: Constants.UPDATE })
   )
+
+  /** 
+  * @openapi
+  * /indicator/title/{title}/restart:
+  *   patch:
+  *     summary: Restart an Indicator
+  *     description: Restart an existing Indicator by title
+  *     tags:
+  *       - Indicators
+  *     parameters:
+  *       - name: Title 
+  *         in: query
+  *         description: Indicator Name
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '201':
+  *         description: Successfully updated an indicator.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Indicator'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.patch('/indicator/title/:title/restart',
     server.auth.bearerMiddleware,
