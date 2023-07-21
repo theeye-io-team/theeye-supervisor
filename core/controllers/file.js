@@ -17,7 +17,38 @@ module.exports = (server) => {
     }
   })
 
-  // FETCH
+  /** 
+  * @openapi
+  * /{customer}/file:
+  *   get:
+  *     summary: Get scripts list
+  *     description: Get a list of scripts from customer.
+  *     tags:
+  *         - File
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved fileinformation.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/File'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.get('/:customer/file',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -37,7 +68,44 @@ module.exports = (server) => {
     fetchFiles
   )
 
-  // GET
+  /** 
+  * @openapi
+  * /{customer}/file/{file}:
+  *   get:
+  *     summary: Get script
+  *     description: Get a specific filefrom customer.
+  *     tags:
+  *         - File
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: File
+  *         in: query
+  *         description: File Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved fileinformation.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/File'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.get('/:customer/file/:file',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -47,7 +115,44 @@ module.exports = (server) => {
     getFile
   )
 
-  // DOWNLOAD SCRIPTS
+  /** 
+  * @openapi
+  * /{customer}/file/{file}/download:
+  *   get:
+  *     summary: Download script
+  *     description: Download a specific filefrom customer.
+  *     tags:
+  *         - File
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: File
+  *         in: query
+  *         description: File Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved fileinformation.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/File'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.get('/:customer/file/:file/download',
     server.auth.bearerMiddleware,
     router.requireCredential('user'),
@@ -65,6 +170,45 @@ module.exports = (server) => {
   )
 
   // GET LINKED MODELS
+
+  /** 
+  * @openapi
+  * /{customer}/file/{file}/linkedmodels:
+  *   get:
+  *     summary: Get script's linked models
+  *     description: Get script's linked models from customer.
+  *     tags:
+  *         - File
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: File
+  *         in: query
+  *         description: File Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved fileinformation.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/File'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.get('/:customer/file/:file/linkedmodels',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -74,7 +218,88 @@ module.exports = (server) => {
     getLinkedModels
   )
 
-  // UPDATE
+  /** 
+  * @openapi
+  * /{customer}/file:
+  *   post:
+  *     summary: Create script
+  *     description: Create filefor specific customer.
+  *     tags:
+  *         - File
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully created script.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/File'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+  server.post('/:customer/file',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    upload.single('file'),
+    createFile,
+    App.state.postCreate('file')
+    //audit.afterCreate('file', { display: 'filename' })
+  )
+
+  /** 
+  * @openapi
+  * /{customer}/file/{file}:
+  *   put:
+  *     summary: Update script
+  *     description: Update filefor specific customer.
+  *     tags:
+  *         - File
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: File
+  *         in: query
+  *         description: File Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated script.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/File'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.put('/:customer/file/:file',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -88,6 +313,45 @@ module.exports = (server) => {
     checkAfectedModels,
     //audit.afterUpdate('file', { display: 'filename' })
   )
+
+  /** 
+  * @openapi
+  * /{customer}/file/{file}/upload:
+  *   put:
+  *     summary: Upload script
+  *     description: Upload filefor specific customer.
+  *     tags:
+  *         - File
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: File
+  *         in: query
+  *         description: File Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully uploaded script.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/File'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.put('/:customer/file/:file/upload',
     server.auth.bearerMiddleware,
@@ -115,6 +379,44 @@ module.exports = (server) => {
     //audit.afterCreate('file', { display: 'filename' })
   )
 
+  /** 
+  * @openapi
+  * /{customer}/file/{file}/schema:
+  *   put:
+  *     summary: Update script's schema
+  *     description: Update script's schema for specific customer.
+  *     tags:
+  *         - File
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: File
+  *         in: query
+  *         description: File Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated script.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/File'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.put('/:customer/file/:file/schema',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -127,7 +429,44 @@ module.exports = (server) => {
     //audit.afterUpdate('file', { display: 'filename' })
   )
 
-  // DELETE
+  /** 
+  * @openapi
+  * /{customer}/file/{file}:
+  *   delete:
+  *     summary: Delete script
+  *     description: Delete filefrom specific customer.
+  *     tags:
+  *         - File
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: File
+  *         in: query
+  *         description: File Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully deleted script.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/File'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.del('/:customer/file/:file',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),

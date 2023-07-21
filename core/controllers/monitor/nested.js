@@ -15,6 +15,39 @@ module.exports = (server) => {
     router.ensureCustomer
   ]
 
+  /** 
+  * @openapi
+  * /monitor/nested/{resource}:
+  *   get:
+  *     summary: Get a nested monitor by Id.
+  *     description: Get a specific nested monitor by it's Id.
+  *     tags:
+  *         - Monitor
+  *     parameters:
+  *       - name: Resource
+  *         in: query
+  *         description: Resource Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved monitor information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Monitor'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.get(
     '/monitor/nested/:resource',
     middlewares,
@@ -23,6 +56,39 @@ module.exports = (server) => {
     router.ensureAllowed({ entity: { name: 'resource' } }),
     controller.get
   )
+
+  /** 
+  * @openapi
+  * /monitor/nested/{resource}:
+  *   put:
+  *     summary: Update a monitor by Id.
+  *     description: Update a specific monitor by it's Id.
+  *     tags:
+  *         - Monitor
+  *     parameters:
+  *       - name: Resource
+  *         in: query
+  *         description: Resource Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated monitor.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Monitor'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.put(
     '/monitor/nested/:resource',
@@ -33,6 +99,32 @@ module.exports = (server) => {
     controller.replace
   )
 
+  /** 
+  * @openapi
+  * /monitor/nested:
+  *   post:
+  *     summary: Create nested monitor.
+  *     description: Create a nested monitor.
+  *     tags:
+  *         - Monitor
+  *     responses:
+  *       '200':
+  *         description: Successfully created monitor.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Monitor'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.post(
     '/monitor/nested',
     middlewares,
@@ -40,6 +132,39 @@ module.exports = (server) => {
     router.filter.spawn({ filter: 'emailArray', param: 'acl' }),
     controller.create
   )
+
+  /** 
+  * @openapi
+  * /monitor/nested/{resource}:
+  *   delete:
+  *     summary: Delete nested monitor by Id.
+  *     description: Delete a specific nested monitor by it's Id.
+  *     tags:
+  *         - Monitor
+  *     parameters:
+  *       - name: Resource
+  *         in: query
+  *         description: Resource Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully deleted monitor.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Monitor'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.del(
     '/monitor/nested/:resource',

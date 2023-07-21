@@ -27,6 +27,40 @@ module.exports = (server) => {
   }
 
   // create a new workflow-job instance
+
+  /** 
+  * @openapi
+  * /workflows/{workflow}/job:
+  *   post:
+  *     summary: Create workflow-job instance.
+  *     description: Create a new workflow-job instance.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully created workflow instance.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.post('/workflows/:workflow/job',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -41,6 +75,46 @@ module.exports = (server) => {
   )
 
   // create job using task secret key
+
+  /** 
+  * @openapi
+  * /workflows/{workflow}/secret/{secret}/job:
+  *   post:
+  *     summary: Create workflow-job instance with key.
+  *     description: Create a new workflow-job instance using secret key.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Secret key
+  *         in: query
+  *         description: Secret key
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully created workflow instance.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.post('/workflows/:workflow/secret/:secret/job',
     router.resolve.idToEntity({ param: 'workflow', required: true }),
     router.resolve.idToEntity({ param: 'task' }),
@@ -63,6 +137,39 @@ module.exports = (server) => {
     controller.create
   )
 
+  /** 
+  * @openapi
+  * /workflows/{workflow}/job:
+  *   delete:
+  *     summary: Delete workflow-job instance.
+  *     description: Delete a new workflow-job instance.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully deleted workflow instance.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.del('/workflows/:workflow/job',
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
@@ -72,6 +179,45 @@ module.exports = (server) => {
     router.ensureCustomerBelongs('workflow'),
     controller.remove
   )
+
+  /** 
+  * @openapi
+  * /workflows/{workflow}/job/{job}:
+  *   get:
+  *     summary: Get workflow's job.
+  *     description: Returns workflow's job instance.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Job
+  *         in: query
+  *         description: Job Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved workflow information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.get('/workflows/:workflow/job/:job',
     server.auth.bearerMiddleware,
@@ -100,6 +246,46 @@ module.exports = (server) => {
   /**
    * fetch many workflow job information
    */
+
+  /** 
+  * @openapi
+  * /workflows/{workflow}/job/{job}/jobs:
+  *   get:
+  *     summary: Get workflow's jobs.
+  *     description: Returns workflow's jobs.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Job
+  *         in: query
+  *         description: Job Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved workflow information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.get('/workflows/:workflow/job/:job/jobs',
     server.auth.bearerMiddleware,
     router.requireCredential('viewer'),
@@ -139,6 +325,40 @@ module.exports = (server) => {
    * fetch all job instances
    *
    */
+
+  /** 
+  * @openapi
+  * /workflows/{workflow}/job:
+  *   get:
+  *     summary: Get all workflow's job instances.
+  *     description: Returns all workflow's instances.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved workflow information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.get('/workflows/:workflow/job',
     server.auth.bearerMiddleware,
     router.requireCredential('viewer'),
@@ -175,6 +395,40 @@ module.exports = (server) => {
   )
 
   // retrieve the inputs for all the executions
+
+  /** 
+  * @openapi
+  * /workflows/{workflow}/jobs/input:
+  *   get:
+  *     summary: Get workflow's job input.
+  *     description: Returns all workflow's jobs input.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved workflow information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.get('/workflows/:workflow/jobs/input',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -186,6 +440,45 @@ module.exports = (server) => {
     controller.input
   )
 
+  /** 
+  * @openapi
+  * /workflows/{workflow}/job/{job}/cancel:
+  *   put:
+  *     summary: Cancel workflow job.
+  *     description: Cancel specific workflow job.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Job
+  *         in: query
+  *         description: Job Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated workflow information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.put('/workflows/:workflow/job/:job/cancel',
     server.auth.bearerMiddleware,
     router.requireCredential('admin'),
@@ -194,6 +487,45 @@ module.exports = (server) => {
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
     controller.cancel
   )
+
+  /** 
+  * @openapi
+  * /workflows/{workflow}/job/{job}/acl:
+  *   put:
+  *     summary: Update workflow job's acl.
+  *     description: Update workflow job's acl.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Job
+  *         in: query
+  *         description: Job Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated workflow information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.put('/workflows/:workflow/job/:job/acl',
     server.auth.bearerMiddleware,

@@ -7,7 +7,7 @@ module.exports = (server) => {
 
   /** 
   * @openapi
-  * /{customer}/task/{task}/serialize
+  * /{customer}/task/{task}/serialize:
   *   get:
   *     summary: Get task recipe
   *     description: Get task recipe from specific task.
@@ -59,7 +59,7 @@ module.exports = (server) => {
 
   /** 
   * @openapi
-  * /{customer}/task/import
+  * /{customer}/task/import:
   *   get:
   *     summary: Import task recipe
   *     description: Import task recipe.

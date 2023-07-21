@@ -13,6 +13,32 @@ const crudv2 = require('./crudv2')
 module.exports = function (server) {
   const CRUD_TOPIC = TopicsConstants.workflow.crud
 
+  /** 
+  * @openapi
+  * /workflows:
+  *   get:
+  *     summary: Get all workflows.
+  *     description: Returns a list of all workflows.
+  *     tags:
+  *         - Workflow
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved the list of workflows.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.get('/workflows',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -33,6 +59,39 @@ module.exports = function (server) {
     }
   )
 
+  /** 
+  * @openapi
+  * /workflows/{workflow}:
+  *   get:
+  *     summary: Get workflow.
+  *     description: Returns a specific workflow.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved workflow.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.get('/workflows/:workflow',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -46,6 +105,32 @@ module.exports = function (server) {
     }
   )
 
+  /** 
+  * @openapi
+  * /workflows:
+  *   post:
+  *     summary: Create workflow.
+  *     description: Create a workflow.
+  *     tags:
+  *         - Workflow
+  *     responses:
+  *       '200':
+  *         description: Successfully created workflow.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.post('/workflows',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -56,6 +141,39 @@ module.exports = function (server) {
     ]),
     audit.afterCreate('workflow', { display: 'name', topic: CRUD_TOPIC })
   )
+
+  /** 
+  * @openapi
+  * /workflows/{workflow}:
+  *   delete:
+  *     summary: Delete workflow.
+  *     description: Delete specific workflow.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully deleted workflow.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.del('/workflows/:workflow',
     server.auth.bearerMiddleware,
@@ -71,6 +189,39 @@ module.exports = function (server) {
     audit.afterRemove('workflow', { display: 'name', topic: CRUD_TOPIC })
   )
 
+  /** 
+  * @openapi
+  * /workflows/{workflow}:
+  *   put:
+  *     summary: Update workflow.
+  *     description: Update specific workflow.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated workflow.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+    
   server.put('/workflows/:workflow',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),

@@ -27,6 +27,32 @@ module.exports = (server) => {
     router.ensureCustomer
   ]
 
+  /** 
+  * @openapi
+  * /monitor:
+  *   get:
+  *     summary: Get list of monitors.
+  *     description: Get a list of monitors.
+  *     tags:
+  *         - Monitor
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved the list of monitors.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Monitor'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.get('/monitor',
     middlewares,
     router.requireCredential('viewer'),
@@ -34,6 +60,39 @@ module.exports = (server) => {
     router.dbFilter(),
     controller.fetch
   )
+
+  /** 
+  * @openapi
+  * /monitor/{resource}:
+  *   get:
+  *     summary: Get a monitor by Id.
+  *     description: Get a specific monitor by it's Id.
+  *     tags:
+  *         - Monitor
+  *     parameters:
+  *       - name: Resource
+  *         in: query
+  *         description: Resource Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved monitor information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Monitor'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.get('/monitor/:resource',
     middlewares,
@@ -43,6 +102,39 @@ module.exports = (server) => {
     controller.get
   )
 
+  /** 
+  * @openapi
+  * /monitor/{resource}:
+  *   delete:
+  *     summary: Delete a monitor by Id.
+  *     description: Delete a specific monitor by it's Id.
+  *     tags:
+  *         - Monitor
+  *     parameters:
+  *       - name: Resource
+  *         in: query
+  *         description: Resource Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully deleted monitor.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Monitor'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.del('/monitor/:resource',
     middlewares,
     router.requireCredential('admin'),
@@ -50,6 +142,32 @@ module.exports = (server) => {
     controller.remove,
     audit.afterRemove('resource', { display: 'name', topic: crudTopic })
   )
+
+  /** 
+  * @openapi
+  * /monitor:
+  *   post:
+  *     summary: Create a monitor.
+  *     description: Create a monitor.
+  *     tags:
+  *         - Monitor
+  *     responses:
+  *       '200':
+  *         description: Successfully created monitor.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Monitor'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.post('/monitor',
     middlewares,
@@ -64,6 +182,39 @@ module.exports = (server) => {
     controller.create,
     //audit.afterCreate('resource', { display: 'name', topic: crudTopic })
   )
+
+  /** 
+  * @openapi
+  * /monitor/{resource}:
+  *   put:
+  *     summary: Update a monitor by Id.
+  *     description: Update a specific monitor by it's Id.
+  *     tags:
+  *         - Monitor
+  *     parameters:
+  *       - name: Resource
+  *         in: query
+  *         description: Resource Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated monitor.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Monitor'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.put('/monitor/:resource',
     middlewares,
@@ -83,6 +234,40 @@ module.exports = (server) => {
   /**
    * update single properties with custom behaviour
    */
+
+  /** 
+  * @openapi
+  * /monitor/{resource}/alerts:
+  *   patch:
+  *     summary: Update monitor's properties by Id.
+  *     description: Update a specific monitor's properties by it's Id.
+  *     tags:
+  *         - Monitor
+  *     parameters:
+  *       - name: Resource
+  *         in: query
+  *         description: Resource Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated monitor.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Monitor'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.patch('/monitor/:resource/alerts',
     middlewares,
     router.requireCredential('admin'),
