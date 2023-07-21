@@ -4,6 +4,46 @@ const router = require('../../router');
 const TaskConstants = require('../../constants')
 
 module.exports = (server) => {
+
+  /** 
+  * @openapi
+  * /{customer}/task/{task}/serialize
+  *   get:
+  *     summary: Get task recipe
+  *     description: Get task recipe from specific task.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: Customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved task recipe.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.get(
     '/:customer/task/:task/serialize',
     [
@@ -16,6 +56,39 @@ module.exports = (server) => {
     ],
     controller.serialize
   )
+
+  /** 
+  * @openapi
+  * /{customer}/task/import
+  *   get:
+  *     summary: Import task recipe
+  *     description: Import task recipe.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: Customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully imported task.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.post(
     '/:customer/task/import',

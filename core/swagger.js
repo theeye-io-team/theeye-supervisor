@@ -23,8 +23,14 @@ const options = {
     'core/controllers/recipe/crud.js',
     'core/controllers/resource/index.js',
     'core/controllers/scheduler/index.js',
-    
+    'core/controllers/task/acl.js',
+    'core/controllers/task/crud.js',
+    'core/controllers/task/integrations.js',
+    'core/controllers/task/job.js',
+    'core/controllers/task/scheduler.js',
+    'core/controllers/task/serialize.js',
     'core/controllers/usage/index.js'
+    
   ]  // files containing annotations as above
 };
 
