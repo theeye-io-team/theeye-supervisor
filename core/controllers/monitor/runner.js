@@ -3,6 +3,33 @@ const router = require('../../router')
 const logger = require('../../lib/logger')('controller:monitor:runner')
 
 module.exports = (server) => {
+
+  /** 
+  * @openapi
+  * /monitor/runner:
+  *   get:
+  *     summary: Get monitor job runner.
+  *     description: Get a specific monitor's job runner.
+  *     tags:
+  *         - Monitor
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved monitor job information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Monitor'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.get('/monitor/runner',
     server.auth.bearerMiddleware,
     router.requireCredential('admin'),
@@ -14,6 +41,33 @@ module.exports = (server) => {
   )
 
   // create job runner
+
+  /** 
+  * @openapi
+  * /monitor/runner:
+  *   post:
+  *     summary: Create monitor job runner.
+  *     description: Create a specific monitor's job runner.
+  *     tags:
+  *         - Monitor
+  *     responses:
+  *       '200':
+  *         description: Successfully created monitor job runner.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Monitor'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.post('/monitor/runner',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -26,6 +80,40 @@ module.exports = (server) => {
   )
 
   // remove runner
+
+  /** 
+  * @openapi
+  * /monitor/nested/{resource}:
+  *   delete:
+  *     summary: Delete monitor runner.
+  *     description: Delete a specific monitor's runner.
+  *     tags:
+  *         - Monitor
+  *     parameters:
+  *       - name: Monitor
+  *         in: query
+  *         description: Monitor Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully deleted monitor runner.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Monitor'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.del('/monitor/runner/:monitor',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),

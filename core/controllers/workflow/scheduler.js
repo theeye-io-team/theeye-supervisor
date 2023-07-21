@@ -9,6 +9,39 @@ const payloadValidationMiddleware = require('../scheduler/payload-validation-mid
 
 module.exports = (server) => {
 
+  /** 
+  * @openapi
+  * /workflows/{workflow}/schedule:
+  *   get:
+  *     summary: Get workflow's schedule.
+  *     description: Get specific workflow's schedule.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved workflow information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.get('/workflows/:workflow/schedule',
     server.auth.bearerMiddleware,
     Router.requireCredential('viewer'),
@@ -18,6 +51,39 @@ module.exports = (server) => {
     Router.ensureAllowed({ entity: { name: 'workflow' } }),
     fetch
   )
+
+  /** 
+  * @openapi
+  * /workflows/{workflow}/schedule:
+  *   post:
+  *     summary: Create workflow schedule.
+  *     description: Create specific workflow schedule.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated workflow information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.post('/workflows/:workflow/schedule',
     server.auth.bearerMiddleware,

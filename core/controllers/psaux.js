@@ -17,7 +17,74 @@ module.exports = function (server) {
     router.resolve.hostnameToHost({required:true})
   ]
 
+  /** 
+  * @openapi
+  * /{customer}/psaux/{hostname}:
+  *   post:
+  *     summary: Create psaux
+  *     description: Create psaux for specific customer.
+  *     tags:
+  *         - Psaux
+  *     parameters:
+  *       - name: Host
+  *         in: query
+  *         description: Host Name
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully created.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Psaux'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
 	server.post('/:customer/psaux/:hostname', middlewares, create)
+
+  /** 
+  * @openapi
+  * /psaux/{hostname}:
+  *   get:
+  *     summary: Create psaux
+  *     description: Create psaux for specific customer.
+  *     tags:
+  *         - Psaux
+  *     parameters:
+  *       - name: Host
+  *         in: query
+  *         description: Host Name
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully created host group.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Psaux'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
 	server.post('/psaux/:hostname', middlewares, create)
 }
 

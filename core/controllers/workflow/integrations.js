@@ -3,6 +3,40 @@ const logger = require('../../lib/logger')('controller:task:integrations');
 const router = require('../../router');
 
 module.exports = (server) => {
+
+  /** 
+  * @openapi
+  * /workflows/{workflow}/credentials:
+  *   get:
+  *     summary: Get workflow credentials.
+  *     description: Returns workflow's credentials.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved workflow information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.get(
     '/workflows/:workflow/credentials',
     server.auth.bearerMiddleware,

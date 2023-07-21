@@ -11,6 +11,55 @@ const Constants = require('../constants')
 const TopicsConstants = require('../constants/topics')
 
 module.exports = function (server) {
+
+  /** 
+  * @openapi
+  * /{customer}/dstat/{hostname}:
+  *   post:
+  *     summary: Create dstat.
+  *     description: Create dstat.
+  *     tags:
+  *       - Dstat
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Hostname
+  *         in: query
+  *         description: Host name
+  *         required: true
+  *         schema:
+  *           type: string
+  *     requestBody:
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Dstat'
+  *     responses:
+  *       '201':
+  *         description: Dstat created successfully.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Dstat'
+  *       '400':
+  *         description: Invalid request data.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.post('/:customer/dstat/:hostname',[
     server.auth.bearerMiddleware,
     router.requireCredential('agent'),

@@ -11,6 +11,46 @@ module.exports = function (server) {
     router.ensureCustomer,
     router.resolve.idToEntity({param:'host',required:true})
   ]
+
+  /** 
+  * @openapi
+  * /{customer}/host/{host}/stats:
+  *   get:
+  *     summary: Get host's stats
+  *     description: Get host's stats from specific customer.
+  *     tags:
+  *         - Host Stats
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Host
+  *         in: query
+  *         description: Host Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved host information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Hoststats'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.get('/:customer/host/:host/stats', middlewares, controller.fetch)
 }
 
