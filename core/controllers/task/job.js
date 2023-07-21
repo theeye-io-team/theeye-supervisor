@@ -11,6 +11,40 @@ module.exports = (server) => {
   /**
    * fetch many jobs information
    */
+
+  /** 
+  * @openapi
+  * /task/{task}/job/queue:
+  *   get:
+  *     summary: Get task's job queue
+  *     description: Get job queue from specific task.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: Task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved task information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.get('/task/:task/job/queue',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -19,6 +53,45 @@ module.exports = (server) => {
     router.resolve.idToEntity({ param: 'task', required: true }),
     queueController
   )
+
+  /** 
+  * @openapi
+  * /{customer}/task/{task}/job:
+  *   delete:
+  *     summary: Delete task jobs
+  *     description: Delete jobs from specific task.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: Customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully deleted jobs.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.del('/:customer/task/:task/job',
     server.auth.bearerMiddleware,
@@ -29,6 +102,45 @@ module.exports = (server) => {
     router.ensureCustomerBelongs('task'),
     remove
   )
+
+  /** 
+  * @openapi
+  * /{customer}/task/{task}/job:
+  *   post:
+  *     summary: Start task
+  *     description: Start a specific task.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully created task job.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.post('/:customer/task/:task/job',
     server.auth.bearerMiddleware,
@@ -43,6 +155,46 @@ module.exports = (server) => {
   //
   // new version
   //
+
+  /** 
+  * @openapi
+  * /task/{task}/job:
+  *   post:
+  *     summary: Start task
+  *     description: Start a specific task.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully started task.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.post('/task/:task/job',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -51,6 +203,51 @@ module.exports = (server) => {
     router.ensureAllowed({ entity: { name: 'task' } }),
     createJob
   )
+
+  /** 
+  * @openapi
+  * /{customer}/task/{task}/secret/{secret}/job:
+  *   post:
+  *     summary: Start task with key
+  *     description: Start a specific task with secret key.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Key
+  *         in: query
+  *         description: Secret key
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully started task.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.post('/:customer/task/:task/secret/:secret/job',
     router.resolve.idToEntity({ param: 'task', required: true }),
@@ -71,6 +268,45 @@ module.exports = (server) => {
     },
     createJob
   )
+
+  /** 
+  * @openapi
+  * /task/{task}/secret/{secret}/job:
+  *   post:
+  *     summary: Start task with key
+  *     description: Start a specific task with secret key.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: Task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Key
+  *         in: query
+  *         description: Secret key
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully started task.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.post('/task/:task/secret/:secret/job',
     router.resolve.idToEntity({ param: 'task', required: true }),
