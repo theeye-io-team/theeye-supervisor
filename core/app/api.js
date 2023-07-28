@@ -3,7 +3,6 @@ const config = require('config')
 const router = require('../router')
 const logger = require('../lib/logger')(':app:api')
 const ErrorHandler = require('../lib/error-handler')
-const swagger = require('../swagger') 
 const restifySwaggerJsdoc = require('restify-swagger-jsdoc');
 
 

@@ -10,7 +10,5 @@ fi
 export MONITORING_DISABLED=""
 export SCHEDULER_JOBS_DISABLED=""
 
-node $PWD/core/swagger.js
-
 npx nodemon ${1} $PWD/core/main.js
 #node ${1} $PWD/core/main.js
