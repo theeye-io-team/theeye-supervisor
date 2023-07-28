@@ -23,7 +23,8 @@
     "test": "NODE_ENV=localdev ./node_modules/.bin/mocha --exit",
     "workspace": "./workspace/start.sh",
     "build": "docker build . --tag 'theeye-supervisor:2.0.0'",
-    "release": "npx standard-version -t ''"
+    "release": "npx standard-version -t ''",
+    "swagger":"NODE_ENV=localdev node core/swagger"
   },
   "dependencies": {
     "@sentry/node": "~7.7.0",
