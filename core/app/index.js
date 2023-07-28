@@ -78,7 +78,7 @@ App.boot = async (config) => {
     return {}
   }
 
-  swaggerInit(App)
+  //swaggerInit(App)
 
   start()
 }
@@ -95,20 +95,20 @@ const createRedisClient = async (App) => {
   App.redis = redisClient
 }
 
-const swaggerInit = (App) => {
-  const swagger = {
-    components: { schemas: { } }
-  }
-
-  for (let modelName in App.Models) {
-    const model = App.Models[modelName]
-    if (model.swagger) {
-      Object.assign(
-        swagger.components.schemas,
-        model.swagger.components.schemas
-      )
-    }
-  }
-
-  console.log(swagger)
-}
+//const swaggerInit = (App) => {
+//  const swagger = {
+//    components: { schemas: { } }
+//  }
+//
+//  for (let modelName in App.Models) {
+//    const model = App.Models[modelName]
+//    if (model.swagger) {
+//      Object.assign(
+//        swagger.components.schemas,
+//        model.swagger.components.schemas
+//      )
+//    }
+//  }
+//
+//  console.log(swagger)
+//}
