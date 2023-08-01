@@ -54,6 +54,7 @@ module.exports = {
     //  priv: join(__dirname, 'jwtRS256.key')
     //},
     secret: '2c1000c295ae613b031d3466db34ef021a5ae064',
+    expiresIn: 10,
     protocol: 'http', // http or https
     api: {
       timeout: 5000,
