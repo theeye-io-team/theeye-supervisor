@@ -9,24 +9,32 @@ module.exports = ({ task, body, query }) => {
       throw new ClientError(`Task arguments required`)
     }
 
-    body || (body={})
-    query || (query={})
-
-    const argumentsLengthError = new ClientError(`Invalid Task Arguments. An array of length ${dynamicTaskArgs.length} is required. Optionals must be null`)
-
-    args = (body.task_arguments || query.task_arguments)
-    if (!args) {
-      if (Array.isArray(body)) {
-        args = body
-      } else {
-        throw argumentsLengthError
-      }
+    //
+    // basic supported options.
+    //
+    // task_arguments param: it must be an array of values.
+    const argsParam = (body?.task_arguments || query?.task_arguments)
+    if (argsParam) {
+      args = argsParam
+    } else if (Array.isArray(body)) {
+      // body: is an array of values.
+      args = body
+    } else {
+      // there is a JSON body or a list of values encoded in the query
+      // map the value the first value of an array to be used as first argument
+      const value = (body || query)
+      args = [ value ]
     }
 
     if (!Array.isArray(args) || args.length < dynamicTaskArgs.length) {
-      throw argumentsLengthError
+      throw new ArgumentsLengthError(dynamicTaskArgs.length)
     }
   }
 
   return args
+}
+
+function ArgumentsLengthError (length) {
+  const msg = `Invalid Task Arguments. An array of length ${length} is required. Optionals must be null`
+  return new ClientError(msg)
 }
