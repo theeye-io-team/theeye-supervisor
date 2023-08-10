@@ -7,7 +7,7 @@ const JobConstants = require('../../constants/jobs')
 module.exports = (server) => {
   server.post('/:customer/job',
     server.auth.bearerMiddleware,
-    router.resolve.customerNameToEntity({ required: true }),
+    router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     router.requireCredential('user'),
     router.resolve.idToEntity({ param: 'task', required: true }),
@@ -42,16 +42,3 @@ module.exports = (server) => {
     createJob
   )
 }
-
-//const createFromFiles = (req, res, next) => {
-//
-//  const form = formidable({ multiples: true })
-//
-//  form.parse(req, (err, fields, files) => {
-//    if (err) {
-//      res.sendError(err)
-//      return;
-//    }
-//    res.send(200,{ fields, files })
-//  })
-//}

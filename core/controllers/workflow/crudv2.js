@@ -6,8 +6,6 @@ const App = require('../../app')
 const logger = require('../../lib/logger')('controller:workflow:crudv2')
 const AsyncController = require('../../lib/async-controller')
 const { ClientError, ServerError } = require('../../lib/error-handler')
-//const formidable = require('formidable')
-//const form = formidable({ multiples: true })
 const WorkflowConstants = require('../../constants/workflow')
 
 module.exports = {
