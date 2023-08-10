@@ -220,6 +220,25 @@ const updateFile = async (req, res, next) => {
     const fileUploaded = req.files.file
     const params = req.params
 
+    let acl
+    if (params.acl) {
+      acl = params.acl
+      if (!Array.isArray(acl)) {
+        let parsed
+        try {
+          parsed = JSON.parse(acl)
+        } catch (err) { }
+
+        if (!Array.isArray(parsed)) {
+          throw new ClientError('Invalid ACL definition')
+        }
+
+        acl = parsed
+      }
+    } else {
+      acl = fileModel.acl
+    }
+
     if (!fileUploaded) {
       throw new ClientError('File and filename are required')
     }
@@ -241,7 +260,7 @@ const updateFile = async (req, res, next) => {
 
     const data = {
       filename: fileUploaded.name,
-      acl: params.acl,
+      acl,
       mimetype: params.mimetype,
       extension: params.extension,
       description: params.description,
