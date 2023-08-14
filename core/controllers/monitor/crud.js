@@ -21,8 +21,9 @@ module.exports = (server) => {
   const middlewares = [
     server.auth.bearerMiddleware,
     async (req, res, next) => {
-      const customer = req.user.current_customer
-      req.customer = await App.Models.Customer.Entity.findById(customer.id)
+      //const customer = req.session.customer
+      //req.customer = await App.Models.Customer.Entity.findById(customer.id)
+      req.customer = req.session.customer
       next()
     },
     router.ensureCustomer

@@ -19,7 +19,7 @@ module.exports = {
       return this.accessLevel(current) >= this.accessLevel(required)
     }
   },
-  ensureAllowed ({ email, credential, model }) {
+  ensureAllowed ({ email, grants, credential, model }) {
     // admins are allowed
     if (this.hasAccessLevel(credential, 'admin')) {
       return
@@ -29,7 +29,11 @@ module.exports = {
       throw ForbiddenError
     }
 
-    if (model.acl.indexOf(email) === -1) {
+    if (Array.isArray(grants)) {
+      // grants are all the permissions granted to the principal
+      const found = grants.find(grant => (model.acl.indexOf(grants) === -1))
+      if (!found) { throw ForbiddenError }
+    } else if (!email || model.acl.indexOf(email) === -1) {
       throw ForbiddenError
     }
 

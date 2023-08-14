@@ -9,7 +9,6 @@ const config = require('config').authentication
 
 module.exports = {
   initialize () {
-
     const request = config.protocol === 'https' ? https.request : http.request
 
     const requestOptions = {
@@ -43,13 +42,14 @@ module.exports = {
         //
         // WARNING!! Integration Tokens cannot be verified using JWT.verify
         //
-        // 2023/09/06. Most of the Integration tokens were issued with the wrong expiration date and are all expired. Tokens can be verified against living session that exists in db and cache. This is being checked using the Gateway API.
+        // 2023/09/06. Most of the Integration tokens were issued already expired. Tokens can still be verified against session stored in db by the Gateway API.
         //
         logger.log('new connection [bearer]')
         // @TODO use cache
         const response = await fetchGatewayProfile(token)
         if (response.statusCode === 200) {
-          let profile = JSON.parse(response.rawBody)
+          const profile = JSON.parse(response.rawBody)
+          profile.token = token
           return done(null, profile)
         } else {
           logger.error(response.rawBody, response.statusCode)
@@ -78,19 +78,34 @@ module.exports = {
           res.send(401, 'Unauthorized')
           //next(null, false)
         } else {
-          req.user = profile
+          const { principal, organization, member } = profile
+          req.user = principal 
+          req.user.credential = member.credential // re-map
           // get customer for the session
-          req.session = { customer: profile.current_customer.name }
+          req.session = {
+            token: profile.token, 
+            customer: organization,
+            customer_name: organization.name,
+            member,
+            credential: member.credential
+          }
           next()
         }
       }, { session: false })(req, res, next)
     }
 
     const fetchGatewayProfile = (token) => {
+      const qs = [
+        `access_token=${token}`,
+        'scopes[]=principal',
+        'scopes[]=organization',
+        'scopes[]=member'
+      ].join('&')
+
       return new Promise((resolve, reject) => {
         let reqOpts = Object.assign({
-          path: `${config.api.path.profile}?access_token=${token}`,
-          //path: `${config.api.path.profile}?access_token=${token}&scopes[]=id`,
+          //path: `${config.api.path.profile}?access_token=${token}`,
+          path: `${config.api.path.profile}?${qs}`,
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -141,4 +156,3 @@ module.exports = {
     return { bearerMiddleware }
   }
 }
-

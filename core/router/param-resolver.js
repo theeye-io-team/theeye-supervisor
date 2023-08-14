@@ -165,12 +165,12 @@ module.exports = {
     options||(options={})
 
     return (req, res, next) => {
-      var hostname = (
+      const hostname = (
         req.params.hostname ||
         (req.body && req.body.hostname) ||
         req.query.hostname
       )
-      var customer = req.customer
+      const customer = req.customer
 
       if (!customer) {
         logger.debug('no customer yet present');
@@ -213,7 +213,7 @@ module.exports = {
         throw new Error('authentication middleware must go first')
       }
 
-      const name = req.session.customer
+      const name = req.session?.customer_name
       if (!name) {
         return res.send(403, 'session organization is not set')
       }
@@ -246,7 +246,7 @@ module.exports = {
         req.params.customer ||
         (req.body && req.body.customer) ||
         (req.query && req.query.customer) ||
-        (req.session && req.session.customer)
+        (req.session?.customer_name)
       )
 
       if (!name) {
@@ -306,7 +306,7 @@ module.exports = {
       const value = (
         (req.body && req.body.customer) ||
         (req.query && req.query.customer) ||
-        (req.session && req.session.customer)
+        (req.session?.customer_name)
       )
 
       if (!value) {
