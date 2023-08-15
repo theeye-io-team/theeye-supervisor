@@ -3,11 +3,9 @@ const after = require('lodash/after')
 
 const App = require('../../app')
 const router = require('../../router')
-const dbFilter = require('../../lib/db-filter')
 const audit = require('../../lib/audit')
 const TopicsConstants = require('../../constants/topics')
 const MonitorConstants = require('../../constants/monitors')
-const ACL = require('../../lib/acl')
 const logger = require('../../lib/logger')('controller:monitor')
 
 const Host = require('../../entity/host').Entity
@@ -32,6 +30,8 @@ module.exports = (server) => {
   server.get('/monitor',
     middlewares,
     router.requireCredential('viewer'),
+    router.ensurePermissions(),
+    router.dbFilter(),
     controller.fetch
   )
 
@@ -60,7 +60,7 @@ module.exports = (server) => {
       required: true,
       into: 'host'
     }),
-    router.filter.spawn({ filter: 'emailArray', param: 'acl' }),
+    //router.filter.spawn({ filter: 'emailArray', param: 'acl' }),
     controller.create,
     //audit.afterCreate('resource', { display: 'name', topic: crudTopic })
   )
@@ -75,7 +75,7 @@ module.exports = (server) => {
       required: true,
       into: 'host'
     }),
-    router.filter.spawn({ filter: 'emailArray', param: 'acl' }),
+    //router.filter.spawn({ filter: 'emailArray', param: 'acl' }),
     replace,
     audit.afterReplace('resource', { display: 'name', topic: crudTopic  })
   )
@@ -118,19 +118,8 @@ const controller = {
    *
    */
   fetch (req, res, next) {
-    const filter = dbFilter(req.query, {
-      sort: {
-        fails_count: -1,
-        type: 1
-      }
-    })
-
-    filter.where.customer_id = req.customer.id;
-    if ( !ACL.hasAccessLevel(req.user.credential,'admin') ) {
-      // find what this user can access
-      filter.where.acl = req.user.email
-    }
-
+    const filter = req.dbQuery
+    filter.sort = { fails_count: -1, type: 1 }
     App.resource.fetchBy(filter, (err, resources) => {
       if (err) {
         logger.error(err)
@@ -162,7 +151,7 @@ const controller = {
       const body = req.body
       const host = req.host
 
-      body.acl = req.acl
+      //body.acl = req.acl
 
       let params = App.resourceMonitor.validateData(body)
       if (params.errors && params.errors.hasErrors()) {
@@ -273,9 +262,9 @@ const replace = async (req, res, next) => {
       updates.looptime = body.looptime
       updates.description = body.description
       updates.tags = body.tags
-      updates.acl = req.acl
+      updates.acl = body.acl
     } else {
-      Object.assign(updates, params.data, { acl: req.acl })
+      Object.assign(updates, params.data)
     }
 
     updates.failure_severity = verifyFailureSeverity(body.failure_severity)

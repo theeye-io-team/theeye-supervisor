@@ -11,8 +11,9 @@ module.exports = function (server) {
   server.get('/:customer/task/:task/schedule',
     server.auth.bearerMiddleware,
     Router.requireCredential('viewer'),
-    Router.resolve.customerNameToEntity({ required: true }),
+    Router.resolve.customerSessionToEntity(),
     Router.ensureCustomer,
+    Router.ensurePermissions(),
     Router.resolve.idToEntity({ param:'task', required: true }),
     Router.ensureAllowed({ entity: { name: 'task' } }),
     fetch
@@ -21,8 +22,9 @@ module.exports = function (server) {
   server.post('/:customer/task/:task/schedule',
     server.auth.bearerMiddleware,
     Router.requireCredential('admin'),
-    Router.resolve.customerNameToEntity({ required: true }),
+    Router.resolve.customerSessionToEntity(),
     Router.ensureCustomer,
+    Router.ensurePermissions(),
     Router.resolve.idToEntity({ param:'task', required: true }),
     // @TODO-DEPRECATED_REMOVE Middleware
     // backward compatibility middleware

@@ -4,7 +4,6 @@ const App = require('../../app')
 const ACL = require('../../lib/acl')
 const audit = require('../../lib/audit')
 const Constants = require('../../constants/task')
-const dbFilter = require('../../lib/db-filter')
 const Host = require('../../entity/host').Entity
 //const IntegrationConstants = require('../../constants/integrations')
 const LifecycleConstants = require('../../constants/lifecycle')
@@ -37,6 +36,8 @@ module.exports = (server) => {
     router.requireCredential('viewer'),
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
+    router.ensurePermissions(),
+    router.dbFilter(),
     controller.fetchRunningCounters
   )
 
@@ -45,6 +46,8 @@ module.exports = (server) => {
     router.requireCredential('viewer'),
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
+    router.ensurePermissions(),
+    router.dbFilter(),
     controller.fetchRunning
   )
 
@@ -55,6 +58,8 @@ module.exports = (server) => {
     middlewares,
     router.requireCredential('viewer'),
     router.resolve.hostnameToHost(),
+    router.ensurePermissions(),
+    router.dbFilter(),
     (req, res, next) => {
       if (req.user.credential === 'agent') {
         controller.queue(req, res, next)
@@ -157,8 +162,7 @@ const controller = {
     const customer = req.customer
     const user = req.user
 
-    const filters = dbFilter(req.query, { /** default **/ })
-    filters.where.customer_id = customer._id.toString()
+    const filters = req.dbQuery
 
     filters.include = Object.assign(filters.include, {
       task_arguments_values: 0,
@@ -169,11 +173,8 @@ const controller = {
       script: 0
     })
 
-    if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
-      filters.where.acl = req.user.email
-    }
-
-    App.Models.Job.Job.fetchBy(filters)
+    App.Models.Job.Job
+      .fetchBy(filters)
       .then(jobs => {
         res.send(200, jobs)
         next()
@@ -183,12 +184,10 @@ const controller = {
   fetchRunning (req, res, next) {
     const customer = req.customer
     const user = req.user
-    const query = req.query
 
     logger.log('querying jobs')
 
-    const filters = dbFilter(query, { /** default **/ })
-    filters.where.customer_id = customer._id.toString()
+    const filters = req.dbQuery
     filters.where.lifecycle = {
       $in: [
         LifecycleConstants.READY,
@@ -210,11 +209,6 @@ const controller = {
     //  creation_date: 1
     //}
 
-    if ( !ACL.hasAccessLevel(req.user.credential, 'admin') ) {
-      // find what this user can access
-      filters.where.acl = req.user.email
-    }
-
     //filters.limit = 1
     App.Models.Job.Job.fetchBy(filters, (err, jobs) => {
       if (err) {
@@ -233,11 +227,9 @@ const controller = {
     try {
       const customer = req.customer
       const user = req.user
-      const query = req.query
 
       logger.log('querying jobs counters')
-      const filters = dbFilter(query, { /** default **/ })
-      filters.where.customer_id = customer._id.toString()
+      const filters = req.dbQuery
       filters.where.lifecycle = {
         $in: [
           LifecycleConstants.READY,
@@ -250,22 +242,19 @@ const controller = {
 
       const $match = filters.where
 
-      if ( !ACL.hasAccessLevel(req.user.credential, 'admin') ) {
-        // find what this user can access
-        $match.acl = req.user.email
-      }
-
-      const counters = await App.Models.Job.Job.aggregate([
-        { $match }, {
-          $group: {
-            _id: {
-              task: "$task_id",
-              workflow: "$workflow_id"
-            },
-            count: { $sum: 1 }
+      const counters = await App.Models.Job
+        .Job
+        .aggregate([
+          { $match }, {
+            $group: {
+              _id: {
+                task: "$task_id",
+                workflow: "$workflow_id"
+              },
+              count: { $sum: 1 }
+            }
           }
-        }
-      ])
+        ])
 
       res.send(200, counters)
       next()
