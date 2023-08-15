@@ -16,29 +16,26 @@ module.exports = {
       return this.accessLevel(current) >= this.accessLevel(required)
     }
   },
-  ensureAllowed ({ email, grants, credential, model }) {
+  ensureAllowed ({ permissions, credential, model }) {
     // admins are allowed
     if (this.hasAccessLevel(credential, 'admin')) {
       return
     }
 
-    if (!model.acl || !Array.isArray(model.acl) || model.acl.length === 0) {
+    if (
+      !model.acl ||
+      !Array.isArray(model.acl) ||
+      model.acl.length === 0
+    ) {
       throw new ForbiddenError()
     }
 
     // grants are all the permissions granted to the principal
-    if (Array.isArray(grants)) {
+    if (Array.isArray(permissions)) {
       let found
-      for (let order = 0; order < grants.length && !found; order++) {
-        let grant = grants[order]
-        // remap. convert to string
-        if (grant.hasOwnProperty('k') && grant.hasOwnProperty('v')) {
-          grant = `${grant.k}:${grant.v}`
-        } else if (typeof grant !== 'string') {
-          grant = grant.toString()
-        }
-
-        found = (model.acl.indexOf(grant) === -1)
+      for (let order = 0; order < permissions.length && !found; order++) {
+        const perm = permissions[order]
+        found = (model.acl.indexOf(perm?.value) === -1)
       }
       if (!found) {
         throw new ForbiddenError()
