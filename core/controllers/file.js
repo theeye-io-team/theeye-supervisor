@@ -4,9 +4,7 @@ const multer = require('multer')
 const config = require('config')
 const App = require('../app')
 const router = require('../router')
-const ACL = require('../lib/acl')
 const logger = require('../lib/logger')('eye:controller:file')
-const dbFilter = require('../lib/db-filter')
 const FileHandler = require('../lib/file')
 const { ClientError, ServerError } = require('../lib/error-handler')
 
@@ -24,6 +22,17 @@ module.exports = (server) => {
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
+    router.ensurePermissions(),
+    router.dbFilter(),
+    fetchFiles
+  )
+
+  // FETCH
+  server.get('/file',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.dbFilter(),
     fetchFiles
   )
 
@@ -136,17 +145,8 @@ module.exports = (server) => {
  *
  */
 const fetchFiles = (req, res, next) => {
-  const customer = req.customer
-  const query = req.query
-  const filter = dbFilter(query, { sort: { filename: 1 } })
-  filter.where.customer_id = customer.id
-
-  if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
-    // find what this user can access
-    filter.where.acl = req.user.email
-  }
-
-  App.Models.File.File.fetchBy(filter, (error, files) => {
+  req.dbQuery.sort = { filename: 1 }
+  App.Models.File.File.fetchBy(req.dbQuery, (error, files) => {
     if (!files) { files = [] }
     res.send(200, files)
     next()

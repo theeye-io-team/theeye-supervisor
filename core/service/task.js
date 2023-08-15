@@ -239,7 +239,7 @@ module.exports = {
         if (!id) { return resolve() }
 
         const data = { host: null, hostname: '' }
-        Host.findById(id, (err, host) => {
+        Host.findById(id, {hostname:1}, (err, host) => {
           if (err) { return reject(err) }
           if (host !== null) {
             data.host = host

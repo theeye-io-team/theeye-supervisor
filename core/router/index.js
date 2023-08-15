@@ -17,6 +17,8 @@ module.exports = {
   ensureCustomerBelongs: require('./ensure-customer-belongs'),
   ensureAllowed: require('./ensure-allowed'),
   ensureHeader: require('./ensure-header'),
+  ensurePermissions: require('./ensure-permissions'),
+  dbFilter: require('./db-filter'),
   load (server) {
     logger.log('loading controllers')
 
