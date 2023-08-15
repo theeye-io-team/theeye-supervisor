@@ -6,9 +6,10 @@ module.exports = (options) => {
     //
     // reduced set of permissions
     //
-    if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
+    if (!ACL.hasAccessLevel(req.session.credential, 'admin')) {
       // default permission granted by email
       permissions = [
+        { type: 'role', value: req.session.credential },
         { type: 'principal', value: req.user.email }
       ]
 

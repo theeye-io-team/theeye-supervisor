@@ -15,9 +15,10 @@ module.exports = function (options) {
       }
 
       const toCheck = {
+        permissions: req.permissions,
         model,
-        email: req.user.email,
-        grants: req.session.member.tags,
+        //email: req.user.email,
+        //grants: req.session.member.tags,
         credential: req.session.credential
       }
 
