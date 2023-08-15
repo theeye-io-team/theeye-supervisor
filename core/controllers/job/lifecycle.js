@@ -81,7 +81,7 @@ module.exports = (server) => {
     (req, res, next) => {
       try {
         const job = req.job
-        if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
+        if (!ACL.hasAccessLevel(req.session.credential, 'admin')) {
           if (job.task && job.task.cancellable === false) {
             throw new ClientError('Job is not cancellable', {statusCode: 403})
           }

@@ -1,13 +1,11 @@
 const App = require('../../app')
 const router = require('../../router')
 const logger = require('../../lib/logger')('controller:workflow:job')
-const dbFilter = require('../../lib/db-filter')
 const JobConstants = require('../../constants/jobs')
 const LifecycleConstants = require('../../constants/lifecycle')
 const Job = require('../../entity/job').Job
 const jobPayloadValidationMiddleware = require('../../service/job//payload-validation')
 const { ClientError } = require('../../lib/error-handler')
-const ACL = require('../../lib/acl')
 
 module.exports = (server) => {
 
@@ -110,6 +108,8 @@ module.exports = (server) => {
     router.ensureCustomer,
     router.resolve.idToEntityByCustomer({ param: 'workflow', required: true }),
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
+    router.ensurePermissions(),
+    router.dbFilter(),
     async (req, res, next) => {
       try {
         const customer = req.customer
@@ -124,16 +124,9 @@ module.exports = (server) => {
           throw new ClientError('The job does not belong to the workflow')
         }
 
-        const filter = dbFilter({})
+        const filter = req.dbQuery
         filter.where.workflow_job_id = job._id.toString()
-        filter.where.customer_id = customer._id.toString()
         filter.where.workflow_id = workflow._id.toString()
-
-        if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
-          // find what this user can access
-          filter.where.acl = req.user.email
-        }
-
         const jobs = await App.Models.Job.Job.fetchBy(filter)
         res.send(200, jobs.map(job => job.publish()))
       } catch (err) {
@@ -154,13 +147,12 @@ module.exports = (server) => {
     router.ensureCustomer,
     router.resolve.idToEntityByCustomer({ param: 'workflow', required: true }),
     router.ensureCustomerBelongs('workflow'),
+    router.ensurePermissions(),
+    router.dbFilter(),
     (req, res, next) => {
-      const workflow = req.workflow
-      const customer = req.customer
-      const user = req.user
+      const { workflow, customer, user } = req
 
-      const filter = dbFilter(req.query, { })
-      filter.where.customer_id = customer.id
+      const filter = req.dbQuery
       filter.where.workflow_id = workflow._id.toString()
 
       if (Object.keys(filter.include).length === 0) {
@@ -172,15 +164,6 @@ module.exports = (server) => {
           task_arguments_values: 0, // input
           task: 0
         }
-      }
-
-      //if (workflow.table_view !== true) {
-      //  filter.include.task_arguments_values = 0
-      //  filter.include.task = 0
-      //}
-
-      if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
-        filter.where.acl = req.user.email
       }
 
       App.Models.Job.Job.fetchBy(filter)
@@ -199,6 +182,8 @@ module.exports = (server) => {
     router.ensureCustomer,
     router.requireCredential('viewer'),
     router.resolve.idToEntityByCustomer({ param: 'workflow', required: true }),
+    router.ensurePermissions(),
+    router.dbFilter(),
     controller.input
   )
 
@@ -250,14 +235,9 @@ const controller = {
   async input (req, res, next) {
     const { workflow, customer, user } = req
 
-    const filters = dbFilter(req.query, { /** default **/ })
-    filters.where.customer_id = customer._id.toString()
+    const filters = req.dbQuery
     filters.where.workflow_id = workflow._id
     filters.where.task_id = workflow.start_task_id
-
-    if (!ACL.hasAccessLevel(user.credential, 'admin')) {
-      filters.where.acl = user.email
-    }
 
     filters.include = Object.assign(filters.include, {
       workflow_id: 1,
@@ -283,7 +263,10 @@ const controller = {
       const job = req.job
 
       const userPromise = []
-      const users = await App.gateway.user.fetch(req.body, { customer_id: req.customer.id })
+      const users = await App.gateway.user.fetch(req.body, {
+        customer_id: req.customer.id
+      })
+
       if (!users || users.length === 0) {
         throw new ClientError('invalid members')
       }

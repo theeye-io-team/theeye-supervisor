@@ -8,9 +8,6 @@ const audit = require('../../lib/audit')
 const router = require('../../router')
 // const audit = require('../../lib/audit')
 
-const ACL = require('../../lib/acl');
-const dbFilter = require('../../lib/db-filter');
-
 const crudv2 = require('./crudv2')
 
 module.exports = function (server) {
@@ -21,7 +18,16 @@ module.exports = function (server) {
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     router.requireCredential('viewer'),
-    fetch
+    router.ensurePermissions(),
+    router.dbFilter(),
+    (req, res, next) => {
+      const filter = req.dbQuery
+      App.Models.Workflow.Workflow.fetchBy(filter, (err, workflows) => {
+        if (err) return res.send(500, err)
+        res.send(200, workflows)
+        next()
+      })
+    }
   )
 
   server.get('/workflows/:workflow',
@@ -80,23 +86,6 @@ module.exports = function (server) {
  * @method GET
  *
  */
-const fetch = (req, res, next) => {
-  const { customer, input = {} } = req
-
-  const filter = dbFilter(input, { /** default **/ })
-  filter.where.customer_id = customer.id
-  if (!ACL.hasAccessLevel(req.user.credential,'admin')) {
-    // find what this user can access
-    filter.where.acl = req.user.email
-  }
-
-  App.Models.Workflow.Workflow.fetchBy(filter, (err, workflows) => {
-    if (err) return res.send(500, err)
-    res.send(200, workflows)
-    next()
-  })
-}
-
 //const remove = (req, res, next) => {
 //  const workflow = req.workflow
 //  workflow.remove(err => {
