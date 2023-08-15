@@ -171,3 +171,13 @@ class AsyncMiddlewareEmptyResult extends ExtendedError {
 ErrorHandler.AsyncMiddlewareEmptyResult = AsyncMiddlewareEmptyResult
 
 ///////////////////////////////////////////////
+//
+class ForbiddenError extends ExtendedError {
+  constructor (message) {
+    super('Forbidden')
+    this.name = this.constructor.name
+    this.code = 403
+    this.statusCode = this.status = 403
+  }
+}
+ErrorHandler.ForbiddenError = ForbiddenError

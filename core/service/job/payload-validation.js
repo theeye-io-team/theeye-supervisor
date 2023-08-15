@@ -96,6 +96,7 @@ const verifyUsers = async ({ users, customer, workflow, task }) => {
   for (let member of members) {
     if (member.user_id && member.user.email) {
       ACL.ensureAllowed({
+        grants: member.tags,
         email: member.user.email,
         credential: member.credential,
         model: (workflow || task)
