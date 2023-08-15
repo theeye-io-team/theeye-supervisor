@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.7.0](https://github.com/theeye/theeye-supervisor/compare/4.6.1...4.7.0) (2023-08-15)
+
+
+### Features
+
+* logger.reqErrorDump fn added ([23fe6f2](https://github.com/theeye/theeye-supervisor/commit/23fe6f20ab35ac552e2acc165502f9ade8c13747))
+* task w/one arg + json payload. no array ([#101](https://github.com/theeye/theeye-supervisor/issues/101)) ([e6253f3](https://github.com/theeye/theeye-supervisor/commit/e6253f379ad91bb442d8337284e40e33b814b77f))
+
+
+### Bug Fixes
+
+* **file:** file upload multiples acl param. json supported ([#102](https://github.com/theeye/theeye-supervisor/issues/102)) ([c82e8e0](https://github.com/theeye/theeye-supervisor/commit/c82e8e08cd902e0b462c32abcf4799354e08b357))
+
 ### [4.6.1](https://github.com/theeye/theeye-supervisor/compare/4.6.0...4.6.1) (2023-07-19)
 
 ## [4.6.0](https://github.com/theeye/theeye-supervisor/compare/4.5.4...4.6.0) (2023-07-11)
