@@ -503,6 +503,10 @@ module.exports = {
         lifecycle = LifecycleConstants.TERMINATED
         state = StateConstants.TIMEOUT
         eventName = StateConstants.TIMEOUT
+      } else if (input.state === StateConstants.CANCELED) {
+        state = StateConstants.CANCELED
+        eventName = StateConstants.CANCELED
+        lifecycle = cancelJobNextLifecycle(job)
       } else {
         lifecycle = LifecycleConstants.FINISHED
         if (
@@ -584,7 +588,7 @@ module.exports = {
 
       job.lifecycle = lifecycle
       job.state = StateConstants.CANCELED
-      job.eventName = StateConstants.CANCELED
+      job.trigger_name = StateConstants.CANCELED
       job.result = result
       job.output = this.parseOutputParameters(result.output)
       await job.save()
