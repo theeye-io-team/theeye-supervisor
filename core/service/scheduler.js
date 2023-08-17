@@ -328,6 +328,28 @@ const TaskJobProcessor = async (agendaJob) => {
     throw new Error(`customer ${data.task_id} is no longer available`)
   }
 
+  if (task.stack_scheduled_executions !== true) {
+    const job = await App.Models.Job
+      .Job
+      .findOne({
+        task_id: task._id.toString(),
+        lifecycle: {
+          $in: [
+            LifecycleConstants.READY,
+            LifecycleConstants.ASSIGNED,
+            LifecycleConstants.ONHOLD,
+            LifecycleConstants.SYNCING,
+            LifecycleConstants.LOCKED
+          ]
+        }
+      })
+
+    if (job !== null) {
+      logger.log('Task execution in progress')
+      return
+    }
+  }
+
   return App.jobDispatcher.create({
     task,
     customer: task.customer,
@@ -350,6 +372,28 @@ const WorkflowJobProcessor = async (agendaJob) => {
 
   if (!workflow.customer) {
     throw new Error(`customer ${workflow.customer} is no longer available`)
+  }
+
+  if (workflow.stack_scheduled_executions !== true) {
+    const job = await App.Models.Job
+      .Job
+      .findOne({
+        workflow_id: workflow._id.toString(),
+        lifecycle: {
+          $in: [
+            LifecycleConstants.READY,
+            LifecycleConstants.ASSIGNED,
+            LifecycleConstants.ONHOLD,
+            LifecycleConstants.SYNCING,
+            LifecycleConstants.LOCKED
+          ]
+        }
+      })
+
+    if (job !== null) {
+      logger.log('Workflow execution in progress')
+      return
+    }
   }
 
   await workflow.execPopulate()
