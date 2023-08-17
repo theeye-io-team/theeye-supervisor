@@ -8,7 +8,7 @@ module.exports = () => {
     if (!ACL.hasAccessLevel(req.session.credential, 'admin')) {
       req.permissions = ACL.buildPermissions({
         role: req.session.credential,
-        indentifier: req.user.email,
+        identifier: req.user.email,
         tags: req.session.member.tags
       })
     } else {
