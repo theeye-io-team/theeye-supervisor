@@ -6,29 +6,29 @@
  *
  **/
 // IN PROGRESS LIFECYCLE
-const READY = 'ready'
 const ASSIGNED = 'assigned'
-const ONHOLD = 'onhold'
-const SYNCING = 'syncing'
 const LOCKED = 'locked'
+const ONHOLD = 'onhold'
+const READY = 'ready'
+const SYNCING = 'syncing'
 
 // FINISHED LIFECYCLE
-const FINISHED = 'finished'
 const CANCELED = 'canceled'
-const EXPIRED = 'expired'
 const COMPLETED = 'completed'
+const EXPIRED = 'expired'
+const FINISHED = 'finished'
 const TERMINATED = 'terminated'
 
-exports.READY = READY
 exports.ASSIGNED = ASSIGNED
-exports.ONHOLD = ONHOLD
-exports.SYNCING = SYNCING
-exports.LOCKED = LOCKED
-exports.FINISHED = FINISHED
-exports.TERMINATED = TERMINATED
 exports.CANCELED = CANCELED
-exports.EXPIRED = EXPIRED
 exports.COMPLETED = COMPLETED
+exports.EXPIRED = EXPIRED
+exports.FINISHED = FINISHED
+exports.LOCKED = LOCKED
+exports.ONHOLD = ONHOLD
+exports.READY = READY
+exports.SYNCING = SYNCING
+exports.TERMINATED = TERMINATED
 
 exports.VALUES = [
   READY,
