@@ -199,7 +199,8 @@ const controller = {
       username: user.username
     }
 
-    App.jobDispatcher.finish({
+    //App.jobDispatcher.finish({
+    App.jobDispatcher.cancel({
       result: {
         user: who,
         output: [ who ]
@@ -209,13 +210,11 @@ const controller = {
       job,
       user,
       customer
-    }, (err) => {
-      if (err) {
-        logger.error('Failed to cancel job')
-        logger.error(err)
-        return res.send(err.statusCode || 500, err.message)
-      }
-
+    }).catch((err) => {
+      logger.error('Failed to cancel job')
+      logger.error(err)
+      return res.send(err.statusCode || 500, err.message)
+    }).then(() => {
       return res.send(204)
     })
   },
