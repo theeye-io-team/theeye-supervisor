@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.8.0](https://github.com/theeye/theeye-supervisor/compare/4.7.0...4.8.0) (2023-08-18)
+
+
+### Features
+
+* skip scheduled on job in progress ([#104](https://github.com/theeye/theeye-supervisor/issues/104)) ([42f16fa](https://github.com/theeye/theeye-supervisor/commit/42f16fae602071abf2142efcccc2bdfcc8c0478c))
+
+
+### Bug Fixes
+
+* cancelation stopped working ([#105](https://github.com/theeye/theeye-supervisor/issues/105)) ([861960a](https://github.com/theeye/theeye-supervisor/commit/861960a7900cea601361e9e7243cda5285416f95))
+
 ## [4.7.0](https://github.com/theeye/theeye-supervisor/compare/4.6.1...4.7.0) (2023-08-15)
 
 
