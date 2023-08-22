@@ -183,6 +183,7 @@ module.exports = {
       {
         $sort: {
           task_id: 1,
+          order: 1,
           creation_date: 1
         }
       },
@@ -192,19 +193,17 @@ module.exports = {
           nextJob: { $first: '$$ROOT' }
         }
       }
-    ]).exec((err, groups) => {
-      if (err) {
-        logger.error('%o',err)
-        return next(err)
-      }
-
-      if (groups.length>0) {
+    ]).exec().then(groups => {
+      if (groups.length > 0) {
         let idx = 0
         const jobs = groups.map(grp => grp.nextJob)
         dispatchJobExecutionRecursive(idx, jobs, next)
       } else {
         next()
       }
+    }).catch(err => {
+      logger.error('%o',err)
+      return next(err)
     })
   },
   getAgentUpdateJob (host, next) {
@@ -707,30 +706,66 @@ const taskRequireHost = (task) => {
 }
 
 const allowedMultitasking = (job, next) => {
-  if (
-    job._type === JobConstants.NGROK_INTEGRATION_TYPE ||
-    job._type === JobConstants.AGENT_UPDATE_TYPE
-  ) {
+  if (job._type === JobConstants.AGENT_UPDATE_TYPE) {
     return next(null, true)
   }
 
-  if (job.task.multitasking !== false) { return next(null, true) }
-
-  JobModels
-    .Job
-    .findOne({
-      task_id: job.task_id,
-      _id: { $ne: job._id },
-      lifecycle: LifecycleConstants.ASSIGNED
-    })
-    .exec( (err, inprogressjob) => {
-      if (err) {
-        logger.error('Failed to fetch inprogress job')
-        return next(err)
+  populateWorkflow(job)
+    .then(() => {
+      if (
+        job.task.multitasking !== false &&
+        job.workflow?.multitasking !== false
+      ) {
+        return null
       }
 
-      next(null, (inprogressjob === null))
+      // identify in progress jobs
+      const query = {
+        _id: { // is not same job it is being evaluated
+          $ne: job._id
+        },
+        _type: { $ne: JobConstants.WORKFLOW_TYPE },
+        lifecycle: {
+          // in progress lifecycles
+          $in: [
+            //LifecycleConstants.LOCKED,
+            //LifecycleConstants.SYNCING,
+            //LifecycleConstants.READY,
+            LifecycleConstants.ASSIGNED,
+            //LifecycleConstants.ONHOLD 
+          ]
+        },
+      }
+
+      // there should be a single job in progress with this workflow
+      if (job.workflow?.multitasking === false) {
+        query.workflow_id = job.workflow._id.toString()
+      } 
+      // there should be a single job in progress with this task
+      else if (job.task.multitasking === false) {
+        query.task_id = job.task_id
+      }
+
+      return JobModels.Job.findOne(query).exec()
     })
+    .then(inprogressjob => {
+      return next(null, (inprogressjob === null))
+    })
+    .catch(err => {
+      logger.error('Failed to fetch inprogress job')
+      return next(err)
+    })
+}
+
+const populateWorkflow = async (job) => {
+  if (job.workflow) {
+    return job.populate({
+      path: 'workflow',
+      select: 'multitasking'
+    }).execPopulate()
+  } else {
+    return
+  }
 }
 
 /**
