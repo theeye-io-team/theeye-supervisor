@@ -183,7 +183,6 @@ module.exports = {
       {
         $sort: {
           task_id: 1,
-          order: 1,
           creation_date: 1
         }
       },
@@ -191,6 +190,11 @@ module.exports = {
         $group: {
           _id: '$task_id',
           nextJob: { $first: '$$ROOT' }
+        }
+      },
+      {
+        $sort: {
+          "nextJob.order": 1
         }
       }
     ]).exec().then(groups => {
@@ -412,6 +416,7 @@ module.exports = {
       }
     }
 
+    input.order = await getWorkflowJobsCount(workflow)
     const job = await JobFactory.createWorkflow(input)
 
     // send and wait before creating the job of the first task
@@ -425,7 +430,7 @@ module.exports = {
         task,
         workflow: input.workflow, // explicit
         workflow_job_id: job._id,
-        workflow_job: job._id
+        workflow_job: job
       })
     )
 
@@ -684,6 +689,21 @@ module.exports = {
   }
 }
 
+/**
+ *
+ * @return {Promise}
+ *
+ */
+const getWorkflowJobsCount = (workflow) => {
+  const count = App.Models
+    .Job
+    .Workflow
+    .countDocuments({ workflow_id: workflow._id })
+
+  // promise
+  return count.exec()
+}
+
 const verifyTaskBeforeExecution = (task) => {
   //let taskData = await App.task.populate(task)
   if (!task.customer) {
@@ -775,25 +795,39 @@ const populateWorkflow = async (job) => {
 const createJob = async (input) => {
   const { task, user } = input
 
-  const job = await new Promise((resolve, reject) => {
-    JobFactory.create(task, input, async (err, job) => {
-      if (err) { return reject(err) }
+  //const job = await new Promise((resolve, reject) => {
+  //  JobFactory.create(task, input, async (err, job) => {
+  //    if (err) { return reject(err) }
 
-      if (!job) {
-        const err = new Error('Job was not created')
-        return reject(err)
-      }
+  //    if (!job) {
+  //      const err = new Error('Job was not created')
+  //      return reject(err)
+  //    }
 
-      if (job.constructor.name !== 'model') {
-        const err = new Error('Invalid job returned')
-        err.job = job
-        return reject(err)
-      }
+  //    if (job.constructor.name !== 'model') {
+  //      const err = new Error('Invalid job returned')
+  //      err.job = job
+  //      return reject(err)
+  //    }
 
-      logger.log('job created.')
-      resolve(job)
-    })
-  })
+  //    logger.log('job created.')
+  //    resolve(job)
+  //  })
+  //})
+  //
+  const job = await JobFactory.create(task, input)
+
+  if (!job) {
+    throw new Error('Job was not created')
+  }
+
+  if (job.constructor.name !== 'model') {
+    const err = new Error('Invalid job returned')
+    err.job = job
+    throw err
+  }
+
+  logger.log('job created.')
 
   // await notification and system log generation
   await RegisterOperation.submit(Constants.CREATE, TopicsConstants.job.crud, { job, user })

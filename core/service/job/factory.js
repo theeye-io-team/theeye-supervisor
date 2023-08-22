@@ -34,6 +34,7 @@ const JobsFactory = {
    *
    */
   async create (task, input, next) {
+    next || (next=()=>{})
     try {
       if ( ! JobsBuilderMap[ task.type ] ) {
         throw new Error(`Invalid or undefined task type ${task.type}`)
@@ -42,8 +43,10 @@ const JobsFactory = {
       const builder = new JobsBuilderMap[ task.type ]({ task, vars: input })
       const job = await builder.create()
       next(null, job)
+      return job
     } catch (err) {
       next(err)
+      return err
     }
   },
   /**
@@ -326,7 +329,8 @@ class WorkflowJob {
           customer_name: customer.name,
           user_id: (user?.id)
           //task_arguments_values: null
-        })
+        }
+      )
     )
 
     ensureObserversAccess({
@@ -354,9 +358,9 @@ class WorkflowJob {
       wJob.user_inputs_members = workflow.user_inputs_members
     }
 
-    await wJob.save()
-
-    return wJob
+    // save and then return the created job.
+    return wJob.save().then(() => wJob)
+    //return wJob
   }
 }
 
@@ -579,6 +583,7 @@ class AbstractJob {
     job.user_id = (vars.user && vars.user.id) // the user that executes the task/wokflow
     job.notify = vars.notify || null
     job.origin = vars.origin || null
+    job.order = vars.order || 0
     job.triggered_by = (vars.event && vars.event._id) || null
 
     if (this.workflowJob) {
