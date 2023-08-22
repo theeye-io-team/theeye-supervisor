@@ -19,10 +19,13 @@ module.exports = {
 
     if (!job.notify && !job.log) { return }
 
-    await job.populate([
-      { path: 'host', select: 'id hostname' },
-      { path: 'workflow_job' },
-    ]).execPopulate()
+    // hast a host property
+    if (job.host || job.workflow_job) {
+      await job.populate([
+        { path: 'host', select: 'id hostname' },
+        { path: 'workflow_job' },
+      ]).execPopulate()
+    }
 
     if (job.log !== false) {
       const payload = prepareLog({ job, task, user })
@@ -113,6 +116,7 @@ const prepareLog = ({ job, task, user }) => {
   }
 
   if (
+    job._type !== JobConstants.WORKFLOW_TYPE &&
     job._type !== JobConstants.APPROVAL_TYPE &&
     job._type !== JobConstants.DUMMY_TYPE &&
     job._type !== JobConstants.NOTIFICATION_TYPE

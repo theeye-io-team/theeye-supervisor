@@ -6,9 +6,6 @@ const JobConstants = require('../../constants/jobs')
 const TaskConstants = require('../../constants/task')
 const TopicsConstants = require('../../constants/topics')
 const StateConstants = require('../../constants/states')
-const JobModels = require('../../entity/job')
-const TaskModel = require('../../entity/task').Entity
-const TaskEvent = require('../../entity/event').TaskEvent
 const JobFactory = require('./factory')
 const mongoose = require('mongoose')
 const RegisterOperation = require('./register')
@@ -25,7 +22,7 @@ module.exports = {
     )
   },
   fetchBy (filter, next) {
-    return JobModels.Job.fetchBy(filter, (err, jobs) => {
+    return App.Models.Job.Job.fetchBy(filter, (err, jobs) => {
       if (err) {
         return next(err)
       }
@@ -35,7 +32,6 @@ module.exports = {
       next(null, jobs)
     })
   },
-
   async getJobsByTask (input) {
     const { task, customer } = input
 
@@ -79,7 +75,7 @@ module.exports = {
 
     const models = []
     for (let index = 0; index < jobs.length; index++) {
-      const job = JobModels.Job.hydrate(jobs[index])
+      const job = App.Models.Job.Job.hydrate(jobs[index])
       job.lifecycle = LifecycleConstants.ASSIGNED
       await job.save()
 
@@ -115,7 +111,7 @@ module.exports = {
         return terminateRecursion()
       }
 
-      const job = JobModels.Job.hydrate(jobs[idx])
+      const job = App.Models.Job.Job.hydrate(jobs[idx])
 
       // Cancel this job and process next
       if (App.jobDispatcher.jobMustHaveATask(job) && !job.task) {
@@ -173,7 +169,7 @@ module.exports = {
       }
     }
 
-    JobModels.Job.aggregate([
+    App.Models.Job.Job.aggregate([
       {
         $match: {
           host_id: input.host._id.toString(),
@@ -307,6 +303,120 @@ module.exports = {
       )
     })
   },
+  finishWorkflowJob (wfjob, input) {
+    wfjob.lifecycle = input.lifecycle
+    wfjob.state = input.state
+    wfjob.trigger_name = (input.trigger_name || input.state)
+    wfjob.save()
+    this.finishedWorkflowPostprocessing({ job: wfjob })
+  },
+  /**
+   *
+   * @summary Finalize task execution. Save result and submit to elk
+   *
+   * @param {Object} input
+   * @property {Job} input.job
+   * @property {Object} input.result
+   * @param {Function} done
+   *
+   */
+  async finish (input, done) {
+    try {
+      const { job, user, result = {} } = input
+      //const result = (input.result ||{})
+
+      let state
+      let lifecycle
+      let eventName
+
+      if (result.killed === true) {
+        lifecycle = LifecycleConstants.TERMINATED
+        state = StateConstants.TIMEOUT
+        eventName = StateConstants.TIMEOUT
+      } else if (input.state === StateConstants.CANCELED) {
+        state = StateConstants.CANCELED
+        eventName = StateConstants.CANCELED
+        lifecycle = cancelJobNextLifecycle(job)
+      } else {
+        lifecycle = LifecycleConstants.FINISHED
+        if (
+          input.state === StateConstants.SUCCESS ||
+          input.state === StateConstants.FAILURE
+        ) {
+          state = input.state
+        } else {
+          // assuming success for backward compatibility
+          state = (job.default_state_evaluation || StateConstants.SUCCESS)
+        }
+      }
+
+      job.lifecycle = lifecycle
+      job.state = state
+      job.result = result
+      // parse result output
+      if (result.output) {
+        // data output, can be anything. stringify for security reason
+        job.output = this.parseOutputParameters(result.output)
+        //job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
+      }
+
+      if (result.lastline) {
+        try {
+          const jsonLastline = JSON.parse(result.lastline)
+          // looking for state and output
+          if (isObject(jsonLastline)) {
+            if (jsonLastline.components) {
+              job.components = jsonLastline.components
+            }
+            if (jsonLastline.next) {
+              job.next = jsonLastline.next
+            }
+            if (jsonLastline.event_name) {
+              eventName = jsonLastline.event_name
+            }
+          }
+        } catch (err) {
+          //logger.log(err)
+        }
+      } else if (input.eventName) {
+        eventName = input.eventName
+      }
+
+      job.trigger_name = (eventName || state)
+
+      await job.save()
+
+      this.finishedPostprocessing({ job, user })
+
+      done(null, job)
+    } catch (err) {
+      logger.error(err)
+      done(err)
+    }
+  },
+  finishedWorkflowPostprocessing ({ job }) {
+    process.nextTick(() => {
+      RegisterOperation.submit(
+        Constants.UPDATE,
+        TopicsConstants.workflow.job.crud,
+        { job }
+      )
+
+      dispatchFinishedWorkflowJobExecutionEvent(job)
+      emitJobFinishedNotification({
+        job,
+        topic: TopicsConstants.workflow.job.finished
+      })
+    })
+  },
+  finishedPostprocessing ({ job, user }) {
+    process.nextTick(() => {
+      RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
+      App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
+      dispatchFinishedTaskJobExecutionEvent(job)
+      emitJobFinishedNotification({ job })
+    })
+  },
   /**
    * @return {Promise<Job>}
    */
@@ -416,7 +526,7 @@ module.exports = {
       }
     }
 
-    input.order = await getWorkflowJobsCount(workflow)
+    input.order = await getWorkflowJobsOrder(workflow)
     const job = await JobFactory.createWorkflow(input)
 
     // send and wait before creating the job of the first task
@@ -486,90 +596,6 @@ module.exports = {
   },
   /**
    *
-   * @summary Finalize task execution. Save result and submit to elk
-   *
-   * @param {Object} input
-   * @property {Job} input.job
-   * @property {Object} input.result
-   * @param {Function} done
-   *
-   */
-  async finish (input, done) {
-    try {
-      const { job, user, result = {} } = input
-      //const result = (input.result ||{})
-
-      let state
-      let lifecycle
-      let eventName
-
-      if (result.killed === true) {
-        lifecycle = LifecycleConstants.TERMINATED
-        state = StateConstants.TIMEOUT
-        eventName = StateConstants.TIMEOUT
-      } else if (input.state === StateConstants.CANCELED) {
-        state = StateConstants.CANCELED
-        eventName = StateConstants.CANCELED
-        lifecycle = cancelJobNextLifecycle(job)
-      } else {
-        lifecycle = LifecycleConstants.FINISHED
-        if (
-          input.state === StateConstants.SUCCESS ||
-          input.state === StateConstants.FAILURE
-        ) {
-          state = input.state
-        } else {
-          // assuming success for backward compatibility
-          state = (job.default_state_evaluation || StateConstants.SUCCESS)
-        }
-      }
-
-      job.lifecycle = lifecycle
-      job.state = state
-      job.result = result
-      // parse result output
-      if (result.output) {
-        // data output, can be anything. stringify for security reason
-        job.output = this.parseOutputParameters(result.output)
-        //job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
-      }
-
-      if (result.lastline) {
-        try {
-          const jsonLastline = JSON.parse(result.lastline)
-          // looking for state and output
-          if (isObject(jsonLastline)) {
-            if (jsonLastline.components) {
-              job.components = jsonLastline.components
-            }
-            if (jsonLastline.next) {
-              job.next = jsonLastline.next
-            }
-            if (jsonLastline.event_name) {
-              eventName = jsonLastline.event_name
-            }
-          }
-        } catch (err) {
-          //logger.log(err)
-        }
-      } else if (input.eventName) {
-        eventName = input.eventName
-      }
-
-      job.trigger_name = (eventName || state)
-
-      await job.save()
-
-      this.finishedPostprocessing({ job, user })
-
-      done(null, job)
-    } catch (err) {
-      logger.error(err)
-      done(err)
-    }
-  },
-  /**
-   *
    * @summary Cancel Job execution.
    * Cancel if READY or Terminate if ASSIGNED.
    * Else abort
@@ -604,14 +630,6 @@ module.exports = {
       next(err)
     }
   },
-  finishedPostprocessing ({ job, user }) {
-    process.nextTick(() => {
-      RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
-      App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
-      dispatchFinishedJobExecutionEvent(job)
-      emitJobFinishedNotification({ job })
-    })
-  },
   jobMustHaveATask (job) {
     var result = (
       job._type === JobConstants.SCRAPER_TYPE ||
@@ -626,7 +644,7 @@ module.exports = {
    * @return {Promise}
    */
   async jobExecutionTimedOutCheck (job_id) {
-    let job = await JobModels.Job.findById(job_id)
+    let job = await App.Models.Job.Job.findById(job_id)
     if (!job) {
       // finished / removed / canceled
       return null
@@ -694,14 +712,15 @@ module.exports = {
  * @return {Promise}
  *
  */
-const getWorkflowJobsCount = (workflow) => {
+const getWorkflowJobsOrder = (workflow) => {
   const count = App.Models
     .Job
     .Workflow
-    .countDocuments({ workflow_id: workflow._id })
+    .findOne({ workflow_id: workflow._id }, 'order')
+    .sort({ order: -1 })
 
   // promise
-  return count.exec()
+  return count.exec().then(job => job?job.order + 1:0)
 }
 
 const verifyTaskBeforeExecution = (task) => {
@@ -766,7 +785,7 @@ const allowedMultitasking = (job, next) => {
         query.task_id = job.task_id
       }
 
-      return JobModels.Job.findOne(query).exec()
+      return App.Models.Job.Job.findOne(query).exec()
     })
     .then(inprogressjob => {
       return next(null, (inprogressjob === null))
@@ -886,12 +905,12 @@ const removeExceededJobsCountByTask = async (task) => {
   const limit = (task.autoremove_completed_jobs_limit || JobConstants.JOBS_LOG_COUNT_LIMIT)
 
   const task_id = task._id.toString()
-  const count = await JobModels.Job.countDocuments({ task_id })
+  const count = await App.Models.Job.Job.countDocuments({ task_id })
 
   // if count > limit allowed, then search top ${limit}
   // destroy the oldest jobs
   if (count > limit) {
-    const jobs = await JobModels.Job
+    const jobs = await App.Models.Job.Job
       .find({ task_id })
       .sort({ _id: -1 })
       .limit(limit)
@@ -899,7 +918,7 @@ const removeExceededJobsCountByTask = async (task) => {
     if (limit === jobs.length) { // we got the ammount of jobs we asked for
       const lastDoc = jobs[limit - 1]
       // only remove finished jobs
-      const result = await JobModels.Job.remove({
+      const result = await App.Models.Job.Job.remove({
         task_id,
         _id: { $lt: lastDoc._id.toString() }, // remove the oldest than the last documents
         $and: [
@@ -925,7 +944,7 @@ const removeExceededJobsCountByWorkflow = async (workflow, task) => {
   const workflow_id = workflow._id.toString()
   const limit = (workflow.autoremove_completed_jobs_limit || JobConstants.JOBS_LOG_COUNT_LIMIT)
 
-  const count = await JobModels.Job.countDocuments({
+  const count = await App.Models.Job.Job.countDocuments({
     workflow_id,
     _type: JobConstants.WORKFLOW_TYPE
   })
@@ -934,7 +953,7 @@ const removeExceededJobsCountByWorkflow = async (workflow, task) => {
     return
   }
 
-  const jobs = await JobModels.Job.aggregate([
+  const jobs = await App.Models.Job.Job.aggregate([
     {
       $match: {
         workflow_id,
@@ -1005,7 +1024,7 @@ const actuallyRemoveWorkflowJobs = async (jobs, limit) => {
       const promises = []
       while (deleteCount > 0) {
         let job = canDelete[deleteCount - 1]
-        const promise = JobModels.Job.remove({
+        const promise = App.Models.Job.Job.remove({
           $or: [
             { workflow_job_id: job._id },
             { _id: mongoose.Types.ObjectId(job._id) }
@@ -1037,7 +1056,7 @@ const removeOldTaskJobs = (task, next) => {
 
   let filters = { task_id: task._id }
 
-  JobModels.Job.remove(filters, function (err) {
+  App.Models.Job.Job.remove(filters, function (err) {
     if (err) {
       logger.error('Failed to remove old jobs registry for task %s', task._id)
       logger.error(err)
@@ -1074,7 +1093,7 @@ const cancelJobNextLifecycle = (job) => {
  * @return {Promise}
  *
  */
-const dispatchFinishedJobExecutionEvent = async (job) => {
+const dispatchFinishedTaskJobExecutionEvent = async (job) => {
   try {
     const { task_id, trigger_name } = job
     let topic
@@ -1082,7 +1101,7 @@ const dispatchFinishedJobExecutionEvent = async (job) => {
     // cannot trigger a workflow event without a task
     if (!task_id) { return }
 
-    let event = await TaskEvent.findOne({
+    let event = await App.Models.Event.TaskEvent.findOne({
       emitter_id: task_id,
       enable: true,
       name: trigger_name
@@ -1090,7 +1109,7 @@ const dispatchFinishedJobExecutionEvent = async (job) => {
 
     if (!event) {
       //event.id = uuidv4()
-      event = new TaskEvent({
+      event = new App.Models.Event.TaskEvent({
         emitter_id: task_id,
         name: trigger_name,
         creation_date: new Date(),
@@ -1107,12 +1126,28 @@ const dispatchFinishedJobExecutionEvent = async (job) => {
 
     const data = getJobResult(job)
 
-    App.eventDispatcher.dispatch({
-      topic,
-      event,
-      data,
-      job
+    App.eventDispatcher.dispatch({ topic, event, data, job })
+  } catch (err) {
+    if (err) {
+      return logger.error(err)
+    }
+  }
+}
+
+const dispatchFinishedWorkflowJobExecutionEvent = async (job) => {
+  try {
+    const { workflow_id, trigger_name } = job
+    const topic = TopicsConstants.workflow.job.finished
+
+    // on the fly
+    const event = new App.Models.Event.WorkflowEvent({
+      emitter_id: workflow_id,
+      name: trigger_name,
+      creation_date: new Date(),
+      last_update: new Date()
     })
+
+    App.eventDispatcher.dispatch({ topic, event, data: {}, job })
   } catch (err) {
     if (err) {
       return logger.error(err)
@@ -1192,10 +1227,10 @@ const WorkflowJobCreatedNotification = ({ job, customer }) => {
  * @return {Promise}
  *
  */
-const emitJobFinishedNotification = ({ job }) => {
+const emitJobFinishedNotification = ({ job, topic = TopicsConstants.job.finished }) => {
   // async call
   return App.notifications.generateSystemNotification({
-    topic: TopicsConstants.job.finished,
+    topic,
     data: {
       operation: Constants.UPDATE,
       organization: job.customer_name,

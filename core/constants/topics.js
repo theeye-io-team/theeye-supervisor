@@ -43,7 +43,12 @@ exports.task = {
 }
 
 exports.workflow = {
-  execution: 'workflow-execution'
+  //crud: 'workflow-crud',
+  job: {
+    crud: 'workflow-job-crud',
+    finished: 'workflow-job-finished'
+  },
+  execution: 'workflow-execution',
 }
 
 exports.job = {
