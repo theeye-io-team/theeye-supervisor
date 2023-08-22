@@ -43,7 +43,8 @@ exports.task = {
 }
 
 exports.workflow = {
-  execution: 'workflow-execution'
+  execution: 'workflow-execution',
+  finished: 'workflow-finished'
 }
 
 exports.job = {
