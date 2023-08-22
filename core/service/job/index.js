@@ -398,14 +398,14 @@ module.exports = {
     process.nextTick(() => {
       RegisterOperation.submit(
         Constants.UPDATE,
-        TopicsConstants.job.crud,
+        TopicsConstants.workflow.job.crud,
         { job }
       )
 
       dispatchFinishedWorkflowJobExecutionEvent(job)
       emitJobFinishedNotification({
         job,
-        topic: TopicsConstants.workflow.finished
+        topic: TopicsConstants.workflow.job.finished
       })
     })
   },
@@ -1137,7 +1137,7 @@ const dispatchFinishedTaskJobExecutionEvent = async (job) => {
 const dispatchFinishedWorkflowJobExecutionEvent = async (job) => {
   try {
     const { workflow_id, trigger_name } = job
-    const topic = TopicsConstants.workflow.finished
+    const topic = TopicsConstants.workflow.job.finished
 
     // on the fly
     const event = new App.Models.Event.WorkflowEvent({
