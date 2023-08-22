@@ -48,16 +48,19 @@ module.exports = async function (payload) {
 const handleWorkflowEvent = async ({ event, data, job }) => {
   const { workflow_id, workflow_job_id } = job
   // search workflow step by generated event
-  const workflow = await Workflow.findById(workflow_id)
-  if (!workflow) { return }
+  const workflow = await App.Models.Workflow.Workflow.findById(workflow_id)
+  const workflow_job = await App.Models.Job.Workflow.findById(workflow_job_id)
 
-  const execution = (
+  if (!workflow) { return }
+  if (!workflow_job) { return }
+
+  const executionFn = (
     workflow?.version === 2 ?
     executeWorkflowStepVersion2 :
     executeWorkflowStep
   )
 
-  return execution(workflow, workflow_job_id, event, data, job)
+  return executionFn(workflow, workflow_job, event, data, job)
 }
 
 /**
@@ -65,7 +68,13 @@ const handleWorkflowEvent = async ({ event, data, job }) => {
  * @return {Promise}
  *
  */
-const executeWorkflowStep = async (workflow, workflow_job_id, event, argsValues, job) => {
+const executeWorkflowStep = async (
+  workflow,
+  workflow_job,
+  event,
+  argsValues,
+  job
+) => {
   if (!event || !event._id) {
     return
   }
@@ -88,12 +97,13 @@ const executeWorkflowStep = async (workflow, workflow_job_id, event, argsValues,
   const promises = []
   for (let i = 0; i < tasks.length; i++) {
     const createPromise = createJob({
+      order: workflow_job.order,
       user,
       task: tasks[i],
       task_arguments_values: argsValues,
       dynamic_settings,
       workflow,
-      workflow_job_id,
+      workflow_job_id: workflow_job._id,
       origin: JobConstants.ORIGIN_WORKFLOW
     })
 
@@ -109,7 +119,13 @@ const executeWorkflowStep = async (workflow, workflow_job_id, event, argsValues,
  * @return {Promise}
  *
  */
-const executeWorkflowStepVersion2 = (workflow, workflow_job_id, event, argsValues, job) => {
+const executeWorkflowStepVersion2 = (
+  workflow,
+  workflow_job,
+  event,
+  argsValues,
+  job
+) => {
 
   if (!event) { return }
 
@@ -134,12 +150,13 @@ const executeWorkflowStepVersion2 = (workflow, workflow_job_id, event, argsValue
 
           const { user, dynamic_settings } = await ifTriggeredByJobSettings(job)
           const createPromise = createJob({
+            order: workflow_job.order,
             user,
             task,
             task_arguments_values: argsValues,
             dynamic_settings,
             workflow,
-            workflow_job_id,
+            workflow_job_id: workflow_job._id,
             origin: JobConstants.ORIGIN_WORKFLOW
           })
 

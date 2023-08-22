@@ -3,6 +3,7 @@ const Schema = require('mongoose').Schema;
 const ObjectId = Schema.Types.ObjectId;
 
 const props = {
+  order: { type: Number, default: 0 },
   customer_id: { type: String },
   customer_name: { type: String },
   name: { type: String },

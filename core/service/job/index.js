@@ -191,20 +191,23 @@ module.exports = {
           _id: '$task_id',
           nextJob: { $first: '$$ROOT' }
         }
+      },
+      {
+        $sort: {
+          "nextJob.order": 1
+        }
       }
-    ]).exec((err, groups) => {
-      if (err) {
-        logger.error('%o',err)
-        return next(err)
-      }
-
-      if (groups.length>0) {
+    ]).exec().then(groups => {
+      if (groups.length > 0) {
         let idx = 0
         const jobs = groups.map(grp => grp.nextJob)
         dispatchJobExecutionRecursive(idx, jobs, next)
       } else {
         next()
       }
+    }).catch(err => {
+      logger.error('%o',err)
+      return next(err)
     })
   },
   getAgentUpdateJob (host, next) {
@@ -413,6 +416,7 @@ module.exports = {
       }
     }
 
+    input.order = await getWorkflowJobsCount(workflow)
     const job = await JobFactory.createWorkflow(input)
 
     // send and wait before creating the job of the first task
@@ -426,7 +430,7 @@ module.exports = {
         task,
         workflow: input.workflow, // explicit
         workflow_job_id: job._id,
-        workflow_job: job._id
+        workflow_job: job
       })
     )
 
@@ -685,6 +689,21 @@ module.exports = {
   }
 }
 
+/**
+ *
+ * @return {Promise}
+ *
+ */
+const getWorkflowJobsCount = (workflow) => {
+  const count = App.Models
+    .Job
+    .Workflow
+    .countDocuments({ workflow_id: workflow._id })
+
+  // promise
+  return count.exec()
+}
+
 const verifyTaskBeforeExecution = (task) => {
   //let taskData = await App.task.populate(task)
   if (!task.customer) {
@@ -707,30 +726,66 @@ const taskRequireHost = (task) => {
 }
 
 const allowedMultitasking = (job, next) => {
-  if (
-    job._type === JobConstants.NGROK_INTEGRATION_TYPE ||
-    job._type === JobConstants.AGENT_UPDATE_TYPE
-  ) {
+  if (job._type === JobConstants.AGENT_UPDATE_TYPE) {
     return next(null, true)
   }
 
-  if (job.task.multitasking !== false) { return next(null, true) }
-
-  JobModels
-    .Job
-    .findOne({
-      task_id: job.task_id,
-      _id: { $ne: job._id },
-      lifecycle: LifecycleConstants.ASSIGNED
-    })
-    .exec( (err, inprogressjob) => {
-      if (err) {
-        logger.error('Failed to fetch inprogress job')
-        return next(err)
+  populateWorkflow(job)
+    .then(() => {
+      if (
+        job.task.multitasking !== false &&
+        job.workflow?.multitasking !== false
+      ) {
+        return null
       }
 
-      next(null, (inprogressjob === null))
+      // identify in progress jobs
+      const query = {
+        _id: { // is not same job it is being evaluated
+          $ne: job._id
+        },
+        _type: { $ne: JobConstants.WORKFLOW_TYPE },
+        lifecycle: {
+          // in progress lifecycles
+          $in: [
+            //LifecycleConstants.LOCKED,
+            //LifecycleConstants.SYNCING,
+            //LifecycleConstants.READY,
+            LifecycleConstants.ASSIGNED,
+            //LifecycleConstants.ONHOLD 
+          ]
+        },
+      }
+
+      // there should be a single job in progress with this workflow
+      if (job.workflow?.multitasking === false) {
+        query.workflow_id = job.workflow._id.toString()
+      } 
+      // there should be a single job in progress with this task
+      else if (job.task.multitasking === false) {
+        query.task_id = job.task_id
+      }
+
+      return JobModels.Job.findOne(query).exec()
     })
+    .then(inprogressjob => {
+      return next(null, (inprogressjob === null))
+    })
+    .catch(err => {
+      logger.error('Failed to fetch inprogress job')
+      return next(err)
+    })
+}
+
+const populateWorkflow = async (job) => {
+  if (job.workflow) {
+    return job.populate({
+      path: 'workflow',
+      select: 'multitasking'
+    }).execPopulate()
+  } else {
+    return
+  }
 }
 
 /**
@@ -740,25 +795,39 @@ const allowedMultitasking = (job, next) => {
 const createJob = async (input) => {
   const { task, user } = input
 
-  const job = await new Promise((resolve, reject) => {
-    JobFactory.create(task, input, async (err, job) => {
-      if (err) { return reject(err) }
+  //const job = await new Promise((resolve, reject) => {
+  //  JobFactory.create(task, input, async (err, job) => {
+  //    if (err) { return reject(err) }
 
-      if (!job) {
-        const err = new Error('Job was not created')
-        return reject(err)
-      }
+  //    if (!job) {
+  //      const err = new Error('Job was not created')
+  //      return reject(err)
+  //    }
 
-      if (job.constructor.name !== 'model') {
-        const err = new Error('Invalid job returned')
-        err.job = job
-        return reject(err)
-      }
+  //    if (job.constructor.name !== 'model') {
+  //      const err = new Error('Invalid job returned')
+  //      err.job = job
+  //      return reject(err)
+  //    }
 
-      logger.log('job created.')
-      resolve(job)
-    })
-  })
+  //    logger.log('job created.')
+  //    resolve(job)
+  //  })
+  //})
+  //
+  const job = await JobFactory.create(task, input)
+
+  if (!job) {
+    throw new Error('Job was not created')
+  }
+
+  if (job.constructor.name !== 'model') {
+    const err = new Error('Invalid job returned')
+    err.job = job
+    throw err
+  }
+
+  logger.log('job created.')
 
   // await notification and system log generation
   await RegisterOperation.submit(Constants.CREATE, TopicsConstants.job.crud, { job, user })
