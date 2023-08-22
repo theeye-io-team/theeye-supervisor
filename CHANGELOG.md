@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.9.0](https://github.com/theeye/theeye-supervisor/compare/4.8.0...4.9.0) (2023-08-22)
+
+
+### Features
+
+* wf multitasking control implementation ([#106](https://github.com/theeye/theeye-supervisor/issues/106)) ([44c8eee](https://github.com/theeye/theeye-supervisor/commit/44c8eeedfc0c9ba05b1c7fa513c69eb79127cbca))
+* workflow finished events ([#107](https://github.com/theeye/theeye-supervisor/issues/107)) ([8d63679](https://github.com/theeye/theeye-supervisor/commit/8d6367946122a3b7fa0f88fa08d2307a4f62d036))
+
 ## [4.8.0](https://github.com/theeye/theeye-supervisor/compare/4.7.0...4.8.0) (2023-08-18)
 
 
