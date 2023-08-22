@@ -134,6 +134,10 @@ const executeWorkflowStepVersion2 = (
 
   const nodes = graph.successors(nodeV)
   if (!nodes || (Array.isArray(nodes) && nodes.length === 0)) {
+    App.jobDispatcher.finishWorkflowJob(workflow_job, {
+      state: job.state,
+      lifecycle: job.lifecycle
+    })
     return
   }
 

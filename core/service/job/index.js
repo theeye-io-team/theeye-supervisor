@@ -35,7 +35,6 @@ module.exports = {
       next(null, jobs)
     })
   },
-
   async getJobsByTask (input) {
     const { task, customer } = input
 
@@ -307,6 +306,105 @@ module.exports = {
       )
     })
   },
+  finishWorkflowJob (wfjob, input) {
+    wfjob.lifecycle = job.lifecycle
+    wfjob.state = job.state
+    wfjob.save()
+
+    this.finishedPostprocessing({ job: wfjob })
+  },
+  /**
+   *
+   * @summary Finalize task execution. Save result and submit to elk
+   *
+   * @param {Object} input
+   * @property {Job} input.job
+   * @property {Object} input.result
+   * @param {Function} done
+   *
+   */
+  async finish (input, done) {
+    try {
+      const { job, user, result = {} } = input
+      //const result = (input.result ||{})
+
+      let state
+      let lifecycle
+      let eventName
+
+      if (result.killed === true) {
+        lifecycle = LifecycleConstants.TERMINATED
+        state = StateConstants.TIMEOUT
+        eventName = StateConstants.TIMEOUT
+      } else if (input.state === StateConstants.CANCELED) {
+        state = StateConstants.CANCELED
+        eventName = StateConstants.CANCELED
+        lifecycle = cancelJobNextLifecycle(job)
+      } else {
+        lifecycle = LifecycleConstants.FINISHED
+        if (
+          input.state === StateConstants.SUCCESS ||
+          input.state === StateConstants.FAILURE
+        ) {
+          state = input.state
+        } else {
+          // assuming success for backward compatibility
+          state = (job.default_state_evaluation || StateConstants.SUCCESS)
+        }
+      }
+
+      job.lifecycle = lifecycle
+      job.state = state
+      job.result = result
+      // parse result output
+      if (result.output) {
+        // data output, can be anything. stringify for security reason
+        job.output = this.parseOutputParameters(result.output)
+        //job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
+      }
+
+      if (result.lastline) {
+        try {
+          const jsonLastline = JSON.parse(result.lastline)
+          // looking for state and output
+          if (isObject(jsonLastline)) {
+            if (jsonLastline.components) {
+              job.components = jsonLastline.components
+            }
+            if (jsonLastline.next) {
+              job.next = jsonLastline.next
+            }
+            if (jsonLastline.event_name) {
+              eventName = jsonLastline.event_name
+            }
+          }
+        } catch (err) {
+          //logger.log(err)
+        }
+      } else if (input.eventName) {
+        eventName = input.eventName
+      }
+
+      job.trigger_name = (eventName || state)
+
+      await job.save()
+
+      this.finishedPostprocessing({ job, user })
+
+      done(null, job)
+    } catch (err) {
+      logger.error(err)
+      done(err)
+    }
+  },
+  finishedPostprocessing ({ job, user }) {
+    process.nextTick(() => {
+      RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
+      App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
+      dispatchFinishedJobExecutionEvent(job)
+      emitJobFinishedNotification({ job })
+    })
+  },
   /**
    * @return {Promise<Job>}
    */
@@ -486,90 +584,6 @@ module.exports = {
   },
   /**
    *
-   * @summary Finalize task execution. Save result and submit to elk
-   *
-   * @param {Object} input
-   * @property {Job} input.job
-   * @property {Object} input.result
-   * @param {Function} done
-   *
-   */
-  async finish (input, done) {
-    try {
-      const { job, user, result = {} } = input
-      //const result = (input.result ||{})
-
-      let state
-      let lifecycle
-      let eventName
-
-      if (result.killed === true) {
-        lifecycle = LifecycleConstants.TERMINATED
-        state = StateConstants.TIMEOUT
-        eventName = StateConstants.TIMEOUT
-      } else if (input.state === StateConstants.CANCELED) {
-        state = StateConstants.CANCELED
-        eventName = StateConstants.CANCELED
-        lifecycle = cancelJobNextLifecycle(job)
-      } else {
-        lifecycle = LifecycleConstants.FINISHED
-        if (
-          input.state === StateConstants.SUCCESS ||
-          input.state === StateConstants.FAILURE
-        ) {
-          state = input.state
-        } else {
-          // assuming success for backward compatibility
-          state = (job.default_state_evaluation || StateConstants.SUCCESS)
-        }
-      }
-
-      job.lifecycle = lifecycle
-      job.state = state
-      job.result = result
-      // parse result output
-      if (result.output) {
-        // data output, can be anything. stringify for security reason
-        job.output = this.parseOutputParameters(result.output)
-        //job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
-      }
-
-      if (result.lastline) {
-        try {
-          const jsonLastline = JSON.parse(result.lastline)
-          // looking for state and output
-          if (isObject(jsonLastline)) {
-            if (jsonLastline.components) {
-              job.components = jsonLastline.components
-            }
-            if (jsonLastline.next) {
-              job.next = jsonLastline.next
-            }
-            if (jsonLastline.event_name) {
-              eventName = jsonLastline.event_name
-            }
-          }
-        } catch (err) {
-          //logger.log(err)
-        }
-      } else if (input.eventName) {
-        eventName = input.eventName
-      }
-
-      job.trigger_name = (eventName || state)
-
-      await job.save()
-
-      this.finishedPostprocessing({ job, user })
-
-      done(null, job)
-    } catch (err) {
-      logger.error(err)
-      done(err)
-    }
-  },
-  /**
-   *
    * @summary Cancel Job execution.
    * Cancel if READY or Terminate if ASSIGNED.
    * Else abort
@@ -603,14 +617,6 @@ module.exports = {
     } catch (err) {
       next(err)
     }
-  },
-  finishedPostprocessing ({ job, user }) {
-    process.nextTick(() => {
-      RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
-      App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
-      dispatchFinishedJobExecutionEvent(job)
-      emitJobFinishedNotification({ job })
-    })
   },
   jobMustHaveATask (job) {
     var result = (
