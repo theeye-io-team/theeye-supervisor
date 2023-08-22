@@ -23,7 +23,9 @@ module.exports = {
         const task = await App.Models.Task.Task.findById(node.value.id)
 
         const model = await App.task.serializePromise(task, options)
-        model.id = task._id.toString() //@GOTO_UUID keep until serialization ends
+
+        // @GOTO_UUID keep until serialization ends
+        model.id = task._id.toString()
         serial.tasks.push(model)
 
         if (workflow.start_task_id.toString() === model.id) {
@@ -38,7 +40,7 @@ module.exports = {
           if (edge.w === model.id) { edge.w = uuid }
         }
 
-        //@GOTO_UUID serialization ended. update after mapping edges with nodes. 
+        // @GOTO_UUID serialization ended. update after mapping edges with nodes. 
         model.id = uuid
       }
     }
