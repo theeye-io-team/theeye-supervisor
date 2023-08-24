@@ -24,6 +24,18 @@ module.exports = (server) => {
     router.ensureAllowed({ entity: { name: 'job' } }),
     resultPolling
   )
+
+  server.get('/job/:job/secret/:secret/result',
+    router.resolve.idToEntity({ param: 'job', required: true }),
+    router.requireSecret('job'),
+    resultPolling
+  )
+
+  server.post('/job/:job/secret/:secret/result',
+    router.resolve.idToEntity({ param: 'job', required: true }),
+    router.requireSecret('job'),
+    resultPolling
+  )
 }
 
 const resultPolling = (req, res, next) => {

@@ -1,6 +1,7 @@
 const Schema = require('mongoose').Schema;
 const ObjectId = Schema.Types.ObjectId;
 const StateConstants = require('../../constants/states')
+const randomSecret = require('../../lib/random-secret')
 
 module.exports = {
   order: { type: Number, default: 0 },
@@ -12,6 +13,7 @@ module.exports = {
   name: { type: String },
   state: { type: String }, // job state
   lifecycle: { type: String },
+  secret: { type: String, default: randomSecret }, // one way hash
   trigger_name: { type: String }, // final event. succes/failure by default
   triggered_by: { type: ObjectId, ref: 'Event' },
   origin: { type: String },
