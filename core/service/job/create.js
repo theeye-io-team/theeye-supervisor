@@ -39,13 +39,22 @@ module.exports = async (req, res, next) => {
 
     req.job = job
     if (waitResult(req)) {
+      // use original req.query
       const query = Object.assign({}, req.query)
       query.counter = 0
       query.limit = (req.query.limit || 10)
       query.timeout = (req.query.timeout || 10)
       const encodedquerystring = qs.stringify(query)
 
-      res.header('Location', `/job/${job.id}/result?${encodedquerystring}`)
+      // started by secret. use job secret
+      let redirectUrl
+      if (req.params.secret) {
+        redirectUrl = `/job/${job.id}/secret/${job.secret}/result`
+      } else {
+        redirectUrl = `/job/${job.id}/result`
+      }
+
+      res.header('Location', `${redirectUrl}?${encodedquerystring}`)
       res.send(303, data)
     } else {
       res.send(200, data)
