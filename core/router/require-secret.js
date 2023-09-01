@@ -1,6 +1,6 @@
 module.exports = function (model) {
   return function (req, res, next) {
-    let secret = req.params.secret
+    const secret = req.params.secret
     if (!secret) {
       return res.send(403,'secret is required')
     }

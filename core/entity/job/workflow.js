@@ -1,6 +1,7 @@
 const BaseSchema = require('../base-schema')
 const Schema = require('mongoose').Schema;
 const ObjectId = Schema.Types.ObjectId;
+//const randomSecret = require('../../lib/random-secret')
 
 const props = {
   order: { type: Number, default: 0 },
@@ -15,6 +16,7 @@ const props = {
   workflow_id: { type: String }, // job belongs to a specific workflow
   workflow: { type: ObjectId, ref: 'Workflow' },
   result: { type: Object, default: () => { return {} } },
+  //secret: { type: String, default: randomSecret }, // one way hash
   output: {
     type: String,
     get: function (data) {

@@ -24,6 +24,46 @@ module.exports = (server) => {
     router.ensureAllowed({ entity: { name: 'job' } }),
     resultPolling
   )
+
+  server.get('/job/:job/secret/:secret/result',
+    router.resolve.idToEntity({ param: 'job', required: true }),
+    router.requireSecret('job'),
+    (req, res, next) => {
+      req.job
+        .populate('customer')
+        .execPopulate()
+        .then(() => {
+          req.customer = req.job.customer
+          req.user = App.user
+          //req.origin = JobConstants.ORIGIN_SECRET
+          next()
+        })
+        .catch(err => {
+          return res.send(500, err.message)
+        })
+    },
+    resultPolling
+  )
+
+  server.post('/job/:job/secret/:secret/result',
+    router.resolve.idToEntity({ param: 'job', required: true }),
+    router.requireSecret('job'),
+    (req, res, next) => {
+      req.job
+        .populate('customer')
+        .execPopulate()
+        .then(() => {
+          req.customer = req.job.customer
+          req.user = App.user
+          //req.origin = JobConstants.ORIGIN_SECRET
+          next()
+        })
+        .catch(err => {
+          return res.send(500, err.message)
+        })
+    },
+    resultPolling
+  )
 }
 
 const resultPolling = (req, res, next) => {
@@ -52,7 +92,16 @@ const resultPolling = (req, res, next) => {
 
             const encodedquerystring = qs.stringify(query)
 
-            res.header('Location', `/job/${job.id}/result?${encodedquerystring}`)
+      // started by secret. use job secret
+      let redirectUrl
+      if (req.params.secret) {
+        redirectUrl = `/job/${job.id}/secret/${job.secret}/result`
+      } else {
+        redirectUrl = `/job/${job.id}/result`
+      }
+
+      res.header('Location', `${redirectUrl}?${encodedquerystring}`)
+
             res.send(303, {})
           }
         } else {
