@@ -5,7 +5,6 @@ const logger = require('../lib/logger')(':app:api')
 const ErrorHandler = require('../lib/error-handler')
 const restifySwaggerJsdoc = require('restify-swagger-jsdoc');
 
-
 module.exports = function () {
   if (process.env.API_DISABLED === 'true') {
     logger.log('WARNING! App Api service is disabled via process.env')
@@ -17,7 +16,7 @@ module.exports = function () {
   restifySwaggerJsdoc.createSwaggerPage({
     title: 'API documentation', // Page title
     version: '1.0.0', // Server version
-    server: server, // Restify server instance created with restify.createServer()
+    server, // Restify server instance created with restify.createServer()
     path: '/docs/swagger', // Public url where the swagger page will be available
   });
 
