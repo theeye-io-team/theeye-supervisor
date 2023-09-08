@@ -1,6 +1,6 @@
 const os = require('os')
 const exec = require('child_process').exec
-const swagger = require('../swagger')
+const swagger = require('../docs/swagger')
 
 module.exports = (server) => {
 
@@ -52,7 +52,7 @@ module.exports = (server) => {
    *      500: 
    *        description: The devs fucked up
    */
-  server.get('/api/swagger', (req, res, next) => {
+  server.get('/api/docs', (req, res, next) => {
     res.send(200, swagger)
   })
 
