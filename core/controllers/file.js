@@ -47,7 +47,7 @@ module.exports = (server) => {
     getFile
   )
 
-  // DOWNLOAD SCRIPTS
+  // DOWNLOAD FILE CONTENT
   server.get('/:customer/file/:file/download',
     server.auth.bearerMiddleware,
     router.requireCredential('user'),
@@ -60,6 +60,22 @@ module.exports = (server) => {
       } else {
         return router.ensureAllowed({ entity: { name: 'file' } })(req, res, next)
       }
+    },
+    downloadFile
+  )
+
+  /**
+   * Agents scripts download
+   */
+  server.get('/:customer/script/:script/download',
+    server.auth.bearerMiddleware,
+    router.requireCredential('agent'),
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.resolve.idToEntity({param:'script',required:true,entity:'file'}),
+    (req, res, next) => {
+      req.file = req.script
+      next()
     },
     downloadFile
   )
@@ -153,6 +169,11 @@ const fetchFiles = (req, res, next) => {
   )
 
   App.Models.File.File.fetchBy(query, (error, files) => {
+  if (!query.where._type) {
+    query.where._type = 'Script'
+  }
+
+  App.Models.File.File.fetchBy(query, (error, files) => {
     if (!files) { files = [] }
     res.send(200, files)
     next()
@@ -175,32 +196,30 @@ const getFile = (req, res, next) => {
  */
 const uploadFile = async (req, res, next) => {
   try {
-    //const fileModel = (req.file || req.script)
     const fileModel = req.file
     const fileUploaded = req.files.file
     if (!fileUploaded) {
-      throw new ClientError('file required')
+      throw new ClientError('File and filename are required')
     }
 
-    logger.log('Updating file content')
-    const storeData = await new Promise((resolve, reject) => {
+    const storageData = await new Promise((resolve, reject) => {
+      logger.log('updating file content in storage')
       FileHandler.replace({
-        model: fileModel,
-        filepath: fileUploaded.path,
-        filename: fileUploaded.name,
-        storename: req.customer.name
+        //filename: fileUploaded.name,
+        filename: fileModel._id.toString(), // storage file name
+        pathname: 'scripts', // storage sub dir
+        storename: req.customer.name, // storage root dir
+        filepath: fileUploaded.path, // source
       }, (err, data) => {
         if (err) { reject(err) }
         else { resolve(data) }
       })
     })
 
-    const buf = fs.readFileSync(fileUploaded.path)
-
     const data = {
       size: fileUploaded.size,
-      keyname: storeData.keyname,
-      md5: md5(buf)
+      storage_key: storageData.storage_key,
+      md5: md5(fs.readFileSync(fileUploaded.path))
     }
 
     logger.log('updating file metadata')
@@ -221,7 +240,6 @@ const uploadFile = async (req, res, next) => {
  */
 const updateFile = async (req, res, next) => {
   try {
-    //const fileModel = (req.file || req.script)
     const fileModel = req.file
     const fileUploaded = req.files.file
     const params = req.params
@@ -249,20 +267,19 @@ const updateFile = async (req, res, next) => {
       throw new ClientError('File and filename are required')
     }
 
-    logger.log('Updating file content')
-    const storeData = await new Promise( (resolve, reject) => {
+    const storageData = await new Promise((resolve, reject) => {
+      logger.log('updating file content in storage')
       FileHandler.replace({
-        model: fileModel,
-        filepath: fileUploaded.path,
-        filename: fileUploaded.name,
-        storename: req.customer.name
+        //filename: fileUploaded.name,
+        filename: fileModel._id.toString(), // storage file name
+        pathname: 'scripts', // storage sub dir
+        storename: req.customer.name, // storage root dir
+        filepath: fileUploaded.path, // source
       }, (err, data) => {
         if (err) { reject(err) }
         else { resolve(data) }
       })
     })
-
-    const buf = fs.readFileSync(fileUploaded.path)
 
     const data = {
       filename: fileUploaded.name,
@@ -271,8 +288,8 @@ const updateFile = async (req, res, next) => {
       extension: params.extension,
       description: params.description,
       size: fileUploaded.size,
-      keyname: storeData.keyname,
-      md5: md5(buf)
+      storage_key: storageData.storage_key,
+      md5: md5(fs.readFileSync(fileUploaded.path))
     }
 
     if (fileModel.template || fileModel.template_id) {
@@ -317,19 +334,6 @@ const createFile = async (req, res, next) => {
     const mimetype = req.params.mimetype
     const extension = req.params.extension
 
-    logger.log('creating file')
-
-    const storeData = await new Promise( (resolve, reject) => {
-      FileHandler.storeFile({
-        filepath: file.path,
-        filename: file.name,
-        storename: req.customer.name
-      }, (err, storeData) => {
-        if (err) { reject(err) }
-        else { resolve(storeData) }
-      })
-    })
-
     const buf = fs.readFileSync(file.path)
 
     const data = {
@@ -342,13 +346,29 @@ const createFile = async (req, res, next) => {
       customer: customer,
       customer_id: customer._id,
       customer_name: customer.name,
-      keyname: storeData.keyname,
       md5: md5(buf),
       public: isPublic
     }
 
     const model = App.Models.File.FactoryCreate(data)
+
+    const storageData = await new Promise( (resolve, reject) => {
+      logger.log('creating the file in the storage')
+      FileHandler.storeFile({
+        //filename: file.name,
+        filename: model._id.toString(), // storage file name
+        pathname: 'scripts', // storage sub dir
+        storename: req.customer.name, // storage root dir
+        filepath: file.path, // source
+      }, (err, storageData) => {
+        if (err) { reject(err) }
+        else { resolve(storageData) }
+      })
+    })
+
+    model.storage_key = storageData.storage_key
     model.save()
+
     req.file = model // assign to the route for state post processing
     res.send(200, model)
     next()
@@ -366,7 +386,10 @@ const downloadFile = (req, res, next) => {
   const file = req.file
   FileHandler.getStream(file, (error, stream) => {
     if (error) {
-      return res.sendError(error)
+      if (error.code === 'NoSuchKey') {
+        return res.sendError(new ClientError('file not found', {statusCode:404}))
+      }
+      return res.sendError(new ServerError(error.message))
     }
 
     logger.log('streaming file to client')

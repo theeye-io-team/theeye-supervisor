@@ -3,24 +3,28 @@ const FileSchema = require('./schema')
 const Template = require('./template')
 
 const ScriptSchema = new FileSchema()
+
 ScriptSchema.statics.create = function (data,next) {
-  var options = {
+  console.log('file/index script.create DEPRECATED')
+  console.log('file/index script.create DEPRECATED')
+  console.log('file/index script.create DEPRECATED')
+
+  const options = {
+    creation_date: new Date(),
     customer: data.customer_id,
     customer_id: data.customer_id,
     customer_name: data.customer_name,
+    description: (data.description||''),
+    extension: data.extension,
     filename: data.filename,
     keyname: data.keyname,
-    mimetype: data.mimetype,
-    extension: data.extension,
-    size: data.size,
-    creation_date: new Date(),
     last_update: new Date(),
-    description: (data.description||''),
     md5: data.md5,
-    public: data.public
+    mimetype: data.mimetype,
+    size: data.size,
   }
 
-  var script = new Script(options)
+  const script = new Script(options)
   script.save(function(error){
     next(error,script)
   })
@@ -29,6 +33,8 @@ ScriptSchema.statics.create = function (data,next) {
 const File = mongodb.model('File', new FileSchema({
   _type: { type: String, default: 'File' }
 }))
+
+const Output = File.discriminator('Output', new FileSchema())
 const Script = File.discriminator('Script', ScriptSchema)
 File.ensureIndexes()
 
@@ -44,6 +50,7 @@ File.on('afterSave', function(model) {
 //File.on('afterRemove',function(model){ });
 
 exports.File = File
+exports.Output = Output
 exports.Script = Script
 exports.Template = Template
 
@@ -57,6 +64,8 @@ exports.FactoryCreate = function (data) {
 
   if (_type === 'Script' || _type === 'ScriptTemplate') {
     return new Script(data)
+  } else if (_type === 'Output') {
+    return new Output(data)
   } else if (_type === 'File' || _type === 'FileTemplate' || !_type) {
     return new File(data)
   }

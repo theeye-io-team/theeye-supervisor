@@ -9,7 +9,7 @@ const Stream = require('stream')
 
 module.exports = {
   get () {
-    var driver = config.storage.driver
+    const driver = config.storage.driver
     return driver === 'local' ? LocalStorage : S3Storage
   }
 }
@@ -26,12 +26,11 @@ const S3Storage = {
    *
    */
   save (input, next) {
-    //var file = input.script
     const s3 = new AWS.S3({
       apiVersion: '2006-03-01',
       params: {
         Bucket: config.integrations.aws.s3.bucket,
-        Key: input.filename // keyname ?
+        Key: input.key
       }
     })
 
@@ -39,7 +38,7 @@ const S3Storage = {
     if (input.sourceOrigin === 'file') {
       body = fs.createReadStream(input.sourcePath).pipe(zlib.createGzip())
     } else if (input.sourceOrigin === 'text') {
-      var str = new Stream.PassThrough()
+      const str = new Stream.PassThrough()
       str.write(input.sourceContent)
       str.end()
       body = str.pipe(zlib.createGzip())
@@ -60,23 +59,17 @@ const S3Storage = {
       })
   },
   /**
-   * @param {Object} input
-   * @property {String} input.key
+   * @param {Object} key
    */
-  remove (file, next) {
+  remove (key, next) {
     next || (next = () =>{})
-    const { keyname } = file
 
-    if (!keyname) {
-      return next( new Error('undefined keyname') )
-    }
-
-    let params = {
+    const params = {
       Bucket: config.integrations.aws.s3.bucket,
-      Key: file.keyname
+      Key: key
     }
 
-    var s3 = new AWS.S3({ params })
+    const s3 = new AWS.S3({ params })
     s3.deleteObject(params, function(error, data) {
       if (error) {
         debug('failed to remove file from s3 ');
@@ -89,7 +82,7 @@ const S3Storage = {
       }
     });
   },
-  getStream (key, customer_name, next) {
+  getStream (key, next) {
     const params = {
       Bucket: config.integrations.aws.s3.bucket,
       Key: key
@@ -97,79 +90,72 @@ const S3Storage = {
 
     const s3 = new AWS.S3({ params })
 
-    s3.getObject(params)
-    .on('error', function (err) {
-      debug('s3 get error. %s', err)
-      next(err)
-    })
-    .createReadStream()
-    .pipe( zlib.createGunzip() )
-    .on('error', function (err) {
-      debug('gzip error. %s', err)
-      next(err)
-    })
-    .on('finish', function () {
-      next(null, this)
-    })
+    s3.getObject(params).createReadStream()
+      .on('error', function (err) {
+        debug('s3 get error. %s', err)
+        return next(err)
+      })
+      .pipe( zlib.createGunzip() )
+      .on('error', function (err) {
+        debug('gzip error. %s', err)
+        return next(err)
+      })
+      .on('finish', function () {
+        return next(null, this)
+      })
   }
 }
 
 const LocalStorage = {
   /**
    * @param {Object} input
-   * @property {String} input.filename
-   * @property {String} input.storename
+   * @property {String} input.key full file pathname
    * @property {String} input.sourceOrigin source origin can be 'text' or 'file'
    * @property {String} input.sourcePath if source is 'file', this is the original file
    * @property {String} input.sourceContent if source is 'text', this is the content
    */
   save (input, next) {
     try {
-      const { filename, storename, sourceOrigin } = input
-      const storagePath = ensureNamedStorageExists(storename)
+      const { key } = input
 
-      const targetPath = path.join(storagePath, filename)
-      if (sourceOrigin === 'file') {
+      const targetPath = buildStorageFilename(key)
+
+      if (input.sourceOrigin === 'file') {
         fs.copyFileSync(input.sourcePath, targetPath)
-      } else if (sourceOrigin === 'text') {
+      } else if (input.sourceOrigin === 'text') {
         fs.writeFileSync(targetPath, input.sourceContent)
       } else {
         throw new Error('unhandled sources origin received')
       }
 
-      next(null, { path: targetPath, filename })
+      next(null, { path: targetPath, filename: path.basename(targetPath) })
     } catch (err) {
       next( err )
     }
   },
-  getStream (key, customerName, next) {
-    const storagePath = systemConfig.file_upload_folder
-    const filepath = path.join(storagePath, customerName, 'scripts', key)
-
+  getStream (key, next) {
+    const filename = buildStorageFilename(key)
     try {
-      fs.accessSync(filepath, fs.R_OK)
+      fs.accessSync(filename, fs.R_OK)
     } catch (err) {
       // file is not found in the storage
       if (err.code === 'ENOENT') {
-        const storage = ensureNamedStorageExists(customerName)
-        fs.writeFileSync(filepath, 'EMPTY FILE CREATED')
+        fs.writeFileSync(filename, 'EMPTY FILE CREATED')
       } else {
         //break
         return next(err)
       }
     }
 
-    const stream = fs.createReadStream(filepath)
+    const stream = fs.createReadStream(filename)
     next(null, stream)
     return stream
   },
-  remove (file, next) {
-    next || (next = (() => {}))
-
-    const storagePath = systemConfig.file_upload_folder
+  remove (key, next) {
     try {
-      const filepath = path.join(storagePath, file.customer_name, 'scripts', file.keyname)
-      fs.rmSync(filepath)
+      const filename = buildStorageFilename(key)
+      fs.accessSync(filename, fs.R_OK)
+      fs.rmSync(filename)
       next()
     } catch (err) {
       next(err)
@@ -177,22 +163,27 @@ const LocalStorage = {
   }
 }
 
-const ensureNamedStorageExists = (storename) => {
+const buildStorageFilename = (key) => {
+  const dirname = path.dirname(key)
+  const basename = path.basename(key)
+
+  const storagepath = ensureNamedStorageExists(dirname)
+
+  const filename = path.join(storagepath, basename)
+  return filename
+}
+
+const ensureNamedStorageExists = (pathname) => {
   debug('creating local storage')
 
   const basePath = systemConfig.file_upload_folder
-  const storagePath = path.join(basePath, storename)
-  const scriptsPath = path.join(storagePath, 'scripts')
+  const storagePath = path.join(basePath, pathname)
 
   if (!fs.existsSync(storagePath)) {
-    fs.mkdirSync(storagePath, '0755')
+    fs.mkdirSync(storagePath, { mode: '0755', recursive: true })
     debug('named storage %s created', storagePath)
   }
 
-  if (!fs.existsSync(scriptsPath)) {
-    fs.mkdirSync(scriptsPath, '0755')
-    debug('scripts storage %s created', scriptsPath)
-  }
-
-  return scriptsPath
+  return storagePath
 }
+
