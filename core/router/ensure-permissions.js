@@ -5,6 +5,10 @@ module.exports = () => {
     //
     // prepare set of permissions
     //
+
+    //if (req.hasOwnProperty('permissions')) {
+    //}
+
     if (!ACL.hasAccessLevel(req.session.credential, 'admin')) {
       req.permissions = ACL.buildPermissions({
         role: req.session.credential,

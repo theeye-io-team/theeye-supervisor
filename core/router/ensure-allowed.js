@@ -15,27 +15,30 @@ module.exports = function (options) {
         }
       }
 
-      new Promise((resolve, reject) => {
-        if (!req.hasOwnProperty('permissions')) {
-          ensurePermissions()(req, res, err => {
-            if (err) { return reject(err) }
-            else { return resolve() }
-          })
-        }
-      }).then(() => {
-        const toCheck = {
-          permissions: req.permissions,
-          model,
-          //email: req.user.email,
-          //grants: req.session.member.tags,
-          credential: req.session.credential
-        }
+      ensurePermissionsPromise(req, res)
+        .then(() => {
+          const toCheck = {
+            permissions: req.permissions,
+            model,
+            //email: req.user.email,
+            //grants: req.session.member.tags,
+            credential: req.session.credential
+          }
 
-        ACL.ensureAllowed(toCheck)
-        return next()
-      })
+          ACL.ensureAllowed(toCheck)
+          return next()
+        })
     } catch (err) {
       return res.sendError(err)
     }
   }
+}
+
+const ensurePermissionsPromise = (req, res) => {
+  return new Promise((resolve, reject) => {
+    ensurePermissions()(req, res, err => {
+      if (err) { return reject(err) }
+      else { return resolve() }
+    })
+  })
 }
