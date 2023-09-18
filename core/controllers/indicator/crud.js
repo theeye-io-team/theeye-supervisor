@@ -1,13 +1,11 @@
 const App = require('../../app')
 const audit = require('../../lib/audit')
 const router = require('../../router')
-const dbFilter = require('../../lib/db-filter')
 //const IndicatorModels = require('../../entity/indicator')
 //const Tag = require('../../entity/tag').Entity
 const logger = require('../../lib/logger')('eye:controller:indicator:crud')
 const TopicsConstants = require('../../constants/topics')
 const Constants = require('../../constants')
-const Acl = require('../../lib/acl')
 
 module.exports = function (server) {
   const middlewares = [
@@ -16,7 +14,12 @@ module.exports = function (server) {
     router.ensureCustomer
   ]
 
-  server.get('/indicator', middlewares, controller.fetch)
+  server.get('/indicator',
+    middlewares,
+    router.ensurePermissions(),
+    router.dbFilter(),
+    controller.fetch
+  )
 
   server.get('/indicator/:indicator',
     server.auth.bearerMiddleware,
@@ -126,18 +129,7 @@ const controller = {
    * @method GET
    */
   fetch (req, res, next) {
-    var filter = dbFilter(
-      Object.assign({}, (req.query||{}) , {
-        where: {
-          customer: req.customer._id
-        }
-      })
-    )
-
-    if ( !Acl.hasAccessLevel(req.user.credential, 'admin') ) {
-      // find what this user can access
-      filter.where.acl = req.user.email
-    }
+    const filter = req.dbQuery
 
     App.Models.Indicator.Indicator
       .find(filter.where)

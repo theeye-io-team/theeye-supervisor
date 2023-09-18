@@ -4,8 +4,6 @@ const router = require('../../router')
 const audit = require('../../lib/audit')
 const TopicsConstants = require('../../constants/topics')
 const Constants = require('../../constants')
-const dbFilter = require('../../lib/db-filter');
-const ACL = require('../../lib/acl');
 
 module.exports = function (server) {
   const crudTopic = TopicsConstants.monitor.crud
@@ -43,6 +41,8 @@ module.exports = function (server) {
     router.resolve.customerNameToEntity({required:true}),
     router.ensureCustomer,
     router.requireCredential('viewer'),
+    router.ensurePermissions(),
+    router.dbFilter(),
     resources_fetch
   )
 
@@ -109,19 +109,8 @@ const update_state = (req, res, next) => {
  *
  */
 const resources_fetch = (req, res, next) => {
-  const filter = dbFilter(req.query, {
-    sort: {
-      fails_count: -1,
-      type: 1
-    }
-  })
-
-  filter.where.customer_id = req.customer._id;
-  if ( !ACL.hasAccessLevel(req.user.credential,'admin') ) {
-    // find what this user can access
-    filter.where.acl = req.user.email
-  }
-
+  const filter = req.dbQuery
+  filter.sort = { fails_count: -1, type: 1 }
   App.resource.fetchBy(filter, (err, resources) => {
     if (err) {
       logger.error(err)

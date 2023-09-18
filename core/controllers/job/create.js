@@ -11,6 +11,7 @@ module.exports = (server) => {
     router.ensureCustomer,
     router.requireCredential('user'),
     router.resolve.idToEntity({ param: 'task', required: true }),
+    router.ensurePermissions(),
     router.ensureAllowed({ entity: { name: 'task' } }),
     createJob
   )
@@ -21,6 +22,7 @@ module.exports = (server) => {
     router.ensureCustomer,
     router.requireCredential('user'),
     router.resolve.idToEntity({ param: 'task', required: true }),
+    router.ensurePermissions(),
     router.ensureAllowed({ entity: { name: 'task' } }),
     createJob
     //restify.plugins.conditionalHandler([

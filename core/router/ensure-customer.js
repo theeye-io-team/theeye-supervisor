@@ -2,13 +2,13 @@ module.exports = function (req, res, next) {
   const { customer, user, session } = req
 
   if (!customer) {
-    var err = new Error('unauthorized. customer required')
+    const err = new Error('unauthorized. customer required')
     err.statusCode = 401
     return next(err)
   }
 
   if (!user) {
-    var err = new Error('unauthorized. user required')
+    const err = new Error('unauthorized. user required')
     err.statusCode = 401
     return next(err)
   }
@@ -17,8 +17,8 @@ module.exports = function (req, res, next) {
     return next()
   }
 
-  if (session && session.customer) {
-    if (session.customer === customer.name) {
+  if (session?.customer_name) {
+    if (session.customer_name === customer.name) {
       return next()
     } else {
       const err = new Error('Incorrect Organizations. Session conflict')

@@ -1,7 +1,6 @@
-'use strict';
 
-var ACL = require('../lib/acl');
-var logger = require('../lib/logger')(':router:middleware:credentials');
+const ACL = require('../lib/acl')
+const logger = require('../lib/logger')(':router:middleware:credentials')
 
 /**
  *
@@ -13,16 +12,18 @@ module.exports = function (credential, options) {
   const reqLvl = ACL.accessLevel(credential)
   options || (options={})
 
-  return function middleware (req,res,next) {
-    if (!req.user) return next();
+  return function middleware (req, res, next) {
+    if (!req.session) {
+      return res.send(403,'forbidden')
+    }
 
-    var currLvl = ACL.accessLevel(req.user.credential)
-    if (options.exactMatch===true) {
+    const currLvl = ACL.accessLevel(req.session.credential)
+    if (options.exactMatch === true) {
       if (currLvl !== reqLvl) {
         return res.send(403,'forbidden')
       }
     } else if (currLvl < reqLvl) {
-      logger.warn('user %s (%s) not allowed', (req.user.username||req.user.email), req.user.credential)
+      logger.warn('user %s (%s) not allowed', (req.user?.username||req.user?.email), req.session.credential)
       return res.send(403,'forbidden')
     }
 

@@ -3,8 +3,6 @@ const ObjectId = require('mongoose').Types.ObjectId
 const App = require('../../app')
 const logger = require('../../lib/logger')('controller:task:crud')
 const router = require('../../router')
-const dbFilter = require('../../lib/db-filter')
-const ACL = require('../../lib/acl')
 const ErrorHandler = require('../../lib/error-handler')
 const audit = require('../../lib/audit')
 const TaskConstants = require('../../constants/task')
@@ -43,6 +41,16 @@ module.exports = (server) => {
   server.get('/:customer/task',
     identityMiddleware('viewer'),
     router.resolve.idToEntityByCustomer({ param: 'host', required: false }),
+    router.ensurePermissions(),
+    router.dbFilter(),
+    controller.fetch
+  )
+
+  server.get('/task',
+    identityMiddleware('viewer'),
+    router.resolve.idToEntityByCustomer({ param: 'host', required: false }),
+    router.ensurePermissions(),
+    router.dbFilter(),
     controller.fetch
   )
 
@@ -168,9 +176,7 @@ const controller = {
   fetch (req, res, next) {
     const customer = req.customer
     const input = req.query
-
-    const filter = dbFilter(input, { /** default **/ })
-    filter.where.customer_id = customer.id
+    const filter = req.dbQuery
 
     // exclude tasks with no host assigned or with invalid script/data
     if (
@@ -197,11 +203,6 @@ const controller = {
 
     if (req.host) {
       filter.where.host_id = req.host._id.toString()
-    }
-
-    if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
-      // find what this user can access
-      filter.where.acl = req.user.email
     }
 
     App.task.fetchBy(filter, (err, tasks) => {
@@ -325,9 +326,9 @@ const controller = {
         customer_id: customer._id.toString(),
       }
 
-      if (!ACL.hasAccessLevel(req.user.credential, 'admin')) {
+      if (Array.isArray(req.permissions)) {
         // find what this user can access
-        $match.acl = req.user.email
+        $match.acl = req.permissions.map(p => p.value)
       }
 
       const tasks = await App.Models.Task.Task.aggregate([
