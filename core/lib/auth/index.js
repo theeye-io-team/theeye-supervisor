@@ -42,7 +42,8 @@ module.exports = {
         //
         // WARNING!! Integration Tokens cannot be verified using JWT.verify
         //
-        // 2023/09/06. Most of the Integration tokens were issued already expired. Tokens can still be verified against session stored in db by the Gateway API.
+        // 2023/09/06. Most of the Integration tokens were created with equal expiration and issue date.
+        // Tokens can be verified against the information stored in the sessions db by the Gateway API but cannot be verifies using JWT methods.
         //
         logger.log('new connection [bearer]')
         // @TODO use cache
