@@ -145,8 +145,13 @@ module.exports = (server) => {
  *
  */
 const fetchFiles = (req, res, next) => {
-  req.dbQuery.sort = { filename: 1 }
-  App.Models.File.File.fetchBy(req.dbQuery, (error, files) => {
+  const query = Object.assign(
+    {},
+    req.dbQuery,
+    { sort: { filename: 1 } }
+  )
+
+  App.Models.File.File.fetchBy(query, (error, files) => {
     if (!files) { files = [] }
     res.send(200, files)
     next()
