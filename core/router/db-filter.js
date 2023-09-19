@@ -1,5 +1,6 @@
 const dbFilter = require('../lib/db-filter')
 const { ForbiddenError, ServerError } = require('../lib/error-handler')
+const EscapedRegExp = require('../lib/escaped-regexp')
 
 module.exports = (options) => {
   return (req, res, next) => {
@@ -20,7 +21,9 @@ module.exports = (options) => {
         if (!Array.isArray(req.permissions)) {
           throw new ServerError('Bad permissions definition')
         }
-        const acl = req.permissions.map(p => p.value)
+        const acl = req.permissions.map(p => {
+          return new EscapedRegExp(`${p.value}`,'i')
+        })
         filter.where.acl = { $in: acl }
       }
 

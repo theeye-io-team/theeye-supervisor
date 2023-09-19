@@ -1,7 +1,20 @@
 // order matters
-const credentials = ['viewer','user','agent','manager','admin','integration','owner','root']
+const credentials = [
+  'viewer',
+  'user',
+  'agent',
+  'manager',
+  'admin',
+  'integration',
+  'owner',
+  'root'
+]
 
-const { ClientError, ServerError, ForbiddenError } = require('./error-handler')
+const {
+  ClientError,
+  ServerError,
+  ForbiddenError
+} = require('./error-handler')
 
 module.exports = {
   accessLevel (credential) {
@@ -30,7 +43,7 @@ module.exports = {
         if (tag.hasOwnProperty('k') && tag.hasOwnProperty('v')) {
           permissions.push({
             type: 'tag',
-            value: `${tag.k}:${tag.v}`
+            value: (`${tag.k}:${tag.v}`).toLowerCase()
           })
         }
       }
