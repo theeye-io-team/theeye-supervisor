@@ -24,7 +24,6 @@ module.exports = (options) => {
         const acl = req.permissions.map(p => {
           return new EscapedRegExp(`${p.value}`,'i')
         })
-        console.log(acl)
         filter.where.acl = { $in: acl }
       }
 
