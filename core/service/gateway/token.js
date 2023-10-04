@@ -7,7 +7,7 @@ module.exports = {
     const authCfg = config.authentication
 
     // seconds
-    const signSettings = { expiresIn: authCfg.expiresIn }
+    const signSettings = { expiresIn: authCfg?.expiresIn || 10 }
 
     let key
     if (authCfg.rs256?.priv) {

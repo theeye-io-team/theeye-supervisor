@@ -141,6 +141,7 @@ module.exports = {
     }
   },
   authentication: {
+    expiresIn: 10,
     protocol: 'http',
     api: {
       timeout: 5000,
