@@ -17,43 +17,36 @@ module.exports = {
         throw err
       }
 
-      let customerConfig = await getCustomerConfig(customer_name)
+      const customer = await getCustomer(customer_name)
+      const customerConfig = customer.config || {}
 
       // force required properties in payload
-      let date = new Date()
-      let payload = Object.assign({ topic }, data)
+      const date = new Date()
+      const payload = Object.assign({ topic }, data)
       payload.organization = customer_name
       payload.timestamp = date.getTime()
       payload.date = date.toISOString()
 
       dump(config.logger, payload)
 
-      elastic.submit(customerConfig.elasticsearch, topic, payload)
-      remote.submit(customerConfig.remote_logger, topic, payload)
+      elastic.submit(customer, topic, payload)
+      remote.submit(customer, topic, payload)
     } catch (err) {
       logger.error('%o', err)
     }
   }
 }
 
-const getCustomerConfig = (customer_name) => {
-  return new Promise((resolve, reject) => {
-    Customer.findOne({ name: customer_name }, (error, customer) => {
-      if (error) {
-        logger.error(error)
-        return resolve(error)
-      }
+const getCustomer = async (customer_name) => {
+  const customer = await Customer.findOne({ name: customer_name })
 
-      if (!customer) {
-        const err = new Error('customer not found')
-        err.filters = filters 
-        logger.error('%o',err)
-        return resolve(err)
-      }
+  if (!customer) {
+    const err = new Error('customer not found')
+    err.filters = filters 
+    throw err
+  }
 
-      resolve(customer.config || {})
-    })
-  })
+  return customer
 }
 
 const dump = (config, payload) => {
