@@ -61,7 +61,10 @@ module.exports = async (req) => {
 
 const paramsFilter = (req) => {
   const params = {}
-  const { body={}, query={} } = req
+  let { body, query } = req
+
+  if (!body) { body = {} }
+  if (!query) { query = {} }
 
   params.assignee = (body.assignee || query.assignee)
   if (params.assignee) {
