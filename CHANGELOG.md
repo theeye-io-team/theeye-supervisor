@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.11.0](https://github.com/theeye/theeye-supervisor/compare/4.10.0...4.11.0) (2023-10-18)
+
+
+### Features
+
+* cheack acl's by tag / groups ([#103](https://github.com/theeye/theeye-supervisor/issues/103)) ([7c51790](https://github.com/theeye-io-team/theeye-supervisor/commit/7c5179054ac032b616b7ed0d63936c783623295d))
+
+### Bug Fixes
+
+* acl by tags toLowerCase ([#109](https://github.com/theeye/theeye-supervisor/issues/109)) ([a1fb892](https://github.com/theeye/theeye-supervisor/commit/a1fb89226a183585cba44e9eebf416fcd98cc642))
+* default session expiresIn ([#110](https://github.com/theeye/theeye-supervisor/issues/110)) ([8ac6ae3](https://github.com/theeye/theeye-supervisor/commit/8ac6ae3865d7ffd14a608388dcb62c2d8eceb2be))
+* disable logger integrations on failure ([#111](https://github.com/theeye/theeye-supervisor/issues/111)) ([ebc0b64](https://github.com/theeye/theeye-supervisor/commit/ebc0b6497230a0a6c832ce25698f5f50b6a90aa5))
+* missing permissions ([d8f1a45](https://github.com/theeye/theeye-supervisor/commit/d8f1a45fdc87f8d4d5c59f77e6eb5df7d400e5e3))
+* task arguments validation ([8646d4d](https://github.com/theeye/theeye-supervisor/commit/8646d4d285e297f6766c1336312b7cabea5438d3))
+
 ## [4.10.0](https://github.com/theeye/theeye-supervisor/compare/4.9.0...4.10.0) (2023-09-07)
 
 
