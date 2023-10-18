@@ -32,6 +32,7 @@ module.exports = (server) => {
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
+    router.ensurePermissions(),
     router.dbFilter(),
     fetchFiles
   )
@@ -73,18 +74,6 @@ module.exports = (server) => {
     getLinkedModels
   )
 
-  // CREATE
-  server.post('/:customer/file',
-    server.auth.bearerMiddleware,
-    router.resolve.customerSessionToEntity(),
-    router.ensureCustomer,
-    router.requireCredential('admin'),
-    upload.single('file'),
-    createFile,
-    App.state.postCreate('file')
-    //audit.afterCreate('file', { display: 'filename' })
-  )
-
   // UPDATE
   server.put('/:customer/file/:file',
     server.auth.bearerMiddleware,
@@ -112,6 +101,18 @@ module.exports = (server) => {
     App.state.postUpdate('file'),
     checkAfectedModels,
     //audit.afterUpdate('file', { display: 'filename' })
+  )
+
+  // CREATE
+  server.post('/:customer/file',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.requireCredential('admin'),
+    upload.single('file'),
+    createFile,
+    App.state.postCreate('file')
+    //audit.afterCreate('file', { display: 'filename' })
   )
 
   server.put('/:customer/file/:file/schema',
