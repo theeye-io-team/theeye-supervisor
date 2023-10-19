@@ -61,8 +61,9 @@ Este es el usuario que ejecutó la task y creó el job. Esta variable va a conte
 
 | Nombre | Tipo   | Descripción       |
 | ------ | ------ | ----------------- |
-| id     | string | ID del usuario    |
-| email  | string | Email del usuario |
+| id     | string | ID interno del usuario |
+| email  | string | email del usuario |
+| username  | string | nombre de usuario |
 
 ### Ejemplo 
 
