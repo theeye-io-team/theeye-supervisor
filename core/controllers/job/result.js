@@ -74,16 +74,16 @@ const resultPolling = (req, res, next) => {
     }
 
     if (App.jobDispatcher.hasFinished(job) === true) {
-      const result = prepareJobResponse(job, req.query)
-      res.send(result?.statusCode, result?.data)
-      next()
+      return sendResponse(res, parseJobResponse(job, req.query), next)
     } else {
       waitJobResult(req, job, customer, req.query.timeout, (err, message) => {
         if (err) {
           res.send(408, 'Request Timeout')
+          return
         } else if (!message) {
           if (req.query.limit === req.query.counter) {
             res.send(408, 'Request Timeout')
+            return
           } else {
             // the message did not arrived
             const query = Object.assign({}, req.query)
@@ -92,17 +92,17 @@ const resultPolling = (req, res, next) => {
 
             const encodedquerystring = qs.stringify(query)
 
-      // started by secret. use job secret
-      let redirectUrl
-      if (req.params.secret) {
-        redirectUrl = `/job/${job.id}/secret/${job.secret}/result`
-      } else {
-        redirectUrl = `/job/${job.id}/result`
-      }
+            // started by secret. use job secret
+            let redirectUrl
+            if (req.params.secret) {
+              redirectUrl = `/job/${job.id}/secret/${job.secret}/result`
+            } else {
+              redirectUrl = `/job/${job.id}/result`
+            }
 
-      res.header('Location', `${redirectUrl}?${encodedquerystring}`)
-
+            res.header('Location', `${redirectUrl}?${encodedquerystring}`)
             res.send(303, {})
+            return
           }
         } else {
           App.Models.Job
@@ -113,9 +113,7 @@ const resultPolling = (req, res, next) => {
                 throw new ClientError('Job result is no longer available', { statusCode: 404 })
               }
 
-              const result = prepareJobResponse(job, req.query)
-              res.send(result?.statusCode, result?.data)
-              next()
+              return sendResponse(res, parseJobResponse(job, req.query), next)
             })
         }
       })
@@ -179,37 +177,42 @@ const waitJobResult = async (req, job, customer, timeout, next) => {
   }, timeout)
 }
 
-const prepareJobResponse = (job, options) => {
+const parseJobResponse = (job, options) => {
   const result = {}
 
   if (options.hasOwnProperty('result')) {
-    result.data = job.result
+    result.body = job.result
   } else if (options.hasOwnProperty('full')) {
-    result.data = job
+    result.body = job
+  } else if (options.hasOwnProperty('output')) {
+    result.body = job.output
   } else {
     const output = job.output
-    if (options.hasOwnProperty('parse')) {
-      const index = (options.parse || 0)
-      if (Array.isArray(output)) {
-        try {
-          const arg = output[index]
-          let respData
-          if (arg) {
-            respData = JSON.parse(arg) // first index
-          }
-
-          result.data = respData || null
-          result.statusCode = (respData?.statusCode || respData?.status)
-        } catch (jsonErr) {
-          result.data = {
-            message: 'task ejecution result cannot be parsed',
-            result: job.result
-          }
-          result.statusCode = 500
+    const index = (options.parse || 0)
+    if (Array.isArray(output)) {
+      try {
+        const arg = output[index]
+        let respData
+        if (arg) {
+          respData = JSON.parse(arg) // first index
         }
+
+        if (respData?.response) {
+          result.body = respData.response?.body || respData.response
+          result.statusCode = respData.response?.statusCode
+          result.headers = respData.response?.headers
+        } else {
+          result.body = respData || null
+          result.statusCode = respData?.statusCode
+        }
+      } catch (jsonErr) {
+        result.body = {
+          message: 'Invalid task ejecution result. Cannot be parsed',
+          details: jsonErr.message,
+          result: job.result
+        }
+        result.statusCode = 500
       }
-    } else {
-      result.data = output
     }
   }
 
@@ -225,3 +228,12 @@ const prepareJobResponse = (job, options) => {
   return result
 }
 
+const sendResponse = (res, result, next) => {
+  if (result.headers) {
+    for (let header in result.headers) {
+      res.header(header, result.headers[header])
+    }
+  }
+  res.send(result.statusCode, result.body)
+  return next()
+}
