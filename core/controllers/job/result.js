@@ -81,9 +81,11 @@ const resultPolling = (req, res, next) => {
       waitJobResult(req, job, customer, req.query.timeout, (err, message) => {
         if (err) {
           res.send(408, 'Request Timeout')
+          return
         } else if (!message) {
           if (req.query.limit === req.query.counter) {
             res.send(408, 'Request Timeout')
+            return
           } else {
             // the message did not arrived
             const query = Object.assign({}, req.query)
@@ -92,17 +94,17 @@ const resultPolling = (req, res, next) => {
 
             const encodedquerystring = qs.stringify(query)
 
-      // started by secret. use job secret
-      let redirectUrl
-      if (req.params.secret) {
-        redirectUrl = `/job/${job.id}/secret/${job.secret}/result`
-      } else {
-        redirectUrl = `/job/${job.id}/result`
-      }
+            // started by secret. use job secret
+            let redirectUrl
+            if (req.params.secret) {
+              redirectUrl = `/job/${job.id}/secret/${job.secret}/result`
+            } else {
+              redirectUrl = `/job/${job.id}/result`
+            }
 
-      res.header('Location', `${redirectUrl}?${encodedquerystring}`)
-
+            res.header('Location', `${redirectUrl}?${encodedquerystring}`)
             res.send(303, {})
+            return
           }
         } else {
           App.Models.Job
@@ -115,7 +117,7 @@ const resultPolling = (req, res, next) => {
 
               const result = prepareJobResponse(job, req.query)
               res.send(result?.statusCode, result?.data)
-              next()
+              return
             })
         }
       })
