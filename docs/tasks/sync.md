@@ -60,34 +60,77 @@ La ejecución con espera se puede realizar utilizando `access_token`. No está s
 
 ## Obtención del resultado Async vs Sync
 
-Mostraremos en este caso como se realizaría una invocación sin espera y como sería lo mismo utilizando la espera con polling.
+Mostraremos como se realizaría una invocación sin espera y como sería lo mismo utilizando la espera con polling.
 
-En este caso solo evaluaremos la opciones de iniciar y luego obtener el resultados con GET.
+En este caso solo evaluaremos la opciones de iniciar la ejecución y luego obtener el resultados utilizando el método HTTP GET.
 Exiten otras alternativas, utilizando eventos o socket, que están disponibles en diferentes variantes pero quedan fuera del alcance de este documento.
 
-## Async - comportamiento por defecto.
+Utilizaremos el siguiente código de ejemplo
 
-La ejecución de una Tarea se realizaría de la siguiente manera
+```javascript
+
+// NodeJs boilerplate
+const main = async () => {
+  const response = {  }
+
+  // add your code here.
+
+  response.body = {
+    regimen_id: "operaciones_cambio_apartado_a",
+    regla_fecha_vencimiento: "byLabourDay",
+    fecha: "2023-01-02T00:00:00.000Z",
+    status: "por_vencer",
+    periodo_origen: "01-01-2023",
+    periodo_www3: "20230101",
+    prorroga: false,
+    createdAt: "2023-10-02T19:53:40.998Z",
+    updatedAt: "2023-10-02T19:53:40.998Z",
+    id: "651b1fc444587926e420dc37",
+    area: "Securities",
+    nro_en_www3: "14_1",
+    nombre_en_w3: "OPERACIONES DE CAMBIO",
+    tipo_de_regimen: "Obligatorio",
+    regimen: "Operaciones de Cambio (R.I. - O.C.) - Apartado A "
+  }
+
+  response.statusCode = 201
+
+  response.headers = {
+    TheEyeJobId: JSON.parse(process.env.THEEYE_JOB).id
+  }
+
+  return { response, state: "success" }
+}
+
+// invoke main and capture result output
+main()
+
+
+```
+
+En esta primer alternativa se envía el objeto response con el estado final de la ejecución.
+Para el resto de los ejemplos utilizaremos este script de ejemplo.
+
+Para otras alternativas de respuesta y opciones para encadenar tareas dirijase a ...
+
+
+## Async vs Sync
+
 
 <!-- tabs:start -->
 
-#### **curl**
+#### **async**
+
+La ejecución normal de una Tarea se realizaría de forma async de la siguiente manera
 
 ```bash
 curl --request POST \
-     --url "https://supervisor.theeye.io/task/64ac0b46c06feba9b89ad795/job?access_token=${accessToken}" \
+     --url "https://supervisor.theeye.io/task/64ac0b46c06feba9b89ad795/secret/${secret}/job" \
      --header 'content-type: application/json' \
      --include \ # include response headers
-     --data '["arg1","arg2","arg3"]'
 ```
 
-<!-- tabs:end -->
-
-Se obtendría la siguiente respuesta
-
-#### Headers
-
-```shell
+```bash
 HTTP/1.1 200 OK
 Server: restify
 Access-Control-Allow-Origin: *
@@ -95,15 +138,15 @@ Access-Control-Allow-Methods: GET,PUT,PATCH,POST,DELETE,OPTIONS
 Access-Control-Allow-Credentials: true
 Access-Control-Allow-Headers: Accept, Accept-Charset, Accept-Encoding, Accept-Version, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-Requested-With
 Content-Type: application/json
-Content-Length: 1653
-Date: Mon, 10 Jul 2023 20:05:12 GMT
+Content-Length: 1368
+Date: Wed, 25 Oct 2023 18:40:36 GMT
 Connection: keep-alive
 Keep-Alive: timeout=5
 ```
 
-#### Body
+La respuesta es devuelta inmediatamente. El estado de la ejecución dice `"state": "in_progress"` y `"lifecycle": "ready"` que indica que el job esta esperando para ser ejecutado.
 
-```js
+```javascript
 {
   "order": 0,
   "task_arguments_values": [],
@@ -118,66 +161,117 @@ Keep-Alive: timeout=5
   "default_state_evaluation": "success",
   "agent_logging": false,
   "_type": "ScriptJob",
-  "creation_date": "2023-07-10T20:05:12.921Z",
-  "last_update": "2023-07-10T20:05:12.928Z",
+  "creation_date": "2023-10-25T18:38:38.474Z",
+  "last_update": "2023-10-25T18:38:38.481Z",
+  "secret": "e16b0e3a9dd52b714bdcefc15b3c141d4b92c68458adabb4f43347046cc427ea",
   "output": [],
   "env": {
-    "THEEYE_JOB": "{\"id\":\"64ac6478646bb71ee82e3a72\",\"task_id\":\"64ac0b46c06feba9b89ad795\"}",
-    "THEEYE_JOB_USER": "{\"id\":\"64ac622ecfd3f6b8c04ff79c\",\"email\":\"files-8d9ee1278b525f17ee119ff6319ee4bacad390e2-integration@theeye.io\",\"username\":\"files-8d9ee1278b525f17ee119ff6319ee4bacad390e2-integration\"}",
+    "THEEYE_JOB": "{\"id\":\"653960ae5f5bf556ac433e20\",\"task_id\":\"6538069b3a10575075d0ccb5\"}",
+    "THEEYE_JOB_USER": "{}",
     "THEEYE_JOB_WORKFLOW": "{}",
-    "THEEYE_ORGANIZATION_NAME": "\"files\"",
+    "THEEYE_ORGANIZATION_NAME": "\"b78e8a19-5038-5950-a79e-4254ff74af3a\"",
     "THEEYE_API_URL": "\"http://127.0.0.1:60080\""
   },
   "task": {
-    ...
+    "id": "6538069b3a10575075d0ccb5",
+    "_type": "ScriptTask",
+    "type": "script",
+    "task_arguments": [],
+    "output_parameters": []
   },
-  "task_id": "64ac0b46c06feba9b89ad795",
-  "host_id": "61702a45bd98993f55331c23",
+  "task_id": "6538069b3a10575075d0ccb5",
+  "host_id": "64aebc382f9bdaaefbe8d934",
   "host": {
-    ...
+    "_id": "64aebc382f9bdaaefbe8d934",
+    "hostname": "draco",
+    "id": "64aebc382f9bdaaefbe8d934"
   },
-  "name": "Actualizar Indicador",
-  "allows_dynamic_settings": true,
-  "customer_id": "6170299c5e06094f81b1df52",
-  "customer_name": "files",
+  "name": "ApiTest",
+  "allows_dynamic_settings": false,
+  "customer_id": "64aeb0020dc410fdc71c0178",
+  "customer_name": "b78e8a19-5038-5950-a79e-4254ff74af3a",
   "state": "in_progress",
   "lifecycle": "ready",
-  "user_id": "64ac622ecfd3f6b8c04ff79c",
   "notify": true,
-  "origin": "user",
+  "origin": "secret",
   "triggered_by": null,
-  "script_id": "64ac0b46c06feba9b89ad79a",
+  "script_id": "6538069a3a10575075d0ccae",
   "script_runas": "node %script%",
   "timeout": 600000,
-  "id": "64ac6478646bb71ee82e3a72",
-  "user": {
-    ...
-  }
+  "id": "653960ae5f5bf556ac433e20",
+  "user": {}
 }
-
 ```
 
-Luego sería necesarío buscar el resultado de la ejecución utilizando el endpoint de resultado especificando el formato deseado.
+#### **sync**
+
+Para iniciar en modo "sync" se debe incluir el parámetro `wait_result=true`
+
+```bash
+curl --request POST \
+     --url "https://supervisor.theeye.io/task/64ac0b46c06feba9b89ad795/secret/${secret}/job?wait_result=true" \
+     --header 'content-type: application/json' \
+     --include \ # include response headers
+```
+
+Luego de unos instantes se obtendría la siguiente respuesta
+
+#### Headers
+
+```shell
+HTTP/1.1 201 Created
+Server: restify
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET,PUT,PATCH,POST,DELETE,OPTIONS
+Access-Control-Allow-Credentials: true
+Access-Control-Allow-Headers: Accept, Accept-Charset, Accept-Encoding, Accept-Version, Authorization, Cache-Control, Content-Length, Content-Type, Origin, User-Agent, X-Requested-With
+TheEyeJobId: 6539264b5f5bf556ac42f5d6
+Content-Type: application/json
+Content-Length: 500
+Date: Wed, 25 Oct 2023 14:29:40 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+```
+
+#### Body
+
+```js
+{
+  "regimen_id": "operaciones_cambio_apartado_a",
+  "regla_fecha_vencimiento": "byLabourDay",
+  "fecha": "2023-01-02T00:00:00.000Z",
+  "status": "por_vencer",
+  "periodo_origen": "01-01-2023",
+  "periodo_www3": "20230101",
+  "prorroga": false,
+  "createdAt": "2023-10-02T19:53:40.998Z",
+  "updatedAt": "2023-10-02T19:53:40.998Z",
+  "id": "651b1fc444587926e420dc37",
+  "area": "Securities",
+  "nro_en_www3": "14_1",
+  "nombre_en_w3": "OPERACIONES DE CAMBIO",
+  "tipo_de_regimen": "Obligatorio",
+  "regimen": "Operaciones de Cambio (R.I. - O.C.) - Apartado A "
+}
+```
+
+<!-- tabs:end -->
+
 
 
 ### Formatos de output
 
+*Importante*
+
+Solo es posible modificar los parámetros del response dado por la api **sync** utilizando `parse` con un objeto `response` como resultado como se muestra en el ejemplo.
+
+Si la tarea finaliza `success` el statusCode será 200 y en caso de `failure` será 500
+
 <!-- tabs:start -->
 
-
-#### **output**
-
-```bash
-curl --url "https://supervisor.theeye.io/job/64ac6772be08c0252fb5ed1a/result?access_token=${accessToken}" \
-       --header 'content-type: application/json' \
-```
-
-```js
-["{\"message\":\"Hello world!\"}"]
-
-```
-
 #### **parse**
+
+En caso de no indicar ningún formato `parse` es la opción por defecto
 
 
 ```bash
@@ -188,11 +282,50 @@ curl --url "https://supervisor.theeye.io/job/64ac6772be08c0252fb5ed1a/result?acc
 
 ```js
 {
-  "message": "Hello world!"
+  "regimen_id": "operaciones_cambio_apartado_a",
+  "regla_fecha_vencimiento": "byLabourDay",
+  "fecha": "2023-01-02T00:00:00.000Z",
+  "status": "por_vencer",
+  "periodo_origen": "01-01-2023",
+  "periodo_www3": "20230101",
+  "prorroga": false,
+  "createdAt": "2023-10-02T19:53:40.998Z",
+  "updatedAt": "2023-10-02T19:53:40.998Z",
+  "id": "651b1fc444587926e420dc37",
+  "area": "Securities",
+  "nro_en_www3": "14_1",
+  "nombre_en_w3": "OPERACIONES DE CAMBIO",
+  "tipo_de_regimen": "Obligatorio",
+  "regimen": "Operaciones de Cambio (R.I. - O.C.) - Apartado A "
 }
 ```
 
+
+#### **output**
+
+El output estandar de las tareas es guardado como Array. Cada elemento del array de output se correspondera con los argumentos de entrada de la siguiente tarea encadenada.
+
+Con el parámetro `output` obtenemos el resultadoa de la tarea de tal forma que pueda ser utilizado como input para otra tarea de un flow.
+
+Los elementos del array pueden ser cualquier `string` o `number`
+
+```bash
+curl --url "https://supervisor.theeye.io/job/64ac6772be08c0252fb5ed1a/result?access_token=${accessToken}" \
+       --header 'content-type: application/json' \
+       -G --data-urlencode 'output'
+```
+
+```js
+[
+  "{\"state\":\"success\",\"body\":{\"regimen_id\":\"operaciones_cambio_apartado_a\",\"regla_fecha_vencimiento\":\"byLabourDay\",\"fecha\":\"2023-01-02T00:00:00.000Z\",\"status\":\"por_vencer\",\"periodo_origen\":\"01-01-2023\",\"periodo_www3\":\"20230101\",\"prorroga\":false,\"createdAt\":\"2023-10-02T19:53:40.998Z\",\"updatedAt\":\"2023-10-02T19:53:40.998Z\",\"id\":\"651b1fc444587926e420dc37\",\"area\":\"Securities\",\"nro_en_www3\":\"14_1\",\"nombre_en_w3\":\"OPERACIONES DE CAMBIO\",\"tipo_de_regimen\":\"Obligatorio\",\"regimen\":\"Operaciones de Cambio (R.I. - O.C.) - Apartado A \"},\"statusCode\":201,\"headers\":{\"TheEyeJobId\":\"6539593d5f5bf556ac433404\"}}"
+]
+
+
+```
+
 #### **result**
+
+Con el parámetro `result` se obtiene el resultado completo de la ejecución de la tarea.
 
 ```bash
 curl --url "https://supervisor.theeye.io/job/64ac6772be08c0252fb5ed1a/result?access_token=${accessToken}" \
@@ -200,32 +333,43 @@ curl --url "https://supervisor.theeye.io/job/64ac6772be08c0252fb5ed1a/result?acc
        -G --data-urlencode 'result'
 ```
 
+Notese que algunos elementos del output fueron removidos para hacer legible la información.
+
 ```js
 {
   "code": 0,
-  "log": "{\"state\":\"success\",\"data\":[{\"message\":\"Hello world!\"}]}\n",
-  "lastline": "{\"state\":\"success\",\"data\":[{\"message\":\"Hello world!\"}]}",
+  "log": "...",
+  "lastline": "...",
   "signal": null,
   "killed": false,
   "times": {
     "seconds": 0,
-    "nanoseconds": 50977309
+    "nanoseconds": 59487955
   },
-  "output": [
-    {
-      "message": "Hello world!"
+  "output": {
+    "state": "success",
+    "response": {
+      "body": {
+        ...
+      },
+      "statusCode": 201,
+      "headers": {
+        "TheEyeJobId": "65395c1b5f5bf556ac4337f3"
+      }
     }
-  ],
+  },
   "user": {
-    "email": "files-agent@theeye.io",
-    "username": "92fa22af8c23ec445d66b9dedd75fe6e353801db",
-    "id": "6170299c5e06094f81b1df53"
+    "email": "7791b41111c9ca7bae4536a0b9757d32e66b445b@theeye.io",
+    "username": "7791b41111c9ca7bae4536a0b9757d32e66b445b",
+    "id": "64aeb0020dc410fdc71c017b"
   }
 }
 ```
 
 
 #### **full**
+
+El parámetro `full` devuelve el job completo iniciado junto con el resultado de la ejecución.
 
 ```bash
 curl --url "https://supervisor.theeye.io/job/64ac6772be08c0252fb5ed1a/result?access_token=${accessToken}" \
@@ -249,69 +393,65 @@ curl --url "https://supervisor.theeye.io/job/64ac6772be08c0252fb5ed1a/result?acc
   "script_arguments": [],
   "agent_logging": false,
   "_type": "ScriptJob",
-  "creation_date": "2023-07-10T20:17:54.780Z",
-  "last_update": "2023-07-10T20:17:56.367Z",
+  "creation_date": "2023-10-25T18:30:02.949Z",
+  "last_update": "2023-10-25T18:30:10.383Z",
+  "secret": "56f74ae7d06353c5eaebfbefd28421bddce1adbd61ecbf7c1d9c1f51d3dac2ec",
   "result": {
     "code": 0,
-    "log": "{\"state\":\"success\",\"data\":[{\"message\":\"Hello world!\"}]}\n",
-    "lastline": "{\"state\":\"success\",\"data\":[{\"message\":\"Hello world!\"}]}",
+    "log": "...",
+    "lastline": "...",
     "signal": null,
     "killed": false,
     "times": {
       "seconds": 0,
-      "nanoseconds": 50977309
+      "nanoseconds": 65750372
     },
-    "output": [
-      {
-        "message": "Hello world!"
+    "output": {
+      "state": "success",
+      "response": {
+        ...
       }
-    ],
+    },
     "user": {
-      "email": "files-agent@theeye.io",
-      "username": "92fa22af8c23ec445d66b9dedd75fe6e353801db",
-      "id": "6170299c5e06094f81b1df53"
+      "email": "7791b41111c9ca7bae4536a0b9757d32e66b445b@theeye.io",
+      "username": "7791b41111c9ca7bae4536a0b9757d32e66b445b",
+      "id": "64aeb0020dc410fdc71c017b"
     }
   },
   "output": [
-    // parsed output
-    "{\"message\":\"Hello world!\"}"
+    ".."
   ],
   "env": {
-    // JSON encoded environment variables
-    "THEEYE_JOB": "{\"id\":\"64ac6772be08c0252fb5ed1a\",\"task_id\":\"64ac0b46c06feba9b89ad795\"}",
-    "THEEYE_JOB_USER": "{\"id\":\"64ac622ecfd3f6b8c04ff79c\",\"email\":\"files-8d9ee1278b525f17ee119ff6319ee4bacad390e2-integration@theeye.io\",\"username\":\"files-8d9ee1278b525f17ee119ff6319ee4bacad390e2-integration\"}",
+    "THEEYE_JOB": "{\"id\":\"65395eaa5f5bf556ac433b7a\",\"task_id\":\"6538069b3a10575075d0ccb5\"}",
+    "THEEYE_JOB_USER": "{}",
     "THEEYE_JOB_WORKFLOW": "{}",
-    "THEEYE_ORGANIZATION_NAME": "\"files\"",
+    "THEEYE_ORGANIZATION_NAME": "\"b78e8a19-5038-5950-a79e-4254ff74af3a\"",
     "THEEYE_API_URL": "\"http://127.0.0.1:60080\""
   },
   "task": {
-    "id": "64ac0b46c06feba9b89ad795",
-    // embedded task entity
-  },
-  "task_id": "64ac0b46c06feba9b89ad795",
-  "host_id": "61702a45bd98993f55331c23",
-  "host": "61702a45bd98993f55331c23",
-  "name": "Actualizar Indicador",
-  "allows_dynamic_settings": true,
-  "customer": "6170299c5e06094f81b1df52",
-  "customer_id": "6170299c5e06094f81b1df52",
-  "customer_name": "files",
-  "state": "success",
-  "lifecycle": "finished",
-  "user_id": "64ac622ecfd3f6b8c04ff79c",
-  "notify": true,
-  "origin": "user",
-  "triggered_by": null,
-  "script": {
-    // embedded script entity
-    "id": "64ac0b46c06feba9b89ad79a",
     ...
   },
-  "script_id": "64ac0b46c06feba9b89ad79a",
+  "task_id": "6538069b3a10575075d0ccb5",
+  "host_id": "64aebc382f9bdaaefbe8d934",
+  "host": "64aebc382f9bdaaefbe8d934",
+  "name": "ApiTest",
+  "allows_dynamic_settings": false,
+  "customer": "64aeb0020dc410fdc71c0178",
+  "customer_id": "64aeb0020dc410fdc71c0178",
+  "customer_name": "b78e8a19-5038-5950-a79e-4254ff74af3a",
+  "state": "success",
+  "lifecycle": "finished",
+  "notify": true,
+  "origin": "secret",
+  "triggered_by": null,
+  "script": {
+    ...
+  },
+  "script_id": "6538069a3a10575075d0ccae",
   "script_runas": "node %script%",
   "timeout": 600000,
   "trigger_name": "success",
-  "id": "64ac6772be08c0252fb5ed1a"
+  "id": "65395eaa5f5bf556ac433b7a"
 }
 
 
@@ -502,7 +642,7 @@ Un job representa una instancia de ejecución de una tarea.  El output está aso
 
 ## Más ejemplos
 
-Para los ejemplos usamos la siguiente receta.
+Para los siguientes ejemplos usamos esta receta.
 
 Puede descargar e importar [esta receta utilizada para todos los ejemplos](/tasks/Rest_API_Response.json ":ignore")
 
