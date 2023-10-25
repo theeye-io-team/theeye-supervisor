@@ -203,7 +203,9 @@ const parseJobResponse = (job, options) => {
           result.headers = respData.response?.headers
         } else {
           result.body = respData || null
-          result.statusCode = respData?.statusCode
+          if (typeof respData?.statusCode === 'number') {
+            result.statusCode = respData.statusCode
+          }
         }
       } catch (jsonErr) {
         result.body = {
