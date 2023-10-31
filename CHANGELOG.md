@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.11.3](https://github.com/theeye/theeye-supervisor/compare/4.11.2...4.11.3) (2023-10-31)
+
+
+### Bug Fixes
+
+* only assign the customer.id ([#113](https://github.com/theeye/theeye-supervisor/issues/113)) ([ff6c4cd](https://github.com/theeye/theeye-supervisor/commit/ff6c4cd006b42e88be34dfe5ef375ccf4b740310))
+
 ### [4.11.2](https://github.com/theeye/theeye-supervisor/compare/4.11.1...4.11.2) (2023-10-25)
 
 
