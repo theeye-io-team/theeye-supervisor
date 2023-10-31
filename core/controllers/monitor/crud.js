@@ -160,7 +160,7 @@ const controller = {
 
       const input = params.data
       input.user = req.user
-      input.customer = customer
+      input.customer = customer.id
       input.customer_id = customer.id
       input.customer_name = customer.name
       input.host_id = host._id
