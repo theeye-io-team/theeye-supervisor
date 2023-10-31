@@ -494,8 +494,8 @@ Service.create = async (input, next) => {
   try {
     logger.log('creating resource for host %j', input)
 
-    let attrs = Object.assign({}, input, { name: input.name })
-    let resource = await createResourceMonitor(attrs)
+    const attrs = Object.assign({}, input, { name: input.name })
+    const resource = await createResourceMonitor(attrs)
 
     logger.log('resource & monitor created')
     const monitor = resource.monitor
