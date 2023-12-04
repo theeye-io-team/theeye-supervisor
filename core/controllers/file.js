@@ -168,7 +168,7 @@ const fetchFiles = (req, res, next) => {
     { sort: { filename: 1 } }
   )
 
-  App.Models.File.File.fetchBy(query, (error, files) => {
+  //App.Models.File.File.fetchBy(query, (error, files) => {
   if (!query.where._type) {
     query.where._type = 'Script'
   }
