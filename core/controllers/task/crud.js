@@ -61,6 +61,13 @@ module.exports = (server) => {
     controller.get
   )
 
+  server.get('/task/:task',
+    identityMiddleware('viewer'),
+    router.resolve.idToEntityByCustomer({ param: 'task', required: true }),
+    router.ensureAllowed({ entity: { name: 'task' } }),
+    controller.get
+  )
+
   server.get('/task/version',
     identityMiddleware('admin'),
     controller.version
