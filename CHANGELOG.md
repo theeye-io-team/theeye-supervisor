@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.11.4](https://github.com/theeye/theeye-supervisor/compare/4.11.3...4.11.4) (2023-12-05)
+
+
+### Bug Fixes
+
+* **task:** fetch tasks filters ([#114](https://github.com/theeye/theeye-supervisor/issues/114)) ([a68d497](https://github.com/theeye/theeye-supervisor/commit/a68d4976dd31c53634d08630cda3cf716956de78))
+
 ### [4.11.3](https://github.com/theeye/theeye-supervisor/compare/4.11.2...4.11.3) (2023-10-31)
 
 
