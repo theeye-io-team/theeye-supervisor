@@ -2,16 +2,13 @@ const dbFilter = require('../lib/db-filter')
 const { ForbiddenError, ServerError } = require('../lib/error-handler')
 const EscapedRegExp = require('../lib/escaped-regexp')
 
-module.exports = (options) => {
+module.exports = function (options) {
   return (req, res, next) => {
     try {
       const customer = req.customer
       const query = req.query
       const filter = dbFilter(query)
-      filter.where.$or = [
-        { customer_id: customer.id },
-        { customer: customer.id },
-      ]
+      filter.where.customer_id = customer.id
 
       if (!req.permissions) {
         throw new ForbiddenError()
