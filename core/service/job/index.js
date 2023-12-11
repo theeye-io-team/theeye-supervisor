@@ -346,7 +346,7 @@ module.exports = {
           state = input.state
         } else {
           // assuming success for backward compatibility
-          state = (job.default_state_evaluation || StateConstants.SUCCESS)
+          state = (job.task?.default_state_evaluation || StateConstants.SUCCESS)
         }
       }
 

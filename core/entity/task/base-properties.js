@@ -56,7 +56,7 @@ module.exports = {
   autoremove_completed_jobs_limit: { type: Number, 'default': 5 },
   version: { type: Number, 'default': 1 },
   fingerprint: { type: String, 'default': '' }, 
-  default_state_evaluation: { type: String, 'default': StateConstants.SUCCESS },
+  default_state_evaluation: { type: String, 'default': StateConstants.FAILURE },
   stack_scheduled_executions: { type: Boolean, "default": false }
   //handle_errors: { type: Boolean }
 }
