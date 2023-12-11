@@ -78,6 +78,5 @@ module.exports = {
 
   // can be canceled by users
   cancellable: { type: Boolean, 'default': true },
-  default_state_evaluation: { type: String, 'default': StateConstants.SUCCESS }
   //handle_errors: { type: Boolean }
 }

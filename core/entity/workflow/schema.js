@@ -63,6 +63,7 @@ function WorkflowSchema (props) {
     version: { type: Number },
     stack_scheduled_executions: { type: Boolean, "default": false },
     multitasking: { type: Boolean, default: true },
+    //default_state_evaluation: { type: String, 'default': StateConstants.FAILURE },
   }
 
   BaseSchema.call(this, Object.assign({}, properties, props), specs)
