@@ -8,7 +8,8 @@ module.exports = {
       const part = machineData[name]
       if (typeof part === 'string') {
         payload.push(part)
-      } else if (name === 'cpu' || name === 'net') {
+      //} else if (name === 'cpu' || name === 'net') {
+      } else if (name === 'cpu') {
         // an array of available cpu/net 
         if (Array.isArray(part)) {
           for (let idx = 0; idx < part.length; idx++) {
@@ -17,11 +18,11 @@ module.exports = {
               payload.push(device.model)
               // array of model, speed 
             }
-            else if (name === 'net') {
-              // array of name, address, mac
-              //payload.push(device.name + device.addres + device.mac)
-              payload.push(device.mac)
-            }
+            //else if (name === 'net') {
+            //  // array of name, address, mac
+            //  //payload.push(device.name + device.addres + device.mac)
+            //  payload.push(device.mac)
+            //}
           }
         }
       }

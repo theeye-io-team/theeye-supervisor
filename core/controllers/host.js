@@ -186,8 +186,12 @@ const controller = {
   },
   async register (req, res, next) {
     try {
-      const { user, customer, body } = req
-      const hostname = (req.params.hostname || req.body.hostname)
+      const { user, customer, body = {} } = req
+      const hostname = body?.hostname
+      if (!hostname) {
+        throw new ClientError('hostname required')
+      }
+
       const data = await registerPullAgent({ user, customer, hostname, info: body.info })
 
       const payload = Object.assign({}, config.agent.core_workers.host_ping)
@@ -205,7 +209,7 @@ const controller = {
    *
    */
   create (req, res, next) {
-    const hostname = req.params.hostname
+    const hostname = req.params?.hostname
     if (!hostname) {
       return res.send(400,'hostname required')
     }
@@ -255,7 +259,9 @@ const registerAgent = (req, done) => {
 
   // setting up registration properties
   const properties = body.info || {}
-  properties.agent_version = body.version || null
+  if (!properties.agent_version && body.version) {
+    properties.agent_version = body.version
+  }
 
   Host.findOne({
     hostname,
@@ -392,21 +398,26 @@ const registerPullAgent = async (input) => {
 const registerHostFingerprint = async (host, info) => {
   const calc = Fingerprint.machineUUID(App.namespace, info)
 
-  const registered = host.fingerprints.find(fp => {
+  let data = host.fingerprints.find(fp => {
     return fp.fingerprint === calc
   })
 
-  if (registered !== undefined) {
-    return registered
+  if (data === undefined) {
+    data = Object.assign({}, info, {
+      fingerprint: calc,
+      creation_date: new Date()
+    })
+    host.fingerprints.push(data)
   }
 
-  const fingerprint = Object.assign({}, info, {
-    fingerprint: calc,
-    creation_date: new Date()
-  })
+  if (host.fingerprints.length > 10) {
+    const total = host.fingerprints.length
+    const keep = host.fingerprints.slice(total - 10, total)
+    host.fingerprints = keep
+  }
 
-  host.fingerprints.push(fingerprint)
+  host.current_fingerprint = calc
   await host.save()
 
-  return fingerprint
+  return data
 }

@@ -1,7 +1,6 @@
 
 const config = require('config')
 const logger = require('../../lib/logger')(':monitoring')
-//const asyncMap = require('async/map')
 
 const monitorsCheck = require('./monitors')
 const nestedCheck = require('./nested')

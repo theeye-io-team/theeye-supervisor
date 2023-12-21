@@ -10,8 +10,10 @@ function HostSchema () {
     disabled: { type: Boolean },
     hostname: { type: String, index: true, required: true },
     customer_name: { type: String, index: true },
-    customer_id: { type: String }, // Host customer_id is a String , will replace base-schema customer_id
-    fingerprints: [ FingerprintSchema ]
+    // Host customer_id is a String , will replace base-schema customer_id
+    customer_id: { type: String },
+    fingerprints: [ FingerprintSchema ],
+    current_fingerprint: { type: String }
   }
 
   // Schema constructor
