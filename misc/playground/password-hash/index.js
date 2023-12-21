@@ -1,23 +1,22 @@
+var bcryptjs = require('bcryptjs');
 var bcrypt = require('bcrypt');
 var SALT_WORK_FACTOR = 10;
 
 
-function hash(newPassword, cb)
+function hash1(newPassword)
 {
-  cb=!cb?(function(){}):cb;
-  bcrypt.genSalt(SALT_WORK_FACTOR, function(err, salt) {
-    if (err) return cb(err);
+  const salt = bcrypt.genSaltSync(SALT_WORK_FACTOR)
+  console.log('salt bcrypt',salt);
+  const crypted = bcrypt.hashSync(newPassword, salt)
+  console.log('hash bcrypt', crypted);
+}
 
-    console.log('salt ',salt);
-
-    bcrypt.hash(newPassword, salt, function(err, crypted) {
-      if(err) return cb(err);
-
-      console.log('hash ', crypted);
-
-      return cb();
-    });
-  });
+function hash2(newPassword)
+{
+  const salt = bcryptjs.genSaltSync(SALT_WORK_FACTOR)
+  console.log('salt bcryptjs',salt);
+  const crypted = bcryptjs.hashSync(newPassword, salt)
+  console.log('hash bcryptjs', crypted);
 }
 
 if( ! process.env.PASSWORD )
@@ -28,4 +27,5 @@ if( ! process.env.PASSWORD )
 
 console.log('hashing :', process.env.PASSWORD);
 
-hash(process.env.PASSWORD);
+hash1(process.env.PASSWORD);
+hash2(process.env.PASSWORD);
