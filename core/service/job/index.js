@@ -278,6 +278,13 @@ module.exports = {
       })
     })
   },
+  finishWorkflowJob (wfjob, input) {
+    wfjob.lifecycle = input.lifecycle
+    wfjob.state = input.state
+    wfjob.trigger_name = (input.trigger_name || input.state)
+    wfjob.save()
+    this.finishedWorkflowPostprocessing({ job: wfjob })
+  },
   finishDummyJob (job, input) {
     return new Promise((resolve, reject) => {
       let { task } = input
@@ -302,13 +309,6 @@ module.exports = {
         }
       )
     })
-  },
-  finishWorkflowJob (wfjob, input) {
-    wfjob.lifecycle = input.lifecycle
-    wfjob.state = input.state
-    wfjob.trigger_name = (input.trigger_name || input.state)
-    wfjob.save()
-    this.finishedWorkflowPostprocessing({ job: wfjob })
   },
   /**
    *
@@ -352,12 +352,13 @@ module.exports = {
 
       job.lifecycle = lifecycle
       job.state = state
-      job.result = result
-      // parse result output
-      if (result.output) {
-        // data output, can be anything. stringify for security reason
+
+      const file = await this.storeJobOutput({ job, customer, result })
+      job.result_id = file._id
+
+      // data output, can be anything. stringify for security reason
+      if (result?.output) {
         job.output = this.parseOutputParameters(result.output)
-        //job.result.output = (typeof output === 'string') ? output : JSON.stringify(output)
       }
 
       if (result.lastline) {
@@ -394,6 +395,14 @@ module.exports = {
       done(err)
     }
   },
+  finishedPostprocessing ({ job, user }) {
+    process.nextTick(() => {
+      RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
+      App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
+      dispatchFinishedTaskJobExecutionEvent(job)
+      emitJobFinishedNotification({ job })
+    })
+  },
   finishedWorkflowPostprocessing ({ job }) {
     process.nextTick(() => {
       RegisterOperation.submit(
@@ -409,11 +418,92 @@ module.exports = {
       })
     })
   },
+  /**
+   *
+   * @summary Finalize task execution. Save result and submit to elk
+   *
+   * @param {Object} input
+   * @property {Job} input.job
+   * @property {Object} input.result
+   * @param {Function} done
+   *
+   */
+  async finish (input, done) {
+    try {
+      const { job, user, customer, result = {} } = input
+
+      let state
+      let lifecycle
+      let eventName
+      let output
+
+      if (result.killed === true) {
+        lifecycle = LifecycleConstants.TERMINATED
+        state = StateConstants.TIMEOUT
+        eventName = StateConstants.TIMEOUT
+      } else {
+        lifecycle = LifecycleConstants.FINISHED
+        if (
+          input.state === StateConstants.SUCCESS ||
+          input.state === StateConstants.FAILURE
+        ) {
+          state = input.state
+        } else {
+          // assuming success for backward compatibility
+          state = (job.default_state_evaluation || StateConstants.SUCCESS)
+        }
+      }
+
+      job.lifecycle = lifecycle
+      job.state = state
+
+      const file = await this.storeJobOutput({ job, customer, result })
+      job.result_id = file._id
+
+      // data output, can be anything. stringify for security reason
+      if (result?.output) {
+        job.output = this.parseOutputParameters(result.output)
+      }
+
+      if (result.lastline) {
+        try {
+          const jsonLastline = JSON.parse(result.lastline)
+          // looking for state and output
+          if (isObject(jsonLastline)) {
+            if (jsonLastline.components) {
+              job.components = jsonLastline.components
+            }
+            if (jsonLastline.next) {
+              job.next = jsonLastline.next
+            }
+            if (jsonLastline.event_name) {
+              eventName = jsonLastline.event_name
+            }
+          }
+        } catch (err) {
+          //logger.log(err)
+        }
+      } else if (input.eventName) {
+        eventName = input.eventName
+      }
+
+      job.trigger_name = (eventName || state)
+
+      await job.save()
+
+      this.finishedPostprocessing({ job, user })
+
+      done(null, job)
+    } catch (err) {
+      logger.error(err)
+      done(err)
+    }
+  },
   finishedPostprocessing ({ job, user }) {
     process.nextTick(() => {
       RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job, user })
       App.scheduler.cancelScheduledTimeoutVerificationJob(job) // async
-      dispatchFinishedTaskJobExecutionEvent(job)
+      dispatchFinishedJobExecutionEvent(job)
       emitJobFinishedNotification({ job })
     })
   },
@@ -424,7 +514,6 @@ module.exports = {
     const { job } = input
 
     job.trigger_name = null
-    job.result = {}
     job.output = {}
 
     return this.jobInputsReplenish(input)
@@ -621,9 +710,10 @@ module.exports = {
 
       job.lifecycle = lifecycle
       job.state = StateConstants.CANCELED
+      job.eventName = StateConstants.CANCELED
       job.trigger_name = StateConstants.CANCELED
-      job.result = result
       job.output = this.parseOutputParameters(result.output)
+      job.result = result
       await job.save()
 
       this.finishedPostprocessing({ job, user })
@@ -634,7 +724,7 @@ module.exports = {
     }
   },
   jobMustHaveATask (job) {
-    var result = (
+    const result = (
       job._type === JobConstants.SCRAPER_TYPE ||
       job._type === JobConstants.SCRIPT_TYPE ||
       job._type === JobConstants.APPROVAL_TYPE ||
@@ -707,6 +797,29 @@ module.exports = {
       })
 
     return promise
+  },
+  async storeJobOutput ({ job, customer, result }) {
+    // parse result output
+    const data = JSON.stringify({ result }, null, 2)
+
+    const storeParams = {
+      customer,
+      data, // result string
+      filename: `${job.task_id}_result.json`,
+      mimetype: 'application/json',
+      extension: 'json',
+      size: data.length,
+      description: null,
+      md5: null,
+      tags: [],
+    }
+
+    const file = await App.file.create(storeParams, {
+      encoded_data: false,
+      pathname: 'outputs'
+    })
+
+    return file
   }
 }
 
@@ -1127,7 +1240,8 @@ const dispatchFinishedTaskJobExecutionEvent = async (job) => {
       topic = TopicsConstants.task.execution
     }
 
-    const data = getJobResult(job)
+    //const data = getJobOutput(job)
+    const data = job.output
 
     App.eventDispatcher.dispatch({ topic, event, data, job })
   } catch (err) {
@@ -1158,17 +1272,19 @@ const dispatchFinishedWorkflowJobExecutionEvent = async (job) => {
   }
 }
 
-const getJobResult = (job) => {
-  let result = job.output
+const getJobOutput = (job) => {
+  const output = job.output
+
   try {
     if (job._type === JobConstants.SCRAPER_TYPE) {
-      result[1] = JSON.stringify(job.result.response?.headers)
-      result[2] = Number(job.result.response?.status_code)
+      output[1] = JSON.stringify(job.result.response?.headers)
+      output[2] = Number(job.result.response?.status_code)
     }
   } catch (err) {
+    logger.error(err)
   }
 
-  return result
+  return output
 }
 
 const parseOutputStringAsJSON = (output) => {
@@ -1276,3 +1392,4 @@ const parseRecipients = (values) => {
 
   return recipients
 }
+

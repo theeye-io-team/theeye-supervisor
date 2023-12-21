@@ -13,6 +13,9 @@ var ResourceService = require('../service/resource')
 var Script = require('../entity/file').Script
 var dbFilter = require('../lib/db-filter')
 
+  /**
+  @todo deprecated
+  **/
 module.exports = function (server) {
   server.get('/:customer/script',
     server.auth.bearerMiddleware,
@@ -32,21 +35,20 @@ module.exports = function (server) {
   )
 
   // clients can download scripts
-  server.get('/:customer/script/:script/download',
-    server.auth.bearerMiddleware,
-    router.requireCredential('user'),
-    router.resolve.customerNameToEntity({required:true}),
-    router.ensureCustomer,
-    router.resolve.idToEntity({param:'script',required:true,entity:'file'}),
-    controller.download
-  )
+  //server.get('/:customer/script/:script/download',
+  //  server.auth.bearerMiddleware,
+  //  router.requireCredential('user'),
+  //  router.resolve.customerNameToEntity({required:true}),
+  //  router.ensureCustomer,
+  //  router.resolve.idToEntity({param:'script',required:true,entity:'file'}),
+  //  controller.download
+  //)
 }
 
 const controller = {
   /**
-   *
-   *
-   */
+  @todo deprecated
+  **/
   fetch (req, res, next) {
     var customer = req.customer;
     var input = req.query;
@@ -59,30 +61,32 @@ const controller = {
     });
   },
   /**
-   *
-   *
-   */
+  @todo deprecated
+  **/
   get (req, res, next) {
     res.send(200, req.script)
     next()
   },
-  download (req, res, next) {
-    var script = req.script;
+  /**
+  @todo deprecated
+  **/
+  //download (req, res, next) {
+  //  var script = req.script;
 
-    ScriptService.getScriptStream(script, (err,stream) => {
-      if (err) {
-        logger.error(err.message)
-        res.send(500)
-      } else {
-        logger.log('streaming script to client');
+  //  ScriptService.getScriptStream(script, (err,stream) => {
+  //    if (err) {
+  //      logger.error(err.message)
+  //      res.send(500)
+  //    } else {
+  //      logger.log('streaming script to client');
 
-        var headers = {
-          'Content-Disposition':'attachment; filename=' + script.filename,
-        }
-        res.writeHead(200,headers);
-        stream.pipe(res);
-        next()
-      }
-    })
-  }
+  //      var headers = {
+  //        'Content-Disposition':'attachment; filename=' + script.filename,
+  //      }
+  //      res.writeHead(200,headers);
+  //      stream.pipe(res);
+  //      next()
+  //    }
+  //  })
+  //}
 }

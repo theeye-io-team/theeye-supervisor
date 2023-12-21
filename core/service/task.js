@@ -622,7 +622,7 @@ const ensureScript = async (task, input) => {
       if (!script && input.script?.data) {
         const attrs = input.script 
         attrs.customer = input.customer
-        script = await App.file.create(attrs)
+        script = await App.file.create(attrs, {encoded_data:true})
       }
     }
   }

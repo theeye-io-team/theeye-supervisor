@@ -73,6 +73,22 @@ module.exports = (server) => {
     middlewares,
     router.requireCredential('agent', { exactMatch: true }),
     router.resolve.idToEntity({ param: 'job', required: true }),
+    //(req, res, next) => {
+    //  App.Models.Task.Task.findById(req.job.task_id, (err, task) => {
+    //    if (err) {
+    //      return res.sendError(err)
+    //    }
+
+    //    if (!task) {
+    //      const err = new ClientError('Task definition not found', {statusCode:404})
+    //      res.sendError(err)
+    //      return
+    //    }
+
+    //    req.task = task
+    //    next()
+    //  })
+    //},
     controller.finish,
   )
 
