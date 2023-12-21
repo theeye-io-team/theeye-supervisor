@@ -29,6 +29,26 @@ module.exports = function (server) {
     controller.get
   )
 
+  // public indicator
+  server.get('/indicator/:indicator/secret/:secret',
+    router.resolve.idToEntity({ param: 'indicator', required: true }),
+    router.requireSecret('indicator'),
+    (req, res, next) => {
+      res.send(req.indicator)
+      next()
+    }
+  )
+
+  //server.get('/indicator/title/:title/secret/:secret',
+  //  router.resolve.idToEntity({ param: 'indicator', required: true }),
+  //  findByTitleMiddleware(),
+  //  router.requireSecret('indicator'),
+  //  (req, res, next) => {
+  //    res.send(req.indicator)
+  //    next()
+  //  }
+  //)
+
   server.get('/indicator/title/:title',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
