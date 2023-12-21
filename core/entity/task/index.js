@@ -8,9 +8,11 @@ const ApprovalSchema = require('./approval')
 const DummySchema = require('./dummy')
 const NotificationSchema = require('./notification')
 const ScriptSchema = require('./script')
+const NodejsSchema = require('./nodejs')
 
 const Task = mongodb.model('Task', TaskSchema)
 const ScriptTask = Task.discriminator('ScriptTask', ScriptSchema)
+const NodejsTask = Task.discriminator('NodejsTask', NodejsSchema)
 const ScraperTask = Task.discriminator('ScraperTask', ScraperSchema)
 const ApprovalTask = Task.discriminator('ApprovalTask', ApprovalSchema)
 const DummyTask = Task.discriminator('DummyTask', DummySchema)
@@ -23,6 +25,7 @@ Task.on('afterSave', function(model) {
 
 exports.Entity = Task
 exports.Task = Task
+exports.NodejsTask = NodejsTask
 exports.ScriptTask = ScriptTask
 exports.ScraperTask = ScraperTask
 exports.ApprovalTask = ApprovalTask
@@ -40,9 +43,6 @@ ClassesMap[ TaskConstants.TYPE_SCRIPT ] = function (input) {
   }
   return task
 }
-ClassesMap[ TaskConstants.TYPE_SCRAPER ] = ScraperTask
-ClassesMap[ TaskConstants.TYPE_APPROVAL ] = ApprovalTask
-ClassesMap[ TaskConstants.TYPE_DUMMY ] = DummyTask
 ClassesMap[ TaskConstants.TYPE_NOTIFICATION ] = function (input) {
   if (
     !Array.isArray(input.task_arguments) ||
@@ -52,6 +52,10 @@ ClassesMap[ TaskConstants.TYPE_NOTIFICATION ] = function (input) {
   }
   return new NotificationTask(input)
 }
+ClassesMap[ TaskConstants.TYPE_NODEJS ] = NodejsTask
+ClassesMap[ TaskConstants.TYPE_SCRAPER ] = ScraperTask
+ClassesMap[ TaskConstants.TYPE_APPROVAL ] = ApprovalTask
+ClassesMap[ TaskConstants.TYPE_DUMMY ] = DummyTask
 
 exports.Factory = {
   create (input) {

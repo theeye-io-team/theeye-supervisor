@@ -445,8 +445,8 @@ module.exports = {
   serialize (task, options, next) {
     const serial = task.serialize(options)
 
-    // only script task
-    if (task._type === 'ScriptTask') {
+    // only tasks with script
+    if (task.script_id) {
       App.file.serialize(task.script_id, options, (err, file) => {
         serial.script = file
         next(null, serial)
@@ -587,16 +587,8 @@ const FactoryMethod = {}
 FactoryMethod[ TaskConstants.TYPE_SCRAPER ] = App.Models.Task.ScraperTask
 FactoryMethod[ TaskConstants.TYPE_APPROVAL ] = App.Models.Task.ApprovalTask
 FactoryMethod[ TaskConstants.TYPE_DUMMY ] = App.Models.Task.DummyTask
-FactoryMethod[ TaskConstants.TYPE_SCRIPT ] = async function (input) {
-  let task = new App.Models.Task.ScriptTask(input)
 
-  if (input.script_runas) {
-    task.script_runas = input.script_runas
-    if (/%script%/.test(input.script_runas) === false) {
-      task.script_runas += ' %script%'
-    }
-  }
-
+const ensureScript = async (task, input) => {
   // the script was created or determined in a previous phase.
   // ensure it is an ObjectID instance and not a MongoID
   let script
@@ -638,8 +630,8 @@ FactoryMethod[ TaskConstants.TYPE_SCRIPT ] = async function (input) {
   if (script?._id) {
     if (script.template_id) {
       if (
-        !task.template_id ||
-        (task.template_id.toString() !== script.template_id?.toString())
+        !input.template_id ||
+        (input.template_id.toString() !== script.template_id?.toString())
       ) {
         // remove from the template
         script.template = null
@@ -647,11 +639,31 @@ FactoryMethod[ TaskConstants.TYPE_SCRIPT ] = async function (input) {
         await script.save()
       }
     }
+
     task.script_id = script._id
     task.script = script._id
   } else {
     task.script_id = null
     task.script = null
+  }
+
+  return script
+}
+
+FactoryMethod[ TaskConstants.TYPE_NODEJS ] = async function (input) {
+  const task = new App.Models.Task.NodejsTask(input)
+  await ensureScript(task, input)
+  return task
+}
+FactoryMethod[ TaskConstants.TYPE_SCRIPT ] = async function (input) {
+  const task = new App.Models.Task.ScriptTask(input)
+  await ensureScript(task, input)
+
+  if (input.script_runas) {
+    task.script_runas = input.script_runas
+    if (/%script%/.test(input.script_runas) === false) {
+      task.script_runas += ' %script%'
+    }
   }
 
   return task

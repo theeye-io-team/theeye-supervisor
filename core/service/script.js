@@ -1,15 +1,11 @@
-'use strict';
 
-var async = require('async');
-var md5 = require('md5');
-var fs = require('fs');
-var config = require('config');
-var path = require('path');
-var extend = require('util')._extend;
-var Script = require("../entity/file").Script;
-var Task = require("../entity/task").Entity;
-var logger = require('../lib/logger')('service:script');
-var storage = require('../lib/storage').get();
+const md5 = require('md5');
+const fs = require('fs');
+const extend = require('util')._extend;
+const Script = require("../entity/file").Script;
+const Task = require("../entity/task").Entity;
+const logger = require('../lib/logger')('service:script');
+const storage = require('../lib/storage').get();
 
 /**
  *
