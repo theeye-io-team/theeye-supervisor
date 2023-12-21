@@ -435,7 +435,10 @@ module.exports = {
   async jobInputsReplenish (input) {
     const { job, user } = input
 
-    if (job._type !== JobConstants.SCRIPT_TYPE) {
+    if (
+      job._type !== JobConstants.SCRIPT_TYPE &&
+      job._type !== JobConstants.NODEJS_TYPE
+    ) {
       throw new Error('only script tasks allowed')
     }
 

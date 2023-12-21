@@ -36,11 +36,11 @@ const JobsFactory = {
   async create (task, input, next) {
     next || (next=()=>{})
     try {
-      if ( ! JobsBuilderMap[ task.type ] ) {
+      if ( ! JobsBuilderMap[task.type] ) {
         throw new Error(`Invalid or undefined task type ${task.type}`)
       }
 
-      const builder = new JobsBuilderMap[ task.type ]({ task, vars: input })
+      const builder = new JobsBuilderMap[task.type]({ task, vars: input })
       const job = await builder.create()
       next(null, job)
       return job
@@ -728,7 +728,7 @@ class ScriptJob extends AbstractJob {
     const job = this.job
 
     const [ task, script ] = await Promise.all([
-      App.Models.Task.ScriptTask.findById(job.task_id),
+      App.Models.Task.Task.findById(job.task_id),
       App.Models.File.Script.findById(job.script_id)
     ])
 
@@ -826,6 +826,13 @@ class ScraperJob extends AbstractJob {
   }
 }
 
+class NodejsJob extends ScriptJob {
+  constructor (input) {
+    super(input)
+    this.job = new JobModels.Nodejs()
+  }
+}
+
 class DummyJob extends AbstractJob {
   constructor (input) {
     super(input)
@@ -841,6 +848,7 @@ class NotificationJob extends AbstractJob {
 }
 
 const JobsBuilderMap = {}
+JobsBuilderMap[ TaskConstants.TYPE_NODEJS ] = NodejsJob
 JobsBuilderMap[ TaskConstants.TYPE_SCRIPT ] = ScriptJob
 JobsBuilderMap[ TaskConstants.TYPE_SCRAPER ] = ScraperJob
 JobsBuilderMap[ TaskConstants.TYPE_APPROVAL ] = ApprovalJob

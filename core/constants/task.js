@@ -1,4 +1,5 @@
 
+exports.TYPE_NODEJS = 'nodejs'
 exports.TYPE_SCRIPT = 'script'
 exports.TYPE_SCRAPER = 'scraper'
 exports.TYPE_APPROVAL = 'approval'

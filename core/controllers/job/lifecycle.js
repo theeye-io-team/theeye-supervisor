@@ -155,7 +155,10 @@ module.exports = (server) => {
           throw new ClientError('Only completed jobs allowed')
         }
 
-        if (job._type !== JobConstants.SCRIPT_TYPE) {
+        if (
+          job._type !== JobConstants.SCRIPT_TYPE &&
+          job._type !== JobConstants.NODEJS_TYPE
+        ) {
           throw new ClientError('Only script tasks allowed')
         }
 

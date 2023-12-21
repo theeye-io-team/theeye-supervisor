@@ -1,6 +1,7 @@
 
 exports.AGENT_UPDATE = 'agent:config:update'
 exports.SCRIPT_TYPE = 'ScriptJob'
+exports.NODEJS_TYPE = 'NodejsJob'
 exports.SCRAPER_TYPE = 'ScraperJob'
 exports.APPROVAL_TYPE = 'ApprovalJob'
 exports.DUMMY_TYPE = 'DummyJob'

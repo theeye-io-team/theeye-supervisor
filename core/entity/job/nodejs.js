@@ -12,3 +12,4 @@ const ScriptSchema = new BaseSchema({
 })
 
 module.exports = ScriptSchema
+

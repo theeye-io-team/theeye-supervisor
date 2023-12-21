@@ -11,6 +11,7 @@ const ScriptSchema = new BaseSchema({
   template: { type: ObjectId, ref: 'TaskTemplate' },
   script_id: { type: String },
   script_runas: { type: String },
+  script_path: { type: String },
   script: { type: ObjectId, ref: 'Script' },
   env: { type: Object, default: () => { return {} }},
   agent_logging: { type: Boolean, default: false }
@@ -58,6 +59,7 @@ ScriptSchema.methods.calculateFingerprint = function (namespace) {
     'timeout',
     'multitasking',
     'script_id',
+    'script_path',
     'script_runas'
   ]
 
@@ -92,6 +94,7 @@ ScriptSchema.statics.create = function (input, next) {
   instance.customer = input.customer._id
   instance.customer_id = input.customer._id
   instance.script_id = input.script._id
+  instance.script_path = input.script_path
   instance.task_arguments = input.task_arguments
   instance.script_runas = input.script_runas
   instance.tags = input.tags

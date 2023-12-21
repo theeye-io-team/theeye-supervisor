@@ -142,7 +142,10 @@ const controller = {
       }
     }
 
-    if (input.type === TaskConstants.TYPE_SCRIPT) {
+    if (
+      input.type === TaskConstants.TYPE_SCRIPT ||
+      input.type === TaskConstants.TYPE_NODEJS
+    ) {
       if (!req.script && !input.script?.data) {
         errors[!req.body.script ? 'required' : 'invalid']('script', req.script)
       }

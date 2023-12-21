@@ -3,6 +3,7 @@ const TaskConstants = require('../../../constants/task')
 
 const TemplateSchema = require('./schema')
 const ScriptSchema = require('./script')
+const NodejsSchema = require('./nodejs')
 const ScraperSchema = require('./scraper')
 const ApprovalSchema = require('./approval')
 const DummySchema = require('./dummy')
@@ -10,17 +11,11 @@ const NotificationSchema = require('./notification')
 
 const Template = mongodb.model('TaskTemplate', new TemplateSchema())
 const ScriptTemplate = Template.discriminator('ScriptTaskTemplate', ScriptSchema)
+const NodejsTemplate = Template.discriminator('NodejsTaskTemplate', NodejsSchema)
 const ScraperTemplate = Template.discriminator('ScraperTaskTemplate', ScraperSchema)
 const ApprovalTemplate = Template.discriminator('ApprovalTaskTemplate', ApprovalSchema)
 const DummyTemplate = Template.discriminator('DummyTaskTemplate', DummySchema)
 const NotificationTemplate = Template.discriminator('NotificationTaskTemplate', NotificationSchema)
-
-Template.ensureIndexes()
-ScriptTemplate.ensureIndexes()
-ScraperTemplate.ensureIndexes()
-ApprovalTemplate.ensureIndexes()
-DummyTemplate.ensureIndexes()
-NotificationTemplate.ensureIndexes()
 
 // called for both inserts and updates
 Template.on('beforeSave', function(model) {
@@ -30,12 +25,14 @@ Template.on('beforeSave', function(model) {
 
 exports.Template = Template
 exports.ScriptTemplate = ScriptTemplate
+exports.NodejsTemplate = NodejsTemplate
 exports.ScraperTemplate = ScraperTemplate
 exports.ApprovalTemplate = ApprovalTemplate
 exports.DummyTemplate = DummyTemplate
 exports.NotificationTemplate = NotificationTemplate
 
 const ClassesMap = {}
+ClassesMap[ TaskConstants.TYPE_NODEJS ] = NodejsTemplate
 ClassesMap[ TaskConstants.TYPE_SCRIPT ] = ScriptTemplate
 ClassesMap[ TaskConstants.TYPE_SCRAPER ] = ScraperTemplate
 ClassesMap[ TaskConstants.TYPE_APPROVAL ] = ApprovalTemplate
