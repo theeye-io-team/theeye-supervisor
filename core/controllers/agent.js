@@ -2,7 +2,6 @@
 const mongoose = require('mongoose')
 const App = require('../app')
 const systemConfig = require('config').system
-const async = require('async')
 const MonitorsConstants = require('../constants/monitors')
 const { ClientError, ServerError } = require('../lib/error-handler')
 
