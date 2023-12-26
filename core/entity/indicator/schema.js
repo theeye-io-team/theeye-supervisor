@@ -17,6 +17,7 @@ class IndicatorSchema extends BaseSchema {
       customer_name: { type: String, required: true },
       description: { type: String },
       title: { type: String, required: true, index: true },
+      name: { type: String },
       acl: [{ type: String }],
       severity: { type: String, default: Constants.MONITOR_SEVERITY_HIGH },
       alerts: { type: Boolean, default: true },
