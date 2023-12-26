@@ -272,7 +272,8 @@ const updateFile = async (req, res, next) => {
       description: params.description,
       size: fileUploaded.size,
       keyname: storeData.keyname,
-      md5: md5(buf)
+      md5: md5(buf),
+      form_id: params.form_id
     }
 
     if (fileModel.template || fileModel.template_id) {
@@ -316,6 +317,7 @@ const createFile = async (req, res, next) => {
     const isPublic = (req.params.public || false)
     const mimetype = req.params.mimetype
     const extension = req.params.extension
+    const form_id = req.params.form_id
 
     logger.log('creating file')
 
@@ -334,6 +336,7 @@ const createFile = async (req, res, next) => {
 
     const data = {
       _type: 'Script',
+      form_id,
       filename: file.name,
       mimetype: mimetype,
       extension: extension,

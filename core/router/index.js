@@ -50,5 +50,6 @@ module.exports = {
     require('../controllers/usage')(server)
     // DEPRECATED - In Progress
     require('../controllers/auth')(server)
+    require('../controllers/form')(server)
   }
 }

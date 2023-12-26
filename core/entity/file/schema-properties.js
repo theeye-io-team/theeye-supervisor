@@ -1,8 +1,8 @@
+const ObjectId = require('mongoose').Types.ObjectId
 module.exports = {
   order: { type: Number, default: 0 },
   customer_id: { type: String },
   customer_name: { type: String },
-  content_schema: { type: Object },
   acl: [{ type: String }],
   tags: { type: Array, default: [] },
   description: { type: String, default:'' },
@@ -12,5 +12,7 @@ module.exports = {
   extension: { type: String },
   size: { type: Number },
   md5: { type: String, default: null },
+  content_schema: { type: Object },
+  form_id: { type: ObjectId }
   //public: { type: Boolean, default: false },
 }
