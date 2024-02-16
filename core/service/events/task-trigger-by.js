@@ -20,10 +20,9 @@ module.exports = async function (payload) {
     // a task has completed its execution and triggered an event
     // or a monitor has changed its state
     if (
-      payload.topic === TopicConstants.task.execution ||
       payload.topic === TopicConstants.monitor.state ||
       payload.topic === TopicConstants.webhook.triggered ||
-      payload.topic === TopicConstants.workflow.execution
+      payload.topic === TopicConstants.job.finished
     ) {
       await triggeredByEvent(payload)
     }

@@ -475,7 +475,7 @@ module.exports = {
    * @property {Workflow} input.workflow optional
    */
   async create (input) {
-    const { task, workflow } = input
+    const { task, workflow, workflow_job } = input
     let job
 
     if (!task) {
@@ -496,12 +496,16 @@ module.exports = {
     }
 
     if (workflow) {
+      // only available when the workflow is started
+      if (workflow_job) {
+        workflow_job.active_jobs_counter = 1
+        await workflow_job.save()
+      }
+
       if (workflow.autoremove_completed_jobs !== false) {
-        //await removeExceededJobsCountByWorkflow(workflow, task)
         removeExceededJobsCountByWorkflow(workflow, task)
       }
     } else if (task.autoremove_completed_jobs !== false) {
-      //await removeExceededJobsCountByTask(task)
       removeExceededJobsCountByTask(task)
     }
 
@@ -530,7 +534,7 @@ module.exports = {
     }
 
     input.order = await getWorkflowJobsOrder(workflow)
-    const job = await JobFactory.createWorkflow(input)
+    const job = await JobFactory.createWorkflowJob(input)
 
     // send and wait before creating the job of the first task
     // to ensure dispatching events in order
@@ -940,6 +944,7 @@ const removeExceededJobsCountByTask = async (task) => {
 }
 
 const removeExceededJobsCountByWorkflow = async (workflow, task) => {
+  // remove jobs only if launching new workflows
   if (task._id.toString() !== workflow.start_task_id.toString()) {
     return
   }
@@ -1048,27 +1053,6 @@ const actuallyRemoveWorkflowJobs = async (jobs, limit) => {
 }
 
 /**
- *
- * @summary remove old job status, the history is kept in historical database.
- * @param {Task} task
- * @param {Function} next
- *
- */
-const removeOldTaskJobs = (task, next) => {
-  logger.log('removing old jobs of task %s', task._id)
-
-  let filters = { task_id: task._id }
-
-  App.Models.Job.Job.remove(filters, function (err) {
-    if (err) {
-      logger.error('Failed to remove old jobs registry for task %s', task._id)
-      logger.error(err)
-    }
-    next(err)
-  })
-}
-
-/**
  * @summary obtain next valid lifecycle state if apply for current job.lifecycle
  * @param {Job} job
  * @return {String} lifecycle string
@@ -1090,7 +1074,7 @@ const cancelJobNextLifecycle = (job) => {
 
 /**
  *
- * @summary The task execution is finished.
+ * @summary Job execution finished.
  * @param {Job} job
  * @param {Object} data
  * @return {Promise}
@@ -1099,9 +1083,8 @@ const cancelJobNextLifecycle = (job) => {
 const dispatchFinishedTaskJobExecutionEvent = async (job) => {
   try {
     const { task_id, trigger_name } = job
-    let topic
 
-    // cannot trigger a workflow event without a task
+    // cannot trigger an event without a task
     if (!task_id) { return }
 
     let event = await App.Models.Event.TaskEvent.findOne({
@@ -1120,15 +1103,8 @@ const dispatchFinishedTaskJobExecutionEvent = async (job) => {
       })
     }
 
-    // trigger task execution event within a workflow
-    if (job.workflow_id && job.workflow_job_id) {
-      topic = TopicsConstants.workflow.execution
-    } else {
-      topic = TopicsConstants.task.execution
-    }
-
     const data = getJobResult(job)
-
+    const topic = TopicsConstants.job.finished
     App.eventDispatcher.dispatch({ topic, event, data, job })
   } catch (err) {
     if (err) {
@@ -1140,7 +1116,6 @@ const dispatchFinishedTaskJobExecutionEvent = async (job) => {
 const dispatchFinishedWorkflowJobExecutionEvent = async (job) => {
   try {
     const { workflow_id, trigger_name } = job
-    const topic = TopicsConstants.workflow.job.finished
 
     // on the fly
     const event = new App.Models.Event.WorkflowEvent({
@@ -1150,6 +1125,7 @@ const dispatchFinishedWorkflowJobExecutionEvent = async (job) => {
       last_update: new Date()
     })
 
+    const topic = TopicsConstants.workflow.job.finished
     App.eventDispatcher.dispatch({ topic, event, data: {}, job })
   } catch (err) {
     if (err) {

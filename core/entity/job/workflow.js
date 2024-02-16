@@ -58,6 +58,7 @@ const props = {
   empty_viewers: { type: Boolean, default: false }, // if "true" acl will be empty on creation
   // @TODO REMOVE
   acl_dynamic: { type: Boolean, default: false },
+  active_jobs_counter: { type: Number, default: undefined }
 }
 
 module.exports = new BaseSchema(props, { collection: 'jobs' })

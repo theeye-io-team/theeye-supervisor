@@ -53,7 +53,7 @@ const JobsFactory = {
    * @param {Object} input
    * @return {Promise}
    */
-  createWorkflow (input) {
+  createWorkflowJob (input) {
     const builder = new WorkflowJob(input)
     return builder.create()
   },
