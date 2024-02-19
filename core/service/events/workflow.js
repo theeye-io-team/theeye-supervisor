@@ -126,7 +126,7 @@ const executeWorkflowStep = async (
  * @return {Promise}
  *
  */
-const executeWorkflowStepVersion2 = (
+const executeWorkflowStepVersion2 = async (
   workflow,
   workflow_job,
   event,
