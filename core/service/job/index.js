@@ -821,26 +821,6 @@ const populateWorkflow = async (job) => {
 const createJob = async (input) => {
   const { task, user } = input
 
-  //const job = await new Promise((resolve, reject) => {
-  //  JobFactory.create(task, input, async (err, job) => {
-  //    if (err) { return reject(err) }
-
-  //    if (!job) {
-  //      const err = new Error('Job was not created')
-  //      return reject(err)
-  //    }
-
-  //    if (job.constructor.name !== 'model') {
-  //      const err = new Error('Invalid job returned')
-  //      err.job = job
-  //      return reject(err)
-  //    }
-
-  //    logger.log('job created.')
-  //    resolve(job)
-  //  })
-  //})
-  //
   const job = await JobFactory.create(task, input)
 
   if (!job) {
@@ -855,7 +835,7 @@ const createJob = async (input) => {
 
   logger.log('job created.')
 
-  // await notification and system log generation
+  // await notification and logs generation
   await RegisterOperation.submit(Constants.CREATE, TopicsConstants.job.crud, { job, user })
 
   if (task.type === TaskConstants.TYPE_DUMMY) {

@@ -22,7 +22,7 @@ module.exports = async function (payload) {
       if (payload.job.workflow_job_id) {
         // a task-job belonging to a workflow finished
         logger.log('This is a workflow job event')
-        handleWorkflowTaskJobEvent(payload)
+        handleWorkflowTaskJobFinishedEvent(payload)
       }
     } else if (
       payload.topic === TopicConstants.monitor.state ||
@@ -38,12 +38,15 @@ module.exports = async function (payload) {
 }
 
 /**
+ * A task-job has finished.
+ *
  * @param {Event} event entity to process
  * @param {Job} job the job that generates the event
  * @param {Mixed} data event data, this is the job.output
  */
-const handleWorkflowTaskJobEvent = async ({ event, data, job }) => {
+const handleWorkflowTaskJobFinishedEvent = async ({ event, data, job }) => {
   const { workflow_id, workflow_job_id } = job
+
   // search workflow step by generated event
   const workflow = await App.Models.Workflow.Workflow.findById(workflow_id)
   const workflow_job = await App.Models.Job.Workflow.findById(workflow_job_id)
@@ -51,7 +54,9 @@ const handleWorkflowTaskJobEvent = async ({ event, data, job }) => {
   if (!workflow) { return }
   if (!workflow_job) { return }
 
-  if (!isNaN(workflow_job.active_jobs_counter)) {
+  if (!isNaN(workflow_job.active_jobs_counter) && workflow_job.active_jobs_counter > 0) {
+    workflow_job.active_jobs_counter -= 1
+
     // reduce on job finished
     await App.Models.Job.Workflow.updateOne(
       { _id: workflow_job._id },
@@ -61,8 +66,9 @@ const handleWorkflowTaskJobEvent = async ({ event, data, job }) => {
         }
       }
     )
-
-    workflow_job.active_jobs_counter -= 1
+  } else {
+    logger.warn('task-job finished within a workflow with 0 active jobs')
+    logger.warn(workflow_job)
   }
 
   const executionFn = (
