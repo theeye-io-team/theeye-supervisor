@@ -55,7 +55,11 @@ const handleWorkflowTaskJobEvent = async ({ event, data, job }) => {
     // reduce on job finished
     await App.Models.Job.Workflow.updateOne(
       { _id: workflow_job._id },
-      { $inc: { active_jobs_counter: -1 } }
+      {
+        $set: {
+          active_jobs_counter: workflow_job.active_jobs_counter
+        }
+      }
     )
 
     workflow_job.active_jobs_counter -= 1
@@ -173,7 +177,11 @@ const executeWorkflowStepVersion2 = async (
             workflow_job.active_jobs_counter += 1
             return App.Models.Job.Workflow.updateOne(
               { _id: workflow_job._id },
-              { $inc: { active_jobs_counter: 1 } }
+              {
+                $set: {
+                  active_jobs_counter: workflow_job.active_jobs_counter
+                }
+              }
             )
           }).catch(err => { return err })
 
