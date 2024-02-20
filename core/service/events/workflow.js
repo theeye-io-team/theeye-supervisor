@@ -56,16 +56,8 @@ const handleWorkflowTaskJobFinishedEvent = async ({ event, data, job }) => {
 
   if (!isNaN(workflow_job.active_jobs_counter) && workflow_job.active_jobs_counter > 0) {
     workflow_job.active_jobs_counter -= 1
-
-    // reduce on job finished
-    await App.Models.Job.Workflow.updateOne(
-      { _id: workflow_job._id },
-      {
-        $set: {
-          active_jobs_counter: workflow_job.active_jobs_counter
-        }
-      }
-    )
+    // decrease on job finished
+    await App.Models.Job.Workflow.incActiveJobs(workflow_job._id, -1)
   } else {
     logger.warn('task-job finished within a workflow with 0 active jobs')
     logger.warn(workflow_job)
@@ -181,14 +173,7 @@ const executeWorkflowStepVersion2 = async (
 
             // increase
             workflow_job.active_jobs_counter += 1
-            return App.Models.Job.Workflow.updateOne(
-              { _id: workflow_job._id },
-              {
-                $set: {
-                  active_jobs_counter: workflow_job.active_jobs_counter
-                }
-              }
-            )
+            return App.Models.Job.Workflow.incActiveJobs(workflow_job._id, 1)
           }).catch(err => { return err })
 
         promises.push(jobPromise)

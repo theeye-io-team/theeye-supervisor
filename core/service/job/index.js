@@ -435,6 +435,10 @@ module.exports = {
   async jobInputsReplenish (input) {
     const { job, user } = input
 
+    if (job.workflow_job) {
+      await App.Models.Job.Workflow.incActiveJobs(job.workflow_job_id, 1)
+    }
+
     if (
       job._type !== JobConstants.SCRIPT_TYPE &&
       job._type !== JobConstants.NODEJS_TYPE
@@ -499,7 +503,7 @@ module.exports = {
       // only available when the workflow is started
       if (workflow_job) {
         workflow_job.active_jobs_counter = 1
-        await workflow_job.save()
+        await App.Models.Job.Workflow.incActiveJobs(workflow_job._id, 1)
       }
 
       if (workflow.autoremove_completed_jobs !== false) {
