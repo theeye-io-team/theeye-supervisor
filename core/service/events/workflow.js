@@ -4,7 +4,7 @@ const Workflow = require('../../entity/workflow').Workflow
 const Task = require('../../entity/task').Entity
 const TopicConstants = require('../../constants/topics')
 const JobConstants = require('../../constants/jobs')
-const createJob = require('./create-job')
+const createTaskJob = require('./create-job')
 const graphlib = require('graphlib')
 const ifTriggeredByJobSettings = require('./triggered-by-job-settings')
 
@@ -18,19 +18,16 @@ const ifTriggeredByJobSettings = require('./triggered-by-job-settings')
  */
 module.exports = async function (payload) {
   try {
-    if (payload.topic === TopicConstants.workflow.execution) {
+    if (payload.topic === TopicConstants.job.finished) {
       if (payload.job.workflow_job_id) {
-        // a task belonging to a workflow has finished
-        logger.log('This is a workflow event')
-        handleWorkflowEvent(payload)
+        // a task-job belonging to a workflow finished
+        logger.log('This is a workflow job event')
+        handleWorkflowTaskJobFinishedEvent(payload)
       }
-    }
-
-    if (
-      payload.topic === TopicConstants.task.execution ||
+    } else if (
       payload.topic === TopicConstants.monitor.state ||
       payload.topic === TopicConstants.webhook.triggered ||
-      payload.topic === TopicConstants.workflow.execution // a task inside a workflow can trigger tasks outside the workflow
+      payload.topic === TopicConstants.job.finished
     ) {
       // workflow trigger has occur
       triggerWorkflowByEvent(payload)
@@ -41,18 +38,30 @@ module.exports = async function (payload) {
 }
 
 /**
+ * A task-job has finished.
+ *
  * @param {Event} event entity to process
  * @param {Job} job the job that generates the event
  * @param {Mixed} data event data, this is the job.output
  */
-const handleWorkflowEvent = async ({ event, data, job }) => {
+const handleWorkflowTaskJobFinishedEvent = async ({ event, data, job }) => {
   const { workflow_id, workflow_job_id } = job
+
   // search workflow step by generated event
   const workflow = await App.Models.Workflow.Workflow.findById(workflow_id)
   const workflow_job = await App.Models.Job.Workflow.findById(workflow_job_id)
 
   if (!workflow) { return }
   if (!workflow_job) { return }
+
+  if (!isNaN(workflow_job.active_jobs_counter) && workflow_job.active_jobs_counter > 0) {
+    workflow_job.active_jobs_counter -= 1
+    // decrease on job finished
+    await App.Models.Job.Workflow.incActiveJobs(workflow_job._id, -1)
+  } else {
+    logger.warn('task-job finished within a workflow with 0 active jobs')
+    logger.warn(workflow_job)
+  }
 
   const executionFn = (
     workflow?.version === 2 ?
@@ -96,7 +105,7 @@ const executeWorkflowStep = async (
 
   const promises = []
   for (let i = 0; i < tasks.length; i++) {
-    const createPromise = createJob({
+    const createPromise = createTaskJob({
       order: workflow_job.order,
       user,
       task: tasks[i],
@@ -119,59 +128,72 @@ const executeWorkflowStep = async (
  * @return {Promise}
  *
  */
-const executeWorkflowStepVersion2 = (
+const executeWorkflowStepVersion2 = async (
   workflow,
   workflow_job,
   event,
   argsValues,
   job
 ) => {
-
   if (!event) { return }
 
+  const promises = []
   const graph = new graphlib.json.read(workflow.graph)
   const nodeV = event.emitter_id.toString()
 
   const nodes = graph.successors(nodeV)
-  if (!nodes || (Array.isArray(nodes) && nodes.length === 0)) {
-    App.jobDispatcher.finishWorkflowJob(workflow_job, {
-      state: job.state,
-      lifecycle: job.lifecycle
-    })
-    return
-  }
+  if (Array.isArray(nodes) && nodes.length > 0) {
+    for (let nodeW of nodes) {
+      const edgeLabel = graph.edge(nodeV, nodeW)
+      if (edgeLabel === event.name) {
+        const jobPromise = Task
+          .findById(nodeW)
+          .then(async (task) => {
+            if (!task) {
+              throw new Error(`workflow step ${nodeW} is missing`)
+            }
 
-  const promises = []
-  for (let nodeW of nodes) {
-    const edgeLabel = graph.edge(nodeV, nodeW)
-    if (edgeLabel === event.name) {
-      promises.push(
-        Task.findById(nodeW)
-        .then(async (task) => {
-          if (!task) {
-            throw new Error(`workflow step ${nodeW} is missing`)
-          }
-
-          const { user, dynamic_settings } = await ifTriggeredByJobSettings(job)
-          const createPromise = createJob({
-            order: workflow_job.order,
-            user,
-            task,
-            task_arguments_values: argsValues,
-            dynamic_settings,
-            workflow,
-            workflow_job_id: workflow_job._id,
-            origin: JobConstants.ORIGIN_WORKFLOW
+            const { user, dynamic_settings } = await ifTriggeredByJobSettings(job)
+            return createTaskJob({
+              order: workflow_job.order,
+              user,
+              task,
+              task_arguments_values: argsValues,
+              dynamic_settings,
+              workflow,
+              workflow_job_id: workflow_job._id,
+              origin: JobConstants.ORIGIN_WORKFLOW
+            })
           })
+          .then(job => {
+            if (isNaN(workflow_job.active_jobs_counter)) {
+              // not a number. cannot be updated. older jobs, error..
+              return null
+            }
 
-          createPromise.catch(err => { return err })
-          return createPromise
-        })
-      )
+            // increase
+            workflow_job.active_jobs_counter += 1
+            return App.Models.Job.Workflow.incActiveJobs(workflow_job._id, 1)
+          }).catch(err => { return err })
+
+        promises.push(jobPromise)
+      }
     }
   }
 
-  return Promise.all(promises)
+  await Promise.all(promises)
+
+  if (workflow_job.active_jobs_counter === 0) {
+    //
+    // WARNING: this counter is neccesary to evaluate simultaneous && paralell jobs. a better solution is required (a specific task to control parallel executed jobs)
+    // 
+    // if counter doesn't reach cero, the finished event won't trigger
+    App.jobDispatcher.finishWorkflowJob(workflow_job, {
+      trigger_name: job.trigger_name,
+      state: job.state,
+      lifecycle: job.lifecycle
+    })
+  }
 }
 
 /**

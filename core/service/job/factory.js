@@ -53,7 +53,7 @@ const JobsFactory = {
    * @param {Object} input
    * @return {Promise}
    */
-  createWorkflow (input) {
+  createWorkflowJob (input) {
     const builder = new WorkflowJob(input)
     return builder.create()
   },
@@ -316,7 +316,11 @@ class WorkflowJob {
     const { workflow, user, customer } = input
 
     const wJob = new JobModels.Workflow(
-      Object.assign({},
+      Object.assign(
+        {
+          state: StateConstants.IN_PROGRESS,
+          //lifecycle: LifecycleConstants.READY
+        },
         input, /* VARIABLE parameters, depends on the CONTEXT */
         {
           /* FIXED parameters */

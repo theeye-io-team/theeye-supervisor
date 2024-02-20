@@ -1,3 +1,4 @@
+const util = require('util');
 const BaseSchema = require('../base-schema')
 const Schema = require('mongoose').Schema;
 const ObjectId = Schema.Types.ObjectId;
@@ -58,6 +59,19 @@ const props = {
   empty_viewers: { type: Boolean, default: false }, // if "true" acl will be empty on creation
   // @TODO REMOVE
   acl_dynamic: { type: Boolean, default: false },
+  active_jobs_counter: { type: Number, default: undefined }
 }
 
-module.exports = new BaseSchema(props, { collection: 'jobs' })
+//module.exports = new BaseSchema(props, { collection: 'jobs' })
+const WorkflowSchema = new BaseSchema(props, { collection: 'jobs' })
+WorkflowSchema.statics.incActiveJobs = async function (id, amount) {
+  return this.updateOne(
+    { _id: id },
+    {
+      $inc: {
+        active_jobs_counter: amount
+      }
+    }
+  )
+}
+module.exports = WorkflowSchema

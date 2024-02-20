@@ -33,7 +33,7 @@ exports.host = {
 
 exports.task = {
   crud: 'task-crud',
-  execution: 'task-execution', // create/start job
+  //execution: 'task-execution', // create/start job
   hold: 'task-hold-execution', // create holded task execution
   assigned: 'task-assigned', // assigned to agent
   result: 'task-result', // job result updated
@@ -46,9 +46,9 @@ exports.workflow = {
   //crud: 'workflow-crud',
   job: {
     crud: 'workflow-job-crud',
-    finished: 'workflow-job-finished'
+    finished: 'workflow-job-finished' // workflow job completed, no more tasks to execute
   },
-  execution: 'workflow-execution',
+  //execution: 'workflow-execution',
 }
 
 exports.job = {
