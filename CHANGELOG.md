@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.12.0](https://github.com/theeye/theeye-supervisor/compare/4.11.6...4.12.0) (2024-02-20)
+
+
+### Features
+
+* nodejs task definition ([#72](https://github.com/theeye/theeye-supervisor/issues/72)) ([08efb79](https://github.com/theeye/theeye-supervisor/commit/08efb792ad599079ca09f213419ea859311e4160))
+* workflow events ([#119](https://github.com/theeye/theeye-supervisor/issues/119)) ([5bc6603](https://github.com/theeye/theeye-supervisor/commit/5bc6603d0497647677da1ca476cf10e62c0d29f0))
+
+
+### Bug Fixes
+
+* remove async. current fingerprint ([#118](https://github.com/theeye/theeye-supervisor/issues/118)) ([f0c90f2](https://github.com/theeye/theeye-supervisor/commit/f0c90f24698bc1ad57ea981a9b5272f95bbf8b70))
+
 ### [4.11.6](https://github.com/theeye/theeye-supervisor/compare/4.11.5...4.11.6) (2023-12-18)
 
 

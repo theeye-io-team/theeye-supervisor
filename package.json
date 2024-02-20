@@ -1,6 +1,6 @@
 {
   "name": "theeye-supervisor",
-  "version": "4.11.6",
+  "version": "4.12.0",
   "private": true,
   "description": "theeye supervisor",
   "author": "Facundo Gonzalez <facugon@theeye.io>",
