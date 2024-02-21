@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.12.1](https://github.com/theeye/theeye-supervisor/compare/4.12.0...4.12.1) (2024-02-21)
+
+
+### Bug Fixes
+
+* jobs restart and inputs replenish ([#120](https://github.com/theeye/theeye-supervisor/issues/120)) ([18aaaa9](https://github.com/theeye/theeye-supervisor/commit/18aaaa936445a0419240bafb14aa2a9e4eb6f1da))
+
 ## [4.12.0](https://github.com/theeye/theeye-supervisor/compare/4.11.6...4.12.0) (2024-02-20)
 
 
