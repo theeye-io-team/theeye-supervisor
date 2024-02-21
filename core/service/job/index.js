@@ -420,12 +420,16 @@ module.exports = {
   /**
    * @return {Promise<Job>}
    */
-  restart (input) {
+  async restart (input) {
     const { job } = input
 
     job.trigger_name = null
     job.result = {}
     job.output = {}
+
+    if (job.workflow_job) {
+      await App.Models.Job.Workflow.incActiveJobs(job.workflow_job_id, 1)
+    }
 
     return this.jobInputsReplenish(input)
   },
@@ -434,17 +438,6 @@ module.exports = {
    */
   async jobInputsReplenish (input) {
     const { job, user } = input
-
-    if (job.workflow_job) {
-      await App.Models.Job.Workflow.incActiveJobs(job.workflow_job_id, 1)
-    }
-
-    if (
-      job._type !== JobConstants.SCRIPT_TYPE &&
-      job._type !== JobConstants.NODEJS_TYPE
-    ) {
-      throw new Error('only script tasks allowed')
-    }
 
     await JobFactory.restart(input)
 
