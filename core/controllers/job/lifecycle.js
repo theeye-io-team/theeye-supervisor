@@ -284,7 +284,10 @@ const controller = {
       if (job._type === JobConstants.DUMMY_TYPE) {
         await submitDummyInputs(req)
       }
-      else if (job._type === JobConstants.SCRIPT_TYPE) {
+      else if (
+        job._type === JobConstants.SCRIPT_TYPE ||
+        job._type === JobConstants.NODEJS_TYPE
+      ) {
         await submitJobInputs(req)
       }
       res.send(200, job)
