@@ -59,17 +59,17 @@ const props = {
   empty_viewers: { type: Boolean, default: false }, // if "true" acl will be empty on creation
   // @TODO REMOVE
   acl_dynamic: { type: Boolean, default: false },
-  active_jobs_counter: { type: Number, default: undefined }
+  active_paths_counter: { type: Number, default: undefined }
 }
 
 //module.exports = new BaseSchema(props, { collection: 'jobs' })
 const WorkflowSchema = new BaseSchema(props, { collection: 'jobs' })
-WorkflowSchema.statics.incActiveJobs = async function (id, amount) {
+WorkflowSchema.statics.setActivePaths = async function (id, amount) {
   return this.updateOne(
     { _id: id },
     {
-      $inc: {
-        active_jobs_counter: amount
+      $set: {
+        active_paths_counter: amount
       }
     }
   )

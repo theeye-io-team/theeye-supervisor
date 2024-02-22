@@ -3,6 +3,7 @@ const logger = require('../../lib/logger')(':events:workflow')
 const Workflow = require('../../entity/workflow').Workflow
 const Task = require('../../entity/task').Entity
 const TopicConstants = require('../../constants/topics')
+const StateConstants = require('../../constants/states')
 const JobConstants = require('../../constants/jobs')
 const createTaskJob = require('./create-job')
 const graphlib = require('graphlib')
@@ -53,15 +54,6 @@ const handleWorkflowTaskJobFinishedEvent = async ({ event, data, job }) => {
 
   if (!workflow) { return }
   if (!workflow_job) { return }
-
-  if (!isNaN(workflow_job.active_jobs_counter) && workflow_job.active_jobs_counter > 0) {
-    workflow_job.active_jobs_counter -= 1
-    // decrease on job finished
-    await App.Models.Job.Workflow.incActiveJobs(workflow_job._id, -1)
-  } else {
-    logger.warn('task-job finished within a workflow with 0 active jobs')
-    logger.warn(workflow_job)
-  }
 
   const executionFn = (
     workflow?.version === 2 ?
@@ -137,7 +129,7 @@ const executeWorkflowStepVersion2 = async (
 ) => {
   if (!event) { return }
 
-  const promises = []
+  const jobsPromises = []
   const graph = new graphlib.json.read(workflow.graph)
   const nodeV = event.emitter_id.toString()
 
@@ -146,48 +138,26 @@ const executeWorkflowStepVersion2 = async (
     for (let nodeW of nodes) {
       const edgeLabel = graph.edge(nodeV, nodeW)
       if (edgeLabel === event.name) {
-        const jobPromise = Task
-          .findById(nodeW)
-          .then(async (task) => {
-            if (!task) {
-              throw new Error(`workflow step ${nodeW} is missing`)
-            }
-
-            const { user, dynamic_settings } = await ifTriggeredByJobSettings(job)
-            return createTaskJob({
-              order: workflow_job.order,
-              user,
-              task,
-              task_arguments_values: argsValues,
-              dynamic_settings,
-              workflow,
-              workflow_job_id: workflow_job._id,
-              origin: JobConstants.ORIGIN_WORKFLOW
-            })
-          })
-          .then(job => {
-            if (isNaN(workflow_job.active_jobs_counter)) {
-              // not a number. cannot be updated. older jobs, error..
-              return null
-            }
-
-            // increase
-            workflow_job.active_jobs_counter += 1
-            return App.Models.Job.Workflow.incActiveJobs(workflow_job._id, 1)
-          }).catch(err => { return err })
-
-        promises.push(jobPromise)
+        const payload = { nodeW, job, workflow, workflow_job, argsValues }
+        jobsPromises.push(createWorkflowNodeJob(payload))
       }
     }
   }
 
-  await Promise.all(promises)
+  const jobs = await Promise.all(jobsPromises)
+  // signed number 
+  const inc = await updateActivePaths (workflow_job, jobs)
+  workflow_job.active_paths_counter += inc
 
-  if (workflow_job.active_jobs_counter === 0) {
+  if (workflow_job.active_paths_counter === 0) {
     //
-    // WARNING: this counter is neccesary to evaluate simultaneous && paralell jobs. a better solution is required (a specific task to control parallel executed jobs)
+    // WARNING: this counter is neccesary to evaluate simultaneous && paralell jobs.
+    // a better solution is required (eg: a specific task to control parallel executed jobs)
+    //
+    // if jobs.length is greater than 1, we cannot determine the final workflow state
     // 
-    // if counter doesn't reach cero, the finished event won't trigger
+    // if active_paths_counter doesn't reach cero, the finished event won't trigger
+    //
     App.jobDispatcher.finishWorkflowJob(workflow_job, {
       trigger_name: job.trigger_name,
       state: job.state,
@@ -237,4 +207,82 @@ const executeWorkflow = async (workflow, argsValues, job, event) => {
     notify: true,
     origin: JobConstants.ORIGIN_TRIGGER_BY
   })
+}
+
+/**
+ * @param {Object} payload
+ * @prop {Job} payload.job
+ * @prop {Object} payload.nodeW
+ */
+const createWorkflowNodeJob = async ({ workflow, job, nodeW, workflow_job, argsValues }) => {
+  const task = await Task.findById(nodeW)
+  if (!task) {
+    throw new Error(`workflow step ${nodeW} is missing`)
+  }
+
+  const { user, dynamic_settings } = await ifTriggeredByJobSettings(job)
+  const nodeJob = await createTaskJob({
+    workflow_job_id: workflow_job._id,
+    order: workflow_job.order,
+    user,
+    task,
+    task_arguments_values: argsValues,
+    dynamic_settings,
+    workflow,
+    origin: JobConstants.ORIGIN_WORKFLOW
+  })
+
+  return nodeJob
+}
+
+/**
+ * there are a few use cases we need to contemplate here:
+ *
+ * 1. the finished job started a new job so it is the same path that continues executing and does not reach the end.
+ * (jobs.length === 1)
+ *
+ * 2. the finished job started two or more simultaneous jobs.
+ * (jobs.length > 1)
+ *
+ * 3. the finished job failed to start a new job so it was the last node.
+ * (jobs.length === 1 && jobs.state !== in_progress)
+ *
+ * 4. the finished job was the last job in the path.
+ * (jobs.length === 0)
+ *
+ * case 1. there is nothing to do.
+ * case 2. the active paths must increase in the number of parallel created jobs
+ * case 3 and 4. the active paths must decrease by 1.
+ */
+const updateActivePaths = async (workflow_job, jobsCreated) => {
+
+  let inc = 0
+
+  // case 1 and 3.
+  if (jobsCreated.length === 1) {
+    const job = jobsCreated[0]
+    if (job.state !== StateConstants.IN_PROGRESS) {
+      inc = -1
+    }
+  }
+  // case 4. the path reach the end. no more nodes in this path
+  else if (jobsCreated.length === 0) {
+    inc = -1
+  }
+  // case 2. new paths created
+  else if (jobsCreated.length > 1) {
+    // and case 3. the state of the started jobs must be "IN_PROGRESS"
+    inc = jobsCreated.filter(j => j.state === StateConstants.IN_PROGRESS).length
+    inc -= 1 // there is always one active path (the main)
+  }
+
+  if (inc !== 0) {
+    // update active paths
+    await App.Models.Job.Workflow.updateOne(
+      { _id: workflow_job._id },
+      { $inc: { active_paths_counter: inc } }
+    )
+  }
+
+  return inc
 }
