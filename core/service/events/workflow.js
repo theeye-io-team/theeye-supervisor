@@ -144,9 +144,9 @@ const executeWorkflowStepVersion2 = async (
     }
   }
 
-  const jobs = await Promise.all(jobsPromises)
-  // signed number 
-  const inc = await updateActivePaths (workflow_job, jobs)
+  // don't wait jobs creation
+  // negative or positive (signed) number 
+  const inc = await updateActivePaths (workflow_job, jobsPromises.length)
   workflow_job.active_paths_counter += inc
 
   if (workflow_job.active_paths_counter === 0) {
@@ -164,6 +164,8 @@ const executeWorkflowStepVersion2 = async (
       lifecycle: job.lifecycle
     })
   }
+
+  return Promise.all(jobsPromises)
 }
 
 /**
@@ -254,26 +256,21 @@ const createWorkflowNodeJob = async ({ workflow, job, nodeW, workflow_job, argsV
  * case 2. the active paths must increase in the number of parallel created jobs
  * case 3 and 4. the active paths must decrease by 1.
  */
-const updateActivePaths = async (workflow_job, jobsCreated) => {
+const updateActivePaths = async (workflow_job, paths) => {
 
   let inc = 0
 
   // case 1 and 3.
-  if (jobsCreated.length === 1) {
-    const job = jobsCreated[0]
-    if (job.state !== StateConstants.IN_PROGRESS) {
-      inc = -1
-    }
+  if (paths === 1) {
+    // nothing
   }
   // case 4. the path reach the end. no more nodes in this path
-  else if (jobsCreated.length === 0) {
+  else if (paths === 0) {
     inc = -1
   }
   // case 2. new paths created
-  else if (jobsCreated.length > 1) {
-    // and case 3. the state of the started jobs must be "IN_PROGRESS"
-    inc = jobsCreated.filter(j => j.state === StateConstants.IN_PROGRESS).length
-    inc -= 1 // there is always one active path (the main)
+  else if (paths > 1) {
+    inc = (paths - 1) // there is always one active path (the main)
   }
 
   if (inc !== 0) {

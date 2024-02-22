@@ -492,7 +492,7 @@ module.exports = {
       job = await createJob(input)
     }
 
-    await dispatchCreatedJobEvent(job, input)
+    await dispatchJobCreatedEvent(job, input)
 
     if (workflow) {
       // only available when the workflow is started
@@ -1086,7 +1086,7 @@ const dispatchFinishedTaskJobExecutionEvent = async (job) => {
   }
 }
 
-const dispatchCreatedJobEvent = async (job, input) => {
+const dispatchJobCreatedEvent = async (job, input) => {
   try {
     const { task_id, trigger_name } = job
 
@@ -1111,7 +1111,7 @@ const dispatchCreatedJobEvent = async (job, input) => {
     })
 
     const topic = TopicsConstants.job.crud
-    App.eventDispatcher.dispatch({ topic, event, input, job })
+    App.eventDispatcher.dispatch({ topic, event, data: input, job })
   } catch (err) {
     if (err) {
       return logger.error(err)

@@ -3,6 +3,7 @@ const logger = require('../../lib/logger')(':events:task-trigger-by')
 const Task = require('../../entity/task').Entity
 const TopicConstants = require('../../constants/topics')
 const JobConstants = require('../../constants/jobs')
+const LifecycleConstants = require('../../constants/lifecycle')
 const createJob = require('./create-job')
 const ifTriggeredByJobSettings = require('./triggered-by-job-settings')
 
