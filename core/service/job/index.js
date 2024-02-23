@@ -427,8 +427,8 @@ module.exports = {
     job.result = {}
     job.output = {}
 
-    if (job.workflow_job) {
-      await App.Models.Job.Workflow.incActiveJobs(job.workflow_job_id, 1)
+    if (job.workflow_job_id) {
+      await App.Models.Job.Workflow.setActivePaths(job.workflow_job_id, 1)
     }
 
     return this.jobInputsReplenish(input)
@@ -492,11 +492,13 @@ module.exports = {
       job = await createJob(input)
     }
 
+    await dispatchJobCreatedEvent(job, input)
+
     if (workflow) {
       // only available when the workflow is started
       if (workflow_job) {
-        workflow_job.active_jobs_counter = 1
-        await App.Models.Job.Workflow.incActiveJobs(workflow_job._id, 1)
+        workflow_job.active_paths_counter = 1 // there ir only one active path
+        await App.Models.Job.Workflow.setActivePaths(workflow_job._id, 1)
       }
 
       if (workflow.autoremove_completed_jobs !== false) {
@@ -835,14 +837,6 @@ const createJob = async (input) => {
   // await notification and logs generation
   await RegisterOperation.submit(Constants.CREATE, TopicsConstants.job.crud, { job, user })
 
-  if (task.type === TaskConstants.TYPE_DUMMY) {
-    if (job.lifecycle !== LifecycleConstants.ONHOLD) {
-      await App.jobDispatcher.finishDummyJob(job, input)
-    }
-  } else if (TaskConstants.TYPE_NOTIFICATION === task.type) {
-    await App.jobDispatcher.finishNotificationJob(job, input)
-  }
-
   return job
 }
 
@@ -1061,8 +1055,10 @@ const dispatchFinishedTaskJobExecutionEvent = async (job) => {
   try {
     const { task_id, trigger_name } = job
 
-    // cannot trigger an event without a task
-    if (!task_id) { return }
+    if (!task_id) {
+      throw new Error('cannot trigger a job event without a task')
+      return
+    }
 
     let event = await App.Models.Event.TaskEvent.findOne({
       emitter_id: task_id,
@@ -1083,6 +1079,39 @@ const dispatchFinishedTaskJobExecutionEvent = async (job) => {
     const data = getJobResult(job)
     const topic = TopicsConstants.job.finished
     App.eventDispatcher.dispatch({ topic, event, data, job })
+  } catch (err) {
+    if (err) {
+      return logger.error(err)
+    }
+  }
+}
+
+const dispatchJobCreatedEvent = async (job, input) => {
+  try {
+    const { task_id, trigger_name } = job
+
+    if (!task_id) {
+      throw new Error('cannot trigger a job event without a task')
+      return
+    }
+
+    //let event = await App.Models.Event.TaskEvent.findOne({
+    //  emitter_id: task_id,
+    //  enable: true,
+    //  name: trigger_name
+    //})
+
+    //event.id = uuidv4()
+    const event = new App.Models.Event.TaskEvent({
+      emitter_id: task_id,
+      name: Constants.CREATE,
+      //name: trigger_name,
+      creation_date: new Date(),
+      last_update: new Date()
+    })
+
+    const topic = TopicsConstants.job.crud
+    App.eventDispatcher.dispatch({ topic, event, data: input, job })
   } catch (err) {
     if (err) {
       return logger.error(err)
