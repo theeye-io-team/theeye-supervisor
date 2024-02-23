@@ -146,6 +146,7 @@ const executeWorkflowStepVersion2 = async (
 
   // don't wait jobs creation
   // negative or positive (signed) number 
+  // calculate the number of active paths based on the number of jobs simultaneously created
   const inc = await updateActivePaths (workflow_job, jobsPromises.length)
   workflow_job.active_paths_counter += inc
 
@@ -165,6 +166,8 @@ const executeWorkflowStepVersion2 = async (
     })
   }
 
+  // jobs creation must resolve after calculating the workflow updates.
+  // if a job fails to start will trigger an event and will be handled async 
   return Promise.all(jobsPromises)
 }
 
