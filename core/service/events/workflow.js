@@ -243,13 +243,13 @@ const createWorkflowNodeJob = async ({ workflow, job, nodeW, workflow_job, argsV
 /**
  * there are a few use cases we need to contemplate here:
  *
- * 1. the finished job started a new job so it is the same path that continues executing and does not reach the end.
+ * 1. the finished job started a new job and it is the same path that continues executing until reaching the end.
  * (jobs.length === 1)
  *
  * 2. the finished job started two or more simultaneous jobs.
  * (jobs.length > 1)
  *
- * 3. the finished job failed to start a new job so it was the last node.
+ * 3. the finished job failed to start a new job and will jump to the end
  * (jobs.length === 1 && jobs.state !== in_progress)
  *
  * 4. the finished job was the last job in the path.
