@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.13.1](https://github.com/theeye/theeye-supervisor/compare/4.13.0...4.13.1) (2024-02-26)
+
+
+### Bug Fixes
+
+* **job:** query to delete old jobs got improved ([#122](https://github.com/theeye/theeye-supervisor/issues/122)) ([3415ffe](https://github.com/theeye/theeye-supervisor/commit/3415ffeb265713923ddb1f707bd4528a53b2a8d4))
+
 ## [4.13.0](https://github.com/theeye/theeye-supervisor/compare/4.12.1...4.13.0) (2024-02-23)
 
 
