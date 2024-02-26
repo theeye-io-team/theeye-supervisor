@@ -1,4 +1,5 @@
 const App = require('../../app')
+const mongoose = require('mongoose')
 const router = require('../../router')
 const logger = require('../../lib/logger')('controller:workflow:job')
 const JobConstants = require('../../constants/jobs')
@@ -324,78 +325,8 @@ const controller = {
 
     res.send(202, {})
 
-    const lifecycleQuery = {
-      $or: [
-        { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.FINISHED ] },
-        { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.TERMINATED ] },
-        { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.CANCELED ] },
-        { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.EXPIRED ] },
-        { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.COMPLETED ] }
-      ]
-    }
-
-    if (Array.isArray(query.lifecycle)) {
-      query.lifecycle.forEach(lifecycle => {
-        if (LifecycleConstants.VALUES.indexOf(lifecycle) !== -1) {
-          lifecycleQuery["$or"].push({
-            $eq: [ '$$taskjob.lifecycle', lifecycle ]
-          })
-        }
-      })
-    }
-
     process.nextTick(() => {
-      Job.aggregate([
-        {
-          $match: {
-            workflow_id: workflow._id.toString(),
-            customer_id: customer._id.toString()
-          }
-        }, {
-          $group: {
-            _id: '$workflow_job_id',
-            tasksJobs: {
-              $push: '$$ROOT'
-            }
-          }
-        }, {
-          $project: {
-            //tasksJobs: 1,
-            finished: {
-              $allElementsTrue: {
-                $map: {
-                  input: '$tasksJobs',
-                  as: 'taskjob',
-                  in: lifecycleQuery
-                }
-              }
-            },
-            _id: 1
-          }
-        }, {
-          $match: {
-            finished: true
-          }
-        }
-      ]).exec((err, result) => {
-        if (err) {
-          logger.error('%o', err)
-          return
-        }
-
-        for (let wfJob of result) {
-          Job.deleteMany({
-            $or: [
-              { _id: { $eq: wfJob._id } },
-              { workflow_job_id: { $eq: wfJob._id } }
-            ]
-          }, (err) => {
-            if (err) {
-              logger.error('%o', err)
-            }
-          })
-        }
-      })
+      executeDeleteJobsQuery(query, workflow, customer)
     })
   }
 }
@@ -439,4 +370,101 @@ const cancelWorkflowJobs = ({ job, user, customer }) => {
       })
       .catch(reject)
   })
+}
+
+const executeDeleteJobsQuery = (filters, workflow, customer) => {
+  const lifecycleQuery = {
+    $or: [
+      { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.FINISHED ] },
+      { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.TERMINATED ] },
+      { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.CANCELED ] },
+      { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.EXPIRED ] },
+      { $eq: [ '$$taskjob.lifecycle', LifecycleConstants.COMPLETED ] }
+    ]
+  }
+
+  if (Array.isArray(filters.lifecycle)) {
+    filters.lifecycle.forEach(lifecycle => {
+      if (LifecycleConstants.VALUES.indexOf(lifecycle) !== -1) {
+        lifecycleQuery["$or"].push({
+          $eq: [ '$$taskjob.lifecycle', lifecycle ]
+        })
+      }
+    })
+  }
+
+  App.Models.Job
+    .Job
+    .aggregate([
+      {
+        $match: {
+          workflow_id: workflow._id.toString(),
+          customer_id: customer._id.toString()
+        }
+      }, {
+        $group: {
+          _id: '$workflow_job_id',
+          tasksJobs: {
+            $push: '$$ROOT'
+          }
+        }
+      }, {
+        $project: {
+          //tasksJobs: 1,
+          finished: {
+            $allElementsTrue: {
+              $map: {
+                input: '$tasksJobs',
+                as: 'taskjob',
+                in: lifecycleQuery
+              }
+            }
+          },
+          _id: 1
+        }
+      }, {
+        $match: {
+          _id: { '$ne': null },
+          finished: true
+        }
+      }
+    ])
+    .exec()
+    .then(result => {
+      if (result?.length > 0) {
+        logger.log('deleting wf jobs')
+        for (let wfJobGroup of result) {
+          if (wfJobGroup._id && wfJobGroup.finished === true) {
+            // delete individual workflow job
+            App.Models.Job
+              .Workflow
+              .deleteOne({
+                _id: mongoose.Types.ObjectId(wfJobGroup._id)
+              })
+              .then(deleted => {
+                logger.log(`wf jobs: ${wfJobGroup._id} ${deleted.deletedCount}`)
+              })
+              .catch(err => {
+                logger.error('%o', err)
+              })
+
+            // delete task jobs
+            App.Models.Job
+              .Job
+              .deleteMany({
+                workflow_job_id: { $eq: wfJobGroup._id }
+              })
+              .then(deleted => {
+                logger.log(`task jobs: ${wfJobGroup._id} ${deleted.deletedCount}`)
+              })
+              .catch(err => {
+                logger.error('%o', err)
+              })
+          }
+        }
+      }
+    })
+    .catch(err => {
+      logger.error(err)
+    })
 }

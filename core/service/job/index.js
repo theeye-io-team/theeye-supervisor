@@ -908,8 +908,7 @@ const removeExceededJobsCountByTask = async (task) => {
         ]
       })
 
-      logger.debug('exceeded task jobs execution logs removed')
-      logger.debug(result)
+      logger.debug(`${result.deletedCount} task-jobs logs removed`)
     }
   }
 }
@@ -932,53 +931,59 @@ const removeExceededJobsCountByWorkflow = async (workflow, task) => {
     return
   }
 
-  const jobs = await App.Models.Job.Job.aggregate([
-    {
-      $match: {
-        workflow_id,
-        customer_id: workflow.customer_id.toString() // just in case
-      }
-    }, {
-      $group: {
-        _id: '$workflow_job_id',
-        count: { $sum: 1 },
-        jobs: {
-          $push: {
-            _id: '$_id',
-            lifecycle: '$lifecycle'
+  App.Models.Job
+    .Job
+    .aggregate([
+      {
+        $match: {
+          workflow_id,
+          customer_id: workflow.customer_id.toString() // just in case
+        }
+      }, {
+        $group: {
+          _id: '$workflow_job_id',
+          count: { $sum: 1 },
+          jobs: {
+            $push: {
+              _id: '$_id',
+              lifecycle: '$lifecycle'
+            }
           }
         }
-      }
-    }, {
-      $match: { _id: { '$ne': null } }
-    }, {
-      $project: {
-        _id: 1,
-        finished: {
-          $allElementsTrue: {
-            $map: {
-              input: '$jobs',
-              as: 'job',
-              in: {
-                $or: [
-                  { $eq: [ '$$job.lifecycle', LifecycleConstants.FINISHED ] },
-                  { $eq: [ '$$job.lifecycle', LifecycleConstants.TERMINATED ] },
-                  { $eq: [ '$$job.lifecycle', LifecycleConstants.CANCELED ] },
-                  { $eq: [ '$$job.lifecycle', LifecycleConstants.EXPIRED ] },
-                  { $eq: [ '$$job.lifecycle', LifecycleConstants.COMPLETED ] }
-                ]
+      }, {
+        $match: { _id: { '$ne': null } }
+      }, {
+        $project: {
+          _id: 1,
+          finished: {
+            $allElementsTrue: {
+              $map: {
+                input: '$jobs',
+                as: 'job',
+                in: {
+                  $or: [
+                    { $eq: [ '$$job.lifecycle', LifecycleConstants.FINISHED ] },
+                    { $eq: [ '$$job.lifecycle', LifecycleConstants.TERMINATED ] },
+                    { $eq: [ '$$job.lifecycle', LifecycleConstants.CANCELED ] },
+                    { $eq: [ '$$job.lifecycle', LifecycleConstants.EXPIRED ] },
+                    { $eq: [ '$$job.lifecycle', LifecycleConstants.COMPLETED ] }
+                  ]
+                }
               }
             }
           }
         }
+      }, {
+        $sort: { _id: 1 }
+      }, {
+        $match: { finished: true }
       }
-    }, {
-      $sort: { _id: 1 }
-    }
-  ])
+    ])
+    .exec()
+    .then(jobs => actuallyRemoveWorkflowJobs(jobs, limit))
+    .catch(err => logger.error(err) )
 
   // don't wait
-  actuallyRemoveWorkflowJobs(jobs, limit)
   return
 }
 
@@ -987,6 +992,7 @@ const actuallyRemoveWorkflowJobs = async (jobs, limit) => {
 
     // remove exceeded items
     const shouldDeleteCount = (jobs.length - limit)
+    logger.log(`deleting ${shouldDeleteCount} of ${jobs.length} exceeded jobs`)
 
     // detect finished tasks
     const canDelete = jobs.filter(job => job.finished === true)
@@ -1016,8 +1022,8 @@ const actuallyRemoveWorkflowJobs = async (jobs, limit) => {
       }
 
       Promise.all(promises).then(result => {
-        logger.debug(`${promises.length} exceeded workflow jobs execution logs removed`)
-        logger.data(result)
+        logger.debug(`${promises.length} removed workflow-job logs`)
+        logger.debug(result)
       })
     }
   }
