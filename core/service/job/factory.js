@@ -150,10 +150,7 @@ const JobsFactory = {
     })
 
     if (errors.hasErrors()) {
-      let name = 'InvalidTaskArguments'
-      const err = new Error(name)
-      err.name = name
-      err.statusCode = 400
+      const err = new ErrorHandler.InvalidTaskArguments()
       err.errors = errors
       return next(err, filteredArguments)
     }
@@ -529,21 +526,20 @@ class AbstractJob {
             argsDefinition,
             inputArgsValues,
             (err, values) => {
-              if (err) {
-                logger.log('%o', err)
-                err.statusCode = 400 // input error
-                return reject(err)
-              }
-
-              resolve(values)
+              if (err) { return reject(err) }
+              else { return resolve(values) }
             }
           )
         })
         job.task_arguments_values = values
       } catch (err) {
-        if (TaskConstants.TYPE_NOTIFICATION !== task.type) {
-          job.task_arguments_values = inputArgsValues
-          await this.terminateBuild(err)
+        if (err instanceof ErrorHandler.InvalidTaskArguments) {
+          if (TaskConstants.TYPE_NOTIFICATION !== task.type) {
+            job.task_arguments_values = inputArgsValues
+            this.terminateBuild(err)
+          }
+        } else {
+          logger.error(err)
         }
       }
     }

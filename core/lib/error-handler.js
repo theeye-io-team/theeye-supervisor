@@ -181,3 +181,15 @@ class ForbiddenError extends ExtendedError {
   }
 }
 ErrorHandler.ForbiddenError = ForbiddenError
+
+///////////////////////////////////////////////
+//
+class InvalidTaskArguments extends ExtendedError {
+  constructor (message) {
+    super('InvalidTaskArguments')
+    this.name = this.constructor.name
+    this.code = 400
+    this.statusCode = this.status = 400
+  }
+}
+ErrorHandler.InvalidTaskArguments = InvalidTaskArguments
