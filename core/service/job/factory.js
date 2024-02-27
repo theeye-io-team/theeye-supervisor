@@ -536,7 +536,7 @@ class AbstractJob {
         if (err instanceof ErrorHandler.InvalidTaskArguments) {
           if (TaskConstants.TYPE_NOTIFICATION !== task.type) {
             job.task_arguments_values = inputArgsValues
-            await this.terminateBuild(err)
+            this.terminateBuild(err)
           }
         } else {
           logger.error(err)
