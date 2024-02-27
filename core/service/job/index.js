@@ -570,7 +570,12 @@ module.exports = {
       return jobs[0]
     }
 
-    await App.Models.Job.AgentUpdate.deleteMany({ host_id, name: JobConstants.AGENT_UPDATE })
+    await App.Models.Job
+      .AgentUpdate
+      .deleteMany({
+        host_id,
+        name: JobConstants.AGENT_UPDATE
+      })
 
     const job = new App.Models.Job.AgentUpdate()
     job.host_id = host_id // enforce host_id, just in case
@@ -1009,21 +1014,49 @@ const actuallyRemoveWorkflowJobs = async (jobs, limit) => {
       const promises = []
       while (deleteCount > 0) {
         let job = canDelete[deleteCount - 1]
-        const promise = App.Models.Job.Job.remove({
-          $or: [
-            { workflow_job_id: job._id },
-            { _id: mongoose.Types.ObjectId(job._id) }
-          ]
-        }).catch(err => err)
 
-        promises.push(promise)
+        // delete individual workflow job first
+        const wfpromise = App.Models.Job
+          .Workflow
+          .deleteOne({
+            _id: mongoose.Types.ObjectId(job._id)
+          })
+          .then(deleted => {
+            logger.log(`[${job._id}]: ${deleted.deletedCount} deleted wf job`)
+            return deleted
+          })
+          .catch(err => {
+            logger.error('%o', err)
+            return `Error: ${err.message}`
+          })
+
+        promises.push(wfpromise)
+
+        // delete task-jobs of this workflow-job
+        const tjobpromise = App.Models.Job
+          .Job
+          .deleteMany({
+            _type: { $ne: 'WorkflowJob' }, // just in case...
+            workflow_job_id: job._id 
+          })
+          .then(deleted => {
+            logger.log(`[${job._id}]: ${deleted.deletedCount} deleted task jobs`)
+            return deleted
+          })
+          .catch(err => {
+            logger.error('%o', err)
+            return `Error: ${err.message}`
+          })
+
+        promises.push(tjobpromise)
 
         --deleteCount
       }
 
       Promise.all(promises).then(result => {
-        logger.debug(`${promises.length} removed workflow-job logs`)
+        logger.debug(`${promises.length} operations performed`)
         logger.debug(result)
+        return result
       })
     }
   }
