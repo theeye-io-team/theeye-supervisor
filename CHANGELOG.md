@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.13.2](https://github.com/theeye/theeye-supervisor/compare/4.13.1...4.13.2) (2024-02-27)
+
+
+### Bug Fixes
+
+* create error instance and capture/dump ([#126](https://github.com/theeye/theeye-supervisor/issues/126)) ([b3399c4](https://github.com/theeye/theeye-supervisor/commit/b3399c43fcf272649d73cc3dfc7f26708db4b6d0))
+* separate wfjob taskjob deletion ([#125](https://github.com/theeye/theeye-supervisor/issues/125)) ([dbba7e0](https://github.com/theeye/theeye-supervisor/commit/dbba7e022a317d267e8d85bc5841534cdf82eb9d))
+
 ### [4.13.1](https://github.com/theeye/theeye-supervisor/compare/4.13.0...4.13.1) (2024-02-26)
 
 
