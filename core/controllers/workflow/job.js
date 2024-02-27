@@ -443,9 +443,11 @@ const executeDeleteJobsQuery = (filters, workflow, customer) => {
               })
               .then(deleted => {
                 logger.log(`wf jobs: ${wfJobGroup._id} ${deleted.deletedCount}`)
+                return deleted
               })
               .catch(err => {
                 logger.error('%o', err)
+                return `Error: ${err.message}`
               })
 
             // delete task jobs
@@ -456,9 +458,11 @@ const executeDeleteJobsQuery = (filters, workflow, customer) => {
               })
               .then(deleted => {
                 logger.log(`task jobs: ${wfJobGroup._id} ${deleted.deletedCount}`)
+                return deleted
               })
               .catch(err => {
                 logger.error('%o', err)
+                return `Error: ${err.message}`
               })
           }
         }
