@@ -364,7 +364,7 @@ const findByTitleMiddleware = (options = {}) => {
 const mutableKeys = [
   'description','acl','severity',
   'alerts','state','sticky','read_only',
-  'tags','value'
+  'tags','value','name'
 ]
 
 const indicatorResetValues = (indicator) => {
