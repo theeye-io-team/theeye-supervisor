@@ -382,7 +382,7 @@ class AbstractJob {
       await this.getWorkflow()
       await this.setupJobBasicProperties()
       await this.build()
-      await this.verifyArguments()
+      await verifyArguments(this)
 
       // it is trying to change the job predefined behaviour
       if (hasDynamicSettings(this.vars.dynamic_settings)) {
@@ -504,47 +504,6 @@ class AbstractJob {
     }
   }
 
-  async verifyArguments () {
-    const { job, task, vars } = this
-
-    if (
-      vars.origin !== JobConstants.ORIGIN_USER &&
-      job.user_inputs === true
-    ) {
-      // we don't care about automatic arguments,
-      // a user must enter the arguments values
-      job.lifecycle = LifecycleConstants.ONHOLD
-      job.task_arguments_values = []
-    } else {
-      const argsDefinition = task.task_arguments
-      const inputArgsValues = vars.task_arguments_values
-
-      try {
-        const values = await new Promise( (resolve, reject) => {
-          JobsFactory.prepareTaskArgumentsValues(
-            task.arguments_type,
-            argsDefinition,
-            inputArgsValues,
-            (err, values) => {
-              if (err) { return reject(err) }
-              else { return resolve(values) }
-            }
-          )
-        })
-        job.task_arguments_values = values
-      } catch (err) {
-        if (err instanceof ErrorHandler.InvalidTaskArguments) {
-          if (TaskConstants.TYPE_NOTIFICATION !== task.type) {
-            job.task_arguments_values = inputArgsValues
-            this.terminateBuild(err)
-          }
-        } else {
-          logger.error(err)
-        }
-      }
-    }
-  }
-
   async saveJob () {
     const job = this.job
     await job.save()
@@ -641,6 +600,48 @@ class AbstractJob {
           assigned_users: (vars.assigned_users || task.assigned_users.toObject()),
           user_inputs_members: (vars.user_inputs_members || task.user_inputs_members.toObject())
         })
+      }
+    }
+  }
+}
+
+const verifyArguments = async (input) => {
+  const { job, task, vars } = input
+
+  if (
+    vars.origin !== JobConstants.ORIGIN_USER &&
+    job.user_inputs === true
+  ) {
+    // we don't care about automatic arguments,
+    // a user must enter the arguments values
+    job.lifecycle = LifecycleConstants.ONHOLD
+    job.task_arguments_values = []
+  } else {
+    const argsDefinition = task.task_arguments
+    const inputArgsValues = vars.task_arguments_values
+
+    try {
+      const values = await new Promise( (resolve, reject) => {
+        JobsFactory.prepareTaskArgumentsValues(
+          task.arguments_type,
+          argsDefinition,
+          inputArgsValues,
+          (err, values) => {
+            if (err) { return reject(err) }
+            else { return resolve(values) }
+          }
+        )
+      })
+      job.task_arguments_values = values
+    } catch (err) {
+      if (err instanceof ErrorHandler.InvalidTaskArguments) {
+        if (TaskConstants.TYPE_NOTIFICATION !== task.type) {
+          job.task_arguments_values = inputArgsValues
+          throw err
+          //this.terminateBuild(err)
+        }
+      } else {
+        throw err
       }
     }
   }

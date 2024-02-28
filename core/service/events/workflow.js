@@ -19,18 +19,23 @@ const ifTriggeredByJobSettings = require('./triggered-by-job-settings')
  */
 module.exports = async function (payload) {
   try {
-    if (payload.topic === TopicConstants.job.finished) {
-      if (payload.job.workflow_job_id) {
-        // a task-job belonging to a workflow finished
-        logger.log('This is a workflow job event')
-        handleWorkflowTaskJobFinishedEvent(payload)
-      }
-    } else if (
+    // case 1. workflow step.
+    if (
+      payload.topic === TopicConstants.job.finished &&
+      payload.job.workflow_job_id
+    ) {
+      // a task-job belonging to a workflow-job has finished
+      logger.log('This is a workflow job event')
+      handleWorkflowTaskJobFinishedEvent(payload)
+    }
+
+    // case 2. a job has finished and the execution of another workflow must be started
+    if (
       payload.topic === TopicConstants.monitor.state ||
       payload.topic === TopicConstants.webhook.triggered ||
       payload.topic === TopicConstants.job.finished
     ) {
-      // workflow trigger has occur
+      // a workflow is trigger by a job
       triggerWorkflowByEvent(payload)
     }
   } catch (err) {
