@@ -25,7 +25,9 @@ module.exports = async function (payload) {
         logger.log('This is a workflow job event')
         handleWorkflowTaskJobFinishedEvent(payload)
       }
-    } else if (
+    }
+
+    if (
       payload.topic === TopicConstants.monitor.state ||
       payload.topic === TopicConstants.webhook.triggered ||
       payload.topic === TopicConstants.job.finished
