@@ -170,7 +170,8 @@ const controller = {
       output: 0,
       result: 0,
       task: 0,
-      script: 0
+      script: 0,
+      env: 0
     })
 
     App.Models.Job.Job
