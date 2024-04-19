@@ -104,68 +104,60 @@ module.exports = {
      *
      */
     //let jobs = []
-    const dispatchJobExecutionRecursive = (
-      idx, jobs, terminateRecursion
-    ) => {
-      if (idx === jobs.length) {
-        return terminateRecursion()
-      }
+    const dispatchJobExecutionRecursive = async (idx, jobs, terminateRecursion) => {
+      let job
+      try {
+        if (idx === jobs.length) {
+          return terminateRecursion()
+        }
 
-      const job = App.Models.Job.Job.hydrate(jobs[idx])
+        job = App.Models.Job.Job.hydrate(jobs[idx])
 
-      // Cancel this job and process next
-      if (App.jobDispatcher.jobMustHaveATask(job) && !job.task) {
-        // cancel invalid job
-        job.lifecycle = LifecycleConstants.CANCELED
-        job.save(err => {
-          if (err) {
-            logger.error('%o', err)
+        // Cancel this job and process next
+        if (App.jobDispatcher.jobMustHaveATask(job) && !job.task) {
+          // cancel invalid job
+          job.lifecycle = LifecycleConstants.CANCELED
+          await job.save()
+          RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job })
+          // continue loop
+          return dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
+        } else {
+          const multitasking = await allowedMultitasking(job)
+          if (!multitasking) {
+            // skip this one
+            return dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
           }
 
-          // continue
-          dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
-        })
+          logger.log(`Dispatching job ${job.id}: ${job.name}`)
+          const result = await App.Models.Job.Job.findOneAndUpdate(
+            { _id: job._id, lifecycle: LifecycleConstants.READY },
+            { lifecycle: LifecycleConstants.ASSIGNED },
+            { rawResult: true, new: true }
+          )
 
-        RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job })
-      } else {
-        allowedMultitasking(job, (err, allowed) => {
-          if (!allowed) {
-            // just ignore this one
-            dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
-          } else {
-            logger.log(`Dispatching job ${job.id}: ${job.name}`)
-            App.Models.Job.Job.findOneAndUpdate({
-              _id: job._id,
-              lifecycle: LifecycleConstants.READY
-            }, {
-              lifecycle: LifecycleConstants.ASSIGNED
-            }, {
-              rawResult: true,
-              new: true
-            }).then(result => {
-              if (!result) { throw new Error('query failed') }
-
-              if (result.lastErrorObject?.updatedExisting !== true) {
-                logger.error(`Job ${job.id}: ${job.name} already dispatched`)
-                return dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
-              }
-
-              const updatedJob = result.value
-
-              terminateRecursion(null, updatedJob)
-              RegisterOperation.submit(
-                Constants.UPDATE,
-                TopicsConstants.job.crud, {
-                  job: updatedJob
-                }
-              )
-            }).catch(err => {
-              logger.error(`Job ${job.id}: ${job.name} cannot be dispatched`)
-              logger.error('%s', err)
-              dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
-            })
+          if (!result) {
+            throw new ServerError('query failed')
           }
-        })
+
+          await App.Models.Job.Job.findOneAndUpdate(
+            { _id: job.workflow_job_id, lifecycle: LifecycleConstants.ONHOLD },
+            { lifecycle: LifecycleConstants.STARTED }
+          )
+
+          if (result.lastErrorObject?.updatedExisting !== true) {
+            throw new ServerError(`Job ${job.id}: ${job.name} already dispatched`)
+          }
+
+          const updatedJob = result.value
+
+          terminateRecursion(null, updatedJob)
+          RegisterOperation.submit( Constants.UPDATE, TopicsConstants.job.crud,
+            { job: updatedJob })
+        }
+      } catch (err) {
+        logger.error(`Job ${job.id}: ${job.name} cannot be dispatched`)
+        logger.error('%s', err)
+        return dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
       }
     }
 
@@ -178,8 +170,7 @@ module.exports = {
       },
       {
         $sort: {
-          task_id: 1,
-          creation_date: 1
+          task_id: 1
         }
       },
       {
@@ -755,56 +746,49 @@ const taskRequireHost = (task) => {
   return res
 }
 
-const allowedMultitasking = (job, next) => {
+const allowedMultitasking = async (job) => {
   if (job._type === JobConstants.AGENT_UPDATE_TYPE) {
-    return next(null, true)
+    return true
   }
 
-  populateWorkflow(job)
-    .then(() => {
-      if (
-        job.task.multitasking !== false &&
-        job.workflow?.multitasking !== false
-      ) {
-        return null
-      }
+  let query
+  if (job.workflow_job) {
+    await populateWorkflow(job)
+    if (job.workflow.multitasking !== false) {
+      return true
+    }
 
-      // identify in progress jobs
-      const query = {
-        _id: { // is not same job it is being evaluated
-          $ne: job._id
-        },
-        _type: { $ne: JobConstants.WORKFLOW_TYPE },
-        lifecycle: {
-          // in progress lifecycles
-          $in: [
-            //LifecycleConstants.LOCKED,
-            //LifecycleConstants.SYNCING,
-            //LifecycleConstants.READY,
-            LifecycleConstants.ASSIGNED,
-            //LifecycleConstants.ONHOLD 
-          ]
-        },
-      }
+    query = {
+      workflow_id: job.workflow_id,
+      _type: JobConstants.WORKFLOW_TYPE,
+      _id: {
+        $ne: job.workflow_job_id
+      },
+      lifecycle: LifecycleConstants.STARTED
+    }
 
-      // there should be a single job in progress with this workflow
-      if (job.workflow?.multitasking === false) {
-        query.workflow_id = job.workflow._id.toString()
-      } 
-      // there should be a single job in progress with this task
-      else if (job.task.multitasking === false) {
-        query.task_id = job.task_id
-      }
+  } else {
+    if (job.task.multitasking !== false) {
+      return true
+    }
 
-      return App.Models.Job.Job.findOne(query).exec()
-    })
-    .then(inprogressjob => {
-      return next(null, (inprogressjob === null))
-    })
-    .catch(err => {
-      logger.error('Failed to fetch inprogress job')
-      return next(err)
-    })
+    // identify in progress jobs of the same task
+    query = {
+      task_id: job.task_id,
+      _id: {
+        $ne: job._id
+      },
+      lifecycle: {
+        // in progress lifecycles
+        $in: [
+          LifecycleConstants.ASSIGNED,
+        ]
+      }
+    }
+  }
+
+  const inprogressjob = await App.Models.Job.Job.findOne(query).exec()
+  return (inprogressjob === null)
 }
 
 const populateWorkflow = async (job) => {

@@ -312,11 +312,15 @@ class WorkflowJob {
     const input = this.input
     const { workflow, user, customer } = input
 
+    const lifecycle = workflow.multitasking === false ?
+      LifecycleConstants.ONHOLD :
+      LifecycleConstants.READY
+
     const wJob = new JobModels.Workflow(
       Object.assign(
         {
           state: StateConstants.IN_PROGRESS,
-          //lifecycle: LifecycleConstants.READY
+          lifecycle
         },
         input, /* VARIABLE parameters, depends on the CONTEXT */
         {
