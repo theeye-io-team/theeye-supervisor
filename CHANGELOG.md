@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.15.0](https://github.com/theeye/theeye-supervisor/compare/4.14.0...4.15.0) (2024-04-22)
+
+
+### Features
+
+* **job-lifecycle:** hold and resume ([9d65af4](https://github.com/theeye/theeye-supervisor/commit/9d65af4c13025c070f044b10ca0de523e5005221))
+
+
+### Bug Fixes
+
+* **workflow:** multitasking control ([#128](https://github.com/theeye/theeye-supervisor/issues/128)) ([2ddd13e](https://github.com/theeye/theeye-supervisor/commit/2ddd13ed605c4bba7752eb7969124469f4669329))
+
 ## [4.14.0](https://github.com/theeye/theeye-supervisor/compare/4.13.2...4.14.0) (2024-02-28)
 
 
