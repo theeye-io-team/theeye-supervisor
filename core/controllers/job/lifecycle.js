@@ -73,6 +73,27 @@ module.exports = (server) => {
     }
   )
 
+  server.put('/job/:job/hold',
+    middlewares,
+    router.requireCredential('user'),
+    router.resolve.idToEntity({ param: 'job', required: true }),
+    router.ensureAllowed({ entity: { name: 'job' } }),
+    async (req, res, next) => {
+      try {
+        const job = req.job
+        if (job.lifecycle === LifecycleConstants.ASSIGNED) {
+          res.send(400, `job lifecycle must be syncing. ${job.lifecycle} is set`)
+          return
+        }
+
+        await App.jobDispatcher.holdExecution(job)
+        res.send(200, "ok")
+      } catch (err) {
+        res.sendError(err)
+      }
+    }
+  )
+
   server.put('/:customer/job/:job/cancel',
     middlewares,
     router.requireCredential('viewer'),
@@ -88,7 +109,7 @@ module.exports = (server) => {
         }
         return next()
       } catch (err) {
-        res.send(err.statusCode, err.message)
+        res.sendError(err)
       }
     },
     controller.cancel

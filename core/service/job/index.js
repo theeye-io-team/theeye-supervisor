@@ -452,6 +452,36 @@ module.exports = {
     return job
   },
   /**
+   *
+   * Hold job if it is not assigned
+   *
+   * @param {Job} job
+   * @return {Promise<Job>}
+   */
+  async holdExecution (job) {
+    let result = await App.Models.Job.Job.findOneAndUpdate(
+      { _id: job._id },
+      { lifecycle: LifecycleConstants.ONHOLD, state: StateConstants.IN_PROGRESS },
+      { rawResult: true, new: true }
+    )
+
+    const updatedJob = result.value
+
+    if (job.workflow_job) {
+      result = await App.Models.Job.Job.findOneAndUpdate(
+        { _id: job.workflow_job_id },
+        { lifecycle: LifecycleConstants.ONHOLD },
+        { rawResult: true, new: true }
+      )
+
+      const wfJob = result.value
+      RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job:wfJob })
+    }
+
+    RegisterOperation.submit(Constants.UPDATE, TopicsConstants.job.crud, { job })
+    return job
+  },
+  /**
    * @param {Object} input
    * @property {Task} input.task
    * @property {User} input.user
