@@ -1,4 +1,3 @@
-
 const util = require('util')
 const properties = require('./base-properties')
 const BaseSchema = require('../base-schema')
