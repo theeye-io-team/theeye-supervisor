@@ -50,7 +50,7 @@ function BaseSchema (props, opts) {
 
 
   this.statics.fetchBy = function (filter, next) {
-    FetchBy.call(this, filter, next)
+    return FetchBy.call(this, filter, next)
   }
 
   this.methods.publish = function (next) {
