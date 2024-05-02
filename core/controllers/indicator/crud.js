@@ -6,6 +6,7 @@ const router = require('../../router')
 const logger = require('../../lib/logger')('eye:controller:indicator:crud')
 const TopicsConstants = require('../../constants/topics')
 const Constants = require('../../constants')
+const eventDispatcher = require('./events_middleware')
 
 module.exports = function (server) {
   const middlewares = [
@@ -52,7 +53,7 @@ module.exports = function (server) {
     router.requireCredential('admin'),
     controller.create,
     audit.afterCreate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.CREATE }),
+    eventDispatcher({ operation: Constants.CREATE }),
     createTags,
   )
 
@@ -62,7 +63,7 @@ module.exports = function (server) {
     router.resolve.idToEntityByCustomer({ param:'indicator', required:true }),
     controller.replace,
     audit.afterReplace('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.REPLACE }),
+    eventDispatcher({ operation: Constants.REPLACE }),
     createTags,
   )
 
@@ -72,7 +73,7 @@ module.exports = function (server) {
     findByTitleMiddleware({ required: false }),
     controller.replace,
     audit.afterReplace('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.REPLACE }),
+    eventDispatcher({ operation: Constants.REPLACE }),
     createTags,
   )
 
@@ -82,7 +83,7 @@ module.exports = function (server) {
     findByTitleMiddleware(),
     controller.update,
     audit.afterUpdate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.UPDATE }),
+    eventDispatcher({ operation: Constants.UPDATE }),
     createTags,
   )
 
@@ -92,7 +93,7 @@ module.exports = function (server) {
     router.resolve.idToEntityByCustomer({ param:'indicator', required: true }),
     controller.update,
     audit.afterUpdate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.UPDATE }),
+    eventDispatcher({ operation: Constants.UPDATE }),
     createTags,
   )
 
@@ -102,7 +103,7 @@ module.exports = function (server) {
     router.resolve.idToEntityByCustomer({ param:'indicator', required: true }),
     controller.updateState,
     audit.afterUpdate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.UPDATE })
+    eventDispatcher({ operation: Constants.UPDATE, eventName: 'set_state' })
   )
 
   server.del('/indicator/:indicator',
@@ -111,7 +112,7 @@ module.exports = function (server) {
     router.resolve.idToEntityByCustomer({ param:'indicator', required: true }),
     controller.remove,
     audit.afterRemove('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.DELETE })
+    eventDispatcher({ operation: Constants.DELETE })
   )
 
   server.del('/indicator/title/:title',
@@ -120,7 +121,7 @@ module.exports = function (server) {
     findByTitleMiddleware(),
     controller.remove,
     audit.afterRemove('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.DELETE })
+    eventDispatcher({ operation: Constants.DELETE })
   )
 }
 
@@ -298,28 +299,6 @@ const controller = {
       }
     }
     return
-  }
-}
-
-const notifyEvent = (options) => {
-  let operation = options.operation
-
-  return function (req, res, next) {
-    const indicator = req.indicator
-
-    App.notifications.generateSystemNotification({
-      topic: TopicsConstants.indicator.crud,
-      data: {
-        operation,
-        organization: req.customer.name,
-        organization_id: req.customer._id,
-        model_id: indicator._id,
-        model_type: indicator._type,
-        model: indicator
-      }
-    })
-
-    if (next) { return next() }
   }
 }
 

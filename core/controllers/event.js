@@ -3,7 +3,68 @@ const App = require('../app')
 const router = require('../router')
 const { ServerError, ClientError } = require('../lib/error-handler')
 
+const Types = [{
+  'name':'indicator',
+  'collection': App.Models.Indicator.Indicator,
+  'model': App.Models.Event.IndicatorEvent
+}, {
+  'name': 'task',
+  'collection': App.Models.Task.Task,
+  'model': App.Models.Event.TaskEvent
+}, {
+  'name': 'webhook',
+  'collection': App.Models.Webhook.Webhook,
+  'model': App.Models.Event.WebhookEvent
+}, {
+  'name': 'monitor',
+  'collection': App.Models.Resource.Resource,
+  'model': App.Models.Event.MonitorEvent
+//}, {
+//  'name': 'workflow',
+//  'collection': App.Models.Workflow.Workflow,
+//  'model': App.Models.Event.WorkflowEvent
+}]
+
 module.exports = (server) => {
+
+  const validateRequiredParamsMiddleware = (req, res, next) => {
+    const body = req.body
+    const customer = req.customer
+
+    if (!body.type) {
+      throw new ClientError('emitter type is required')
+    }
+    if (!body.event_name) {
+      throw new ClientError('event name is required')
+    }
+    if (!body.emitter_id) {
+      throw new ClientError('emitter id is required')
+    }
+
+    const typeModel = Types.find(t => t.name === body.type)
+    if (!typeModel) {
+      throw new ClientError(`Type ${type} is not implemented`)
+    }
+  }
+
+  server.post('/event',
+    server.auth.bearerMiddleware,
+    router.requireCredential('admin'),
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    validateRequiredParamsMiddleware,
+    controller.create
+  )
+
+  server.post('/event/ensure',
+    server.auth.bearerMiddleware,
+    router.requireCredential('admin'),
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    validateRequiredParamsMiddleware,
+    controller.ensureExists
+  )
+
   server.get('/:customer/event',
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
@@ -17,14 +78,6 @@ module.exports = (server) => {
     router.ensureCustomer,
     router.resolve.idToEntity({ param: 'event', required: true }),
     controller.get
-  )
-
-  server.post('/event',
-    server.auth.bearerMiddleware,
-    router.requireCredential('admin'),
-    router.resolve.customerSessionToEntity(),
-    router.ensureCustomer,
-    controller.create
   )
 
   server.get('/event/emitters', 
@@ -48,54 +101,33 @@ module.exports = (server) => {
   )
 }
 
-const Types = [{
-  'name':'indicator',
-  'collection': App.Models.Indicator.Indicator,
-  'model': App.Models.Event.IndicatorEvent
-}, {
-  'name': 'task',
-  'collection': App.Models.Task.Task,
-  'model': App.Models.Event.TaskEvent
-}, {
-  'name': 'webhook',
-  'collection': App.Models.Webhook.Webhook,
-  'model': App.Models.Event.WebhookEvent
-}, {
-  'name': 'monitor',
-  'collection': App.Models.Resource.Resource,
-  'model': App.Models.Event.MonitorEvent
-}, {
-  'name': 'workflow',
-  'collection': App.Models.Workflow.Workflow,
-  'model': App.Models.Event.WorkflowEvent
-}]
 
 const controller = {
+  async ensureExists (req, res, next) {
+    try {
+      const { type } = req.body
+      const typeModel = Types.find(t => t.name === type)
+      const eventData = prepareEventData(req)
+      const event = await typeModel.model.findOne(eventData)
+      if (!event) {
+        event = await typeModel.model.create(eventData)
+      }
+      req.event = event
+      res.send(200, event)
+      return next()
+    } catch (err) {
+      res.sendError(err)
+    }
+  },
   async create (req, res, next) {
     try {
-      const body = req.body
-      const customer = req.customer
-
-      if (!body.type) {
-        throw new ClientError('emitter type is required')
-      }
-
-      const typeModel = Types.find(t => t.name === body.type)
-      if (!typeModel) {
-        throw new ClientError(`Type ${type} is not implemented`)
-      }
-
-      const eventData = {
-        name: body.name,
-        emitter: body.emitter_id,
-        emitter_id: body.emitter_id,
-        customer: customer.id,
-        customer_id: customer.id,
-      }
-
-      const emitter = await typeModel.model.create(eventData)
-      res.send(200, emitter)
-
+      const { type } = req.body
+      const typeModel = Types.find(t => t.name === type)
+      const eventData = prepareEventData(req)
+      const event = await typeModel.model.create(eventData)
+      req.event = event
+      res.send(200, event)
+      return next()
     } catch (err) {
       res.sendError(err)
     }
@@ -125,7 +157,8 @@ const controller = {
         name: 1,
         title: 1,
         _type: 1,
-        type: 1
+        type: 1,
+        tags: 1
       }
 
       let payload = {}
@@ -174,4 +207,17 @@ const controller = {
       res.sendError(err)
     }
   }
+}
+
+
+const prepareEventData = ({ body, customer }) => {
+  const eventData = {
+    name: body.event_name,
+    emitter: body.emitter_id,
+    emitter_id: body.emitter_id,
+    customer: customer.id,
+    customer_id: customer.id,
+  }
+
+  return eventData
 }
