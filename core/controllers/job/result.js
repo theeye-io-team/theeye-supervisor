@@ -1,6 +1,7 @@
 const App = require('../../app')
 const router = require('../../router')
 const logger = require('../../lib/logger')('controller:job')
+const { ClientError } = require('../../lib/error-handler')
 const AsyncMiddleware = require('../../lib/async-controller')
 const qs = require('qs')
 
