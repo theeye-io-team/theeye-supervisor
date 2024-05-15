@@ -27,7 +27,7 @@ const Types = [{
 
 module.exports = (server) => {
 
-  const validateRequiredParamsMiddleware = (req, res, next) => {
+  const validateRequiredParamsMiddleware = async (req, res) => {
     const body = req.body
     const customer = req.customer
 
@@ -103,7 +103,7 @@ module.exports = (server) => {
 
 
 const controller = {
-  async ensureExists (req, res, next) {
+  async ensureExists (req, res) {
     try {
       const { type } = req.body
       const typeModel = Types.find(t => t.name === type)
@@ -114,12 +114,11 @@ const controller = {
       }
       req.event = event
       res.send(200, event)
-      return next()
     } catch (err) {
       res.sendError(err)
     }
   },
-  async create (req, res, next) {
+  async create (req, res) {
     try {
       const { type } = req.body
       const typeModel = Types.find(t => t.name === type)
@@ -127,15 +126,14 @@ const controller = {
       const event = await typeModel.model.create(eventData)
       req.event = event
       res.send(200, event)
-      return next()
     } catch (err) {
       res.sendError(err)
     }
   },
-  get (req, res, next) {
+  async get (req, res) {
     req.send(200, req.event)
   },
-  fetch (req, res, next) {
+  async fetch (req, res) {
     App.Models.Event.Event.fetch({
       customer: req.customer._id,
       emitter: { $ne: null }
@@ -147,7 +145,7 @@ const controller = {
       }
     })
   },
-  async fetchEmitters (req, res, next) {
+  async fetchEmitters (req, res) {
     try {
       const filter = req.dbQuery
       const qtype = req.query.type
@@ -184,7 +182,7 @@ const controller = {
       res.sendError(err)
     }
   },
-  async getEmitterEvents (req, res, next) {
+  async getEmitterEvents (req, res) {
     try {
       const customer = req.customer
       const filter = req.dbQuery

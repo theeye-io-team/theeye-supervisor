@@ -14,7 +14,7 @@ const TopicsConstants = require('../../constants/topics')
 module.exports = (options) => {
   let { operation, eventName } = options
 
-  return async function (req, res, next) {
+  return async function (req, res) {
     const topic = TopicsConstants.indicator.crud
     const indicator = req.indicator
 
@@ -50,7 +50,5 @@ module.exports = (options) => {
     }
 
     App.eventDispatcher.dispatch({ topic, event, data: {}, indicator })
-
-    if (next) { return next() }
   }
 }
