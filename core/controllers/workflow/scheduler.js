@@ -32,7 +32,7 @@ module.exports = (server) => {
   )
 }
 
-const create = async (req, res, next) => {
+const create = async (req, res) => {
   try {
     const { workflow, user, customer, body } = req
 
@@ -50,14 +50,13 @@ const create = async (req, res, next) => {
 
     req.schedule = schedule.attrs
     res.send(200, schedule)
-    next()
   } catch (err) {
     logger.error(err)
     return res.send(err.statusCode || 500, err.message)
   }
 }
 
-const fetch = async (req, res, next) => {
+const fetch = async (req, res) => {
   try {
     const customer = req.customer
     const workflow = req.workflow
@@ -75,7 +74,6 @@ const fetch = async (req, res, next) => {
     )
 
     res.send(200, schedules)
-    next()
   } catch (err) {
     res.send(err.statusCode || 500, err.message)
   }

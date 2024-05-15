@@ -10,7 +10,7 @@ module.exports = (server) => {
   server.get('/api/status', nodeStatus)
 }
 
-const nodeStatus = async (req, res, next) => {
+const nodeStatus = async (req, res) => {
   try {
     let message = { status: `Node is ok.` }
 
@@ -22,7 +22,6 @@ const nodeStatus = async (req, res, next) => {
     message.env = process.env.NODE_ENV
 
     res.send(200, message)
-    next()
   } catch (err) {
     res.send(500, err)
   }

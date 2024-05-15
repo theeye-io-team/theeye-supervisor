@@ -36,7 +36,7 @@ module.exports = (server) => {
   )
 }
 
-const replaceAcl = async (req, res, next) => {
+const replaceAcl = async (req, res) => {
   try {
     const job = req.job
 

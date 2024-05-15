@@ -21,7 +21,7 @@ module.exports = function (server) {
 	server.post('/psaux/:hostname', middlewares, create)
 }
 
-const create = async (req, res, next) => {
+const create = async (req, res) => {
   try {
     let host = req.host
     let stats = req.body.psaux
@@ -91,7 +91,6 @@ const create = async (req, res, next) => {
     })
 
     res.send(200)
-    return next()
 
   } catch (err) {
     logger.error(err)

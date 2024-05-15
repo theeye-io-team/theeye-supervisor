@@ -27,13 +27,6 @@ module.exports = function (server) {
   server.get('/admin/usage/counters',
     server.auth.bearerMiddleware,
     router.requireCredential('root'),
-    //(req, res, next) => {
-    //  if (!req.query.usageToken) {
-    //    res.send(403, 'Forbidden')
-    //    return
-    //  }
-    //  return next()
-    //},
     router.resolve.customerToEntity({ required: true }), // use customer name or id to resolve
     usageCount
   )
@@ -41,19 +34,12 @@ module.exports = function (server) {
   server.get('/admin/usage/details',
     server.auth.bearerMiddleware,
     router.requireCredential('root'),
-    //(req, res, next) => {
-    //  if (!req.query.usageToken) {
-    //    res.send(403, 'Forbidden')
-    //    return
-    //  }
-    //  return next()
-    //},
     router.resolve.customerToEntity({ required: true }), // use customer name or id to resolve
     usageDetails
   )
 }
 
-const usageCount = async (req, res, next) => {
+const usageCount = async (req, res) => {
   try {
     const customer = req.customer
     const queryPromise = []
@@ -77,7 +63,7 @@ const usageCount = async (req, res, next) => {
   }
 }
 
-const usageDetails = async (req, res, next) => {
+const usageDetails = async (req, res) => {
   try {
     const customer = req.customer
 

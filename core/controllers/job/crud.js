@@ -224,7 +224,7 @@ const controller = {
       next()
     })
   },
-  async fetchRunningCounters (req, res, next) {
+  async fetchRunningCounters (req, res) {
     try {
       const customer = req.customer
       const user = req.user
@@ -258,7 +258,6 @@ const controller = {
         ])
 
       res.send(200, counters)
-      next()
     } catch (err) {
       res.sendError(err)
     }
@@ -301,7 +300,7 @@ const controller = {
       next()
     })
   },
-  async updateAssignee (req, res, next) {
+  async updateAssignee (req, res) {
     try {
       const job = req.job
       const search = req.body
@@ -350,7 +349,7 @@ const controller = {
       res.sendError(err)
     }
   },
-  async participants (req, res, next) {
+  async participants (req, res) {
     try {
       const job = req.job
 

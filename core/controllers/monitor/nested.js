@@ -98,7 +98,7 @@ const controller = {
   /**
    * @method PUT
    */
-  async replace (req, res, next) {
+  async replace (req, res) {
     try {
       const resource = req.resource
       const body = req.body
@@ -116,7 +116,6 @@ const controller = {
       await App.resource.update({ resource, updates: params.data })
       //await resource.populate('monitor')
       res.send(200, resource)
-      return next()
     } catch (e) {
       logger.error(e)
       if (e.statusCode) {

@@ -18,7 +18,7 @@ module.exports = (server) => {
   )
 }
 
-const fetchTags = async (req, res, next) => {
+const fetchTags = async (req, res) => {
   try {
     const { customer } = req
     const tags = await App.Models.Tag.Tag

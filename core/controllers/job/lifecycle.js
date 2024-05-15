@@ -56,7 +56,7 @@ module.exports = (server) => {
     router.requireCredential('user'),
     router.resolve.idToEntity({ param: 'job', required: true }),
     router.ensureAllowed({ entity: { name: 'job' } }),
-    async (req, res, next) => {
+    async (req, res) => {
       try {
         const job = req.job
         if (job.lifecycle !== LifecycleConstants.SYNCING) {
@@ -78,7 +78,7 @@ module.exports = (server) => {
     router.requireCredential('user'),
     router.resolve.idToEntity({ param: 'job', required: true }),
     router.ensureAllowed({ entity: { name: 'job' } }),
-    async (req, res, next) => {
+    async (req, res) => {
       try {
         const job = req.job
         if (job.lifecycle === LifecycleConstants.ASSIGNED) {
@@ -189,7 +189,7 @@ module.exports = (server) => {
         res.send(err.status, err.message)
       }
     },
-    async (req, res, next) => {
+    async (req, res) => {
       try {
         const job = req.job
         const task = job.task
@@ -298,7 +298,7 @@ const controller = {
       next()
     })
   },
-  async submitInput (req, res, next) {
+  async submitInput (req, res) {
     const job = req.job
 
     try {
@@ -312,7 +312,6 @@ const controller = {
         await submitJobInputs(req)
       }
       res.send(200, job)
-      return next()
     } catch (err) {
       logger.error(err)
       if (err.statusCode) {

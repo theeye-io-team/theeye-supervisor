@@ -10,7 +10,7 @@ const { ClientError } = require('../../lib/error-handler')
 
 module.exports = (server) => {
 
-  const verifyStartingTask = async (req, res, next) => {
+  const verifyStartingTask = async (req, res) => {
     try {
       if (!req.task) {
         const { workflow } = req
@@ -21,7 +21,6 @@ module.exports = (server) => {
         }
         req.task = task
       }
-      return next()
     } catch (err) {
       res.sendError(err)
     }
@@ -81,7 +80,7 @@ module.exports = (server) => {
     router.ensureCustomer,
     router.resolve.idToEntityByCustomer({ param: 'workflow', required: true }),
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
-    async (req, res, next) => {
+    async (req, res) => {
       try {
         const customer = req.customer
         const workflow = req.workflow
@@ -92,7 +91,6 @@ module.exports = (server) => {
         }
 
         res.send(200, job.publish())
-        next()
       } catch (err) {
         res.sendError(err)
       }
@@ -111,7 +109,7 @@ module.exports = (server) => {
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
     router.ensurePermissions(),
     router.dbFilter(),
-    async (req, res, next) => {
+    async (req, res) => {
       try {
         const customer = req.customer
         const workflow = req.workflow
@@ -233,7 +231,7 @@ module.exports = (server) => {
 }
 
 const controller = {
-  async input (req, res, next) {
+  async input (req, res) {
     const { workflow, customer, user } = req
 
     const filters = req.dbQuery
@@ -252,14 +250,14 @@ const controller = {
       filters.include['task.task_arguments'] = 1
     }
 
-    App.Models.Job.Job.fetchBy(filters)
+    return App.Models.Job.Job.fetchBy(filters)
       .then(jobs => {
         res.send(200, jobs)
-        next()
+        return
       })
       .catch(res.sendError)
   },
-  async replaceAcl (req, res, next) {
+  async replaceAcl (req, res) {
     try {
       const job = req.job
 
@@ -283,7 +281,7 @@ const controller = {
       res.sendError(err)
     }
   },
-  async cancel (req, res, next) {
+  async cancel (req, res) {
     try {
       const job = req.job
 
@@ -298,7 +296,7 @@ const controller = {
       res.sendError(err)
     }
   },
-  async create (req, res, next) {
+  async create (req, res) {
     try {
       const { user } = req
       const payload = await jobPayloadValidationMiddleware(req)
@@ -313,7 +311,6 @@ const controller = {
 
       res.send(200, data)
       req.job = wJob
-      next()
     } catch (err) {
       res.sendError(err)
     }

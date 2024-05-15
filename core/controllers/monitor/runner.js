@@ -42,7 +42,7 @@ module.exports = (server) => {
  * @method POST
  *
  */
-const create = async (req, res, next) => {
+const create = async (req, res) => {
   try {
     const { customer, host, task } = req
     // default values.
@@ -80,14 +80,13 @@ const create = async (req, res, next) => {
     App.jobDispatcher.createAgentUpdateJob(host._id)
 
     res.send(200, inserted.ops[0])
-    next()
   } catch (err) {
     logger.error(err)
     res.send(500, 'Internal Server Error')
   }
 }
 
-const fetch = async (req, res, next) => {
+const fetch = async (req, res) => {
   try {
     const host = req.host
     const customer = req.customer
@@ -99,14 +98,13 @@ const fetch = async (req, res, next) => {
     })
 
     res.send(200, runners)
-    next()
   } catch (err) {
     logger.error(err)
     res.send(500, 'Internal Server Error')
   }
 }
 
-const remove = async (req, res, next) => {
+const remove = async (req, res) => {
   try {
     const monitor = req.monitor
     await monitor.remove()

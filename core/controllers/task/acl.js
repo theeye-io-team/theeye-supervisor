@@ -53,11 +53,11 @@ module.exports = (server) => {
 
 const controller = {
 
-  async get (req, res, next) {
+  async get (req, res) {
     const task = req.task
     res.send(200, { acl: task.acl })
   },
-  async replace (req, res, next) {
+  async replace (req, res) {
     try {
       const task = req.task
 
@@ -90,13 +90,12 @@ const controller = {
       task.acl = acl
       await task.save()
       res.send(200, { acl })
-      next()
     } catch (err) {
       logger.error(err, err.status)
       res.send(err.status || 500, err.message)
     }
   },
-  async update (req, res, next) {
+  async update (req, res) {
     try {
       const task = req.task
 
@@ -152,19 +151,17 @@ const controller = {
 
       await task.save()
       res.send(200, { acl })
-      next()
     } catch (err) {
       logger.error(err, err.status)
       res.send(err.status || 500, err.message)
     }
   },
-  async del (req, res, next) {
+  async del (req, res) {
     try {
       const task = req.task
       task.acl = []
       await task.save()
       res.send(200, { acl: task.acl })
-      next()
     } catch (err) {
       logger.error(err, err.status)
       res.send(err.status || 500, err.message)

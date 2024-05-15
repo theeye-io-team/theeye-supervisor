@@ -179,7 +179,7 @@ const controller = {
   /**
    * @method POST
    */
-  async trigger (req, res, next) {
+  async trigger (req, res) {
     try {
       const webhook = req.webhook
       const body = req.body
@@ -217,7 +217,6 @@ const controller = {
       webhook.save()
 
       res.send(200, { message: 'success' })
-      next()
     } catch (err) {
       logger.error(err)
       res.send(500, err)

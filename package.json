@@ -54,7 +54,7 @@
     "qs": "~6.9.4",
     "readable-stream": "~1.0.34",
     "redis": "~4.6.5",
-    "restify": "~8.6.1",
+    "restify": "~11.1.0",
     "standard-version": "~9.5.0",
     "stream-buffers": "~2.2.0",
     "uuid": "~8.3.0",

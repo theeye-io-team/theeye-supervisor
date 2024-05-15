@@ -93,7 +93,7 @@ module.exports = (server) => {
   )
 }
 
-const queueController = async (req, res, next) => {
+const queueController = async (req, res) => {
   try {
     const { customer, user, task } = req
     const query = req.query
@@ -115,14 +115,13 @@ const queueController = async (req, res, next) => {
     }
 
     res.send(200, jobs)
-    next()
   } catch (err) {
     logger.error(err)
     res.sendError(err)
   }
 }
 
-const remove = async (req, res, next) => {
+const remove = async (req, res) => {
   try {
     const task = req.task
     const customer = req.customer
@@ -152,7 +151,6 @@ const remove = async (req, res, next) => {
 
     let result = await App.Models.Job.Job.deleteMany(dbquery)
     res.send(200, { deletedCount: result.deletedCount })
-    return next()
   } catch (err) {
     logger.error('%o', err)
     res.send(500)

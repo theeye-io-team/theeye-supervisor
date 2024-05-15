@@ -54,12 +54,12 @@ module.exports = (server) => {
 
 const controller = {
 
-  async get (req, res, next) {
+  async get (req, res) {
     const workflow = req.workflow
     const { acl } = workflow
     res.send(200, { acl })
   },
-  async replace (req, res, next) {
+  async replace (req, res) {
     try {
       const workflow = req.workflow
 
@@ -93,13 +93,12 @@ const controller = {
       await workflow.save()
       await assignWorkflowAclToTasks(workflow)
       res.send(200, { acl: workflow.acl })
-      next()
     } catch (err) {
       logger.error(err, err.status)
       res.send(err.status || 500, err.message)
     }
   },
-  async update (req, res, next) {
+  async update (req, res) {
     try {
       const workflow = req.workflow
 
@@ -156,20 +155,18 @@ const controller = {
       await workflow.save()
       await assignWorkflowAclToTasks(workflow)
       res.send(200, { acl: workflow.acl })
-      next()
     } catch (err) {
       logger.error(err, err.status)
       res.send(err.status || 500, err.message)
     }
   },
-  async del (req, res, next) {
+  async del (req, res) {
     try {
       const workflow = req.workflow
       workflow.acl = []
       await workflow.save()
       await assignWorkflowAclToTasks(workflow)
       res.send(200, { acl: workflow.acl })
-      next()
     } catch (err) {
       logger.error(err, err.status)
       res.send(err.status || 500, err.message)
