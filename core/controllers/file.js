@@ -173,7 +173,7 @@ const getFile = (req, res, next) => {
  * @method PUT/PATCH
  *
  */
-const uploadFile = async (req, res, next) => {
+const uploadFile = async (req, res) => {
   try {
     //const fileModel = (req.file || req.script)
     const fileModel = req.file
@@ -208,7 +208,6 @@ const uploadFile = async (req, res, next) => {
     await fileModel.save()
 
     res.send(200, fileModel)
-    next()
   } catch (err) {
     res.sendError(err)
   }
@@ -219,7 +218,7 @@ const uploadFile = async (req, res, next) => {
  * @method PUT/PATCH
  *
  */
-const updateFile = async (req, res, next) => {
+const updateFile = async (req, res) => {
   try {
     //const fileModel = (req.file || req.script)
     const fileModel = req.file
@@ -285,19 +284,17 @@ const updateFile = async (req, res, next) => {
     await fileModel.save()
 
     res.send(200, fileModel)
-    next()
   } catch (err) {
     res.sendError(err)
   }
 }
 
-const updateContentSchema = async (req, res, next) => {
+const updateContentSchema = async (req, res) => {
   try {
     const file = req.file
     file.content_schema = req.body
     await file.save()
     res.send(200, file.content_schema)
-    return next()
   } catch (err) {
     res.sendError(err)
   }
@@ -308,7 +305,7 @@ const updateContentSchema = async (req, res, next) => {
  * @method POST
  *
  */
-const createFile = async (req, res, next) => {
+const createFile = async (req, res) => {
   try {
     const customer = req.customer
     const file = req.files.file
@@ -351,7 +348,6 @@ const createFile = async (req, res, next) => {
     model.save()
     req.file = model // assign to the route for state post processing
     res.send(200, model)
-    next()
   } catch (err) {
     res.sendError(err)
   }
@@ -383,7 +379,7 @@ const downloadFile = (req, res, next) => {
  * @method DELETE
  *
  */
-const removeFile = async (req, res, next) => {
+const removeFile = async (req, res) => {
   try {
     const file = req.file
     const linkedModels = await App.file.getLinkedModels({ file })
@@ -404,7 +400,6 @@ const removeFile = async (req, res, next) => {
     })
 
     res.send(204)
-    next()
   } catch (err) {
     res.sendError(err)
   }
@@ -415,13 +410,12 @@ const removeFile = async (req, res, next) => {
  * GET LINKED MODELS
  *
  */
-const getLinkedModels = async (req, res, next) => {
+const getLinkedModels = async (req, res) => {
   try {
     const file = req.file
     const linkedModels = await App.file.getLinkedModels({ file })
 
     res.send(200, linkedModels)
-    next()
   } catch (err) {
     logger.error(err)
     return res.send(500)
@@ -429,7 +423,7 @@ const getLinkedModels = async (req, res, next) => {
 }
 
 
-const checkAfectedModels = async (req, res, next) => {
+const checkAfectedModels = async (req, res) => {
   try {
     const file = req.file
     const linkedModels = await App.file.getLinkedModels({ file })
@@ -448,7 +442,4 @@ const checkAfectedModels = async (req, res, next) => {
   } catch (err) {
     logger.error(err)
   }
-
-  // call next middleware
-  next()
 }

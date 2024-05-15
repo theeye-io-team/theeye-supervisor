@@ -16,7 +16,7 @@ module.exports = {
     const entityName = (options.entity||options.param)
     const targetName = (options.into||paramName)
 
-    return async function (req, res, next) {
+    return async function (req, res) {
       try {
         const customer = req.customer
         let _id = (
@@ -37,7 +37,7 @@ module.exports = {
           }
 
           req[targetName] = null
-          return next()
+          return 
         }
 
         if (!isMongoId(_id)) {
@@ -46,7 +46,7 @@ module.exports = {
           }
 
           req[targetName] = null
-          return next()
+          return 
         }
 
         logger.debug('resolving "%s" with id "%s"', targetName, _id)
@@ -75,13 +75,13 @@ module.exports = {
           }
 
           req[targetName] = null
-          return next()
+          return 
         }
 
 
         logger.debug('instances of "%s" found', options.param)
         req[targetName] = dbDoc
-        next()
+        return
       } catch (err) {
         res.sendError(err)
       }

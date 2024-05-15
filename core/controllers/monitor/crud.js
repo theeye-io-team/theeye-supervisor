@@ -18,11 +18,10 @@ module.exports = (server) => {
   // default middlewares
   const middlewares = [
     server.auth.bearerMiddleware,
-    async (req, res, next) => {
+    async (req, res) => {
       //const customer = req.session.customer
       //req.customer = await App.Models.Customer.Entity.findById(customer.id)
       req.customer = req.session.customer
-      next()
     },
     router.ensureCustomer
   ]
@@ -145,7 +144,7 @@ const controller = {
    * @summary Create resource on single host
    * @method POST
    */
-  async create (req, res, next) {
+  async create (req, res) {
     try {
       const customer = req.customer
       const body = req.body
@@ -178,7 +177,6 @@ const controller = {
       logger.log('resources created')
 
       res.send(201, req.resource)
-      next() // next middleware
     } catch (err) {
       if (err.errors) {
         let messages = err.errors.map(e => {
@@ -246,7 +244,7 @@ const controller = {
  * @method PUT
  *
  */
-const replace = async (req, res, next) => {
+const replace = async (req, res) => {
   try {
     const resource = req.resource
     const body = req.body
@@ -271,7 +269,6 @@ const replace = async (req, res, next) => {
 
     await updateResource(resource, updates)
     res.send(200, resource)
-    next()
   } catch (e) {
     logger.error(e)
     if (e.statusCode) {

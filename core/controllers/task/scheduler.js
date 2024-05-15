@@ -69,7 +69,7 @@ const fetch = (req, res, next) => {
  * @method POST
  * @route /:customer/task/:task/schedule
  */
-const create = async (req, res, next) => {
+const create = async (req, res) => {
   try {
     const { task, user, customer, body } = req
 
@@ -92,7 +92,6 @@ const create = async (req, res, next) => {
 
     req.schedule = schedule.attrs
     res.send(200, schedule)
-    next()
   } catch (err) {
     if (!err.statusCode || err.statusCode === 500) { logger.error(err) }
     res.sendError(err)

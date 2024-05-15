@@ -68,7 +68,7 @@ module.exports = function (server) {
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'host', required: true }),
-    async (req, res, next) => {
+    async (req, res) => {
       try {
         const host = req.host
         host.disabled = true
@@ -84,7 +84,7 @@ module.exports = function (server) {
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'host', required: true }),
-    async (req, res, next) => {
+    async (req, res) => {
       try {
         const host = req.host
         host.disabled = false
@@ -100,7 +100,7 @@ module.exports = function (server) {
     middlewares,
     router.requireCredential('admin'),
     router.resolve.idToEntity({ param: 'host', required: true }),
-    async (req, res, next) => {
+    async (req, res) => {
       try {
         const host = req.host
         let fingerprints = req.body
@@ -128,7 +128,7 @@ module.exports = function (server) {
 }
 
 const controller = {
-  async template (req, res, next) {
+  async template (req, res) {
     try {
       const { customer, host } = req
       const template = await App.host.template(host, customer)
@@ -138,12 +138,11 @@ const controller = {
       res.send(500, err)
     }
   },
-  async reconfigure (req, res, next) {
+  async reconfigure (req, res) {
     try {
       const host = req.host
       const job = await App.jobDispatcher.createAgentUpdateJob(host._id)
       res.send(204)
-      next()
     } catch (err) {
       logger.error(err)
       res.send(500, 'Internal Server Error')
@@ -184,7 +183,7 @@ const controller = {
       })
     })
   },
-  async register (req, res, next) {
+  async register (req, res) {
     try {
       const { user, customer, body = {} } = req
       const hostname = body?.hostname

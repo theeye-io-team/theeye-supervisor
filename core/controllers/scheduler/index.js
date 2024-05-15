@@ -9,7 +9,7 @@ const { ServerError, ClientError } = require('../../lib/error-handler')
 
 module.exports = (server) => {
 
-  const schedulerResolver = async (req, res, next) => {
+  const schedulerResolver = async (req, res) => {
     try {
       const id = req.params.schedule
       if (!id) {
@@ -27,7 +27,6 @@ module.exports = (server) => {
 
       req.schedule = schedule
 
-      next()
     } catch (err) {
       res.send(err.statusCode, err.message)
     }
@@ -90,19 +89,18 @@ module.exports = (server) => {
   )
 }
 
-const remove = async (req, res, next) => {
+const remove = async (req, res) => {
   try {
     const schedule = req.schedule
     const numRemoved = await App.scheduler.cancelSchedule(schedule.attrs._id)
     res.send(200, { numRemoved })
-    next()
   } catch (err) {
     logger.error('%o', err)
     return res.send(500, 'Internal Server Error')
   }
 }
 
-const start = async (req, res, next) => {
+const start = async (req, res) => {
   try {
     const job = req.schedule
 
@@ -130,19 +128,17 @@ const start = async (req, res, next) => {
     await job.save()
 
     res.send(200, 'ok')
-    next()
   } catch (err) {
     return res.sendError(err)
   }
 }
 
-const stop = async (req, res, next) => {
+const stop = async (req, res) => {
   try {
     const schedule = req.schedule
     schedule.disable()
     await schedule.save()
     res.send(200, 'ok')
-    next()
   } catch (err) {
     logger.error('%o', err)
     return res.send(500, 'Internal Server Error')

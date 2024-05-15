@@ -2,7 +2,7 @@ const App = require('../app')
 const { ServerError, ClientError, AsyncMiddlewareEmptyResult } = require('./error-handler')
 
 module.exports = (fn, options = {}) => {
-  const controller = async (req, res, next) => {
+  const controller = async (req, res) => {
     try {
       const result = await fn(req, res)
       if (result === undefined) {
@@ -10,7 +10,6 @@ module.exports = (fn, options = {}) => {
       }
       const body = (result||'ok')
       res.send(body)
-      next()
     } catch (err) {
       if (err.name === 'ValidationError') {
         const clientErr = new ClientError('Invalid Payload') 

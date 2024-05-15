@@ -26,7 +26,7 @@ module.exports = (server) => {
 /**
  * @summary export workflow recipe
  */
-const serialize = async (req, res, next) => {
+const serialize = async (req, res) => {
   try {
     const { mode = 'shallow' } = req.query
     const workflow = req.workflow

@@ -68,7 +68,7 @@ module.exports = function(server) {
  *
  */
 const controller = {
-  async serialize (req, res, next) {
+  async serialize (req, res) {
     try {
       const { customer, group } = req
       const recipe = await Recipe.findOne({

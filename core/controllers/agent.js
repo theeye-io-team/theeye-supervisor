@@ -39,7 +39,7 @@ const controller = {
    * @path /:customer/agent/:hostname/config
    *
    */
-  async update (req, res, next) {
+  async update (req, res) {
     try {
       const { customer, host } = req
       if (!host) {
@@ -60,7 +60,6 @@ const controller = {
         })
 
       res.send(204)
-      next()
     } catch (err) {
       res.sendError(err)
     }
@@ -72,7 +71,7 @@ const controller = {
    * @path /:customer/agent/:hostname/config
    *
    */
-  async config (req, res, next) {
+  async config (req, res) {
     try {
       const { user, customer } = req
 

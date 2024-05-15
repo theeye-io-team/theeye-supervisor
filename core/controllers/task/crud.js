@@ -9,7 +9,7 @@ const TaskConstants = require('../../constants/task')
 const { ClientError, ServerError } = require('../../lib/error-handler')
 
 module.exports = (server) => {
-  const increaseVersion = async (req, res, next) => {
+  const increaseVersion = async (req, res) => {
     try {
       const task = req.task
       const fingerprint = task.calculateFingerprint(App.namespace)
@@ -23,7 +23,6 @@ module.exports = (server) => {
         task.version += 1
       }
       await task.save()
-      next()
     } catch (err) {
       logger.error(err)
     }
@@ -228,7 +227,7 @@ const controller = {
    * @param {String} :task , mongo ObjectId
    *
    */
-  async get (req, res, next) {
+  async get (req, res) {
     try {
       const data = await App.task.populate(req.task)
       res.send(200, data)

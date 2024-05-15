@@ -273,7 +273,7 @@ const controller = {
     res.send(200, req.indicator)
     next()
   },
-  async updateState (req, res, next) {
+  async updateState (req, res) {
     try {
       const indicator = req.indicator
       const body = req.body
@@ -290,14 +290,14 @@ const controller = {
       await indicator.save()
 
       res.send(200, indicator)
-      return next()
     } catch (err) {
       if (err.name == 'ValidationError') {
-        return res.send(400, err.name)
+        res.send(400, err.name)
       } else {
-        return res.send(500, err)
+        res.send(500, err)
       }
     }
+    return
   }
 }
 

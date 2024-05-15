@@ -12,7 +12,7 @@ const qs = require('qs')
  * @param {Object[]} req.body.lifecycle
  *
  */
-module.exports = async (req, res, next) => {
+module.exports = async (req, res) => {
   try {
     const payload = await jobPayloadValidationMiddleware(req)
     const { user } = req
@@ -58,7 +58,6 @@ module.exports = async (req, res, next) => {
       res.send(303, data)
     } else {
       res.send(200, data)
-      next()
     }
   } catch (err) {
     res.sendError(err)
