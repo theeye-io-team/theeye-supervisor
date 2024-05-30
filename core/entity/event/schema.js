@@ -11,6 +11,7 @@ function EventSchema (specs) {
   });
 
   this.statics.fetch = function (query,done) {
+    console.error('entity/event/schema.statics.fetch DEPRECATED!!!')
     this
       .find(query)
       .select('_id emitter name _type emitter_id')

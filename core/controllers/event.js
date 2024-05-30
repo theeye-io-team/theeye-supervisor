@@ -65,19 +65,21 @@ module.exports = (server) => {
     controller.ensureExists
   )
 
-  server.get('/:customer/event',
-    server.auth.bearerMiddleware,
-    router.resolve.customerNameToEntity({ required: true }),
-    router.ensureCustomer,
-    controller.fetch
-  )
-
   server.get('/:customer/event/:event',
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer,
     router.resolve.idToEntity({ param: 'event', required: true }),
     controller.get
+  )
+
+  server.get('/:customer/event',
+    server.auth.bearerMiddleware,
+    router.resolve.customerNameToEntity({ required: true }),
+    router.ensureCustomer,
+    router.ensurePermissions(),
+    router.dbFilter(),
+    controller.fetch
   )
 
   server.get('/event/emitters', 
@@ -134,16 +136,10 @@ const controller = {
     req.send(200, req.event)
   },
   async fetch (req, res) {
-    App.Models.Event.Event.fetch({
-      customer: req.customer._id,
-      emitter: { $ne: null }
-    }, (err,events) => {
-      if (err) {
-        res.sendError(err)
-      } else {
-        res.send(200, events)
-      }
-    })
+    const filters = req.dbQuery
+    filters.where.emitter = { $ne: null }
+    const events = App.Models.Event.Event.fetchBy(filters)
+    res.send(200, events)
   },
   async fetchEmitters (req, res) {
     try {
@@ -177,7 +173,7 @@ const controller = {
         }
       }
 
-        res.send(200, payload)
+      res.send(200, payload)
     } catch (err) {
       res.sendError(err)
     }
