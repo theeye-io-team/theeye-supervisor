@@ -17,7 +17,7 @@ const Types = [{
   'model': App.Models.Event.WebhookEvent
 }, {
   'name': 'monitor',
-  'collection': App.Models.Resource.Resource,
+  'collection': App.Models.Monitor.Monitor,
   'model': App.Models.Event.MonitorEvent
 //}, {
 //  'name': 'workflow',
@@ -75,7 +75,16 @@ module.exports = (server) => {
 
   server.get('/:customer/event',
     server.auth.bearerMiddleware,
-    router.resolve.customerNameToEntity({ required: true }),
+    router.resolve.customerSessionToEntity(),
+    router.ensureCustomer,
+    router.ensurePermissions(),
+    router.dbFilter(),
+    controller.fetch
+  )
+
+  server.get('/event',
+    server.auth.bearerMiddleware,
+    router.resolve.customerSessionToEntity(),
     router.ensureCustomer,
     router.ensurePermissions(),
     router.dbFilter(),
@@ -103,17 +112,29 @@ module.exports = (server) => {
   )
 }
 
-
 const controller = {
   async ensureExists (req, res) {
     try {
       const { type } = req.body
       const typeModel = Types.find(t => t.name === type)
       const eventData = prepareEventData(req)
-      const event = await typeModel.model.findOne(eventData)
+      let event = await typeModel.model.findOne({
+        name: eventData.name,
+        emitter: eventData.emitter_id,
+        customer: eventData.customer,
+      })
       if (!event) {
         event = await typeModel.model.create(eventData)
       }
+
+      await event.populate({
+        path: 'emitter',
+        select: '_id name title _type type host host_id workflow_id',
+        populate: {
+          path: 'host',
+          select: 'hostname _id'
+        }
+      }).execPopulate()
       req.event = event
       res.send(200, event)
     } catch (err) {
@@ -125,7 +146,24 @@ const controller = {
       const { type } = req.body
       const typeModel = Types.find(t => t.name === type)
       const eventData = prepareEventData(req)
-      const event = await typeModel.model.create(eventData)
+      let event = await typeModel.model.findOne({
+        name: eventData.name,
+        emitter: eventData.emitter_id,
+        customer: eventData.customer,
+      })
+      if (event) {
+        throw new ClientError('Event exists', {statusCode: 409})
+      }
+
+      event = await typeModel.model.create(eventData)
+      await event.populate({
+        path: 'emitter',
+        select: '_id name title _type type host host_id workflow_id',
+        populate: {
+          path: 'host',
+          select: 'hostname _id'
+        }
+      }).execPopulate()
       req.event = event
       res.send(200, event)
     } catch (err) {
@@ -138,12 +176,26 @@ const controller = {
   async fetch (req, res) {
     const filters = req.dbQuery
     filters.where.emitter = { $ne: null }
-    const events = App.Models.Event.Event.fetchBy(filters)
+    filters.include = '_id emitter name _type emitter_id'
+    filters.populate = {
+      path: 'emitter',
+      select: '_id name title _type type host host_id workflow_id',
+      populate: {
+        path: 'host',
+        select: 'hostname _id'
+      }
+    }
+
+    const events = await App.Models.Event.Event.fetchBy(filters)
     res.send(200, events)
   },
   async fetchEmitters (req, res) {
     try {
       const filter = req.dbQuery
+
+      // to fetch Monitors
+      filter.where.$or.push({ customer_name: req.customer.name })
+
       const qtype = req.query.type
 
       filter.include = {

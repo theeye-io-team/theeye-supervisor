@@ -9,7 +9,10 @@ module.exports = function (options) {
       const customer = req.customer
       const query = req.query
       const filter = dbFilter(query)
-      filter.where.customer_id = customer.id
+      filter.where.$or = [
+        { customer_id: customer.id },
+        { customer: customer.id }
+      ]
 
       if (!req.hasOwnProperty('permissions')) {
         const reqp = req._url?.pathname
