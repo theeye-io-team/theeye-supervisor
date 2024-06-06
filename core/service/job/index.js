@@ -1222,7 +1222,7 @@ const dispatchFinishedWorkflowJobExecutionEvent = async (job) => {
     })
 
     const topic = TopicsConstants.workflow.job.finished
-    App.eventDispatcher.dispatch({ topic, event, data: {}, job })
+    App.eventDispatcher.dispatch({ topic, event, data: [], job })
   } catch (err) {
     if (err) {
       return logger.error(err)

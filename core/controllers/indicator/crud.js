@@ -101,10 +101,26 @@ module.exports = function (server) {
     middlewares,
     router.requireCredential('agent'),
     router.resolve.idToEntityByCustomer({ param:'indicator', required: true }),
-    controller.updateState,
+    controller.changeState,
     audit.afterUpdate('indicator', { display: 'title' }),
     eventDispatcher({ operation: Constants.UPDATE, eventName: 'set_state' })
   )
+
+  server.patch('/indicator/:indicator/value',
+    middlewares,
+    router.requireCredential('agent'),
+    router.resolve.idToEntityByCustomer({ param:'indicator', required: true }),
+    controller.changeValue,
+    audit.afterUpdate('indicator', { display: 'title' }),
+    eventDispatcher({ operation: Constants.UPDATE, eventName: 'set_state' })
+  )
+
+  const deleteIndicatorEvents = async (req, res) => {
+    return App.Models
+      .Event
+      .IndicatorEvent
+      .deleteMany({ emitter_id: req.indicator._id })
+  }
 
   server.del('/indicator/:indicator',
     middlewares,
@@ -112,7 +128,8 @@ module.exports = function (server) {
     router.resolve.idToEntityByCustomer({ param:'indicator', required: true }),
     controller.remove,
     audit.afterRemove('indicator', { display: 'title' }),
-    eventDispatcher({ operation: Constants.DELETE })
+    eventDispatcher({ operation: Constants.DELETE }),
+    deleteIndicatorEvents
   )
 
   server.del('/indicator/title/:title',
@@ -121,7 +138,8 @@ module.exports = function (server) {
     findByTitleMiddleware(),
     controller.remove,
     audit.afterRemove('indicator', { display: 'title' }),
-    eventDispatcher({ operation: Constants.DELETE })
+    eventDispatcher({ operation: Constants.DELETE }),
+    deleteIndicatorEvents
   )
 }
 
@@ -274,22 +292,27 @@ const controller = {
     res.send(200, req.indicator)
     next()
   },
-  async updateState (req, res) {
+  async changeState (req, res) {
     try {
       const indicator = req.indicator
-      const body = req.body
-
-      if (!body || (!body.state && !body.value)) {
-        return res.send(400, 'provide the state changes. value and/or state are required')
-      }
-
-      let state = body.state
-      if (state === 'success') { state = 'normal' }
-      if (body.state) { indicator.state = state }
-      if (body.value) { indicator.value = body.value }
-
+      const state = req.body
+      indicator.state = (state === 'success') ? 'normal' : state
       await indicator.save()
-
+      res.send(200, indicator)
+    } catch (err) {
+      if (err.name == 'ValidationError') {
+        res.send(400, err.name)
+      } else {
+        res.send(500, err)
+      }
+    }
+    return
+  },
+  async changeValue (req, res) {
+    try {
+      const indicator = req.indicator
+      indicator.value = req.body
+      await indicator.save()
       res.send(200, indicator)
     } catch (err) {
       if (err.name == 'ValidationError') {

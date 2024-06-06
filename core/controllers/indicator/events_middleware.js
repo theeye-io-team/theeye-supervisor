@@ -42,6 +42,8 @@ module.exports = (options) => {
 
     if (!event) {
       event = await App.Models.Event.IndicatorEvent.create({
+        customer: req.customer._id,
+        emitter: indicator._id,
         emitter_id: indicator._id,
         name: eventName,
         creation_date: new Date(),
@@ -49,6 +51,19 @@ module.exports = (options) => {
       })
     }
 
-    App.eventDispatcher.dispatch({ topic, event, data: {}, indicator })
+    App.eventDispatcher.dispatch({
+      topic,
+      event,
+      data: [{
+        topic,
+        event_name: eventName,
+        operation,
+        model_id: indicator._id,
+        model_type: indicator._type,
+      }],
+      indicator
+    })
+
+    return
   }
 }
