@@ -191,6 +191,7 @@ const controller = {
     const filters = req.dbQuery
     filters.where.lifecycle = {
       $in: [
+        LifecycleConstants.STARTED,
         LifecycleConstants.READY,
         LifecycleConstants.ASSIGNED,
         LifecycleConstants.ONHOLD,

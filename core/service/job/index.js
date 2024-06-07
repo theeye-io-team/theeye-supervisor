@@ -135,67 +135,83 @@ module.exports = {
             { rawResult: true, new: true }
           )
 
-          if (!result) {
-            throw new ServerError('query failed')
-          }
-
-          await App.Models.Job.Job.findOneAndUpdate(
-            { _id: job.workflow_job_id, lifecycle: LifecycleConstants.ONHOLD },
-            { lifecycle: LifecycleConstants.STARTED }
-          )
+          if (!result) { throw new ServerError('query failed') }
 
           if (result.lastErrorObject?.updatedExisting !== true) {
             throw new ServerError(`Job ${job.id}: ${job.name} already dispatched`)
           }
 
+          // set workflow as started
+          await App.Models.Job.Job.findOneAndUpdate(
+            { _id: job.workflow_job_id },
+            { lifecycle: LifecycleConstants.STARTED }
+          )
+
           const updatedJob = result.value
 
           terminateRecursion(null, updatedJob)
-          RegisterOperation.submit( Constants.UPDATE, TopicsConstants.job.crud,
-            { job: updatedJob })
+          RegisterOperation.submit(
+            Constants.UPDATE,
+            TopicsConstants.job.crud,
+            { job: updatedJob }
+          )
         }
       } catch (err) {
-        logger.error(`Job ${job.id}: ${job.name} cannot be dispatched`)
+        logger.error(`Job ${job?.id}: ${job?.name} cannot be dispatched`)
         logger.error('%s', err)
         return dispatchJobExecutionRecursive(++idx, jobs, terminateRecursion)
       }
     }
 
-    App.Models.Job.Job.aggregate([
+    this.queryJobsQueuesByHost(input.host._id.toString())
+      .then(queues => {
+        if (queues.length > 0) {
+          let idx = 0
+          const jobs = queues.map(q => q.nextJob)
+          dispatchJobExecutionRecursive(idx, jobs, next)
+        } else {
+          next()
+        }
+      }).catch(err => {
+        logger.error('%o',err)
+        return next(err)
+      })
+  },
+  queryJobsQueuesByHost (host_id) {
+    return App.Models.Job.Job.aggregate([
       {
         $match: {
-          host_id: input.host._id.toString(),
+          host_id,
           lifecycle: LifecycleConstants.READY
         }
       },
       {
-        $sort: {
-          task_id: 1
+        $addFields: {
+          queue_id: { $ifNull: [ "$workflow_id", "$task_id" ] }
         }
       },
+      {
+        $sort: {
+          queue_id: 1,
+          order: 1
+        }
+      },
+      // given the defined order use it to determine which is the next job of the queue to execute
       {
         $group: {
-          _id: '$task_id',
-          nextJob: { $first: '$$ROOT' }
+          _id: '$queue_id',
+          nextJob: {
+            $first: '$$ROOT'
+          }
         }
       },
+      // sort queues by FIFO. dispatch older first
       {
         $sort: {
-          "nextJob.order": 1
+          "nextJob.creation_date": 1
         }
       }
-    ]).exec().then(groups => {
-      if (groups.length > 0) {
-        let idx = 0
-        const jobs = groups.map(grp => grp.nextJob)
-        dispatchJobExecutionRecursive(idx, jobs, next)
-      } else {
-        next()
-      }
-    }).catch(err => {
-      logger.error('%o',err)
-      return next(err)
-    })
+    ]).exec()
   },
   getAgentUpdateJob (host, next) {
     App.Models.Job.AgentUpdate.findOne({
