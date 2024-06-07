@@ -142,10 +142,15 @@ module.exports = {
           }
 
           // set workflow as started
-          await App.Models.Job.Job.findOneAndUpdate(
-            { _id: job.workflow_job_id },
-            { lifecycle: LifecycleConstants.STARTED }
-          )
+          if (job.workflow_job_id) {
+            await App.Models.Job.Job.findOneAndUpdate(
+              {
+                _id: job.workflow_job_id,
+                lifecycle: { $ne: LifecycleConstants.STARTED }
+              },
+              { lifecycle: LifecycleConstants.STARTED }
+            )
+          }
 
           const updatedJob = result.value
 
@@ -155,6 +160,18 @@ module.exports = {
             TopicsConstants.job.crud,
             { job: updatedJob }
           )
+
+          if (job.workflow_job_id) {
+            await updatedJob.populate([
+              { path: 'workflow_job' },
+            ]).execPopulate()
+
+            RegisterOperation.workflowSubmit(
+              Constants.UPDATE,
+              TopicsConstants.workflow.job.crud,
+              { job: updatedJob.workflow_job }
+            )
+          }
         }
       } catch (err) {
         logger.error(`Job ${job?.id}: ${job?.name} cannot be dispatched`)

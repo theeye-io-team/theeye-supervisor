@@ -52,6 +52,20 @@ module.exports = {
 
     return
   },
+  async workflowSubmit (operation, topic, input) {
+    const { job } = input
+    App.notifications.generateSystemNotification({
+      topic,
+      data: {
+        operation,
+        organization: job.customer_name,
+        organization_id: job.customer_id,
+        model_id: job._id,
+        model_type: job._type,
+        model: this.workflowJobToEventModel(job)
+      }
+    })
+  },
   /**
    *
    * Trimmed job schema
@@ -91,6 +105,27 @@ module.exports = {
         _type: job.task?._type,
         name: job.task?.name,
       },
+    })
+  },
+  workflowJobToEventModel (job) {
+    return ({
+      acl: job.acl,
+      assigned_users: job.assigned_users,
+      cancellable: job.cancellable,
+      creation_date: job.creation_date,
+      customer_id: job.customer_id,
+      _id: job._id.toString(),
+      id: job._id.toString(),
+      lifecycle: job.lifecycle,
+      name: job.name,
+      order: job.order,
+      state: job.state,
+      _type: job._type,
+      type: job.type,
+      user_id: job.user_id,
+      user_inputs: job.user_inputs,
+      user_inputs_members: job.user_inputs_members,
+      workflow_id: job.workflow_id
     })
   }
 }
