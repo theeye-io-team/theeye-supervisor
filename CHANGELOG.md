@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.15.1](https://github.com/theeye/theeye-supervisor/compare/4.15.0...4.15.1) (2024-06-19)
+
+
+### Bug Fixes
+
+* **job:** improved queue handler ([#131](https://github.com/theeye/theeye-supervisor/issues/131)) ([d6c1200](https://github.com/theeye/theeye-supervisor/commit/d6c12000b4d8c2842a9929a90f7fa1a5d484a850))
+* middleware function definition ([#130](https://github.com/theeye/theeye-supervisor/issues/130)) ([7e9a5d4](https://github.com/theeye/theeye-supervisor/commit/7e9a5d41534bdb35844e3272f211bb3d30f2d6b9))
+
 ## [4.15.0](https://github.com/theeye/theeye-supervisor/compare/4.14.0...4.15.0) (2024-04-22)
 
 
