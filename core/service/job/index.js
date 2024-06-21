@@ -1203,7 +1203,16 @@ const dispatchJobCreatedEvent = async (job, input) => {
     })
 
     const topic = TopicsConstants.job.crud
-    App.eventDispatcher.dispatch({ topic, event, data: input, job })
+    // event data argument
+    const data = [{
+      topic,
+      //event_name: trigger_name,
+      operation: Constants.CREATE,
+      model_id: job._id.toString(),
+      model_type: job._type
+    }]
+
+    App.eventDispatcher.dispatch({ topic, event, data, job })
   } catch (err) {
     if (err) {
       return logger.error(err)
@@ -1224,7 +1233,7 @@ const dispatchFinishedWorkflowJobExecutionEvent = async (job) => {
     })
 
     const topic = TopicsConstants.workflow.job.finished
-    App.eventDispatcher.dispatch({ topic, event, data: {}, job })
+    App.eventDispatcher.dispatch({ topic, event, data: [], job })
   } catch (err) {
     if (err) {
       return logger.error(err)

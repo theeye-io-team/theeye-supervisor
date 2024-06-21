@@ -6,7 +6,7 @@ const router = require('../../router')
 const logger = require('../../lib/logger')('eye:controller:indicator:crud')
 const TopicsConstants = require('../../constants/topics')
 const Constants = require('../../constants')
-const { ClientError } = require('../../lib/error-handler')
+const eventDispatcher = require('./events_middleware')
 
 module.exports = function (server) {
   const middlewares = [
@@ -53,7 +53,7 @@ module.exports = function (server) {
     router.requireCredential('admin'),
     controller.create,
     audit.afterCreate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.CREATE }),
+    eventDispatcher({ operation: Constants.CREATE }),
     createTags,
   )
 
@@ -63,7 +63,7 @@ module.exports = function (server) {
     router.resolve.idToEntityByCustomer({ param:'indicator', required:true }),
     controller.replace,
     audit.afterReplace('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.REPLACE }),
+    eventDispatcher({ operation: Constants.REPLACE }),
     createTags,
   )
 
@@ -73,7 +73,7 @@ module.exports = function (server) {
     findByTitleMiddleware({ required: false }),
     controller.replace,
     audit.afterReplace('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.REPLACE }),
+    eventDispatcher({ operation: Constants.REPLACE }),
     createTags,
   )
 
@@ -83,7 +83,7 @@ module.exports = function (server) {
     findByTitleMiddleware(),
     controller.update,
     audit.afterUpdate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.UPDATE }),
+    eventDispatcher({ operation: Constants.UPDATE }),
     createTags,
   )
 
@@ -93,7 +93,7 @@ module.exports = function (server) {
     router.resolve.idToEntityByCustomer({ param:'indicator', required: true }),
     controller.update,
     audit.afterUpdate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.UPDATE }),
+    eventDispatcher({ operation: Constants.UPDATE }),
     createTags,
   )
 
@@ -101,10 +101,26 @@ module.exports = function (server) {
     middlewares,
     router.requireCredential('agent'),
     router.resolve.idToEntityByCustomer({ param:'indicator', required: true }),
-    controller.updateState,
+    controller.changeState,
     audit.afterUpdate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.UPDATE })
+    eventDispatcher({ operation: Constants.UPDATE, eventName: 'set_state' })
   )
+
+  server.patch('/indicator/:indicator/value',
+    middlewares,
+    router.requireCredential('agent'),
+    router.resolve.idToEntityByCustomer({ param:'indicator', required: true }),
+    controller.changeValue,
+    audit.afterUpdate('indicator', { display: 'title' }),
+    eventDispatcher({ operation: Constants.UPDATE, eventName: 'set_state' })
+  )
+
+  const deleteIndicatorEvents = async (req, res) => {
+    return App.Models
+      .Event
+      .IndicatorEvent
+      .deleteMany({ emitter_id: req.indicator._id })
+  }
 
   server.del('/indicator/:indicator',
     middlewares,
@@ -112,7 +128,8 @@ module.exports = function (server) {
     router.resolve.idToEntityByCustomer({ param:'indicator', required: true }),
     controller.remove,
     audit.afterRemove('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.DELETE })
+    eventDispatcher({ operation: Constants.DELETE }),
+    deleteIndicatorEvents
   )
 
   server.del('/indicator/title/:title',
@@ -121,7 +138,8 @@ module.exports = function (server) {
     findByTitleMiddleware(),
     controller.remove,
     audit.afterRemove('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.DELETE })
+    eventDispatcher({ operation: Constants.DELETE }),
+    deleteIndicatorEvents
   )
 }
 
@@ -136,10 +154,10 @@ const controller = {
       .find(filter.where)
       .exec((err, models) => {
         if (err) {
-          logger.error(err)
-          return res.send(500)
+          res.sendError(err)
+        } else {
+          res.send(200, models)
         }
-        res.send(200, models)
       })
   },
   /**
@@ -168,11 +186,9 @@ const controller = {
       indicator.save((err, model) => {
         if (err) {
           if (err.name == 'ValidationError') {
-            logger.debug('%o', err)
-            return res.send(400, err)
+            res.send(400, err)
           } else {
-            logger.error('%o', err)
-            return res.send(500)
+            res.sendError(err)
           }
         } else {
           res.send(200, values)
@@ -214,17 +230,15 @@ const controller = {
     indicator.save((err, model) => {
       if (err) {
         if (err.name == 'ValidationError') {
-          logger.debug('%o', err)
           return res.send(400, err)
         } else {
-          logger.error('%o', err)
-          return res.send(500)
+          res.sendError(err)
         }
+      } else {
+        res.send(200, model)
+        req.indicator = indicator
+        next()
       }
-
-      res.send(200, model)
-      req.indicator = indicator
-      next()
     })
   },
   /**
@@ -249,47 +263,38 @@ const controller = {
     indicator.save((err, model) => {
       if (err) {
         if (err.name == 'ValidationError') {
-          logger.debug('%o', err)
-          return res.send(400, err)
+          res.send(400, err)
         } else {
-          logger.error('%o', err)
-          return res.send(500)
+          res.sendError(500)
         }
+      } else {
+        res.send(200, model)
+        next()
       }
-
-      res.send(200, model)
-      return next()
     })
   },
   remove (req, res, next) {
     const indicator = req.indicator
 
     indicator.remove(err => {
-      if (err) { return res.send(500,err) }
-      res.send(204)
-      next()
+      if (err) {
+        res.sendError(err)
+      } else {
+        res.send(204)
+        next()
+      }
     })
   },
   get (req, res, next) {
     res.send(200, req.indicator)
     next()
   },
-  async updateState (req, res) {
+  async changeState (req, res) {
     try {
       const indicator = req.indicator
-      const body = req.body
-
-      if (!body || (!body.state && !body.value)) {
-        throw new ClientError('provide the state changes. value and/or state are required')
-      }
-
-      let state = body.state
-      if (state === 'success') { state = 'normal' }
-      if (body.state) { indicator.state = state }
-      if (body.value) { indicator.value = body.value }
-
+      const state = req.body
+      indicator.state = (state === 'success') ? 'normal' : state
       await indicator.save()
-
       res.send(200, indicator)
     } catch (err) {
       if (err.name == 'ValidationError') {
@@ -298,28 +303,22 @@ const controller = {
         res.sendError(err)
       }
     }
-  }
-}
-
-const notifyEvent = (options) => {
-  let operation = options.operation
-
-  return function (req, res, next) {
-    const indicator = req.indicator
-
-    App.notifications.generateSystemNotification({
-      topic: TopicsConstants.indicator.crud,
-      data: {
-        operation,
-        organization: req.customer.name,
-        organization_id: req.customer._id,
-        model_id: indicator._id,
-        model_type: indicator._type,
-        model: indicator
+    return
+  },
+  async changeValue (req, res) {
+    try {
+      const indicator = req.indicator
+      indicator.value = req.body
+      await indicator.save()
+      res.send(200, indicator)
+    } catch (err) {
+      if (err.name == 'ValidationError') {
+        res.send(400, err.name)
+      } else {
+        res.sendError(err)
       }
-    })
-
-    if (next) { return next() }
+    }
+    return
   }
 }
 
@@ -347,16 +346,13 @@ const findByTitleMiddleware = (options = {}) => {
       customer_id: customer._id
     }, (err, indicator) => {
       if (err) {
-        logger.error(err)
-        return res.send(500, err.message)
+        res.sendError(err)
+      } else if (!indicator && options.required !== false) {
+        res.send(404, 'indicator not found')
+      } else {
+        req.indicator = indicator
+        next()
       }
-
-      if (!indicator && options.required !== false) {
-        return res.send(404, 'indicator not found')
-      }
-
-      req.indicator = indicator
-      return next()
     })
   }
 }

@@ -2,7 +2,7 @@ const util = require('util')
 const Schema = require('mongoose').Schema
 const ObjectId = Schema.Types.ObjectId
 const debug = require('debug')('eye:entity:monitor')
-const lodashAfter = require('lodash/after')
+const FetchBy = require('../../lib/fetch-by')
 
 const properties = {
   looptime: { type: Number },
@@ -62,6 +62,10 @@ function BaseSchema (specs, opts) {
 
     serial.source_model_id = this._id
     return serial
+  }
+
+  this.statics.fetchBy = function (filter, next) {
+    return FetchBy.call(this, filter, next)
   }
 
 }

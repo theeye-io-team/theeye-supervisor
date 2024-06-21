@@ -144,9 +144,10 @@ const LocalStorage = {
   },
   getStream (key, customerName, next) {
     const storagePath = systemConfig.file_upload_folder
-    const filepath = path.join(storagePath, customerName, 'scripts', key)
+    let filepath
 
     try {
+      filepath = path.join(storagePath, customerName, 'scripts', key)
       fs.accessSync(filepath, fs.R_OK)
     } catch (err) {
       // file is not found in the storage

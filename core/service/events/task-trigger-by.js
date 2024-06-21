@@ -20,6 +20,10 @@ module.exports = async function (payload) {
     // a task has completed its execution and triggered an event
     // or a monitor has changed its state
     if (
+      payload.topic === TopicConstants.file.crud ||
+      payload.topic === TopicConstants.indicator.crud ||
+      payload.topic === TopicConstants.indicator.state ||
+      payload.topic === TopicConstants.workflow.job.finished ||
       payload.topic === TopicConstants.monitor.state ||
       payload.topic === TopicConstants.webhook.triggered ||
       payload.topic === TopicConstants.job.finished

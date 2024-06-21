@@ -4,6 +4,7 @@ const router = require('../../router')
 const logger = require('../../lib/logger')('eye:controller:indicator:counter')
 const TopicsConstants = require('../../constants/topics')
 const Constants = require('../../constants')
+const eventDispatcher = require('./events_middleware')
 
 module.exports = function (server) {
 
@@ -16,7 +17,7 @@ module.exports = function (server) {
     isNumericIndicator,
     controller.increase,
     audit.afterUpdate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.UPDATE })
+    eventDispatcher({ operation: Constants.UPDATE })
   )
 
   server.patch('/indicator/title/:title/increase',
@@ -28,7 +29,7 @@ module.exports = function (server) {
     isNumericIndicator,
     controller.increase,
     audit.afterUpdate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.UPDATE })
+    eventDispatcher({ operation: Constants.UPDATE })
   )
 
   server.patch('/indicator/:indicator/decrease',
@@ -40,7 +41,7 @@ module.exports = function (server) {
     isNumericIndicator,
     controller.decrease,
     audit.afterUpdate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.UPDATE })
+    eventDispatcher({ operation: Constants.UPDATE })
   )
 
   server.patch('/indicator/title/:title/decrease',
@@ -52,7 +53,7 @@ module.exports = function (server) {
     isNumericIndicator,
     controller.decrease,
     audit.afterUpdate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.UPDATE })
+    eventDispatcher({ operation: Constants.UPDATE })
   )
 
   server.patch('/indicator/:indicator/restart',
@@ -64,7 +65,7 @@ module.exports = function (server) {
     isNumericIndicator,
     controller.restart,
     audit.afterUpdate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.UPDATE })
+    eventDispatcher({ operation: Constants.UPDATE })
   )
 
   server.patch('/indicator/title/:title/restart',
@@ -76,7 +77,7 @@ module.exports = function (server) {
     isNumericIndicator,
     controller.restart,
     audit.afterUpdate('indicator', { display: 'title' }),
-    notifyEvent({ operation: Constants.UPDATE })
+    eventDispatcher({ operation: Constants.UPDATE })
   )
 }
 
@@ -135,28 +136,6 @@ const controller = {
       res.send(200)
       next()
     })
-  }
-}
-
-const notifyEvent = (options) => {
-  let operation = options.operation
-
-  return function (req, res, next) {
-    const indicator = req.indicator
-
-    App.notifications.generateSystemNotification({
-      topic: TopicsConstants.indicator.crud,
-      data: {
-        operation,
-        organization: req.customer.name,
-        organization_id: req.customer._id,
-        model_id: indicator._id,
-        model_type: indicator._type,
-        model: indicator
-      }
-    })
-
-    if (next) { return next() }
   }
 }
 

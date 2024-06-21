@@ -46,14 +46,6 @@ const CounterIndicator = Indicator.discriminator('CounterIndicator', CounterSche
 const ChartIndicator = Indicator.discriminator('ChartIndicator', ChartSchema)
 const FileIndicator = Indicator.discriminator('FileIndicator', FileSchema)
 
-Indicator.ensureIndexes()
-CounterIndicator.ensureIndexes()
-ProgressIndicator.ensureIndexes()
-TextIndicator.ensureIndexes()
-HTMLIndicator.ensureIndexes()
-ChartIndicator.ensureIndexes()
-FileIndicator.ensureIndexes()
-
 // called for both inserts and updates
 Indicator.on('afterSave', function (model) {
   model.last_update = new Date()

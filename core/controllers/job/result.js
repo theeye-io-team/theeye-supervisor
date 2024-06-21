@@ -1,6 +1,7 @@
 const App = require('../../app')
 const router = require('../../router')
 const logger = require('../../lib/logger')('controller:job')
+const { ClientError } = require('../../lib/error-handler')
 const AsyncMiddleware = require('../../lib/async-controller')
 const qs = require('qs')
 
@@ -126,6 +127,8 @@ const resultPolling = (req, res, next) => {
 const waitJobResult = async (req, job, customer, timeout, next) => {
 
   let isWaiting
+  let timerId
+  let channel
 
   if (!timeout || timeout > 60) {
     timeout = 60 // seconds. arbitrary
@@ -135,10 +138,12 @@ const waitJobResult = async (req, job, customer, timeout, next) => {
 
   timeout = (timeout * 1000)
 
-  let timerId
-  let channel
-
   const stopWaiting = async (err, message) => {
+    if (!isWaiting) {
+      logger.error('already stopped waiting. loop ended')
+      return
+    } 
+
     try {
       clearTimeout(timerId)
       App.redis.unsubscribe(channel)
