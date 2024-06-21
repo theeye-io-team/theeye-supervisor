@@ -4,22 +4,26 @@ const logger = require('../../lib/logger')(':events:dispatcher')
 const _prefix = 'ID_'
 const _callbacks = []
 
-var _lastID = 1
+let _lastID = 1
 
 class Dispatcher extends EventEmitter {
 
-	dispatch (payload) {
-    logger.log('dispatching event %o', payload)
-		for (var idx in _callbacks) {
-      _callbacks[idx](payload)
-		}
-	}
+  dispatch (payload) {
+    if (!Array.isArray(payload.data)) {
+      logger.error(`WARNING! array expected but ${typeof payload.data} was received instead`)
+    }
 
-	register (callback) {
-		var id = _prefix + _lastID++
-		_callbacks[id] = callback
-		return id
-	}
+    logger.log('dispatching event %o', payload)
+    for (let idx in _callbacks) {
+      _callbacks[idx](payload)
+    }
+  }
+
+  register (callback) {
+    const id = _prefix + _lastID++
+    _callbacks[id] = callback
+    return id
+  }
 
 }
 
