@@ -1,19 +1,21 @@
-exports.monitor = {
+const Monitor = exports.monitor = {
   crud: 'monitor-crud',
   execution: 'monitor-execution',
   state: 'monitor-state'
 }
-exports.indicator = {
+
+const Indicator = exports.indicator = {
   crud: 'indicator-crud',
   state: 'indicator-state'
 }
+
 exports.script = {
   crud: 'script-crud'
 }
 exports.agent = {
   version: 'agent-version'
 }
-exports.file = {
+const File = exports.file = {
   crud: 'file-crud'
 }
 exports.hostgroup = {
@@ -42,7 +44,7 @@ exports.task = {
   notification: 'notification-task'
 }
 
-exports.workflow = {
+const Workflow = exports.workflow = {
   //crud: 'workflow-crud',
   job: {
     crud: 'workflow-job-crud',
@@ -51,7 +53,7 @@ exports.workflow = {
   //execution: 'workflow-execution',
 }
 
-exports.job = {
+const Job = exports.job = {
   crud: 'job-crud',
   finished: 'job-finished'
 }
@@ -60,7 +62,17 @@ exports.schedule = {
   crud: 'schedule-crud'
 }
 
-exports.webhook = {
+const Webhook = exports.webhook = {
   crud: 'webhook-crud',
   triggered: 'webhook-triggered'
 }
+
+exports.triggers = [
+  Job.finished,
+  Webhook.triggered,
+  Workflow.job.finished,
+  File.crud,
+  Indicator.crud,
+  Indicator.state,
+  Monitor.state,
+]
