@@ -8,22 +8,22 @@ let _lastID = 1
 
 class Dispatcher extends EventEmitter {
 
-	dispatch (payload) {
+  dispatch (payload) {
     if (!Array.isArray(payload.data)) {
       logger.error(`WARNING! array expected but ${typeof payload.data} was received instead`)
     }
 
     logger.log('dispatching event %o', payload)
-		for (let idx in _callbacks) {
+    for (let idx in _callbacks) {
       _callbacks[idx](payload)
-		}
-	}
+    }
+  }
 
-	register (callback) {
-		const id = _prefix + _lastID++
-		_callbacks[id] = callback
-		return id
-	}
+  register (callback) {
+    const id = _prefix + _lastID++
+    _callbacks[id] = callback
+    return id
+  }
 
 }
 
