@@ -1,7 +1,6 @@
 //const util = require('util')
 const Schema = require('mongoose').Schema
 const BaseSchema = require('../base-schema')
-const FetchBy = require('../../lib/fetch-by')
 const randomSecret = require('../../lib/random-secret')
 const Constants = require('../../constants/monitors')
 const ObjectId = Schema.Types.ObjectId
@@ -38,10 +37,6 @@ class IndicatorSchema extends BaseSchema {
     //  Object.assign({}, baseProps, specificProps),
     //  specs
     //)
-
-    this.statics.fetchBy = function (filter, next) {
-      FetchBy.call(this, filter, next)
-    }
 
     // Duplicate the ID field.
     this.virtual('id').get(function(){

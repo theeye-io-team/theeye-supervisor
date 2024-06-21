@@ -92,7 +92,7 @@ const paramsFilter = (req) => {
 const verifyUsers = async ({ users, customer, workflow, task }) => {
   if (!Array.isArray(users) || users.length === 0) { return }
 
-  // verify that every user is a member of the organization and has acl.
+  // verify that every user is a member of the organization and has access to the task and workflow.
   const members = await App.gateway.member.fromUsers(users, customer)
 
   // verify users are members of the organization

@@ -132,7 +132,9 @@ function Service (resource) {
           }
         )
 
+        const topic = TopicsConstants.monitor.state
         const data = [{
+          topic,
           type: resource.type,
           monitor_id: resource._id.toString(),
           hostname: resource.hostname,
@@ -142,7 +144,7 @@ function Service (resource) {
         }]
 
         App.eventDispatcher.dispatch({
-          topic: TopicsConstants.monitor.state,
+          topic,
           event,
           resource,
           data

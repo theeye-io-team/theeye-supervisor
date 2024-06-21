@@ -6,15 +6,15 @@ const logger = require('../../lib/logger')('eye:entity:monitor')
 /** Extended Schema. Includes non template attributes **/
 const MonitorSchema = new BaseSchema({
   order: { type: Number, default: 0 },
-  host_id: { type: String },
-  resource_id: { type: String, required: true },
-  template_id: { type: ObjectId },
   enable: { type: Boolean, default: true },
   creation_date: { type: Date, default: Date.now },
   last_update: { type: Date, default: Date.now },
-  template: { type: ObjectId, ref: 'MonitorTemplate' }, // has one
   host: { type: ObjectId, ref: 'Host' }, // belongs to
+  host_id: { type: String },
+  template: { type: ObjectId, ref: 'MonitorTemplate' }, // has one
+  template_id: { type: ObjectId },
   resource: { type: ObjectId, ref: 'Resource' }, // belongs to
+  resource_id: { type: String, required: true },
   env: { type: Object, default: () => { return {} } },
   _type: { type: String, 'default': 'ResourceMonitor' }
 }, { collection: 'resourcemonitors' })

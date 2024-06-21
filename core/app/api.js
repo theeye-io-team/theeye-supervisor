@@ -86,7 +86,7 @@ module.exports = function () {
 
   server.on('uncaughtException', (req, res, route, error) => {
     const handler = new ErrorHandler()
-    handler.sendExceptionAlert(error)
+    handler.sendExceptionAlert(error, req)
     logger.error('Message Error: %s', error.message)
     logger.error('Stack %s', error.stack)
     res.send(500, 'internal error')

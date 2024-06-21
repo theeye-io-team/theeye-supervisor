@@ -29,8 +29,12 @@ module.exports = async function (payload) {
       handleWorkflowTaskJobFinishedEvent(payload)
     }
 
-    // case 2. a job has finished and the execution of another workflow must be started
+    // case 2. somthing happened and the execution of a workflow must be started
     if (
+      payload.topic === TopicConstants.file.crud ||
+      payload.topic === TopicConstants.indicator.crud ||
+      payload.topic === TopicConstants.indicator.state ||
+      payload.topic === TopicConstants.workflow.job.finished ||
       payload.topic === TopicConstants.monitor.state ||
       payload.topic === TopicConstants.webhook.triggered ||
       payload.topic === TopicConstants.job.finished

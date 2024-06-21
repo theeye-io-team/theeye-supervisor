@@ -408,33 +408,4 @@ const WorkflowJobProcessor = async (agendaJob) => {
   })
 }
 
-/**
- * @return {Array}
- */
-//const verifyTask = async (task, done) => {
-//  let customer = App.Models.Customer.Entity.findById(task.customer_id)
-//  let host = App.Models.Host.Entity.findById(task.host_id)
-//  let script
-//
-//  if (task.type === 'script') {
-//    script = App.Models.File.Script.findById(task.script_id)
-//  }
-//
-//  let data = await Promise.all([ customer, host, script ])
-//
-//  if (!data[0]) {
-//    throw new Error(`customer ${task.customer_id} is no longer available`)
-//  }
-//
-//  if (!data[1]) {
-//    throw new Error(`host ${task.host_id} is no longer available`)
-//  }
-//
-//  if (task.type === 'script' && ! data[2]) {
-//    throw new Error(`script ${task.script_id} is no longer available`)
-//  }
-//
-//  return data
-//}
-
 module.exports = new Scheduler()

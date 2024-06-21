@@ -1,4 +1,3 @@
-
 const util = require('util')
 const properties = require('./base-properties')
 const BaseSchema = require('../base-schema')
@@ -12,6 +11,7 @@ function EventSchema (specs) {
   });
 
   this.statics.fetch = function (query,done) {
+    console.error('entity/event/schema.statics.fetch DEPRECATED!!!')
     this
       .find(query)
       .select('_id emitter name _type emitter_id')
