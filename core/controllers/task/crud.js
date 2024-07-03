@@ -6,7 +6,7 @@ const router = require('../../router')
 const ErrorHandler = require('../../lib/error-handler')
 const audit = require('../../lib/audit')
 const TaskConstants = require('../../constants/task')
-const { ClientError, ServerError } = require('../../lib/error-handler')
+//const { ClientError, ServerError } = require('../../lib/error-handler')
 
 module.exports = (server) => {
   const increaseVersion = async (req, res) => {

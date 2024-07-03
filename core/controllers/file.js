@@ -418,7 +418,7 @@ const getLinkedModels = async (req, res) => {
     res.send(200, linkedModels)
   } catch (err) {
     logger.error(err)
-    return res.send(500)
+    res.send(500)
   }
 }
 

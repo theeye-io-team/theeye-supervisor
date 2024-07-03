@@ -39,7 +39,7 @@ module.exports = (server) => {
           next()
         })
         .catch(err => {
-          return res.send(500, err.message)
+          res.sendError(err)
         })
     },
     resultPolling
@@ -59,7 +59,7 @@ module.exports = (server) => {
           next()
         })
         .catch(err => {
-          return res.send(500, err.message)
+          res.sendError(err)
         })
     },
     resultPolling

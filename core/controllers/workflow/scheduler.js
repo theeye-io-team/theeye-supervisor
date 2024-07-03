@@ -51,8 +51,7 @@ const create = async (req, res) => {
     req.schedule = schedule.attrs
     res.send(200, schedule)
   } catch (err) {
-    logger.error(err)
-    return res.send(err.statusCode || 500, err.message)
+    res.sendError(err)
   }
 }
 
@@ -75,6 +74,6 @@ const fetch = async (req, res) => {
 
     res.send(200, schedules)
   } catch (err) {
-    res.send(err.statusCode || 500, err.message)
+    res.sendError(err)
   }
 }

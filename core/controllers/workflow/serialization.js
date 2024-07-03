@@ -31,7 +31,7 @@ const serialize = async (req, res) => {
     const { mode = 'shallow' } = req.query
     const workflow = req.workflow
     const serial = await App.workflow.serialize(workflow, { mode })
-    return res.send(200, serial)
+    res.send(200, serial)
   } catch (err) {
     res.sendError(err)
   }

@@ -3,13 +3,13 @@ const audit = require('../../lib/audit')
 const router = require('../../router');
 const TopicsConstants = require('../../constants/topics')
 const MonitorConstants = require('../../constants/monitors')
-//const Monitor = require('../../entity/monitor').Entity;
 const crudTopic = TopicsConstants.monitor.crud
 const logger = require('../../lib/logger')('controller:monitor')
+const { ClientError, ServerError } = require('../../lib/error-handler')
 
 module.exports = (server) => {
   // default middlewares
-  var middlewares = [
+  const middlewares = [
     server.auth.bearerMiddleware,
     router.resolve.customerNameToEntity({ required: true }),
     router.ensureCustomer
@@ -110,19 +110,14 @@ const controller = {
       )
 
       if (params.errors && params.errors.hasErrors()) {
-        return res.send(400, params.errors)
+        throw new ClientError(params.errors)
       }
 
       await App.resource.update({ resource, updates: params.data })
       //await resource.populate('monitor')
       res.send(200, resource)
     } catch (e) {
-      logger.error(e)
-      if (e.statusCode) {
-        res.send(e.statusCode, e.message)
-      } else {
-        res.send(500, e.message)
-      }
+      res.sendError(err)
     }
   },
   remove (req, res, next) {

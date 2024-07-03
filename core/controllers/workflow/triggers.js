@@ -20,38 +20,33 @@ module.exports = (server) => {
   )
 }
 
-var controller = {
+const controller = {
   /**
    * @method GET
    */
   get (req, res, next) {
-    var customer = req.customer
-    var node = req.query.node
+    const customer = req.customer
+    const node = req.query.node
 
     Event.fetch({ customer: req.customer._id }, (err, events) => {
       if (err) {
-        logger.error(err.message)
-        logger.debug('%o', err)
-        return res.send(500, err)
-      }
+        res.sendError(err)
+      } else if (!events || events.length == 0) {
+        res.sendError( new Error('workflow is not available') )
+      } else {
 
-      if (!events || events.length == 0) {
-        return res.send(500, 'workflow is not available')
-      }
+        try {
+          const workflow = new Workflow()
+          workflow.fromEvents(events)
 
-      try {
-        var workflow = new Workflow()
-        workflow.fromEvents(events)
-
-        if (!node) {
-          return res.send(200, workflow.graph)
-        } else {
-          return res.send(200, workflow.getPath(node))
+          if (!node) {
+            res.send(200, workflow.graph)
+          } else {
+            res.send(200, workflow.getPath(node))
+          }
+        } catch (err) {
+          res.sendError(err)
         }
-      } catch (err) {
-        logger.error(err.message)
-        logger.debug('%o', err)
-        return res.send(500, err)
       }
     })
   }

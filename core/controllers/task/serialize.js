@@ -76,8 +76,7 @@ const controller = {
 
     createFromRecipe(req, (err, task) => {
       if (err) {
-        logger.error('%o',err)
-        return res.send(err.statusCode || 500, err.message)
+        res.sendError(err)
       } else {
         res.send(200, task)
         next()

@@ -11,6 +11,7 @@ const logger = require('../../lib/logger')('controller:monitor')
 const Host = require('../../entity/host').Entity
 const Resource = require('../../entity/resource').Entity
 const Monitor = require('../../entity/monitor').Entity
+const { ClientError, ServerError } = require('../../lib/error-handler')
 
 module.exports = (server) => {
   const crudTopic = TopicsConstants.monitor.crud
@@ -154,7 +155,7 @@ const controller = {
 
       let params = App.resourceMonitor.validateData(body)
       if (params.errors && params.errors.hasErrors()) {
-        return res.send(400, params.errors)
+        throw new ClientError(params.errors)
       }
 
       const input = params.data
@@ -179,13 +180,12 @@ const controller = {
       res.send(201, req.resource)
     } catch (err) {
       if (err.errors) {
-        let messages = err.errors.map(e => {
+        const messages = err.errors.map(e => {
           return { field: e.path, type: e.kind }
         })
-        return res.send(400, messages)
+        res.send(400, messages)
       } else {
-        logger.error(err)
-        return res.send(err.statusCode || 500, err)
+        res.sendError(err)
       }
     }
   },
@@ -252,7 +252,7 @@ const replace = async (req, res) => {
 
     const params = App.resourceMonitor.validateData(Object.assign({}, body))
     if (params.errors && params.errors.hasErrors()) {
-      return res.send(400, params.errors)
+      throw new ClientError(params.errors)
     }
 
     const updates = {}
@@ -270,12 +270,7 @@ const replace = async (req, res) => {
     await updateResource(resource, updates)
     res.send(200, resource)
   } catch (e) {
-    logger.error(e)
-    if (e.statusCode) {
-      res.send(e.statusCode, e.message)
-    } else {
-      res.send(500, e.message)
-    }
+    res.sendError(err)
   }
 }
 

@@ -95,8 +95,7 @@ const remove = async (req, res) => {
     const numRemoved = await App.scheduler.cancelSchedule(schedule.attrs._id)
     res.send(200, { numRemoved })
   } catch (err) {
-    logger.error('%o', err)
-    return res.send(500, 'Internal Server Error')
+    res.sendError(err)
   }
 }
 
@@ -129,7 +128,7 @@ const start = async (req, res) => {
 
     res.send(200, 'ok')
   } catch (err) {
-    return res.sendError(err)
+    res.sendError(err)
   }
 }
 
@@ -140,7 +139,6 @@ const stop = async (req, res) => {
     await schedule.save()
     res.send(200, 'ok')
   } catch (err) {
-    logger.error('%o', err)
-    return res.send(500, 'Internal Server Error')
+    res.sendError(err)
   }
 }
