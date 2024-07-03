@@ -220,49 +220,6 @@ module.exports = (server) => {
 
   /** 
   * @openapi
-  * /{customer}/file:
-  *   post:
-  *     summary: Create script
-  *     description: Create filefor specific customer.
-  *     tags:
-  *         - File
-  *     parameters:
-  *       - name: Customer
-  *         in: query
-  *         description: Customer Id
-  *         required: true
-  *         schema:
-  *           type: string
-  *     responses:
-  *       '200':
-  *         description: Successfully created script.
-  *         content:
-  *           application/json:
-  *             schema:
-  *               type: array
-  *               items:
-  *                 $ref: '#/components/schemas/File'
-  *       '401':
-  *         description: Authentication failed.
-  *         content:
-  *           application/json:
-  *             schema:
-  *               $ref: '#/components/schemas/Error'
-  * 
-  */
-  server.post('/:customer/file',
-    server.auth.bearerMiddleware,
-    router.resolve.customerSessionToEntity(),
-    router.ensureCustomer,
-    router.requireCredential('admin'),
-    upload.single('file'),
-    createFile,
-    App.state.postCreate('file')
-    //audit.afterCreate('file', { display: 'filename' })
-  )
-
-  /** 
-  * @openapi
   * /{customer}/file/{file}:
   *   put:
   *     summary: Update script
@@ -368,6 +325,38 @@ module.exports = (server) => {
   )
 
   // CREATE
+  /** 
+  * @openapi
+  * /{customer}/file:
+  *   post:
+  *     summary: Create script
+  *     description: Create filefor specific customer.
+  *     tags:
+  *         - File
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully created script.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/File'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.post('/:customer/file',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
