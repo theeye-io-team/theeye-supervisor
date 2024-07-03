@@ -7,6 +7,40 @@ const Workflow = require('../../lib/workflow')
 const logger = require('../../lib/logger')('controller:workflow')
 
 module.exports = function (server) {
+
+  /** 
+  * @openapi
+  * /workflows/{id}/graph:
+  *   get:
+  *     summary: Get workflow graph.
+  *     description: Returns a workflow graph.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Id
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved workflow information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.get(
     '/workflows/:id/graph',
     server.auth.bearerMiddleware,

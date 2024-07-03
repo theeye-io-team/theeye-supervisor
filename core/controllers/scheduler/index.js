@@ -44,6 +44,45 @@ module.exports = (server) => {
     return fn
   }
 
+  /** 
+  * @openapi
+  * /{customer}/scheduler/{schedule}:
+  *   delete:
+  *     summary: Delete scheduele 
+  *     tags:
+  *       - Schedule
+  *     description: Delete schedule from specific customer.
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: Customer name
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: schedule
+  *         in: query
+  *         description: Schedule id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       204:
+  *         description: Successfully deleted the schedule.
+  *       '400':
+  *         description: Invalid request data.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Schedule'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+ 
   server.del('/:customer/scheduler/:schedule',
     server.auth.bearerMiddleware,
     Router.requireCredential('admin'),
@@ -54,6 +93,39 @@ module.exports = (server) => {
     Audit.afterRemove('schedule', { display: 'name' }),
     customNotifyMiddleware(Constants.DELETE)
   )
+
+  /** 
+  * @openapi
+  * /scheduler/{schedule}:
+  *   delete:
+  *     summary: Delete scheduele 
+  *     tags:
+  *       - Schedule
+  *     description: Delete schedule by it's Id.
+  *     parameters:
+  *       - name: schedule
+  *         in: query
+  *         description: schedule id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       204:
+  *         description: Successfully deleted the schedule.
+  *       '400':
+  *         description: Invalid request data.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Schedule'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.del('/scheduler/:schedule',
     server.auth.bearerMiddleware,
@@ -66,6 +138,43 @@ module.exports = (server) => {
     customNotifyMiddleware(Constants.DELETE)
   )
 
+  /** 
+  * @openapi
+  * /scheduler/{schedule}/stop:
+  *   put:
+  *     summary: Stop schedule 
+  *     description: Stop schedule by it's Id
+  *     tags:
+  *       - Schedule
+  *     parameters:
+  *       - name: schedule
+  *         in: query
+  *         description: Schedule Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '201':
+  *         description: Successfully updated the schedule.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Schedule'
+  *       '400':
+  *         description: Invalid request data.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.put('/scheduler/:schedule/stop',
     server.auth.bearerMiddleware,
     Router.requireCredential('admin'),
@@ -76,6 +185,43 @@ module.exports = (server) => {
     Audit.afterUpdate('schedule', { display: 'name' }),
     customNotifyMiddleware(Constants.UPDATE)
   )
+
+  /** 
+  * @openapi
+  * /scheduler/{schedule}/start:
+  *   put:
+  *     summary: Start schedule 
+  *     description: Start schedule by it's Id
+  *     tags:
+  *       - Schedule
+  *     parameters:
+  *       - name: schedule
+  *         in: query
+  *         description: Schedule Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '201':
+  *         description: Successfully updated the schedule.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Schedule'
+  *       '400':
+  *         description: Invalid request data.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
 
   server.put('/scheduler/:schedule/start',
     server.auth.bearerMiddleware,

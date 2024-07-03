@@ -35,6 +35,38 @@ module.exports = function (server) {
     next()
   }
 
+  /** 
+  * @openapi
+  * /{customer}/resource:
+  *   get:
+  *     summary: Get resources filtered by customer
+  *     description: Get all resources filtered by customer id.
+  *     tags:
+  *       - Resource
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved resource information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Resource'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.get(
     '/:customer/resource',
     server.auth.bearerMiddleware,
@@ -46,6 +78,38 @@ module.exports = function (server) {
     resources_fetch
   )
 
+  /** 
+  * @openapi
+  * /{customer}/resource/{resource}:
+  *   get:
+  *     summary: Get specific resource filtered by customer
+  *     description: Get specific resource filtered by customer id.
+  *     tags:
+  *       - Resource
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: customer id 
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved resource information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Resource'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.get(
     '/:customer/resource/:resource',
     server.auth.bearerMiddleware,
@@ -57,6 +121,53 @@ module.exports = function (server) {
     resources_fetch_by_id
   )
 
+  /** 
+  * @openapi
+  * /{customer}/resource/{resource}/state:
+  *   patch:
+  *     summary: Update an existing resoruce's state
+  *     description: Change a resources's state. 
+  *     tags:
+  *       - Resource
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: resource
+  *         in: query
+  *         description: resource Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     requestBody:
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Resource'
+  *     responses:
+  *       '201':
+  *         description: Successfully updated resource state.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Resource'
+  *       '400':
+  *         description: Invalid request data.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
   server.patch(
     '/:customer/resource/:resource/state',
     middlewares,
@@ -69,6 +180,54 @@ module.exports = function (server) {
   // KEEP BACKWARD COMPATIBILITY WITH OLDER AGENT VERSIONS.
   // SUPPORTED FROM VERSION v0.9.3-beta-11-g8d1a93b
   //
+
+  /** 
+  * @openapi
+  * /{customer}/resource/{resource}:
+  *   put:
+  *     summary: Update an existing resource
+  *     tags:
+  *       - Indicators
+  *     description: Change a resource.
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: resource
+  *         in: query
+  *         description: resource Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     requestBody:
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Resource'
+  *     responses:
+  *       '201':
+  *         description: Successfully updated an resource.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Resource'
+  *       '400':
+  *         description: Invalid request data.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
   server.put(
     '/:customer/resource/:resource',
     middlewares,

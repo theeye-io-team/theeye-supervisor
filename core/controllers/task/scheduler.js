@@ -8,6 +8,45 @@ const payloadValidationMiddleware = require('../scheduler/payload-validation-mid
 
 module.exports = function (server) {
 
+  /** 
+  * @openapi
+  * /{customer}/task/{task}/schedule:
+  *   get:
+  *     summary: Get task schedule
+  *     description: Get task schedule from specific task.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: Customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved task information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.get('/:customer/task/:task/schedule',
     server.auth.bearerMiddleware,
     Router.requireCredential('viewer'),
@@ -18,6 +57,45 @@ module.exports = function (server) {
     Router.ensureAllowed({ entity: { name: 'task' } }),
     fetch
   )
+
+  /** 
+  * @openapi
+  * /{customer}/task/{task}/schedule:
+  *   post:
+  *     summary: Create task schedule
+  *     description: Create task schedule for a specific task.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: Customer id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully deleted jobs.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.post('/:customer/task/:task/schedule',
     server.auth.bearerMiddleware,

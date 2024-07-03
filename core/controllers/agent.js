@@ -14,6 +14,55 @@ const File = require('../entity/file').File;
 //const User = require('../entity/user').Entity
 
 module.exports = function (server) {
+
+  /** 
+  * @openapi
+  * /{customer}/agent/{hostname}:
+  *   put:
+  *     summary: Update an existing Indicator by Id
+  *     description: Change an Indicator.
+  *     tags:
+  *       - Workflow
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Hostname
+  *         in: query
+  *         description: Host name
+  *         required: true
+  *         schema:
+  *           type: string
+  *     requestBody:
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Workflow'
+  *     responses:
+  *       '201':
+  *         description: Successfully updated workflow.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Workflow'
+  *       '400':
+  *         description: Invalid request data.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.put('/:customer/agent/:hostname',
     server.auth.bearerMiddleware,
     router.requireCredential('agent'),
@@ -22,6 +71,45 @@ module.exports = function (server) {
     router.resolve.hostnameToHost({ required: true }),
     controller.update
   )
+
+  /** 
+  * @openapi
+  * /{customer}/agent/{hostname}/config:
+  *   get:
+  *     summary: Get one Indicator
+  *     description: Get only one indicator.
+  *     tags:
+  *         - Agent
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Hostname
+  *         in: query
+  *         description: Host name
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved agent configuration.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Agent'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.get('/:customer/agent/:hostname/config',
     server.auth.bearerMiddleware,

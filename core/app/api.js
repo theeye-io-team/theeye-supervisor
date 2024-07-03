@@ -3,6 +3,7 @@ const config = require('config')
 const router = require('../router')
 const logger = require('../lib/logger')(':app:api')
 const ErrorHandler = require('../lib/error-handler')
+const restifySwaggerJsdoc = require('restify-swagger-jsdoc');
 
 module.exports = function () {
   if (process.env.API_DISABLED === 'true') {
@@ -11,6 +12,13 @@ module.exports = function () {
   }
 
   const server = restify.createServer({ strictNext: true })
+
+  restifySwaggerJsdoc.createSwaggerPage({
+    title: 'API documentation', // Page title
+    version: '1.0.0', // Server version
+    server, // Restify server instance created with restify.createServer()
+    path: '/docs/swagger', // Public url where the swagger page will be available
+  });
 
   server.pre((req, res, next) => {
     logger.log('REQUEST %s %s %j', req.method, req.url, req.headers)

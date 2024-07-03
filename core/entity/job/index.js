@@ -1,3 +1,4 @@
+const m2s = require('mongoose-to-swagger');
 const mongodb = require('../../lib/mongodb').db
 const IntegrationConstants = require('../../constants/integrations')
 const BaseSchema = require('./schema')
@@ -34,3 +35,18 @@ exports.Approval = ApprovalJob
 exports.Dummy = DummyJob
 exports.Notification = NotificationJob
 exports.Workflow = WorkflowJob
+
+exports.swagger = {
+  components: {
+    schemas: {
+      Job: m2s(Job),
+      AgentUpdateJob: m2s(AgentUpdateJob),
+      ScriptJob: m2s(ScriptJob),
+      ScraperJob: m2s(ScraperJob),
+      ApprovalJob: m2s(ApprovalJob),
+      DummyJob: m2s(DummyJob),
+      NotificationJob: m2s(NotificationJob),
+      WorkflowJob: m2s(WorkflowJob)
+    }
+  }
+}

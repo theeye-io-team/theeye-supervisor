@@ -1,4 +1,5 @@
 
+const m2s = require('mongoose-to-swagger');
 const mongodb = require('../../lib/mongodb')
 const BaseSchema = require('./schema')
 
@@ -15,3 +16,11 @@ Entity.ensureIndexes()
 
 exports.Entity = Entity
 exports.Host = Entity
+
+exports.swagger = {
+  components: {
+    schemas: {
+      Host: m2s(Entity)
+    }
+  }
+}

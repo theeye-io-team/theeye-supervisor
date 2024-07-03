@@ -20,9 +20,42 @@ module.exports = (server) => {
     router.ensureCustomer
   ]
 
-  /**
-   * get a single job information
-   */
+  /** 
+  * @openapi
+  * /{customer}/job/{job}:
+  *   get:
+  *     summary: Get a single job
+  *     description: Get information on a single job.
+  *     tags:
+  *       - Job
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: customer id
+  *         schema:
+  *           type: string
+  *       - name: job
+  *         in: query
+  *         description: job id
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved job information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Job'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.get('/:customer/job/:job',
     middlewares,
     router.requireCredential('viewer'),
@@ -31,6 +64,31 @@ module.exports = (server) => {
     controller.get
   )
 
+  /** 
+  * @openapi
+  * /job/running_count:
+  *   get:
+  *     summary: Get running jobs count
+  *     description: Get running jobs count.
+  *     tags:
+  *       - Job
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved job information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Job'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
   server.get('/job/running_count',
     server.auth.bearerMiddleware,
     router.requireCredential('viewer'),
@@ -41,6 +99,31 @@ module.exports = (server) => {
     controller.fetchRunningCounters
   )
 
+  /** 
+  * @openapi
+  * /job/running_count:
+  *   get:
+  *     summary: Get a list of running jobs
+  *     description: Get a list of jobs currently running.
+  *     tags:
+  *       - Job
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved job information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Job'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
   server.get('/job/running',
     server.auth.bearerMiddleware,
     router.requireCredential('viewer'),
@@ -51,9 +134,37 @@ module.exports = (server) => {
     controller.fetchRunning
   )
 
-  /**
-   * fetch many jobs information
-   */
+  /** 
+  * @openapi
+  * /{customer}/job:
+  *   get:
+  *     summary: Get jobs by customer
+  *     description: Get a list of jobs from customer.
+  *     tags:
+  *       - Job
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: customer id
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved job information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Job'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
   server.get('/:customer/job',
     middlewares,
     router.requireCredential('viewer'),
@@ -69,12 +180,81 @@ module.exports = (server) => {
     }
   )
 
+  /** 
+  * @openapi
+  * /{customer}/job/{job}:
+  *   put:
+  *     summary: Update job status
+  *     description: Mark a job as done.
+  *     tags:
+  *       - Job
+  *     parameters:
+  *       - name: customer
+  *         in: query
+  *         description: customer id
+  *         schema:
+  *           type: string
+  *       - name: job
+  *         in: query
+  *         description: job id
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated job information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Job'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.put('/:customer/job/:job',
     middlewares,
     router.requireCredential('agent', { exactMatch: true }),
     router.resolve.idToEntity({ param: 'job', required: true }),
     controller.finish,
   )
+
+  /** 
+  * @openapi
+  * /job/{job}/assignee:
+  *   put:
+  *     summary: Update job assignees
+  *     description: Update job assignees list.
+  *     tags:
+  *       - Job
+  *     parameters:
+  *       - name: job
+  *         in: query
+  *         description: job id
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated job information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Job'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.put('/job/:job/assignee',
     server.auth.bearerMiddleware,
@@ -85,6 +265,38 @@ module.exports = (server) => {
     controller.updateAssignee
   )
 
+  /** 
+  * @openapi
+  * /job/{job}/participants:
+  *   get:
+  *     summary: Get job participants
+  *     description: Get a list of participants from a single job.
+  *     tags:
+  *       - Job
+  *     parameters:
+  *       - name: job
+  *         in: query
+  *         description: job id
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved job information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Job'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.get('/job/:job/participants',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),
@@ -93,6 +305,38 @@ module.exports = (server) => {
     router.resolve.idToEntityByCustomer({ param: 'job', required: true }),
     controller.participants
   )
+
+  /** 
+  * @openapi
+  * /job/{job}/input:
+  *   get:
+  *     summary: Get job input
+  *     description: Get input values from a single job.
+  *     tags:
+  *       - Job
+  *     parameters:
+  *       - name: job
+  *         in: query
+  *         description: job id
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved job information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Job'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.get('/job/:job/input',
     server.auth.bearerMiddleware,
@@ -103,6 +347,38 @@ module.exports = (server) => {
     controller.input
   )
 
+  /** 
+  * @openapi
+  * /job/{job}/output:
+  *   get:
+  *     summary: Get job output
+  *     description: Get output values from a single job.
+  *     tags:
+  *       - Job
+  *     parameters:
+  *       - name: job
+  *         in: query
+  *         description: job id
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved job information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Job'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+ 
   server.get('/job/:job/output',
     server.auth.bearerMiddleware,
     router.resolve.customerSessionToEntity(),

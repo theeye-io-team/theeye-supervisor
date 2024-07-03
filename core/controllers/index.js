@@ -1,13 +1,61 @@
-
 const os = require('os')
 const exec = require('child_process').exec
+const swagger = require('../docs/swagger')
 
 module.exports = (server) => {
+
+  /** 
+   * @openapi
+   * /api:
+   *  get:
+   *    description: Check if the API is running.
+   *    responses: 
+   *      200:
+   *        description: The API is running.
+   *        content:
+   *          text/plain:
+   *            schema:
+   *              type: string
+   *              example: 'Hi, I am ok. Thanks for asking'
+   *
+  */
+
   server.get('/api', (req, res, next) => {
+    // TODO: return text/plain header 
     res.send(200, `Hi, I am ok. Thanks for asking`)
   })
 
+  /** 
+   * @openapi
+   * /api/status:
+   *  get:
+   *    description: Request supervisor and host machine information.
+   *    responses: 
+   *      200:
+   *        description: JSON object with supervisor and host machine information.
+   *        content:
+   *          application/json:
+   *            schema: 
+   *              $ref: "#definitions/task/components/schemas/ScriptTask"
+  */
+
   server.get('/api/status', nodeStatus)
+
+  /**
+   * @openapi
+   * /api/swagger:
+   *  get:
+   *    description: Get the API documentation in standard OpenAPI format
+   *    responses: 
+   *      200: 
+   *        description: JSON object with the API documentation in OpenAPI format
+   *      500: 
+   *        description: The devs fucked up
+   */
+  server.get('/api/docs', (req, res, next) => {
+    res.send(200, swagger)
+  })
+
 }
 
 const nodeStatus = async (req, res) => {
@@ -35,6 +83,7 @@ const getVersion = () => {
 
     const cmd = 'cd ' + process.cwd() + ' && git describe'
     exec(cmd, {}, (err, stdout, stderr) => {
+     
       if (err) reject(err)
       resolve(stdout)
     })

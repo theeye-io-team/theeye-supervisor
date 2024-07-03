@@ -1,6 +1,7 @@
 const mongodb = require('../../lib/mongodb').db
 const FileSchema = require('./schema')
 const Template = require('./template')
+const m2s = require('mongoose-to-swagger')
 
 const ScriptSchema = new FileSchema()
 ScriptSchema.statics.create = function (data,next) {
@@ -20,7 +21,7 @@ ScriptSchema.statics.create = function (data,next) {
     public: data.public
   }
 
-  var script = new Script(options)
+  const script = new Script(options)
   script.save(function(error){
     next(error,script)
   })
@@ -37,11 +38,6 @@ File.on('afterSave', function(model) {
   model.last_update = new Date()
   // do more stuff
 })
-
-// create event
-//File.on('afterInsert',function(model){ });
-//File.on('afterUpdate',function(model){ });
-//File.on('afterRemove',function(model){ });
 
 exports.File = File
 exports.Script = Script
@@ -62,4 +58,14 @@ exports.FactoryCreate = function (data) {
   }
 
   throw new Error('FATAL ERROR. file _type [' + _type + '] is not valid')
+}
+
+exports.swagger = {
+  components: {
+    schemas: {
+      File: m2s(File),
+      Script: m2s(Script),
+      Template: m2s(Template)
+    }
+  }
 }

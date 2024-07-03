@@ -9,5 +9,6 @@ fi
 
 export MONITORING_DISABLED=""
 export SCHEDULER_JOBS_DISABLED=""
-npx nodemon --inspect ${1} $PWD/core/main.js
+
+npx nodemon --ignore swagger.json ${1} $PWD/core/main.js
 #node ${1} $PWD/core/main.js

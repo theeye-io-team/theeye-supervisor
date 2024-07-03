@@ -7,6 +7,39 @@ const logger = require('../../lib/logger')('controller:workflow:acl')
 
 module.exports = (server) => {
 
+  /** 
+  * @openapi
+  * /workflows/{workflow}/acl:
+  *   get:
+  *     summary: Get workflow acls
+  *     description: Get a list of acls from workflow.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved workflow information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.get('/workflows/:workflow/acl',
     server.auth.bearerMiddleware,
     router.requireCredential('manager'),
@@ -16,6 +49,39 @@ module.exports = (server) => {
     router.ensureAllowed({ entity: { name: 'workflow' } }),
     controller.get
   )
+
+  /** 
+  * @openapi
+  * /workflows/{workflow}/acl:
+  *   put:
+  *     summary: Replace workflow acls
+  *     description: Replace acls from workflow.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully replaced workflow information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.put('/workflows/:workflow/acl',
     server.auth.bearerMiddleware,
@@ -28,6 +94,39 @@ module.exports = (server) => {
     audit.afterUpdate('workflow', { display: 'name' })
   )
 
+  /** 
+  * @openapi
+  * /workflows/{workflow}/acl:
+  *   patch:
+  *     summary: Update workflow acls
+  *     description: Update acls from workflow.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated workflow information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.patch('/workflows/:workflow/acl',
     server.auth.bearerMiddleware,
     router.requireCredential('manager'),
@@ -38,6 +137,39 @@ module.exports = (server) => {
     controller.update,
     audit.afterUpdate('workflow', { display: 'name' })
   )
+
+  /** 
+  * @openapi
+  * /workflows/{workflow}/acl:
+  *   delete:
+  *     summary: Delete workflow acls
+  *     description: Delete acls from workflow.
+  *     tags:
+  *         - Workflow
+  *     parameters:
+  *       - name: Workflow
+  *         in: query
+  *         description: Workflow Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully deleted workflow information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.del('/workflows/:workflow/acl',
     server.auth.bearerMiddleware,

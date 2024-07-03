@@ -23,18 +23,163 @@ module.exports = function(server) {
     router.ensureCustomer,
   ]
 
+  /** 
+  * @openapi
+  * /{customer}/hostgroup:
+  *   get:
+  *     summary: Get host group list
+  *     description: Get a list of host in the host group from specific customer.
+  *     tags:
+  *         - Host Group
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved host information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Hostgroup'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.get('/:customer/hostgroup', middleware, controller.fetch)
+  
+  /** 
+  * @openapi
+  * /{customer}/hostgroup:
+  *   post:
+  *     summary: Create host group 
+  *     description: Create host group for specific customer.
+  *     tags:
+  *         - Host Group
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully created host group.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Hostgroup'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.post('/:customer/hostgroup',
     middleware,
     controller.create,
     audit.afterCreate('group', { display: 'name', topic: crudTopic })
   )
 
+  /** 
+  * @openapi
+  * /{customer}/hostgroup/{group}:
+  *   get:
+  *     summary: Get host group 
+  *     description: Get a host group from specific customer.
+  *     tags:
+  *         - Host Group
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Group
+  *         in: query
+  *         description: Group Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved host information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Hostgroup'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.get('/:customer/hostgroup/:group',
     middleware,
     router.resolve.idToEntity({ param: 'group', entity: 'host/group', required: true }),
     controller.get
   )
+
+  /** 
+  * @openapi
+  * /{customer}/hostgroup/{group}:
+  *   put:
+  *     summary: Update host group 
+  *     description: Update a host group from specific customer.
+  *     tags:
+  *         - Host Group
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Group
+  *         in: query
+  *         description: Group Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated host information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Hostgroup'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.put('/:customer/hostgroup/:group',
     middleware,
@@ -43,12 +188,84 @@ module.exports = function(server) {
     audit.afterReplace('group', { display: 'name', topic: crudTopic })
   )
 
+  /** 
+  * @openapi
+  * /{customer}/hostgroup/{group}:
+  *   delete:
+  *     summary: Delete host group 
+  *     description: Delete a host group from specific customer.
+  *     tags:
+  *         - Host Group
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Group
+  *         in: query
+  *         description: Group Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated host information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Hostgroup'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.del('/:customer/hostgroup/:group',
     middleware,
     router.resolve.idToEntity({ param: 'group', entity: 'host/group', required: true }),
     controller.remove,
     audit.afterRemove('group', { display: 'name', topic: crudTopic })
   )
+
+  /** 
+  * @openapi
+  * /hostgroup/{group}/serialize:
+  *   get:
+  *     summary: Get host group 
+  *     description: Get a host group.
+  *     tags:
+  *         - Host Group
+  *     parameters:
+  *       - name: Group
+  *         in: query
+  *         description: Group Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved host information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Hostgroup'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.get('/hostgroup/:group/serialize',
     server.auth.bearerMiddleware,

@@ -13,6 +13,32 @@ module.exports = (server) => {
     router.ensureCustomer // requesting user is authorized to access the customer
   ]
 
+  /** 
+  * @openapi
+  * /workflows/triggers:
+  *   get:
+  *     summary: Get workflow's triggers.
+  *     description: Get specific workflow's triggers.
+  *     tags:
+  *         - Workflow
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved workflow information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Workflow'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  *
+  */
+
   server.get(
     '/workflows/triggers',
     middlewares,

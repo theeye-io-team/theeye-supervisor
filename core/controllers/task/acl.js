@@ -6,6 +6,39 @@ const audit = require('../../lib/audit')
 
 module.exports = (server) => {
 
+  /** 
+  * @openapi
+  * /task/{task}/acl:
+  *   get:
+  *     summary: Get tsks's acl
+  *     description: Get a list of acls from a specific task.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved task information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+  
   server.get('/task/:task/acl',
     server.auth.bearerMiddleware,
     router.requireCredential('manager'),
@@ -15,6 +48,44 @@ module.exports = (server) => {
     router.ensureAllowed({ entity: { name: 'task' } }),
     controller.get
   )
+
+  /** 
+  * @openapi
+  * /task/{task}/acl:
+  *   put:
+  *     summary: Replace taks's acl
+  *     description: Replace acl from a specific task.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     requestBody:
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Task'
+  *     responses:
+  *       '200':
+  *         description: Successfully updated task information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.put('/task/:task/acl',
     server.auth.bearerMiddleware,
@@ -27,6 +98,44 @@ module.exports = (server) => {
     audit.afterUpdate('task', { display: 'name' })
   )
 
+  /** 
+  * @openapi
+  * /task/{task}/acl:
+  *   put:
+  *     summary: Update taks's acl
+  *     description: Update acls from a specific task.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     requestBody:
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Task'
+  *     responses:
+  *       '200':
+  *         description: Successfully updated task information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.patch('/task/:task/acl',
     server.auth.bearerMiddleware,
     router.requireCredential('manager'),
@@ -37,6 +146,39 @@ module.exports = (server) => {
     controller.update,
     audit.afterUpdate('task', { display: 'name' })
   )
+
+  /** 
+  * @openapi
+  * /task/{task}/acl:
+  *   delete:
+  *     summary: Delete taks's acl
+  *     description: Delete acls from a specific task.
+  *     tags:
+  *       - Task
+  *     parameters:
+  *       - name: task
+  *         in: query
+  *         description: Task id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated task information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Task'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.del('/task/:task/acl',
     server.auth.bearerMiddleware,

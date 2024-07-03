@@ -17,7 +17,79 @@ module.exports = function (server) {
     router.ensureCustomer
   ]
 
+  /** 
+  * @openapi
+  * /{customer}/webhook:
+  *   get:
+  *     summary: Get webhooks list
+  *     description: Get a list of webhooks from specific customer.
+  *     tags:
+  *         - Webhook
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved webhook information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Webhook'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.get('/:customer/webhook', middlewares, controller.fetch)
+
+  /** 
+  * @openapi
+  * /{customer}/webhook/{webhook}:
+  *   get:
+  *     summary: Get webhook
+  *     description: Get specific webhook from customer.
+  *     tags:
+  *         - Webhook
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Webhook
+  *         in: query
+  *         description: Webhook Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved webhook information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Webhook'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.get(
     '/:customer/webhook/:webhook',
@@ -25,6 +97,44 @@ module.exports = function (server) {
     router.resolve.idToEntity({ param:'webhook', required:true }),
     controller.get
   )
+
+  /** 
+  * @openapi
+  * /{customer}/webhook:
+  *   post:
+  *     summary: Create webhook
+  *     description: Create a webhook for customer.
+  *     tags:
+  *         - Webhook
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     requestBody:
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Webhook'
+  *     responses:
+  *       '200':
+  *         description: Successfully created webhook.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Webhook'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.post(
     '/:customer/webhook',
@@ -34,6 +144,50 @@ module.exports = function (server) {
     audit.afterCreate('webhook',{display:'name'})
   )
 
+  /** 
+  * @openapi
+  * /{customer}/webhook:
+  *   put:
+  *     summary: Update webhook
+  *     description: Update a webhook from customer.
+  *     tags:
+  *         - Webhook
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Webhook
+  *         in: query
+  *         description: Webhook Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     requestBody:
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Webhook'
+  *     responses:
+  *       '200':
+  *         description: Successfully updated webhook.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Webhook'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.put(
     '/:customer/webhook/:webhook',
     middlewares,
@@ -42,6 +196,50 @@ module.exports = function (server) {
     controller.update,
     audit.afterUpdate('webhook',{display:'name'})
   )
+
+  /** 
+  * @openapi
+  * /{customer}/webhook/{webhook}:
+  *   delete:
+  *     summary: Delete webhook
+  *     description: Delete a webhook from customer.
+  *     tags:
+  *         - Webhook
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Webhook
+  *         in: query
+  *         description: Webhook Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     requestBody:
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Webhook'
+  *     responses:
+  *       '200':
+  *         description: Successfully deleted webhook.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Webhook'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.del(
     '/:customer/webhook/:webhook',

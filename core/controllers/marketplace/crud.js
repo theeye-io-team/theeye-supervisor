@@ -24,21 +24,168 @@ const AsyncController = require('../../lib/async-controller')
 const { ClientError, ServerError } = require('../../lib/error-handler')
 
 module.exports = (server) => {
+
+  /** 
+  * @openapi
+  * /marketplace/{model}:
+  *   get:
+  *     summary: Get specific model from the marketplace
+  *     description: Get a specific model from the marketplace by it's model. 
+  *     tags:
+  *       - Marketplace
+  *     parameters:
+  *       - name: model
+  *         in: query
+  *         description: model name
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved model.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Model'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.get('/marketplace/:model',
     server.auth.bearerMiddleware,
     AsyncController(fetch)
   )
 
+  /** 
+  * @openapi
+  * /marketplace/{model}/{id}:
+  *   get:
+  *     summary: Get specific model from the marketplace
+  *     description: Get a specific model from the marketplace by it's model Id. 
+  *     tags:
+  *       - Marketplace
+  *     parameters:
+  *       - name: model
+  *         in: query
+  *         description: model name
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: model
+  *         in: query
+  *         description: model id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved model.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Model'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.get('/marketplace/:model/:id',
     server.auth.bearerMiddleware,
     AsyncController(get)
   )
 
+  /** 
+  * @openapi
+  * /marketplace/{model}/{id}/serialize:
+  *   get:
+  *     summary: Get specific model from the marketplace
+  *     description: Get a specific model from the marketplace by it's model Id. 
+  *     tags:
+  *       - Marketplace
+  *     parameters:
+  *       - name: model
+  *         in: query
+  *         description: model name
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: model
+  *         in: query
+  *         description: model id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved model.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Model'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.get('/marketplace/:model/:id/serialize',
     server.auth.bearerMiddleware,
     AsyncController(serialize)
   )
 
+  /** 
+  * @openapi
+  * /marketplace/{model}/{id}/rate:
+  *   post:
+  *     summary: Get specific model from the marketplace
+  *     description: Get a specific model from the marketplace by it's model Id. 
+  *     tags:
+  *       - Marketplace
+  *     parameters:
+  *       - name: model
+  *         in: query
+  *         description: model name
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: model
+  *         in: query
+  *         description: model id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved model.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Model'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
   server.post('/marketplace/:model/:id/rate',
     server.auth.bearerMiddleware,
     AsyncController(rate)

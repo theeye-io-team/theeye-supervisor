@@ -21,11 +21,83 @@ module.exports = function (server) {
     router.ensureCustomer,
   ]
 
+  /** 
+  * @openapi
+  * /{customer}/host:
+  *   get:
+  *     summary: Get hosts list
+  *     description: Get a list of hosts from specific customer.
+  *     tags:
+  *         - Host
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved host information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Host'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.get('/:customer/host',
     middlewares,
     router.requireCredential('viewer'),
     controller.fetch
   )
+
+  /** 
+  * @openapi
+  * /{customer}/host/{host}:
+  *   get:
+  *     summary: Get host
+  *     description: Get host from specific customer.
+  *     tags:
+  *         - Host
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Host
+  *         in: query
+  *         description: Host Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully retrieved host information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Host'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.get('/:customer/host/:host',
     middlewares,
@@ -34,6 +106,45 @@ module.exports = function (server) {
     controller.get
   )
 
+  /** 
+  * @openapi
+  * /{customer}/host/{host}:
+  *   put:
+  *     summary: Reconfigure host
+  *     description: Reconfigure host from specific customer.
+  *     tags:
+  *         - Host
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Host
+  *         in: query
+  *         description: Host Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated host information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Host'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.put('/:customer/host/:host/reconfigure',
     middlewares,
     router.requireCredential('admin'),
@@ -41,11 +152,83 @@ module.exports = function (server) {
     controller.reconfigure
   )
 
+  /** 
+  * @openapi
+  * /{customer}/host/{hostname}:
+  *   post:
+  *     summary: Create host
+  *     description: Create host for specific customer.
+  *     tags:
+  *         - Host
+  *     parameters:
+  *       - name: Customer
+  *         in: query
+  *         description: Customer Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *       - name: Host
+  *         in: query
+  *         description: Host Name
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully created host.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Host'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.post('/:customer/host/:hostname',
     middlewares,
     router.requireCredential('agent', { exactMatch: true }), // only agents can create hosts
     controller.create
   )
+
+  /** 
+  * @openapi
+  * /host/{hostname}:
+  *   post:
+  *     summary: Create host
+  *     description: Create host for specific customer.
+  *     tags:
+  *         - Host
+  *     parameters:
+  *       - name: Host
+  *         in: query
+  *         description: Host Name
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully created host.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Host'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.post('/host/:hostname',
     middlewares,
@@ -56,6 +239,38 @@ module.exports = function (server) {
   //
   // new agents registration process.
   //
+
+  /** 
+  * @openapi
+  * /host/{hostname}:
+  *   post:
+  *     summary: Create host
+  *     description: Create host.
+  *     tags:
+  *         - Host
+  *     requestBody:
+  *       content:
+  *         application/json:
+  *           schema:
+  *             $ref: '#/components/schemas/Host'
+  *     responses:
+  *       '200':
+  *         description: Successfully created host.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Host'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.post('/host',
     middlewares,
     router.requireCredential('agent', { exactMatch: true }), // only agents can create hosts
@@ -63,6 +278,39 @@ module.exports = function (server) {
       { version: '1.2.4', handler: controller.register }
     ])
   )
+
+  /** 
+  * @openapi
+  * /host/{host}/disable:
+  *   put:
+  *     summary: Disable host
+  *     description: Disable host.
+  *     tags:
+  *         - Host
+  *     parameters:
+  *       - name: Host
+  *         in: query
+  *         description: Host Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated host.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Host'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.put('/host/:host/disable',
     middlewares,
@@ -80,6 +328,39 @@ module.exports = function (server) {
     }
   )
  
+  /** 
+  * @openapi
+  * /host/{host}/enable:
+  *   put:
+  *     summary: Enable host
+  *     description: Enable host.
+  *     tags:
+  *         - Host
+  *     parameters:
+  *       - name: Host
+  *         in: query
+  *         description: Host Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated host.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Host'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
+
   server.put('/host/:host/enable',
     middlewares,
     router.requireCredential('admin'),
@@ -95,6 +376,39 @@ module.exports = function (server) {
       }
     }
   )
+
+  /** 
+  * @openapi
+  * /host/{host}/fingerprints:
+  *   put:
+  *     summary: Update host's fingerprints
+  *     description: Update host's fingerprints.
+  *     tags:
+  *         - Host
+  *     parameters:
+  *       - name: Host
+  *         in: query
+  *         description: Host Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated host information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Host'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.put('/host/:host/fingerprints',
     middlewares,
@@ -116,6 +430,39 @@ module.exports = function (server) {
       }
     }
   )
+
+  /** 
+  * @openapi
+  * /host/{host}/template:
+  *   put:
+  *     summary: Update host's template
+  *     description: Update host's template.
+  *     tags:
+  *         - Host
+  *     parameters:
+  *       - name: Host
+  *         in: query
+  *         description: Host Id
+  *         required: true
+  *         schema:
+  *           type: string
+  *     responses:
+  *       '200':
+  *         description: Successfully updated host information.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               type: array
+  *               items:
+  *                 $ref: '#/components/schemas/Host'
+  *       '401':
+  *         description: Authentication failed.
+  *         content:
+  *           application/json:
+  *             schema:
+  *               $ref: '#/components/schemas/Error'
+  * 
+  */
 
   server.get('/host/:host/template',
     server.auth.bearerMiddleware,

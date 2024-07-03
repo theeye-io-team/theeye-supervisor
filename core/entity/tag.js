@@ -1,4 +1,5 @@
 
+const m2s = require('mongoose-to-swagger');
 const mongodb = require("../lib/mongodb");
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
@@ -66,3 +67,11 @@ Entity.ensureIndexes()
 
 exports.Entity = Entity
 exports.Tag = Entity
+
+exports.swagger = {
+  components: {
+    schemas: {
+      Tag: m2s(Entity)
+    }
+  }
+}
