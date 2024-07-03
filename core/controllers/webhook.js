@@ -137,7 +137,7 @@ module.exports = function (server) {
   */
 
   server.post(
-    '/{customer}/webhook/{webhook}',
+    '/:customer/webhook',
     middlewares,
     router.requireCredential('admin'),
     controller.create,
