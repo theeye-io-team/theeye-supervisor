@@ -65,6 +65,7 @@ exports.swagger = {
     schemas: {
       File: m2s(File),
       Script: m2s(Script),
+      Template: m2s(Template)
     }
   }
 }
