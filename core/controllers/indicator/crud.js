@@ -6,6 +6,7 @@ const router = require('../../router')
 const logger = require('../../lib/logger')('eye:controller:indicator:crud')
 const TopicsConstants = require('../../constants/topics')
 const Constants = require('../../constants')
+const { ClientError } = require('../../lib/error-handler')
 
 module.exports = function (server) {
   const middlewares = [
@@ -279,7 +280,7 @@ const controller = {
       const body = req.body
 
       if (!body || (!body.state && !body.value)) {
-        return res.send(400, 'provide the state changes. value and/or state are required')
+        throw new ClientError('provide the state changes. value and/or state are required')
       }
 
       let state = body.state
@@ -294,10 +295,9 @@ const controller = {
       if (err.name == 'ValidationError') {
         res.send(400, err.name)
       } else {
-        res.send(500, err)
+        res.sendError(err)
       }
     }
-    return
   }
 }
 

@@ -66,7 +66,7 @@ module.exports = (server) => {
           next()
         })
         .catch(err => {
-          return res.send(500, err.message)
+          res.sendError(err)
         })
     },
     createJob
@@ -86,7 +86,7 @@ module.exports = (server) => {
           next()
         })
         .catch(err => {
-          return res.send(500, err.message)
+          res.sendError(err)
         })
     },
     createJob
@@ -116,7 +116,6 @@ const queueController = async (req, res) => {
 
     res.send(200, jobs)
   } catch (err) {
-    logger.error(err)
     res.sendError(err)
   }
 }
@@ -152,7 +151,6 @@ const remove = async (req, res) => {
     let result = await App.Models.Job.Job.deleteMany(dbquery)
     res.send(200, { deletedCount: result.deletedCount })
   } catch (err) {
-    logger.error('%o', err)
-    res.send(500)
+    res.sendError(500)
   }
 }

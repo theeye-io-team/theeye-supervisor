@@ -23,9 +23,12 @@ module.exports = function (server) {
     (req, res, next) => {
       const filter = req.dbQuery
       App.Models.Workflow.Workflow.fetchBy(filter, (err, workflows) => {
-        if (err) return res.send(500, err)
-        res.send(200, workflows)
-        next()
+        if (err) {
+          res.sendError(err)
+        } else {
+          res.send(200, workflows)
+          next()
+        }
       })
     }
   )

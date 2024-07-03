@@ -8,6 +8,7 @@ const WebhookEvent = require('../entity/event').WebhookEvent;
 const Webhook = require('../entity/webhook').Webhook;
 const Constants = require('../constants')
 const TopicsConstants = require('../constants/topics')
+const { ClientError, ServerError } = require('../lib/error-handler')
 
 module.exports = function (server) {
   const middlewares = [
@@ -113,11 +114,11 @@ const controller = {
       .find(filter.where)
       .populate('customer')
       .exec((err, webhooks) => {
-        if(err) {
-          logger.error(err);
-          return res.send(500);
+        if (err) {
+          res.sendError(err)
+        } else {
+          res.send(200, webhooks)
         }
-        res.send(200, webhooks)
       })
   },
   /**
@@ -131,15 +132,18 @@ const controller = {
 
     const webhook = new Webhook(input)
     webhook.save(err => {
-      if(err){
-        if( err.name == 'ValidationError' )
-          return res.send(400, err);
-        else return res.send(500);
+      if (err) {
+        if (err.name == 'ValidationError') {
+          res.send(400, err)
+        } else {
+          res.sendError(err)
+        }
+      } else {
+        res.send(200, webhook)
+        req.webhook = webhook
+        next()
       }
-      res.send(200, webhook);
-      req.webhook = webhook;
-      next();
-    });
+    })
   },
   /**
    * @method PUT
@@ -153,27 +157,33 @@ const controller = {
     })
 
     webhook.save(err => {
-      if(err) return res.send(500)
-      res.send(200, webhook)
-      next()
+      if (err) {
+        res.sendError(err)
+      } else {
+        res.send(200, webhook)
+        next()
+      }
     })
   },
   /**
    * @method GET
    */
   get (req, res, next) {
-    var webhook = req.webhook;
-    return res.send(200, webhook);
+    const webhook = req.webhook;
+    res.send(200, webhook);
   },
   /**
    * @method DELETE
    */
   remove (req, res, next) {
-    var webhook = req.webhook;
+    const webhook = req.webhook;
     webhook.remove(err => {
-      if(err) return res.send(500);
-      res.send(200,webhook);
-      next();
+      if (err) {
+        res.sendError(err)
+      } else {
+        res.send(200,webhook)
+        next()
+      }
     });
   },
   /**
@@ -191,7 +201,7 @@ const controller = {
       })
 
       if (!triggerEvent) {
-        return res.send(500, 'webhook events are missing.')
+        throw new ServerError('webhook events are missing.')
       }
 
       App.notifications.generateSystemNotification({
@@ -218,8 +228,7 @@ const controller = {
 
       res.send(200, { message: 'success' })
     } catch (err) {
-      logger.error(err)
-      res.send(500, err)
+      res.sendError(err)
     }
   }
 }

@@ -223,7 +223,6 @@ const controller = {
       username: user.username
     }
 
-    //App.jobDispatcher.finish({
     App.jobDispatcher.cancel({
       result: {
         user: who,
@@ -313,11 +312,7 @@ const controller = {
       }
       res.send(200, job)
     } catch (err) {
-      logger.error(err)
-      if (err.statusCode) {
-        return res.send(err.statusCode, err.message)
-      }
-      return res.send(500, err.message)
+      res.sendError(err)
     }
   }
 }

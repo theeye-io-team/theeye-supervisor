@@ -55,13 +55,11 @@ const fetch = (req, res, next) => {
   const task = req.task
   App.scheduler.getTaskSchedule(task._id, (err, schedule) => {
     if (err) {
-      logger.error('Scheduler had an error retrieving data for %s',task._id)
-      logger.error(err)
-      return res.send(500)
+      res.sendError(err)
+    } else {
+      res.send(200, schedule)
+      next()
     }
-
-    res.send(200, schedule)
-    next()
   })
 }
 
@@ -93,7 +91,6 @@ const create = async (req, res) => {
     req.schedule = schedule.attrs
     res.send(200, schedule)
   } catch (err) {
-    if (!err.statusCode || err.statusCode === 500) { logger.error(err) }
     res.sendError(err)
   }
 }

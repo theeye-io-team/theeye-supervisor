@@ -47,19 +47,18 @@ const controller = {
       }
 
       if (customer.disabled === true || host.disabled === true) {
-        return res.send(204)
+        res.send(204)
+      } else {
+        const resource = await findHostResource(host)
+        const manager = new App.resource(resource)
+        manager
+          .handleState({ state: MonitorsConstants.RESOURCE_NORMAL })
+          .catch(err => {
+            logger.error(err)
+          })
+
+        res.send(204)
       }
-
-      const resource = await findHostResource(host)
-
-      const manager = new App.resource(resource)
-      manager
-        .handleState({ state: MonitorsConstants.RESOURCE_NORMAL })
-        .catch(err => {
-          logger.error(err)
-        })
-
-      res.send(204)
     } catch (err) {
       res.sendError(err)
     }
@@ -82,7 +81,7 @@ const controller = {
 
       if (customer.disabled === true || host.disabled === true) {
         const workers = generateBlockedAgentConfig()
-        return res.send(200, { workers })
+        res.send(200, { workers })
       } else {
         const monitors = await App.Models.Monitor.Monitor.find({
           enable: true,
