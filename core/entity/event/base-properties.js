@@ -9,5 +9,7 @@ module.exports = {
   secret: { type: String, default: () => { return randomSecret() } },
   customer: { type: Schema.Types.ObjectId, ref: 'Customer' },
   customer_id: { type: Schema.Types.ObjectId },
-  emitter_id: { type: Schema.Types.ObjectId }
+  emitter_id: { type: Schema.Types.ObjectId },
+  emitter_prop: { type: String },
+  emitter_value: { type: String }
 }
