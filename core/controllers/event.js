@@ -127,14 +127,17 @@ const controller = {
         event = await typeModel.model.create(eventData)
       }
 
-      await event.populate({
-        path: 'emitter',
-        select: '_id name title _type type host host_id workflow_id',
-        populate: {
-          path: 'host',
-          select: 'hostname _id'
-        }
-      }).execPopulate()
+      if (event.emitter) {
+        await event.populate({
+          path: 'emitter',
+          select: '_id name title _type type host host_id workflow_id',
+          populate: {
+            path: 'host',
+            select: 'hostname _id'
+          }
+        }).execPopulate()
+      }
+
       req.event = event
       res.send(200, event)
     } catch (err) {
@@ -152,14 +155,18 @@ const controller = {
       }
 
       event = await typeModel.model.create(eventData)
-      await event.populate({
-        path: 'emitter',
-        select: '_id name title _type type host host_id workflow_id',
-        populate: {
-          path: 'host',
-          select: 'hostname _id'
-        }
-      }).execPopulate()
+
+      if (event.emitter) {
+        await event.populate({
+          path: 'emitter',
+          select: '_id name title _type type host host_id workflow_id',
+          populate: {
+            path: 'host',
+            select: 'hostname _id'
+          }
+        }).execPopulate()
+      }
+
       req.event = event
       res.send(200, event)
     } catch (err) {
@@ -171,8 +178,23 @@ const controller = {
   },
   async fetch (req, res) {
     const filters = req.dbQuery
-    filters.where.emitter = { $ne: null }
-    filters.include = '_id emitter name _type emitter_id'
+    const fixed$or = filters.where.$or
+
+    filters.where = {
+      _type: 'IndicatorEvent',
+      $and: [
+        { $or: fixed$or },
+        { $or: [
+          { emitter: { $ne: null } },
+          {
+            emitter_prop: { $ne: null },
+            emitter_value: { $ne: null }
+          }
+        ] }
+      ]
+    }
+
+    filters.include = '_id emitter name _type emitter_id emitter_prop emitter_value'
     filters.populate = {
       path: 'emitter',
       select: '_id name title _type type host host_id workflow_id',
