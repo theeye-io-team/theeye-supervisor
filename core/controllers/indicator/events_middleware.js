@@ -34,35 +34,46 @@ module.exports = (options) => {
       eventName = EventNamaByOperation[operation]
     }
 
-    let event = await App.Models.Event.IndicatorEvent.findOne({
-      emitter_id: indicator._id,
+    let events = await App.Models.Event.IndicatorEvent.find({
+      $or: [
+        { emitter_id: indicator._id },
+        { emitter_prop: 'tags', emitter_value: { $in: indicator.tags } },
+        { emitter_prop: 'type', emitter_value: indicator.type },
+        { emitter_prop: '_type', emitter_value: indicator._type },
+        { emitter_prop: 'name', emitter_value: indicator.name },
+        { emitter_prop: 'title', emitter_value: indicator.title },
+      ],
       enable: true,
       name: eventName
     })
 
-    if (!event) {
-      event = await App.Models.Event.IndicatorEvent.create({
-        customer: req.customer._id,
-        emitter: indicator._id,
-        emitter_id: indicator._id,
-        name: eventName,
-        creation_date: new Date(),
-        last_update: new Date()
-      })
+    if (!events || events.length === 0) {
+      events = [
+        await App.Models.Event.IndicatorEvent.create({
+          customer: req.customer._id,
+          emitter: indicator._id,
+          emitter_id: indicator._id,
+          name: eventName,
+          creation_date: new Date(),
+          last_update: new Date()
+        })
+      ]
     }
 
-    App.eventDispatcher.dispatch({
-      topic,
-      event,
-      data: [{
+    for (const event of events) {
+      App.eventDispatcher.dispatch({
         topic,
-        event_name: eventName,
-        operation,
-        model_id: indicator._id,
-        model_type: indicator._type,
-      }],
-      indicator
-    })
+        event,
+        data: [{
+          topic,
+          event_name: eventName,
+          operation,
+          model_id: indicator._id,
+          model_type: indicator._type,
+        }],
+        indicator
+      })
+    }
 
     return
   }

@@ -2,6 +2,7 @@
 const App = require('../app')
 const router = require('../router')
 const { ServerError, ClientError } = require('../lib/error-handler')
+const isMongoId = require('validator/lib/isMongoId')
 
 const Types = [{
   'name':'indicator',
@@ -37,7 +38,10 @@ module.exports = (server) => {
     if (!body.event_name) {
       throw new ClientError('event name is required')
     }
-    if (!body.emitter_id) {
+    if (
+      !body.emitter_id &&
+      !(body.emitter_value && body.emitter_prop)
+    ) {
       throw new ClientError('emitter id is required')
     }
 
@@ -118,23 +122,22 @@ const controller = {
       const { type } = req.body
       const typeModel = Types.find(t => t.name === type)
       const eventData = prepareEventData(req)
-      let event = await typeModel.model.findOne({
-        name: eventData.name,
-        emitter: eventData.emitter_id,
-        customer: eventData.customer,
-      })
+      let event = await findEvent(typeModel, eventData)
       if (!event) {
         event = await typeModel.model.create(eventData)
       }
 
-      await event.populate({
-        path: 'emitter',
-        select: '_id name title _type type host host_id workflow_id',
-        populate: {
-          path: 'host',
-          select: 'hostname _id'
-        }
-      }).execPopulate()
+      if (event.emitter) {
+        await event.populate({
+          path: 'emitter',
+          select: '_id name title _type type host host_id workflow_id',
+          populate: {
+            path: 'host',
+            select: 'hostname _id'
+          }
+        }).execPopulate()
+      }
+
       req.event = event
       res.send(200, event)
     } catch (err) {
@@ -146,24 +149,24 @@ const controller = {
       const { type } = req.body
       const typeModel = Types.find(t => t.name === type)
       const eventData = prepareEventData(req)
-      let event = await typeModel.model.findOne({
-        name: eventData.name,
-        emitter: eventData.emitter_id,
-        customer: eventData.customer,
-      })
+      let event = await findEvent(typeModel, eventData)
       if (event) {
         throw new ClientError('Event exists', {statusCode: 409})
       }
 
       event = await typeModel.model.create(eventData)
-      await event.populate({
-        path: 'emitter',
-        select: '_id name title _type type host host_id workflow_id',
-        populate: {
-          path: 'host',
-          select: 'hostname _id'
-        }
-      }).execPopulate()
+
+      if (event.emitter) {
+        await event.populate({
+          path: 'emitter',
+          select: '_id name title _type type host host_id workflow_id',
+          populate: {
+            path: 'host',
+            select: 'hostname _id'
+          }
+        }).execPopulate()
+      }
+
       req.event = event
       res.send(200, event)
     } catch (err) {
@@ -175,8 +178,23 @@ const controller = {
   },
   async fetch (req, res) {
     const filters = req.dbQuery
-    filters.where.emitter = { $ne: null }
-    filters.include = '_id emitter name _type emitter_id'
+    const fixed$or = filters.where.$or
+
+    filters.where = {
+      _type: 'IndicatorEvent',
+      $and: [
+        { $or: fixed$or },
+        { $or: [
+          { emitter: { $ne: null } },
+          {
+            emitter_prop: { $ne: null },
+            emitter_value: { $ne: null }
+          }
+        ] }
+      ]
+    }
+
+    filters.include = '_id emitter name _type emitter_id emitter_prop emitter_value'
     filters.populate = {
       path: 'emitter',
       select: '_id name title _type type host host_id workflow_id',
@@ -255,15 +273,52 @@ const controller = {
   }
 }
 
-
 const prepareEventData = ({ body, customer }) => {
-  const eventData = {
-    name: body.event_name,
-    emitter: body.emitter_id,
-    emitter_id: body.emitter_id,
-    customer: customer.id,
-    customer_id: customer.id,
+  let eventData
+  if (body.emitter_id) {
+    eventData = {
+      name: body.event_name,
+      emitter: body.emitter_id,
+      emitter_id: body.emitter_id,
+      customer: customer.id,
+      customer_id: customer.id,
+    }
+  } else if (body.emitter_prop === 'id' && isMongoId(body.emitter_value)) {
+     eventData = {
+      name: body.event_name,
+      emitter: body.emitter_value,
+      emitter_id: body.emitter_value,
+      customer: customer.id,
+      customer_id: customer.id,
+    }
+  } else if (body.emitter_prop && body.emitter_value) {
+    eventData = {
+      name: body.event_name,
+      emitter: null,
+      emitter_id: null,
+      emitter_prop: body.emitter_prop,
+      emitter_value: body.emitter_value,
+      customer: customer.id,
+      customer_id: customer.id,
+    }
+  } else {
+    throw new ClientError('invalid event emitter definition')
   }
 
   return eventData
+}
+
+const findEvent = (typeModel, props) => {
+  const query = {
+    name: props.name,
+    customer: props.customer,
+  }
+  if (props.emitter_id) {
+    query.emitter_id = props.emitter_id
+  }
+  if (props.emitter_prop && props.emitter_value) {
+    query.emitter_prop = props.emitter_prop
+    query.emitter_value = props.emitter_value
+  }
+  return typeModel.model.findOne(query)
 }
