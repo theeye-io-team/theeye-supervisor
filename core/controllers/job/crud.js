@@ -354,6 +354,10 @@ const controller = {
     try {
       const job = req.job
 
+      if (!job) {
+        throw new ClientError('job not found', {statusCode:404})
+      }
+
       let search = []
       search.push(job.user_id)
 

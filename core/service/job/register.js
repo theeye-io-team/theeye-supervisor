@@ -15,56 +15,67 @@ const logger = require('../../lib/logger')('service:jobs')
 module.exports = {
   async submit (operation, topic, input) {
     const { job, user } = input
-    const task = (job.task || {})
 
-    if (!job.notify && !job.log) { return }
+    if (!job) {
+      logger.error(`job is undefined`)
+      logger.error(input)
+    } else {
+      const task = (job.task || {})
 
-    // hast a host property
-    if (job.host || job.workflow_job) {
-      await job.populate([
-        { path: 'host', select: 'id hostname' },
-        { path: 'workflow_job' },
-      ]).execPopulate()
-    }
+      if (!job.notify && !job.log) { return }
 
-    if (job.log !== false) {
-      const payload = prepareLog({ job, task, user })
-      payload.operation = operation
-      App.logger.submit(job.customer_name, topic, payload)
-    }
+      // hast a host property
+      if (job.host || job.workflow_job) {
+        await job.populate([
+          { path: 'host', select: 'id hostname' },
+          { path: 'workflow_job' },
+        ]).execPopulate()
+      }
 
-    // skip system notifications for this job.
-    if (job.notify !== false) {
-      App.notifications.generateSystemNotification({
-        topic,
-        data: {
-          operation,
-          hostname: (job.host && job.host.hostname) || job.host_id,
-          organization: job.customer_name,
-          organization_id: job.customer_id,
-          model_id: job._id,
-          model_type: job._type,
-          //approvers: (job.approvers || undefined),
-          model: this.jobToEventModel(job)
-        }
-      })
+      if (job.log !== false) {
+        const payload = prepareLog({ job, task, user })
+        payload.operation = operation
+        App.logger.submit(job.customer_name, topic, payload)
+      }
+
+      // skip system notifications for this job.
+      if (job.notify !== false) {
+        App.notifications.generateSystemNotification({
+          topic,
+          data: {
+            operation,
+            hostname: (job.host && job.host.hostname) || job.host_id,
+            organization: job.customer_name,
+            organization_id: job.customer_id,
+            model_id: job._id,
+            model_type: job._type,
+            //approvers: (job.approvers || undefined),
+            model: this.jobToEventModel(job)
+          }
+        })
+      }
     }
 
     return
   },
   async workflowSubmit (operation, topic, input) {
     const { job } = input
-    App.notifications.generateSystemNotification({
-      topic,
-      data: {
-        operation,
-        organization: job.customer_name,
-        organization_id: job.customer_id,
-        model_id: job._id,
-        model_type: job._type,
-        model: this.workflowJobToEventModel(job)
-      }
-    })
+    if (!job) {
+      logger.error(`job is undefined`)
+      logger.error(input)
+    } else {
+      App.notifications.generateSystemNotification({
+        topic,
+        data: {
+          operation,
+          organization: job.customer_name,
+          organization_id: job.customer_id,
+          model_id: job._id,
+          model_type: job._type,
+          model: this.workflowJobToEventModel(job)
+        }
+      })
+    }
   },
   /**
    *
