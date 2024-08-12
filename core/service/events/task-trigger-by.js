@@ -40,7 +40,9 @@ module.exports = async function (payload) {
  * @param {Mixed} data event data, this is the job.output
  * @param {Job} job the job that generates the event
  */
-const triggeredByEvent = async ({ event, data, job }) => {
+const triggeredByEvent = async (payload) => {
+
+  const { event, data, job } = payload
 
   if (!event||!event._id) {
     return

@@ -7,6 +7,7 @@ const logger = require('../../lib/logger')('eye:controller:indicator:crud')
 const TopicsConstants = require('../../constants/topics')
 const Constants = require('../../constants')
 const eventDispatcher = require('./events_middleware')
+const { ClientError, ServerError } = require('../../lib/error-handler')
 
 module.exports = function (server) {
   const middlewares = [
@@ -185,7 +186,7 @@ const controller = {
    */
   replace (req, res, next) {
     if (!req.indicator) {
-      controller.create(req, res, next)
+      controller.create(req, res).then(next)
     } else {
       const body = req.body
       if (!body) {
@@ -220,22 +221,31 @@ const controller = {
   /**
    * @method POST
    */
-  create (req, res, next) {
+  async create (req, res) {
     const body = req.body
     if (!body) {
-      return res.send(400, 'empty payload. JSON body is required')
+      throw new ClientError('empty payload. JSON body is required')
     }
 
     if (!body.type) {
-      return res.send(400, 'type is required')
+      throw new ClientError('type is required')
     }
 
     if (!body.title) {
-      return res.send(400, 'title is required')
+      throw new ClientError('title is required')
     }
 
     if (!validTitle(body.title)) {
-      return res.send(400, 'title is invalid')
+      throw new ClientError('title is invalid')
+    }
+
+    const exists = await App.Models.Indicator.Indicator.findOne({
+      title: body.title,
+      customer_id: req.customer._id
+    })
+
+    if (exists) {
+      throw new ClientError('title in use')
     }
 
     const input = Object.assign({}, body, {
@@ -247,19 +257,10 @@ const controller = {
     })
 
     const indicator = new App.Models.Indicator.Factory(input)
-    indicator.save((err, model) => {
-      if (err) {
-        if (err.name == 'ValidationError') {
-          return res.send(400, err)
-        } else {
-          res.sendError(err)
-        }
-      } else {
-        res.send(200, model)
-        req.indicator = indicator
-        next()
-      }
-    })
+    await indicator.save()
+
+    req.indicator = indicator
+    res.send(200, indicator)
   },
   /**
    * @method PATCH
@@ -285,7 +286,7 @@ const controller = {
         if (err.name == 'ValidationError') {
           res.send(400, err)
         } else {
-          res.sendError(500)
+          res.sendError(err)
         }
       } else {
         res.send(200, model)

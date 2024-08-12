@@ -57,16 +57,21 @@ module.exports = function () {
   // respond with error middleware
   server.use((req, res, next) => {
     res.sendError = (err, next) => {
-      if (err instanceof ErrorHandler.ClientError || err.statusCode < 500) {
+      if (err.name == 'ValidationError') {
+        res.send(400, err)
+      } else if (err instanceof ErrorHandler.ClientError || err.statusCode < 500) {
         res.send(err.statusCode || 400, {
           statusCode: err.statusCode,
           message: err.message,
           errors: err.errors
         })
       } else {
-        logger.error(err)
+        logger.error('Message Error: %s', err.message)
+        logger.error('Stack %s', err.stack)
+
         const handler = new ErrorHandler()
         handler.sendExceptionAlert(err, req)
+
         res.send(500, 'Internal Server Error')
       }
       if (next) { next() }
@@ -84,13 +89,8 @@ module.exports = function () {
   server.use(plugins.queryParser())
   server.use(plugins.bodyParser())
 
-  server.on('uncaughtException', (req, res, route, error) => {
-    const handler = new ErrorHandler()
-    handler.sendExceptionAlert(error, req)
-    logger.error('Message Error: %s', error.message)
-    logger.error('Stack %s', error.stack)
-    res.send(500, 'internal error')
-  })
+  server.on('uncaughtException', (req, res, route, error) => { res.sendError(error) })
+  server.on('restifyError', (req, res, error) => { res.sendError(error) })
 
   // Routing the controllers
   router.load(server)
