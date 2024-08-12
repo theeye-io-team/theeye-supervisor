@@ -72,8 +72,9 @@ module.exports = (options) => {
           operation,
           model_id: indicator._id,
           model_type: indicator._type,
-        }],
-        indicator
+        }, {
+          value: indicator.toObject()
+        }] // model
       })
     }
 
