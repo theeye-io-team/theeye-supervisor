@@ -35,6 +35,7 @@ module.exports = (options) => {
     }
 
     let events = await App.Models.Event.IndicatorEvent.find({
+      enable: true,
       $or: [
         { emitter_id: indicator._id },
         { emitter_prop: 'tags', emitter_value: { $in: indicator.tags } },
@@ -43,8 +44,9 @@ module.exports = (options) => {
         { emitter_prop: 'name', emitter_value: indicator.name },
         { emitter_prop: 'title', emitter_value: indicator.title },
       ],
-      enable: true,
-      name: eventName
+      name: {
+        $in: [ eventName, 'ALL' ] // eventName: created, changed, deleted or "ALL"
+      }
     })
 
     if (!events || events.length === 0) {
@@ -70,8 +72,9 @@ module.exports = (options) => {
           operation,
           model_id: indicator._id,
           model_type: indicator._type,
-        }],
-        indicator
+        }, {
+          value: indicator.toObject()
+        }] // model
       })
     }
 
