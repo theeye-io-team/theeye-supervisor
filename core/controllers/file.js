@@ -177,7 +177,7 @@ const uploadFile = async (req, res) => {
   try {
     //const fileModel = (req.file || req.script)
     const fileModel = req.file
-    const fileUploaded = req.files.file
+    const fileUploaded = req.files?.file
     if (!fileUploaded) {
       throw new ClientError('file required')
     }
@@ -222,8 +222,11 @@ const updateFile = async (req, res) => {
   try {
     //const fileModel = (req.file || req.script)
     const fileModel = req.file
-    const fileUploaded = req.files.file
-    const params = req.params
+    const fileUploaded = req.files?.file
+    if (!fileUploaded) {
+      throw new ClientError('file required')
+    }
+    const params = req.params || {}
 
     let acl
     if (params.acl) {
@@ -308,11 +311,15 @@ const updateContentSchema = async (req, res) => {
 const createFile = async (req, res) => {
   try {
     const customer = req.customer
-    const file = req.files.file
-    const description = req.params.description
-    const isPublic = (req.params.public || false)
-    const mimetype = req.params.mimetype
-    const extension = req.params.extension
+    const file = req.files?.file
+    if (!fileUploaded) {
+      throw new ClientError('file required')
+    }
+    const params = req.params || {}
+    const description = params?.description
+    const isPublic = (params?.public || false)
+    const mimetype = params?.mimetype
+    const extension = params?.extension
 
     logger.log('creating file')
 
