@@ -54,9 +54,18 @@ module.exports = function () {
     }
   })
 
-  // respond with error middleware
-  server.use((req, res, next) => {
-    res.sendError = (err, next) => {
+  let plugins = restify.plugins
+  server.acceptable = server.acceptable.concat(
+    server.acceptable.map(accept => `${accept};charset=UTF-8`)
+  )
+
+  server.use(plugins.acceptParser(server.acceptable))
+  server.use(plugins.gzipResponse())
+  server.use(plugins.queryParser())
+  server.use(plugins.bodyParser())
+
+  const sendError = (req, res, next) => {
+    return (err, next) => {
       if (err.name == 'ValidationError') {
         res.send(400, err)
       } else if (err instanceof ErrorHandler.ClientError || err.statusCode < 500) {
@@ -76,21 +85,17 @@ module.exports = function () {
       }
       if (next) { next() }
     }
+  }
+
+  // respond with error middleware
+  server.use((req, res, next) => {
+    // define middleware
+    res.sendError = sendError(req, res, next)
     next()
   })
 
-  let plugins = restify.plugins
-  server.acceptable = server.acceptable.concat(
-    server.acceptable.map(accept => `${accept};charset=UTF-8`)
-  )
-
-  server.use(plugins.acceptParser(server.acceptable))
-  server.use(plugins.gzipResponse())
-  server.use(plugins.queryParser())
-  server.use(plugins.bodyParser())
-
-  server.on('uncaughtException', (req, res, route, error) => { res.sendError(error) })
-  server.on('restifyError', (req, res, error) => { res.sendError(error) })
+  server.on('uncaughtException', (req, res, route, error) => { sendError(req, res)(error) })
+  server.on('restifyError', (req, res, error) => { sendError(req, res)(error) })
 
   // Routing the controllers
   router.load(server)
