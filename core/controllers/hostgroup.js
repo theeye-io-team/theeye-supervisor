@@ -180,9 +180,14 @@ const controller = {
     const hostname_regex = body.hostname_regex
     const source_host = req.body.source_host
     const applyToSourceHost = req.body.applyToSourceHost
+    const autoremove_stopped = req.body.autoremove_stopped
 
     if (typeof applyToSourceHost !== 'boolean') {
       return res.send(400, 'Invalid parameter value')
+    }
+
+    if (typeof autoremove_stopped !== 'boolean') {
+      return res.send(400, 'Invalid parameter autoremove_stopped')
     }
 
     if (typeof hostname_regex === 'string') {
@@ -206,7 +211,8 @@ const controller = {
         triggers: body.triggers || [], // Array of Objects with task ids related to the trigger id
         resources: body.resources || [], // Array of Objects with resources and monitors definition, all mixed
         files: body.files || [], // Array of Objects with file definitions
-        applyToSourceHost: applyToSourceHost
+        applyToSourceHost,
+        autoremove_stopped,
       })
     ).then(group => {
       res.send(200, group)
@@ -226,10 +232,15 @@ const controller = {
     const body = req.body
 
     const hostname_regex = body.hostname_regex
-    const deleteInstances = req.body.deleteInstances
+    const deleteInstances = body.deleteInstances
+    const autoremove_stopped =body.autoremove_stopped
 
     if (typeof deleteInstances !== 'boolean') {
       return res.send(400, 'Invalid parameter value')
+    }
+
+    if (typeof autoremove_stopped !== 'boolean') {
+      return res.send(400, 'Invalid parameter autoremove_stopped')
     }
 
     if (typeof hostname_regex === 'string') {
@@ -245,11 +256,12 @@ const controller = {
       group: req.group,
       name: body.name,
       description: body.description,
-      hostname_regex: hostname_regex,
       hosts: body.hosts || [], // Array of valid Host ids
       tasks: body.tasks || [], // Array of Objects with task definition
       resources: body.resources || [], // Array of Objects with resources and monitors definition, all mixed
-      deleteInstances: deleteInstances
+      hostname_regex,
+      deleteInstances,
+      autoremove_stopped
     }).then(group => {
       res.send(200, group)
       next()

@@ -13,7 +13,7 @@ const TemplateSchema = new BaseSchema({
 },{ collection: 'resource_templates' })
 
 TemplateSchema.methods.updateInstancesOfGroupHosts = function (done) {
-  var template = this;
+  const template = this;
   logger.log('updating template resource "%s"(%s) instances',
     template.name,
     template._id
@@ -21,6 +21,5 @@ TemplateSchema.methods.updateInstancesOfGroupHosts = function (done) {
   done()
 }
 
-var Entity = mongodb.model('ResourceTemplate', TemplateSchema);
-Entity.ensureIndexes();
+const Entity = mongodb.model('ResourceTemplate', TemplateSchema);
 exports.Entity = Entity;

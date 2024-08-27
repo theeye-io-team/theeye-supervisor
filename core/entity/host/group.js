@@ -1,9 +1,6 @@
-"use strict"
-
 const mongodb = require('../../lib/mongodb')
 const Schema = require('mongoose').Schema
 const ObjectId = Schema.Types.ObjectId
-const debug = require('debug')('eye:entity:host:group')
 const BaseSchema = require('../base-schema')
 
 const TriggerTemplate = new Schema({
@@ -28,6 +25,7 @@ const properties = {
   resources: [{ type: ObjectId, ref: 'ResourceTemplate' }], // has many
   files: [{ type: ObjectId, ref: 'FileTemplate' }], // has many
   triggers: [ TriggerTemplate ], // has many
+  autoremove_stopped: { type: Boolean, default: false },
   _type: { type: String, default: 'HostGroup' }
 }
 
@@ -52,6 +50,5 @@ EntitySchema.methods.populateAll = function(next) {
   })
 }
 
-var Entity = mongodb.db.model('HostGroup', EntitySchema)
-Entity.ensureIndexes()
+const Entity = mongodb.db.model('HostGroup', EntitySchema)
 exports.Entity = Entity
