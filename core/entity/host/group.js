@@ -52,3 +52,4 @@ EntitySchema.methods.populateAll = function(next) {
 
 const Entity = mongodb.db.model('HostGroup', EntitySchema)
 exports.Entity = Entity
+exports.HostGroup = Entity

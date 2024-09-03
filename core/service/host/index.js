@@ -1,4 +1,3 @@
-'use strict'
 
 const App = require('../../app')
 const after = require('lodash/after')
@@ -56,6 +55,34 @@ HostService.provisioning = async (input) => {
  * @param {Function(Error)} done
  *
  */
+HostService.destroyHostResources = (host_id) => {
+  const destroyHostMonitors = (host_id) => {
+    return Promise.allSetted([
+      App.Models.Resource.deleteMany({ host_id }),
+      App.Models.Monitor.Monitor.find({ host_id }, '_id')
+        .then(monitors => {
+          const ids = monitors.map(m => m._id)
+          return App.Models.Monitor.Monitor
+            .deleteMany({ host_id })
+            .then(() => {
+              return Event.deleteMany({
+                emitter_id: { $in: ids }
+              })
+            })
+        })
+    ])
+  }
+
+  return Promise.allSettled([
+    HostStats.deleteMany({ host_id }),
+    App.Models.Host.Host.deleteOne({ _id: host_id }),
+    App.Models.Job.Job.deleteMany({ host_id }),
+    App.Models.Task.Task.deleteMany({ host_id }),
+    destroyHostMonitors(host_id),
+    App.hostTemplate.destroyHostTemplateResources(host_id, hostgroup)
+  ])
+}
+
 HostService.removeHostResource = function (input, done) {
   const resource = input.resource
   const user = input.user
@@ -96,9 +123,9 @@ HostService.removeHostResource = function (input, done) {
   // find and remove resources
   const removeResource = (resource, done) => {
     App.resource.remove({
-      resource: resource,
+      resource,
       notifyAgents: false,
-      user: user
+      user
     },(err) => {
       if (err) {
         logger.error(err)
@@ -145,7 +172,7 @@ HostService.removeHostResource = function (input, done) {
   // find and remove host tasks
   logger.log('removing the host from the tasks')
   Task
-    .find({ host_id: host_id })
+    .find({ host_id })
     .exec(function(err, items){
       if (err) {
         logger.error(err)

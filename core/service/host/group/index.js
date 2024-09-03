@@ -99,6 +99,7 @@ const Service = module.exports = {
     const customer = input.customer
     const user = input.user
     const applyToSourceHost = input.applyToSourceHost
+    const autoremove_stopped = input.autoremove_stopped
 
     /**
      * @summary check if input.hosts contains the same id as source_host.
@@ -116,6 +117,7 @@ const Service = module.exports = {
       }
 
     const values = Object.assign({}, input, {
+      autoremove_stopped,
       files: [],
       tasks: [],
       resources: [],
@@ -131,6 +133,7 @@ const Service = module.exports = {
 
     logger.log('creating recipe with provided data')
     await Recipe.create({
+      autoremove_stopped,
       tags: [],
       public: false,
       customer: customer._id,
@@ -235,6 +238,7 @@ const Service = module.exports = {
     group.hosts = input.hosts
     group.description = input.description
     group.hostname_regex = input.hostname_regex
+    group.autoremove_stopped = input.autoremove_stopped
     await group.save()
 
     await new Promise((resolve, reject) => {
@@ -258,7 +262,7 @@ const Service = module.exports = {
       for (let i=0; i < delHosts.length; i++) {
         const host = await Host.findById(delHosts[i])
         if (host) {
-          unlinkHostFromTemplate(host, group, keepInstances)
+          Service.unlinkHostFromTemplate(host, group, keepInstances)
             .catch(err => {
               logger.error('error unlinking templates')
             })
@@ -325,6 +329,168 @@ const Service = module.exports = {
     }
 
     return
+  },
+
+  /**
+   * Given a host, remove all the task and monitor linked to the host group
+   *
+   * @author Facugon
+   * @param {Host} host
+   * @param {HostGroup} template
+   * @param {Boolean} keepInstances
+   * @param {Function} next
+   */
+  async unlinkHostFromTemplate (host, template, keepInstances) {
+    /**
+     * In all cases :
+     * host_id (old property) is a mongo db string id.
+     * template_id (new property) is a native ObjectID mongo type
+     *
+     * @summary Remove all Schema intances cloned from the template
+     * @param {Mongoose.Schema} Schema
+     * @param {Object} entityTemplate
+     * @param {Boolean} keepInstances
+     * @param {Function} done
+     */
+    const removeSchemaTemplatedInstances = async (Schema, template_id) => {
+      const entities = await Schema.find({
+        host_id: host._id.toString(),
+        template_id: template_id
+      })
+
+      if (!entities||entities.length===0) { return }
+
+      const promises = []
+      for (let i=0; i<entities.length; i++) {
+        if (keepInstances === true) {
+          promises.push( updateEntity(entities[i]) )
+        } else {
+          promises.push( removeEntity(entities[i]) )
+        }
+      }
+      return Promise.all(promises)
+    }
+
+    const updateEntity = (entity) => {
+      entity.template = null
+      entity.template_id = null
+      entity.last_update = new Date()
+      return entity.save()
+    }
+
+    const removeEntity = async (entity) => {
+      await entity.remove()
+      logger.log('entity %s removed', entity._type)
+      // remove all events attached to the entity
+      await Event.deleteMany({ emitter_id: entity._id })
+      logger.log('events removed')
+    }
+
+    const taskPromises = []
+    for (let taskTemplate of template.tasks) {
+      taskPromises.push(
+        removeSchemaTemplatedInstances(
+          Task,
+          taskTemplate._id
+        )
+      )
+    }
+    await Promise.all(taskPromises)
+
+    const resourcePromises = []
+    for (let resourceTemplate of template.resources) {
+      resourcePromises.push(
+        removeSchemaTemplatedInstances(
+          Resource,
+          resourceTemplate._id
+        )
+      )
+
+      // remove linked monitor
+      resourcePromises.push(
+        removeSchemaTemplatedInstances(
+          Monitor,
+          resourceTemplate.monitor_template_id
+        )
+      )
+    }
+    await Promise.all(resourcePromises)
+  },
+
+
+  /**
+   * Given a host, remove all the task and monitor linked to the host group
+   *
+   * In all cases
+   * > host_id (old property) is a mongo db string id.
+   * > template_id (new property) is a native ObjectID mongo type
+   *
+   * @author Facugon
+   * @param {Host} host
+   * @param {HostGroup} template
+   * @param {Function} next
+   */
+  destroyHostTemplateResources (host_id, template) {
+
+    const destroyHostResources = (OfThisModel, template_id) => {
+      return OfThisModel
+        .find({
+          host_id,
+          template_id: template_id
+        }, '_id')
+        .then(models => {
+          const ids = models.map(m => m._id)
+          return Promise.allSettled([
+            OfThisModel.deleteMany(filter),
+            Event.deleteMany({ emitter_id: { $in: ids } })
+          ])
+        })
+    }
+
+    const promises = []
+    for (let taskTemplate of template.tasks) {
+      promises.push(
+        destroyHostResources(
+          Task,
+          taskTemplate._id
+        )
+      )
+    }
+
+    for (let resourceTemplate of template.resources) {
+      promises.push(
+        destroyHostResources(
+          Resource,
+          resourceTemplate._id
+        )
+      )
+
+      // remove linked monitor
+      promises.push(
+        destroyHostResources(
+          Monitor,
+          resourceTemplate.monitor_template_id
+        )
+      )
+    }
+
+    promises.push(
+      HostGroup
+        .find({ hosts: host_id })
+        .then(groups => {
+          const promises = []
+          for (const group of groups) {
+            const idx = group.hosts.indexOf(host_id)
+            if (idx !== -1) {
+              group.hosts.splice(idx,1)
+              promises.push(group.save())
+            }
+          }
+          return Promise.allSettled(promises)
+        })
+    )
+
+    return Promise.allSettled(promises)
   }
 }
 
@@ -626,89 +792,6 @@ const findHost = (id, next) => {
     }
     next(null,host)
   })
-}
-
-/**
- * Given a host, remove all the task and monitor copied from the template
- *
- * @author Facugon
- * @param {Host} host
- * @param {HostGroup} template
- * @param {Boolean} keepInstances
- * @param {Function} next
- */
-const unlinkHostFromTemplate = async (host, template, keepInstances) => {
-  /**
-   * In all cases :
-   * host_id (old property) is a mongo db string id.
-   * template_id (new property) is a native ObjectID mongo type
-   *
-   * @summary Remove all Schema intances cloned from the template
-   * @param {Mongoose.Schema} Schema
-   * @param {Object} entityTemplate
-   * @param {Boolean} keepInstances
-   * @param {Function} done
-   */
-  const removeSchemaTemplatedInstances = async (Schema, template_id) => {
-    const entities = await Schema.find({
-      host_id: host._id.toString(),
-      template_id: template_id
-    })
-
-    if (!entities||entities.length===0) { return }
-
-    const promises = []
-    for (let i=0; i<entities.length; i++) {
-      if (keepInstances === true) {
-        promises.push( updateEntity(entities[i]) )
-      } else {
-        promises.push( removeEntity(entities[i]) )
-      }
-    }
-    return Promise.all(promises)
-  }
-
-  const updateEntity = (entity) => {
-    entity.template = null
-    entity.template_id = null
-    entity.last_update = new Date()
-    return entity.save()
-  }
-
-  const removeEntity = async (entity) => {
-    await entity.remove()
-    logger.log('entity %s removed', entity._type)
-    // remove all events attached to the entity
-    await Event.deleteMany({ emitter_id: entity._id })
-    logger.log('events removed')
-  }
-
-  const taskPromises = []
-  for (let taskTemplate of template.tasks) {
-    taskPromises.push(
-      removeSchemaTemplatedInstances(Task, taskTemplate._id)
-    )
-  }
-  await Promise.all(taskPromises)
-
-  const resourcePromises = []
-  for (let resourceTemplate of template.resources) {
-    resourcePromises.push(
-      removeSchemaTemplatedInstances(
-        Resource,
-        resourceTemplate._id
-      )
-    )
-
-    // remove linked monitor
-    resourcePromises.push(
-      removeSchemaTemplatedInstances(
-        Monitor,
-        resourceTemplate.monitor_template_id
-      )
-    )
-  }
-  await Promise.all(resourcePromises)
 }
 
 /**

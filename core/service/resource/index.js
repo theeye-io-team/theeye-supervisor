@@ -358,6 +358,7 @@ function Service (resource) {
       const isHost = (resource.type === MonitorConstants.RESOURCE_TYPE_HOST)
       if (isHost) {
         cancelAssignedJobsToHost(resource.host_id)
+        verifyStoppedHostAssignedTemplate(resource)
       }
     }
   }
@@ -877,8 +878,8 @@ Service.createFromTemplate = function(options) {
     input.monitor_template.name = 'Process List'
   }
 
-  var resource = generateResourceModel(input)
-  var monitor = generateMonitorModel(input)
+  let resource = generateResourceModel(input)
+  let monitor = generateMonitorModel(input)
 
   // the ids are generated as soon as the models are created.
   // dont need to save them before
@@ -1032,7 +1033,7 @@ const cancelAssignedJobsToHost = (host_id) => {
   }
 
   // search for jobs to cancel
-  logger.log('searching for jobs to cancel')
+  logger.log('searching jobs to cancel')
   App.jobDispatcher.fetchBy(filter, (err, jobs) => {
     if (err) return logger.error(err)
 
@@ -1045,4 +1046,20 @@ const cancelAssignedJobsToHost = (host_id) => {
       .filter(job => job.lifecycle === Lifecycle.ASSIGNED)
       .forEach(job => App.jobDispatcher.cancel({ job, user }))
   })
+}
+
+/**
+ * the stopped host resource is assigned to a template with autoremove_stopped agents
+ */
+const verifyStoppedHostAssignedTemplate = async (resource) => {
+  const host = await App.Models.Host.Host.findById(resource.host_id)
+  const host_id = host._id.toString()
+  // find a group with autoremove_stopped and completely erase the host
+  const groups = await App.Models.HostGroup.HostGroup.find({ hosts: host_id })
+  if (Array.isArray(groups) && groups.length > 0) { 
+    const group = groups.find(grp => grp.autoremove_stopped === true)
+    if (group) {
+      App.host.destroyHostResources(host_id)
+    }
+  }
 }
