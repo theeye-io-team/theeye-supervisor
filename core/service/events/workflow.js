@@ -236,6 +236,7 @@ const createWorkflowNodeJob = async ({ workflow, job, nodeW, workflow_job, argsV
 
   const { user, dynamic_settings } = await ifTriggeredByJobSettings(job)
   const nodeJob = await createTaskJob({
+    workflow_job: workflow_job,
     workflow_job_id: workflow_job._id,
     order: workflow_job.order,
     user,

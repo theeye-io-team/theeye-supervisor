@@ -383,6 +383,7 @@ class AbstractJob {
    */
   async create () {
     try {
+      verifyTaskBeforeExecution(this.task)
       await this.getWorkflow()
       await this.setupJobBasicProperties()
       await this.build()
@@ -436,7 +437,7 @@ class AbstractJob {
 
       await this.saveJob()
     } catch (err) {
-      logger.error(err)
+      //logger.error(err)
       await this.terminateBuild(err)
     }
     return this.job
@@ -638,13 +639,14 @@ const verifyArguments = async (input) => {
       })
       job.task_arguments_values = values
     } catch (err) {
-      if (err instanceof ErrorHandler.InvalidTaskArguments) {
-        if (TaskConstants.TYPE_NOTIFICATION !== task.type) {
-          job.task_arguments_values = inputArgsValues
-          throw err
-          //this.terminateBuild(err)
-        }
-      } else {
+      if (!err instanceof ErrorHandler.InvalidTaskArguments) {
+        throw err
+      }
+
+      // if it is a notification task ignore arguments errors
+      // will be executed using the default arguments
+      if (TaskConstants.TYPE_NOTIFICATION !== task.type) {
+        job.task_arguments_values = inputArgsValues
         throw err
       }
     }
@@ -860,3 +862,24 @@ JobsBuilderMap[ TaskConstants.TYPE_APPROVAL ] = ApprovalJob
 JobsBuilderMap[ TaskConstants.TYPE_DUMMY ] = DummyJob
 JobsBuilderMap[ TaskConstants.TYPE_NOTIFICATION ] = NotificationJob
 JobsBuilderMap[ TaskConstants.TYPE_WORKFLOW ] = WorkflowJob
+
+const verifyTaskBeforeExecution = (task) => {
+  //let taskData = await App.task.populate(task)
+  if (!task.customer) {
+    throw new Error(`FATAL. Task ${task._id} does not has a customer`)
+  }
+
+  if (taskRequireHost(task) && !task.host) {
+    throw new Error(`invalid task ${task._id} does not has a host assigned`)
+  }
+
+  return
+}
+
+const taskRequireHost = (task) => {
+  const res = (
+    task.type === TaskConstants.TYPE_SCRIPT ||
+    task.type === TaskConstants.TYPE_SCRAPER
+  )
+  return res
+}

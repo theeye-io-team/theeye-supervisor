@@ -334,6 +334,14 @@ module.exports = {
     wfjob.save()
     this.finishedWorkflowPostprocessing({ job: wfjob })
   },
+  async terminateWorkflowJob (wfJob) {
+    await App.Models.Job.Workflow.setActivePaths(wfJob._id, 0)
+    this.finishWorkflowJob(wfJob, {
+      lifecycle: LifecycleConstants.TERMINATED,
+      state: StateConstants.ERROR,
+      trigger_name: LifecycleConstants.TERMINATED
+    })
+  },
   /**
    *
    * @summary Finalize task execution. Save result and submit to elk
@@ -533,8 +541,6 @@ module.exports = {
       throw new ClientError('task is required')
     }
 
-    verifyTaskBeforeExecution(task)
-
     if (
       task.grace_time > 0 && ( // automatic origin
         input.origin === JobConstants.ORIGIN_WORKFLOW ||
@@ -548,13 +554,18 @@ module.exports = {
 
     await dispatchJobCreatedEvent(job, input)
 
-    if (workflow) {
-      // only available when the workflow is started
-      if (workflow_job) {
+    if (workflow_job) {
+      if (job.lifecycle === LifecycleConstants.TERMINATED) {
+        workflow_job.active_paths_counter = 0
+        // the job could not be started
+        await this.terminateWorkflowJob(workflow_job)
+      } else {
         workflow_job.active_paths_counter = 1 // there ir only one active path
         await App.Models.Job.Workflow.setActivePaths(workflow_job._id, 1)
       }
+    }
 
+    if (workflow) {
       if (workflow.autoremove_completed_jobs !== false) {
         removeExceededJobsCountByWorkflow(workflow, task)
       }
@@ -786,27 +797,6 @@ const getWorkflowJobsOrder = (workflow) => {
 
   // promise
   return count.exec().then(job => job?job.order + 1:0)
-}
-
-const verifyTaskBeforeExecution = (task) => {
-  //let taskData = await App.task.populate(task)
-  if (!task.customer) {
-    throw new Error(`FATAL. Task ${task._id} does not has a customer`)
-  }
-
-  if (taskRequireHost(task) && !task.host) {
-    throw new Error(`invalid task ${task._id} does not has a host assigned`)
-  }
-
-  return
-}
-
-const taskRequireHost = (task) => {
-  const res = (
-    task.type === TaskConstants.TYPE_SCRIPT ||
-    task.type === TaskConstants.TYPE_SCRAPER
-  )
-  return res
 }
 
 const allowedMultitasking = async (job) => {
