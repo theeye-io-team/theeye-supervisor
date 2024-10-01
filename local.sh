@@ -18,3 +18,4 @@ fi
 #npx nodemon $PWD/core/main.js
 npx nodemon ${1} $PWD/core/main.js
 
+
