@@ -50,9 +50,6 @@ function WorkflowSchema (props) {
     // jobs behaviour can change during run time
     allows_dynamic_settings: { type: Boolean },
 
-    // @TODO REMOVE
-    acl_dynamic: { type: Boolean, default: false },
-
     // default schema type
     _type: {
       type: String,
