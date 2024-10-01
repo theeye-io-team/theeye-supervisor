@@ -73,8 +73,6 @@ module.exports = {
   // will be only visible to the user/owner and the assigned_users.
   // if "true" acl will be empty on creation
   empty_viewers: { type: Boolean, default: false },
-  // @TODO REMOVE
-  acl_dynamic: { type: Boolean, default: false },
 
   // can be canceled by users
   cancellable: { type: Boolean, 'default': true },
