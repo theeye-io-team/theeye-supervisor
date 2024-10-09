@@ -129,29 +129,28 @@ module.exports = {
   },
   getBuffer (file, next) {
     logger.log('obtaining file from storage')
-    this.getStream(file, (err, readstream) => {
-      if (err) { return next(err) }
-
-      var bufs = []
-      readstream.on('error', function(err){
+    this.getStream(file).then(stream => {
+      const bufs = []
+      stream.on('error', function(err){
         logger.error(err)
         next(err)
-        readstream.destroy()
+        stream.destroy()
       })
-      readstream.on('data', function(data){
+      stream.on('data', function(data){
         bufs.push(data)
       })
       // no more data to consume
-      readstream.on('end', function(){
-        var buf = Buffer.concat(bufs)
+      stream.on('end', function(){
+        let buf = Buffer.concat(bufs)
         logger.log('file data consumed')
         next(null,buf)
       })
       // stream consumed totally or terminated
-      readstream.on('close', function(){
+      stream.on('close', function(){
         logger.log('file stream closed')
       })
     })
+      .catch(next)
   }
 }
 
