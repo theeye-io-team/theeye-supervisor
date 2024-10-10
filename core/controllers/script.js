@@ -67,22 +67,21 @@ const controller = {
     next()
   },
   download (req, res, next) {
-    var script = req.script;
+    const script = req.script;
 
-    ScriptService.getScriptStream(script, (err,stream) => {
-      if (err) {
-        logger.error(err.message)
-        res.send(500)
-      } else {
-        logger.log('streaming script to client');
+    ScriptService
+      .getScriptStream(script)
+      .then(stream => {
+        logger.log('streaming script to client')
 
-        var headers = {
+        const headers = {
           'Content-Disposition':'attachment; filename=' + script.filename,
         }
-        res.writeHead(200,headers);
+
+        res.writeHead(200, headers)
         stream.pipe(res);
         next()
-      }
-    })
+      })
+      .catch(res.sendError)
   }
 }
