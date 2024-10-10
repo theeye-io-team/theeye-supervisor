@@ -5,112 +5,109 @@ const zlib = require('zlib')
 const debug = require('debug')('eye:lib:store')
 const config = require('config')
 const systemConfig = config.get('system')
-const Stream = require('stream')
+const stream = require('stream')
 
 module.exports = {
   get () {
-    var driver = config.storage.driver
-    return driver === 'local' ? LocalStorage : S3Storage
+    const driver = config.storage.driver
+    return (driver === 'local') ? LocalStorage : S3Storage()
   }
 }
 
-const S3Storage = {
-  /**
-   *
-   * @param {Object} input
-   * @property {String} input.filename
-   * @property {String} input.storename
-   * @property {String} input.sourceOrigin source origin can be 'text' or 'file'
-   * @property {String} input.sourcePath if source is 'file', this is the original file
-   * @property {String} input.sourceContent if source is 'text', this is the content
-   *
-   */
-  save (input, next) {
-    //var file = input.script
-    const s3 = new AWS.S3({
-      apiVersion: '2006-03-01',
-      params: {
+const S3Storage = () => {
+
+  const s3 = new AWS.S3({
+    apiVersion: '2006-03-01',
+    region: config.integrations.aws.s3.region
+  })
+
+  return {
+    /**
+     *
+     * @param {Object} input
+     * @property {String} input.filename
+     * @property {String} input.storename
+     * @property {String} input.sourceOrigin source origin can be 'text' or 'file'
+     * @property {String} input.sourcePath if source is 'file', this is the original file
+     * @property {String} input.sourceContent if source is 'text', this is the content
+     *
+     */
+    save (input, next) {
+      //var file = input.script
+
+      let body
+      if (input.sourceOrigin === 'file') {
+        body = fs.createReadStream(input.sourcePath).pipe(zlib.createGzip())
+      } else if (input.sourceOrigin === 'text') {
+        var str = new stream.PassThrough()
+        str.write(input.sourceContent)
+        str.end()
+        body = str.pipe(zlib.createGzip())
+      }
+
+      const params = {
+        Body: body,
         Bucket: config.integrations.aws.s3.bucket,
         Key: input.filename // keyname ?
       }
-    })
 
-    let body
-    if (input.sourceOrigin === 'file') {
-      body = fs.createReadStream(input.sourcePath).pipe(zlib.createGzip())
-    } else if (input.sourceOrigin === 'text') {
-      var str = new Stream.PassThrough()
-      str.write(input.sourceContent)
-      str.end()
-      body = str.pipe(zlib.createGzip())
-    }
+      s3.upload(params)
+        .on('httpUploadProgress', function (evt) {
+          debug('upload progress %j', evt)
+        })
+        .send(function (error, data) {
+          if (error) {
+            debug('failed to create file in s3')
+            debug(error.message);
+            if (next) { next(error, null) }
+          } else {
+            if (next) { next(null, data) }
+          }
+        })
+    },
+    /**
+     * @param {Object} input
+     * @property {String} input.key
+     */
+    remove (file, next) {
+      next || (next = () =>{})
+      const { keyname } = file
 
-    s3.upload({ Body: body })
-      .on('httpUploadProgress', function (evt) {
-        debug('upload progress %j', evt)
-      })
-      .send(function (error, data) {
-        if (error) {
-          debug('failed to create file in s3')
-          debug(error.message);
-          if (next) { next(error, null) }
-        } else {
-          if (next) { next(null, data) }
-        }
-      })
-  },
-  /**
-   * @param {Object} input
-   * @property {String} input.key
-   */
-  remove (file, next) {
-    next || (next = () =>{})
-    const { keyname } = file
-
-    if (!keyname) {
-      return next( new Error('undefined keyname') )
-    }
-
-    let params = {
-      Bucket: config.integrations.aws.s3.bucket,
-      Key: file.keyname
-    }
-
-    var s3 = new AWS.S3({ params })
-    s3.deleteObject(params, function(error, data) {
-      if (error) {
-        debug('failed to remove file from s3 ');
-        debug(error.message);
-        next(error)
-      } else {
-        debug('file removed')
-        debug(data)
-        next(null, data)
+      if (!keyname) {
+        return next( new Error('undefined keyname') )
       }
-    });
-  },
-  getStream (key, customer_name, next) {
-    const params = {
-      Bucket: config.integrations.aws.s3.bucket,
-      Key: key
+
+      const params = {
+        Bucket: config.integrations.aws.s3.bucket,
+        Key: file.keyname
+      }
+
+      s3.deleteObject(params, function(error, data) {
+        if (error) {
+          debug('failed to remove file from s3 ');
+          debug(error.message);
+          next(error)
+        } else {
+          debug('file removed')
+          debug(data)
+          next(null, data)
+        }
+      });
+    },
+    async getStream (key) {
+      const params = {
+        Bucket: config.integrations.aws.s3.bucket,
+        Key: key
+      }
+
+      const getObject = promisify(s3.getObject).bind(s3)
+      const resp = await getObject(params)
+
+      const readstream = new stream.Readable()
+      readstream.push(resp.Body)
+      readstream.push(null)
+      return readstream.pipe(zlib.createGunzip())
     }
-
-    const s3 = new AWS.S3({ params })
-
-    s3.getObject(params)
-    .on('error', function (err) {
-      debug('s3 get error. %s', err)
-      next(err)
-    })
-    .createReadStream()
-    .pipe( zlib.createGunzip() )
-    .on('error', function (err) {
-      debug('gzip error. %s', err)
-      next(err)
-    })
-    .on('finish', function () {
-      next(null, this)
-    })
   }
 }
 
@@ -142,7 +139,7 @@ const LocalStorage = {
       next( err )
     }
   },
-  getStream (key, customerName, next) {
+  async getStream (key, customerName) {
     const storagePath = systemConfig.file_upload_folder
     let filepath
 
@@ -156,13 +153,11 @@ const LocalStorage = {
         fs.writeFileSync(filepath, 'EMPTY FILE CREATED')
       } else {
         //break
-        return next(err)
+        throw err
       }
     }
 
-    const stream = fs.createReadStream(filepath)
-    next(null, stream)
-    return stream
+    return fs.createReadStream(filepath)
   },
   remove (file, next) {
     next || (next = (() => {}))

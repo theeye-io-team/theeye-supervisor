@@ -367,11 +367,7 @@ const createFile = async (req, res) => {
  */
 const downloadFile = (req, res, next) => {
   const file = req.file
-  FileHandler.getStream(file, (error, stream) => {
-    if (error) {
-      return res.sendError(error)
-    }
-
+  FileHandler.getStream(file).then(stream => {
     logger.log('streaming file to client')
     const headers = {
       'Content-Disposition': 'attachment; filename=' + file.filename
@@ -379,6 +375,7 @@ const downloadFile = (req, res, next) => {
     res.writeHead(200,headers)
     stream.pipe(res)
   })
+    .catch(res.sendError)
 }
 
 /**
