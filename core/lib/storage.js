@@ -7,6 +7,8 @@ const config = require('config')
 const systemConfig = config.get('system')
 const stream = require('stream')
 
+const { promisify } = require('util')
+
 module.exports = {
   get () {
     const driver = config.storage.driver
