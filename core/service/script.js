@@ -147,11 +147,7 @@ module.exports = {
       });
     });
   },
-  getScriptStream: function(script,next) {
-    storage.getStream(
-      script.keyname,
-      script.customer_name,
-      next
-    );
+  getScriptStream (script) {
+    return storage.getStream(script.keyname)
   }
-};
+}
