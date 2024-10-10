@@ -1,16 +1,18 @@
 module.exports = {
-  order: { type: Number, default: 0 },
+  acl: [{ type: String }],
+  content_schema: { type: Object },
+  creation_date: { type: Date },
   customer_id: { type: String },
   customer_name: { type: String },
-  content_schema: { type: Object },
-  acl: [{ type: String }],
-  tags: { type: Array, default: [] },
   description: { type: String, default:'' },
-  filename: { type: String },
-  keyname: { type: String },
-  mimetype: { type: String },
   extension: { type: String },
-  size: { type: Number },
+  filename: { type: String },
+  keyname: { type: String }, // old property. @TODO: DEPRECATE
+  last_update: { type: Date },
   md5: { type: String, default: null },
-  //public: { type: Boolean, default: false },
+  mimetype: { type: String },
+  order: { type: Number, default: 0 },
+  size: { type: Number },
+  storage_key: { type: String }, // new property
+  tags: { type: Array, default: [] },
 }

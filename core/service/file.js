@@ -2,7 +2,6 @@ const after = require('lodash/after')
 const isDataUrl = require('valid-data-url')
 const Task = require("../entity/task").Entity;
 const logger = require('../lib/logger')('service:file');
-const storage = require('../lib/storage').get();
 const FileHandler = require('../lib/file')
 const crypto = require('crypto')
 
@@ -10,14 +9,22 @@ const FileModel = require('../entity/file')
 const Monitor = require('../entity/monitor').Entity
 
 module.exports = {
+  //@TODO 
+  /**
+   * @todo REMOVE IS ONLY REMOVING THE LAST REVISION OF THE FILE
+   * @todo PREVIOUS REVISIONS OF A FILE ARE NOT LINKED TO THE FILE MODEL
+   *
+   */
   remove (input, next) {
     next || (next = () => {})
     const { file } = input
     FileModel.File.deleteOne({ _id: file._id }, (err) => {
       if (err) { return next(err) }
-      storage.remove(file, (err, data) => {
-        if (err) { logger.error(err) }
-      })
+
+      FileHandler
+        .remove(file)
+        .catch(err => logger.error(err))
+
       next()
     })
   },
@@ -109,20 +116,40 @@ module.exports = {
       template_id: template._id
     })
 
-    delete data._id
-    delete data.md5
-    delete data.keyname
+    //delete data._id
+    //delete data.md5
+    //delete data.keyname
+    //delete data.storage_key
 
-    let text = fileDataDecode(template.data)
+    const text = fileDataDecode(template.data)
 
-    this.createFromText({
+    const params = {
       text,
       metadata: data,
       storename: customer.name,
       filename: data.filename
-    }, done)
+    }
+
+    createFromText(params, done)
   },
-  create (input) {
+  /**
+   * @param Object input 
+   * @prop Customer customer
+   * @prop String filename
+   * @prop String pathname where to create the file
+   * @prop String mimetype
+   * @prop String extension
+   * @prop Number size
+   * @prop String description
+   * @prop String md5 
+   * @prop {Array<String>} tags
+   * @prop String data 
+   *
+   * @param Array options
+   * @prop Boolean encoded_data
+   * @prop String pathname scripts, jobs..
+   */
+  create (input, options) {
     return new Promise((resolve, reject) => {
       const { customer } = input
       const props = Object.assign({}, input, {
@@ -133,57 +160,19 @@ module.exports = {
         creation_date: new Date()
       })
 
-      delete props.id
-      delete props._id
-      delete props.template_id
-      delete props.template
+      const text = (options?.encoded_data) ? fileDataDecode(input.data) : input.data
 
-      let text = fileDataDecode(input.data)
-
-      this.createFromText({
+      const params = {
         text,
         metadata: props,
         filename: props.filename,
-        storename: customer.name
-      }, (err, file) => {
-        if (err) { reject(err) }
-        else { resolve(file) }
-      })
-    })
-  },
-  /**
-   *
-   * @summary create a file from it's content. all metadata must be provided. save content in the files storage and metadata in the database
-   * @param {Object} input
-   * @property {String} input.text file content to save in files storage
-   * @property {Object} input.metadata file metadata to save in database
-   * @property {String} input.storename files storage name
-   * @property {String} input.filename file name
-   *
-   */
-  createFromText (input, done) {
-    const { text, storename, filename = 'unknown', metadata } = input
-    logger.log('saving file in the store')
-
-    FileHandler.storeText({ storename, filename, text }, (err, storeData) => {
-      if (err) {
-        logger.error(err)
-        return done(err)
+        storename: customer.name,
+        pathname: options.pathname
       }
 
-      const props = Object.assign({}, metadata)
-      props.keyname = storeData.keyname
-      props.md5 = crypto
-        .createHash('md5')
-        .update(text)
-        .digest('hex')
-
-      props._type = 'Script' // force to create all files as scripts
-
-      const script = FileModel.Script(props)
-      script.save( (err, model) => {
-        if (err) { logger.error(err) }
-        done(err, model)
+      createFromText(params, (err, file) => {
+        if (err) { reject(err) }
+        else { resolve(file) }
       })
     })
   },
@@ -193,7 +182,6 @@ module.exports = {
     // the original file or a template
     const fileId = (fileSerial._id || fileSerial.id)
     if (fileId) {
-
       // the original file is in this organization
       file = await FileModel.File.findOne({
         customer_id: customer._id.toString(),
@@ -204,12 +192,10 @@ module.exports = {
       })
 
       if (file) { return file }
-
     }
 
     // source_model_id
     if (fileSerial.source_model_id) {
-
       // a file was already created using the same template
       file = await FileModel.File.findOne({
         customer_id: customer._id.toString(),
@@ -217,12 +203,15 @@ module.exports = {
       })
 
       if (file) { return file }
-
     }
 
     // file fingerprint
-    if (fileSerial.md5 && fileSerial.size && fileSerial.extension && fileSerial.mimetype) {
-
+    if (
+      fileSerial.md5 &&
+      fileSerial.size &&
+      fileSerial.extension &&
+      fileSerial.mimetype
+    ) {
       // search using the metadata and fingerprint
       file = await FileModel.File.findOne({
         customer_id: customer._id.toString(),
@@ -233,7 +222,6 @@ module.exports = {
       })
 
       if (file) { return file }
-
     }
 
     // no more options
@@ -297,4 +285,75 @@ const fileDataDecode = (data) => {
     text = `Cannot decode the script. Invalid DataUrl encode, must be base64 encoded. Error: ${err.message}`
   }
   return text
+}
+
+/**
+ *
+ * @summary create a file from it's content.
+ * all metadata must be provided. 
+ * save the content in the storage and the metadata in the database
+ *
+ * @param {Object} input
+ * @property {String} input.text file content to save in files storage
+ * @property {Object} input.metadata file metadata to save in database
+ * @property {String} input.storename files storage name
+ * @property {String} input.filename file name
+ * @property {String} input.type file type
+ *
+ */
+const createFromText = (input, done) => {
+  const {
+    text,
+    storename,
+    filename,
+    pathname = 'scripts',
+    metadata
+  } = input
+
+  let type = (pathname === 'scripts') ? 'Script' : 'File'
+  switch (pathname) {
+    case 'scripts': type = 'Script'; break;
+    case 'outputs': type = 'Output'; break;
+    default: type = 'File'
+  }
+  logger.log(`creating a ${type} file`)
+
+  // remove 
+  delete metadata._id
+  delete metadata.id
+  delete metadata.md5
+  delete metadata.keyname
+  delete metadata.storage_key
+  delete metadata.template_id
+  delete metadata.template
+
+  const props = Object.assign({}, metadata)
+  props._type = type
+  props.md5 = crypto
+    .createHash('md5')
+    .update(text)
+    .digest('hex')
+
+  const file = FileModel.FactoryCreate(props)
+
+  const params = {
+    storename,
+    pathname,
+    filename: file._id.toString(),
+    text
+  }
+
+  logger.log('saving file in the store')
+  FileHandler.storeText(params, (err, storeData) => {
+    if (err) {
+      logger.error(err)
+      return done(err)
+    }
+
+    file.storage_key = storeData.storage_key
+    file.save( (err, model) => {
+      if (err) { logger.error(err) }
+      done(err, model)
+    })
+  })
 }

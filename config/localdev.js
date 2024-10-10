@@ -7,6 +7,7 @@ const { join } = require('path')
 module.exports = {
   storage: {
     driver: "local"
+    //driver: "s3"
   },
   mongo: {
     uri: "mongodb://127.0.0.1/theeye?retryWrites=true&w=majority",
