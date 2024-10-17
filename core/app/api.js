@@ -64,8 +64,8 @@ module.exports = function () {
   server.use(plugins.queryParser())
   server.use(plugins.bodyParser())
 
-  const sendError = (req, res, next) => {
-    return (err, next) => {
+  const sendError = (req, res) => {
+    return (err) => {
       if (err.name == 'ValidationError') {
         res.send(400, err)
       } else if (err instanceof ErrorHandler.ClientError || err.statusCode < 500) {
@@ -83,7 +83,7 @@ module.exports = function () {
 
         res.send(500, 'Internal Server Error')
       }
-      if (next) { next() }
+      //if (next) { next() }
     }
   }
 
