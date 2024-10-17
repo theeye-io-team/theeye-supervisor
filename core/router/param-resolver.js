@@ -16,7 +16,7 @@ module.exports = {
     const entityName = (options.entity||options.param)
     const targetName = (options.into||paramName)
 
-    return async function (req, res) {
+    return function (req, res, next) {
       try {
         const customer = req.customer
         let _id = (
@@ -59,7 +59,7 @@ module.exports = {
         )
 
         // filter by customer
-        const dbDoc = await Entity.findOne({
+        Entity.findOne({
           _id, 
           $or: [
             { customer: customer._id },
@@ -67,21 +67,20 @@ module.exports = {
             { customer_id: customer._id },
             { customer_name: customer.name }
           ]
-        })
+        }).then(dbDoc => {
+          if (!dbDoc) {
+            if (options.required) {
+              throw new ClientError(`${options.param } not found`, { statusCode: 404 })
+            }
 
-        if (!dbDoc) {
-          if (options.required) {
-            throw new ClientError(`${options.param } not found`, { statusCode: 404 })
+            req[targetName] = null
+            return 
           }
 
-          req[targetName] = null
-          return 
-        }
-
-
-        logger.debug('instances of "%s" found', options.param)
-        req[targetName] = dbDoc
-        return
+          logger.debug('instances of "%s" found', options.param)
+          req[targetName] = dbDoc
+          next()
+        })
       } catch (err) {
         res.sendError(err)
       }
