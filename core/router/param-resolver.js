@@ -37,50 +37,48 @@ module.exports = {
           }
 
           req[targetName] = null
-          return 
-        }
-
-        if (!isMongoId(_id)) {
+          return next()
+        } else if (!isMongoId(_id)) {
           if (options.required) {
             throw new ClientError(`${options.param} invalid value`)
           }
 
           req[targetName] = null
-          return 
-        }
+          return next()
+        } else {
+          logger.debug('resolving "%s" with id "%s"', targetName, _id)
 
-        logger.debug('resolving "%s" with id "%s"', targetName, _id)
+          const EntityModule = require('../entity/' + entityName)
+          const Entity = (
+            EntityModule.Entity || 
+            EntityModule[ firstToUpper(entityName) ] || 
+            EntityModule
+          )
 
-        const EntityModule = require('../entity/' + entityName)
-        const Entity = (
-          EntityModule.Entity || 
-          EntityModule[ firstToUpper(entityName) ] || 
-          EntityModule
-        )
+          // filter by customer
+          Entity.findOne({
+            _id, 
+            $or: [
+              { customer: customer._id },
+              { customer_id: customer._id.toString() },
+              { customer_id: customer._id },
+              { customer_name: customer.name }
+            ]
+          }).then(dbDoc => {
+            if (!dbDoc) {
+              if (options.required) {
+                throw new ClientError(`${options.param } not found`, { statusCode: 404 })
+              }
 
-        // filter by customer
-        Entity.findOne({
-          _id, 
-          $or: [
-            { customer: customer._id },
-            { customer_id: customer._id.toString() },
-            { customer_id: customer._id },
-            { customer_name: customer.name }
-          ]
-        }).then(dbDoc => {
-          if (!dbDoc) {
-            if (options.required) {
-              throw new ClientError(`${options.param } not found`, { statusCode: 404 })
+              req[targetName] = null
+              return next()
             }
 
-            req[targetName] = null
-            return 
-          }
-
-          logger.debug('instances of "%s" found', options.param)
-          req[targetName] = dbDoc
-          next()
-        })
+            logger.debug('instances of "%s" found', options.param)
+            req[targetName] = dbDoc
+            return next()
+          })
+        }
       } catch (err) {
         res.sendError(err)
       }
