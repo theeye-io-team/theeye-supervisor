@@ -312,7 +312,7 @@ const createFile = async (req, res) => {
   try {
     const customer = req.customer
     const file = req.files?.file
-    if (!fileUploaded) {
+    if (!file) {
       throw new ClientError('file required')
     }
     const params = req.params || {}
