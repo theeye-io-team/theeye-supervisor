@@ -306,9 +306,9 @@ const controller = {
       }
     })
   },
-  get (req, res, next) {
+  async get (req, res) {
     res.send(200, req.indicator)
-    next()
+    return
   },
   async changeState (req, res) {
     try {
