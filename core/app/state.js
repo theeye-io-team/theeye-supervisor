@@ -1,13 +1,49 @@
 
+const logger = require('../lib/logger')(':app:state')
 const Constants = require('../constants')
 const TopicsConstants = require('../constants/topics')
+const ErrorHandler = require('../lib/error-handler')
 
 module.exports = (App) => {
+
+  const handlers = {
+    postUpdate (name) {
+      const topic = TopicsConstants[name].crud
+      const operation = Constants.UPDATE
+      return middleware(name, topic, operation)
+    },
+    postReplace (name) {
+      const topic = TopicsConstants[name].crud
+      const operation = Constants.REPLACE
+      return middleware(name, topic, operation)
+    },
+    postRemove (name) {
+      const topic = TopicsConstants[name].crud
+      const operation = Constants.DELETE
+        return middleware(name, topic, operation)
+    },
+    postCreate (name) {
+      const topic = TopicsConstants[name].crud
+      const operation = Constants.CREATE
+      return middleware(name, topic, operation)
+    }
+  }
+
   const middleware = (name, topic, operation) => {
     return (req, res, next) => {
-      const model = req[name]
-      const { user, customer } = req
-      broadcastStateChanges(topic, operation, customer, user, model)
+      try {
+        const model = req[name]
+        if (!model) {
+          throw new ErrorHandler.ServerError(`req[${name}] is not defined. cannot broadcast state change`)
+        }
+        const { user, customer } = req
+        broadcastStateChanges(topic, operation, customer, user, model)
+      } catch (err) {
+        logger.error(err)
+        const errorHandler = new ErrorHandler()
+        errorHandler.sendExceptionAlert(err, req)
+      }
+      // continue with the next middleware anyway
       next()
     }
   }
@@ -42,27 +78,6 @@ module.exports = (App) => {
     App.eventDispatcher.dispatch({ topic, event: engineEvent, model })
   }
 
-  return {
-    postUpdate (name) {
-      const topic = TopicsConstants[name].crud
-      const operation = Constants.UPDATE
-      return middleware(name, topic, operation)
-    },
-    postReplace (name) {
-      const topic = TopicsConstants[name].crud
-      const operation = Constants.REPLACE
-      return middleware(name, topic, operation)
-    },
-    postRemove (name) {
-      const topic = TopicsConstants[name].crud
-      const operation = Constants.DELETE
-        return middleware(name, topic, operation)
-    },
-    postCreate (name) {
-      const topic = TopicsConstants[name].crud
-      const operation = Constants.CREATE
-      return middleware(name, topic, operation)
-    }
-  }
+  return handlers
 
 }

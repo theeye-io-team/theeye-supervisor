@@ -10,7 +10,7 @@ class Dispatcher extends EventEmitter {
 
   dispatch (payload) {
     if (!Array.isArray(payload.data)) {
-      logger.error(`WARNING! array expected but ${typeof payload.data} was received instead`)
+      logger.error(`Invalid event data type: ${typeof payload.data}. [${payload.topic}] ${payload.event.name}`)
     }
 
     logger.log('dispatching event %o', payload)
