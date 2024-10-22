@@ -29,16 +29,16 @@ function updateScriptFile (file, script, doneFn) {
 
     logger.log('saving file to media storage');
     storage.save({
-      'customer_name': script.customer_name,
-      'script': file
-    },function(error,data){
-      if(error) {
+      customer_name: script.customer_name,
+      script: file
+    }, function (error,data) {
+      if (error) {
         logger.error('cannot save script into storage');
         logger.error(error);
         return doneFn(error);
       }
       return doneFn(null, file);
-    });
+    })
   }
   else doneFn();
 }
@@ -147,7 +147,7 @@ module.exports = {
       });
     });
   },
-  getScriptStream (script) {
-    return storage.getStream(script.keyname)
+  getScriptStream (script, customer_name) {
+    return storage.getStream(script.keyname, customer_name)
   }
 }

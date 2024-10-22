@@ -70,7 +70,7 @@ const controller = {
     const script = req.script;
 
     ScriptService
-      .getScriptStream(script)
+      .getScriptStream(script, req.customer.name)
       .then(stream => {
         logger.log('streaming script to client')
 
