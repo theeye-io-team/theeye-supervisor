@@ -9,6 +9,7 @@ module.exports = {
     options||(options={})
 
     if (!options.param) {
+      // internal code exception. api will not start
       throw new Error('param name is required')
     }
 
@@ -16,72 +17,77 @@ module.exports = {
     const entityName = (options.entity||options.param)
     const targetName = (options.into||paramName)
 
-    return function (req, res, next) {
-      try {
-        const customer = req.customer
-        let _id = (
-          req.params[paramName] ||
-          (req.body && req.body[paramName]) ||
-          req.query[paramName]
-        )
+    const getRequestedEntityById = async (req) => {
+      const customer = req.customer
+      let _id = (
+        req.params[paramName] ||
+        (req.body && req.body[paramName]) ||
+        req.query[paramName]
+      )
 
-        if (isObject(_id)) {
-          _id = ( _id._id || _id.id || undefined )
-        } else if (typeof _id !== 'string') {
-          _id = undefined
-        }
-
-        if (!_id) {
-          if (options.required) {
-            throw new ClientError(`${options.param} is required`)
-          }
-
-          req[targetName] = null
-          return next()
-        } else if (!isMongoId(_id)) {
-          if (options.required) {
-            throw new ClientError(`${options.param} invalid value`)
-          }
-
-          req[targetName] = null
-          return next()
-        } else {
-          logger.debug('resolving "%s" with id "%s"', targetName, _id)
-
-          const EntityModule = require('../entity/' + entityName)
-          const Entity = (
-            EntityModule.Entity || 
-            EntityModule[ firstToUpper(entityName) ] || 
-            EntityModule
-          )
-
-          // filter by customer
-          Entity.findOne({
-            _id, 
-            $or: [
-              { customer: customer._id },
-              { customer_id: customer._id.toString() },
-              { customer_id: customer._id },
-              { customer_name: customer.name }
-            ]
-          }).then(dbDoc => {
-            if (!dbDoc) {
-              if (options.required) {
-                throw new ClientError(`${options.param } not found`, { statusCode: 404 })
-              }
-
-              req[targetName] = null
-              return next()
-            }
-
-            logger.debug('instances of "%s" found', options.param)
-            req[targetName] = dbDoc
-            return next()
-          })
-        }
-      } catch (err) {
-        res.sendError(err)
+      if (isObject(_id)) {
+        _id = ( _id._id || _id.id || undefined )
+      } else if (typeof _id !== 'string') {
+        _id = undefined
       }
+
+      // not set
+      if (!_id) {
+        if (options.required) {
+          throw new ClientError(`${options.param} is required`)
+        }
+        return null
+      }
+
+      // invalid format
+      if (!isMongoId(_id)) {
+        if (options.required) {
+          throw new ClientError(`${options.param} invalid value`)
+        }
+        return null
+      }
+
+      logger.debug('resolving "%s" with id "%s"', targetName, _id)
+
+      const EntityModule = require('../entity/' + entityName)
+      const Entity = (
+        EntityModule.Entity || 
+        EntityModule[ firstToUpper(entityName) ] || 
+        EntityModule
+      )
+
+      // filter by customer
+      const dbDoc = await Entity.findOne({
+        _id, 
+        $or: [
+          { customer: customer._id },
+          { customer_id: customer._id.toString() },
+          { customer_id: customer._id },
+          { customer_name: customer.name }
+        ]
+      })
+
+      // entity not found
+      if (!dbDoc) {
+        if (options.required) {
+          throw new ClientError(`${options.param } not found`, { statusCode: 404 })
+        }
+        return null
+      }
+
+      logger.debug('entity instance of "%s" found', options.param)
+      return dbDoc
+    }
+
+    // should return a callback form function.
+    // async fn breaks restify middlewares
+    return function (req, res, next) {
+      getRequestedEntityById(req, res)
+        .then(entity => {
+          req[targetName] = entity
+          next()
+        })
+        .catch(res.sendError)
     }
   },
   idToEntity (options) {
