@@ -292,11 +292,8 @@ const updateAssignee = (job, members) => {
   job.user_inputs_members = members.map(mem => mem.id)
 }
 
-const ensureObserversAccess = ({ job, empty_viewers, acl, acl_dynamic = false }) => {
-  if (
-    empty_viewers === true ||
-    acl_dynamic === true // @TODO remove
-  ) {
+const ensureObserversAccess = ({ job, empty_viewers, acl }) => {
+  if (empty_viewers === true) {
     job.acl = []
   } else {
     job.acl = acl
@@ -341,8 +338,7 @@ class WorkflowJob {
     ensureObserversAccess({
       acl: workflow.acl,
       job: wJob,
-      empty_viewers: (input.empty_viewers || workflow.empty_viewers),
-      acl_dynamic: workflow.acl_dynamic
+      empty_viewers: (input.empty_viewers || workflow.empty_viewers)
     })
 
     //

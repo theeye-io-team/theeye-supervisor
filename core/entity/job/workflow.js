@@ -57,8 +57,6 @@ const props = {
   // will only be visible to assigned users.
   // if "true" job acl will be empty on creation
   empty_viewers: { type: Boolean, default: false }, // if "true" acl will be empty on creation
-  // @TODO REMOVE
-  acl_dynamic: { type: Boolean, default: false },
   active_paths_counter: { type: Number, default: undefined }
 }
 
