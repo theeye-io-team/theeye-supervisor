@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.15.2](https://github.com/theeye/theeye-supervisor/compare/4.15.1...4.15.2) (2025-01-04)
+
+
+### Bug Fixes
+
+* hotfix using return of res.send in async middleware ([#132](https://github.com/theeye/theeye-supervisor/issues/132)) ([ddd04ad](https://github.com/theeye/theeye-supervisor/commit/ddd04adff26bcd558b62fb79cc4ecee772189507))
+* monitoring nested monitors. code and queries ([cb2e2c8](https://github.com/theeye/theeye-supervisor/commit/cb2e2c8206dfabfdf2994e33db91e1de5e4ea23a))
+
 ### [4.15.1](https://github.com/theeye/theeye-supervisor/compare/4.15.0...4.15.1) (2024-06-19)
 
 
