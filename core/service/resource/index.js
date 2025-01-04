@@ -738,7 +738,7 @@ Service.remove = function (input, done) {
           if (err) logger.error(err)
         })
 
-        if (input.notifyAgents) {
+        if (input.notifyAgents && monitor.host_id) {
           App.jobDispatcher.createAgentUpdateJob(monitor.host_id)
         }
 

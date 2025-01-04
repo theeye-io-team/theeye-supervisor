@@ -607,6 +607,8 @@ module.exports = {
     return job
   },
   async createAgentUpdateJob (host_id) {
+    if (!host_id) { return null }
+
     const host = await App.Models.Host.Entity.findById(host_id)
     if (!host) {
       throw new Error('Host not found')
