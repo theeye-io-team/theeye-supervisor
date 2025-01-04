@@ -65,8 +65,6 @@ const checkNestedMonitor = async (props) => {
     return
   }
 
-  resource.monitor = monitor  
-
   const manager = new ResourceService(resource)
 
   const ids = monitor.config
