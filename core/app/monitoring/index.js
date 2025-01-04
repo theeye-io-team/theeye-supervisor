@@ -12,14 +12,7 @@ module.exports = function () {
     logger.log('WARNING! Monitoring service is disabled via config')
   } else {
     logger.log('initializing monitoring')
-
-    monitorsCheck({
-      check_interval: config.monitor.check_interval,
-      agent_keep_alive: config.agent.core_workers.host_ping.looptime
-    })
-
-    nestedCheck({
-      check_interval: config.monitor.check_interval
-    })
+    monitorsCheck()
+    nestedCheck()
   }
 }
