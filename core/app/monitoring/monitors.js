@@ -99,10 +99,8 @@ const checkResourcesState = async (job) => {
   const t0 = performance.now()
   let checksCount = 0
   for (let resource of resources) {
-    if (resource.monitor) {
-      checksCount++
-      await checkRunningMonitors(resource)
-    }
+    checksCount++
+    await checkRunningMonitors(resource)
   }
 
   const t1 = performance.now()
