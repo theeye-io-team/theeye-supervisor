@@ -24,12 +24,26 @@ module.exports = () => {
 const checkResourcesState = async (job) => {
   logger.debug('***** CHECKING MONITORS STATE *****')
 
+  // to avoid checking resources that has been recently updated
+  const threshold = App.config.monitor.check_threshold || 5000 // milliseconds
+
   const resources = await Resource.aggregate([
     {
       $match: {
         enable: true,
         state: { $ne: MonitorConstants.RESOURCE_STOPPED },
-        type: { $ne: MonitorConstants.RESOURCE_TYPE_NESTED }
+        type: { $ne: MonitorConstants.RESOURCE_TYPE_NESTED },
+        $expr: {
+          $or: [
+            { $eq: ["$last_update", null] },  // Never updated
+            {
+              $lt: [
+                "$last_update",
+                { $subtract: [ new Date(), threshold ] }
+              ]
+            }
+          ]
+        }
       }
     }, {
       $lookup: {
@@ -56,28 +70,22 @@ const checkResourcesState = async (job) => {
     },
     {
       $match: {
-        $and: [
-          { "monitor.looptime": { $exists: true } },  // This implicitly checks for monitor too
-          {
-            $expr: {
-              $or: [
-                { $eq: ["$last_check", null] },  // Never checked
-                {
-                  $lt: [
-                    {
-                      $add: [
-                        { $ifNull: ["$last_check", new Date(0)] },
-                        5000,  // 5000ms buffer
-                        "$monitor.looptime"
-                      ]
-                    },
-                    new Date()
-                  ]
+        "monitor.looptime": { $exists: true },  // This implicitly checks for monitor too
+        $expr: {
+          $or: [
+            { $eq: ["$last_check", null] },  // Never checked
+            { $lt: [
+              "$last_check",
+              {
+                $dateSubtract: {
+                  startDate: "$$NOW",
+                  unit: "millisecond",
+                  amount: { $toLong: "$monitor.looptime" }
                 }
-              ]
-            }
-          }
-        ]
+              }
+            ] }
+          ]
+        }
       }
     },
     {
@@ -145,12 +153,10 @@ const checkResourceMonitorStatus = async (resource) => {
 }
 
 const checkHostResourceStatus = async (resource) => {
-  const agent_ping_interval = App.config.agent.core_workers.host_ping.looptime
-
   logger.debug('checking host resource %s', resource.name)
   const trigger = triggerAlert(
     resource.last_update,
-    agent_ping_interval,
+    resource.monitor.looptime,
     resource.fails_count,
     App.config.monitor.fails_count_alert
   )
@@ -202,11 +208,10 @@ function triggerAlert(
     'time elapsed (mins)': (timeElapsed / 1000 / 60)
   })
 
-  if (loopsElapsed >= 2) {
-    if (failsCount === 0) return true
-    if ((loopsElapsed - failsCount) === 1) return true
-    if (loopsElapsed > failsCountThreshold) return true
-    return false
-  }
+  // Only trigger alert if:
+  // 1. We've missed more loops than the failsCountThreshold
+  // 2. Or if the current fails count indicates we've missed consecutive checks
+  if (loopsElapsed > failsCountThreshold) return true
+  if (loopsElapsed === failsCount + 1) return true
   return false
 }

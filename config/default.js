@@ -73,8 +73,11 @@ module.exports = {
    *
    */
   monitor: {
+    // millis
+    check_threshold: 5000,
     fails_count_alert: 3,
     disabled: false,
+    // millis
     check_interval: 10000
   },
   agent: {
