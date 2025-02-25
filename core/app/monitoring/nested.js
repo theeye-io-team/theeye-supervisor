@@ -12,15 +12,13 @@ module.exports = () => {
   App.scheduler.agenda.define(
     'nested-monitoring',
     { lockLifetime: (5 * 60 * 1000) }, // max lock
-    (job) => {
-      return checkNestedMonitorsState()
-    }
+    checkNestedMonitorsState
   )
 
   App.scheduler.agenda.every(`${interval} seconds`, 'nested-monitoring')
 }
 
-const checkNestedMonitorsState = async () => {
+const checkNestedMonitorsState = async (job) => {
   logger.debug('***** CHECKING NESTED MONITORS STATE *****')
   const resources = await Resource.aggregate([
     {
@@ -40,12 +38,19 @@ const checkNestedMonitorsState = async () => {
     }
   ])
 
+  logger.debug(`%s active nested monitors to checks`, resources.length)
   if (resources.length === 0) { return }
 
-  logger.debug(`running ${resources.length} checks`)
+  const t0 = performance.now()
+
   for (let resource of resources) {
     await checkNestedMonitor(resource)
   }
+
+  const t1 = performance.now()
+  const tt = (t1 - t0) / 1000
+
+  logger.log(`${resources.length} nested monitors checked after ${tt} ms`)
 }
 
 /**
