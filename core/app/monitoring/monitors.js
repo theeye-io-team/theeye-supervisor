@@ -1,179 +1,214 @@
-const after = require('lodash/after')
 const { performance } = require('perf_hooks') // node > 8 required
 
 const App = require('../../app')
 const ResourceService = require('../../service/resource')
 const MonitorConstants = require('../../constants/monitors')
-const ResourceMonitor = require('../../entity/monitor').Entity
 const Resource = require('../../entity/resource').Entity
 const logger = require('../../lib/logger')(':monitoring:monitors')
 
-module.exports = (options) => {
+module.exports = () => {
+  const check_interval = App.config.monitor.check_interval
+
   // to seconds
-  var interval = options.check_interval / 1000
+  const interval = check_interval / 1000
 
   App.scheduler.agenda.define(
     'monitoring',
     { lockLifetime: (5 * 60 * 1000) }, // max lock
-    (job, done) => { checkResourcesState(done) }
+    checkResourcesState
   )
   App.scheduler.agenda.every(`${interval} seconds`, 'monitoring')
 
-  function checkResourcesState (done) {
-    logger.debug('***** CHECKING AUTOMATIC MONITORS STATE *****')
-    Resource
-      .aggregate([
-        {
-          $match: {
-            enable: true,
-            state: { $ne: MonitorConstants.RESOURCE_STOPPED },
-            type: { $ne: MonitorConstants.RESOURCE_TYPE_NESTED }
-          }
-        }, {
-          $lookup: {
-            from: "resourcemonitors",
-            localField: "_id",
-            foreignField: "resource",
-            as: "monitor"
-          }
-        }, {
-          $unwind: "$monitor"
-        }
-      ])
-      .exec(function (err, resources) {
-        if (err) {
-          logger.error(err)
-          return done(err)
-        }
+}
 
-        const date = new Date()
-        const total = resources.length
-        logger.debug('%s active monitors to checks', total)
-        if (resources.length===0) { return done() }
+const checkResourcesState = async (job) => {
+  logger.debug('***** CHECKING MONITORS STATE *****')
 
-        let t0 = performance.now()
-        let checksCount = 0
-        const completed = after(total, () => {
-          let t1 = performance.now()
-          let tt = (t1 - t0) / 1000
-          logger.log(`${checksCount} monitores checked after ${tt} ms`)
-          done()
-        })
-
-        resources.forEach(resource => {
-          let last_check = (resource.last_check || new Date())
-          let check = (last_check.getTime() + resource.monitor.looptime + 5000) < date.getTime()
-          if (check) {
-            checksCount++
-            let model = Resource.hydrate(Object.assign({}, resource, { monitor: null }))
-            checkRunningMonitors(model, () => completed())
-          } else {
-            completed()
-          }
-        })
-      })
-  }
-
-  async function checkRunningMonitors (resource, done) {
-    try {
-      if (resource.type === 'host') {
-        await checkHostResourceStatus(resource, App.config.monitor)
-      } else {
-        await checkResourceMonitorStatus(resource, App.config.monitor)
+  const resources = await Resource.aggregate([
+    {
+      $match: {
+        enable: true,
+        state: { $ne: MonitorConstants.RESOURCE_STOPPED },
+        type: { $ne: MonitorConstants.RESOURCE_TYPE_NESTED }
       }
-      done()
-    } catch (err) {
-      logger.error(err)
-      done(err)
+    }, {
+      $lookup: {
+        from: "resourcemonitors",
+        localField: "_id",
+        foreignField: "resource",
+        pipeline: [
+          {
+            $match: {
+              enable: true
+            }
+          },
+          {
+            $project: {
+              _id: 1,
+              looptime: 1
+            }
+          }
+        ],
+        as: "monitor",
+      }
+    }, {
+      $unwind: "$monitor"
+    },
+    {
+      $match: {
+        $and: [
+          { "monitor.looptime": { $exists: true } },  // This implicitly checks for monitor too
+          {
+            $expr: {
+              $or: [
+                { $eq: ["$last_check", null] },  // Never checked
+                {
+                  $lt: [
+                    {
+                      $add: [
+                        { $ifNull: ["$last_check", new Date(0)] },
+                        5000,  // 5000ms buffer
+                        "$monitor.looptime"
+                      ]
+                    },
+                    new Date()
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      $project: {
+        _id: 1,
+        type: 1,
+        name: 1,
+        monitor: 1,
+        last_check: 1,
+        last_update: 1,
+        fails_count: 1
+      }
+    }
+  ])
+
+  logger.debug('%s active monitors to checks', resources.length)
+  if (resources.length === 0) { return }
+
+  const t0 = performance.now()
+  let checksCount = 0
+  for (let resource of resources) {
+    if (resource.monitor) {
+      checksCount++
+      await checkRunningMonitors(resource)
     }
   }
 
-  async function checkResourceMonitorStatus (resource, config) {
-    let monitor = ResourceMonitor.findOne({ enable: true, resource_id: resource._id })
+  const t1 = performance.now()
+  const tt = (t1 - t0) / 1000
 
-    if (!monitor) {
-      logger.debug('resource hasn\'t got any monitor')
-      return
-    }
+  logger.log(`${checksCount} monitores checked after ${tt} ms`)
+}
 
-    logger.debug('checking monitor "%s"', resource.name)
-
-    let trigger = triggerAlert(
-      resource.last_update,
-      monitor.looptime,
-      resource.fails_count,
-      config.fails_count_alert
-    )
-
-    if (trigger === true) {
-      const manager = new ResourceService(resource)
-      await manager.handleState({ state: MonitorConstants.RESOURCE_STOPPED })
+const checkRunningMonitors = async (resource) => {
+  try {
+    if (resource.type === MonitorConstants.RESOURCE_TYPE_HOST) {
+      await checkHostResourceStatus(resource)
     } else {
-      resource.last_check = new Date()
-      await resource.save()
+      await checkResourceMonitorStatus(resource)
     }
-    return
+  } catch (err) {
+    logger.error(err)
   }
+}
 
-  async function checkHostResourceStatus (resource, config) {
-    logger.debug('checking host resource %s', resource.name)
-    let trigger = triggerAlert(
-      resource.last_update,
-      options.agent_keep_alive,
-      resource.fails_count,
-      config.fails_count_alert
+const checkResourceMonitorStatus = async (resource) => {
+  logger.debug('checking monitor "%s"', resource.name)
+
+  const trigger = triggerAlert(
+    resource.last_update,
+    resource.monitor.looptime,
+    resource.fails_count,
+    App.config.monitor.fails_count_alert
+  )
+
+  if (trigger === true) {
+    const model = await Resource.findById(resource._id)
+    const manager = new ResourceService(model)
+    await manager.handleState({ state: MonitorConstants.RESOURCE_STOPPED })
+  } else {
+    await Resource.updateOne(
+      { _id: resource._id },
+      { $set: { last_check: new Date() } }
     )
-
-    if (trigger === true) {
-      const manager = new ResourceService(resource)
-      await manager.handleState({ state: MonitorConstants.RESOURCE_STOPPED })
-    } else {
-      resource.last_check = new Date()
-      await resource.save()
-    }
-    return
   }
+  return
+}
 
-  /**
-   *
-   * @param {Date} lastUpdate
-   * @param {Number} loopDuration
-   * @param {Number} failsCount
-   * @param {Number} failsCountThreshold
-   * @return {Boolean}
-   *
-   */
-  function triggerAlert (
-    lastUpdate,
-    loopDuration,
-    failsCount,
-    failsCountThreshold
-  ) {
-    // ensure parameters
-    if (!(lastUpdate instanceof Date)) return true
-    if (isNaN(loopDuration = parseInt(loopDuration))) return true
-    if (isNaN(failsCount = parseInt(failsCount))) return true
-    if (isNaN(failsCountThreshold = parseInt(failsCountThreshold))) return true
+const checkHostResourceStatus = async (resource) => {
+  const agent_ping_interval = App.config.agent.core_workers.host_ping.looptime
 
-    if (!lastUpdate) return true
+  logger.debug('checking host resource %s', resource.name)
+  const trigger = triggerAlert(
+    resource.last_update,
+    agent_ping_interval,
+    resource.fails_count,
+    App.config.monitor.fails_count_alert
+  )
 
-    var timeElapsed = Date.now() - lastUpdate.getTime()
-    var loopsElapsed = Math.floor(timeElapsed / loopDuration)
+  if (trigger === true) {
+    const model = await Resource.findById(resource._id)
+    const manager = new ResourceService(model)
+    await manager.handleState({ state: MonitorConstants.RESOURCE_STOPPED })
+  } else {
+    await Resource.updateOne(
+      { _id: resource._id },
+      { $set: { last_check: new Date() } }
+    )
+  }
+  return
+}
 
-    logger.debug({
-      'fails count': failsCount,
-      'last update': lastUpdate,
-      'loops elapsed': loopsElapsed,
-      'loop duration': `${loopDuration} (${(loopDuration / (60 * 1000)).toFixed(2)} mins)`,
-      'time elapsed (mins)': (timeElapsed / 1000 / 60)
-    })
+/**
+ *
+ * @param {Date} lastUpdate
+ * @param {Number} loopDuration
+ * @param {Number} failsCount
+ * @param {Number} failsCountThreshold
+ * @return {Boolean}
+ *
+ */
+function triggerAlert(
+  lastUpdate,
+  loopDuration,
+  failsCount,
+  failsCountThreshold
+) {
+  // ensure parameters
+  if (!(lastUpdate instanceof Date)) return true
+  if (isNaN(loopDuration = parseInt(loopDuration))) return true
+  if (isNaN(failsCount = parseInt(failsCount))) return true
+  if (isNaN(failsCountThreshold = parseInt(failsCountThreshold))) return true
 
-    if (loopsElapsed >= 2) {
-      if (failsCount === 0) return true
-      if ((loopsElapsed - failsCount) === 1) return true
-      if (loopsElapsed > failsCountThreshold) return true
-      return false
-    }
+  if (!lastUpdate) return true
+
+  let timeElapsed = Date.now() - lastUpdate.getTime()
+  let loopsElapsed = Math.floor(timeElapsed / loopDuration)
+
+  logger.debug({
+    'fails count': failsCount,
+    'last update': lastUpdate,
+    'loops elapsed': loopsElapsed,
+    'loop duration': `${loopDuration} (${(loopDuration / (60 * 1000)).toFixed(2)} mins)`,
+    'time elapsed (mins)': (timeElapsed / 1000 / 60)
+  })
+
+  if (loopsElapsed >= 2) {
+    if (failsCount === 0) return true
+    if ((loopsElapsed - failsCount) === 1) return true
+    if (loopsElapsed > failsCountThreshold) return true
     return false
   }
+  return false
 }
