@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.15.3](https://github.com/theeye/theeye-supervisor/compare/4.15.2...4.15.3) (2025-02-26)
+
+
+### Bug Fixes
+
+* **monitoring:** queries improved ([#144](https://github.com/theeye/theeye-supervisor/issues/144)) ([21a3747](https://github.com/theeye/theeye-supervisor/commit/21a3747e5eaf709d477638eaef5b1fc53d1305ad)), closes [#143](https://github.com/theeye/theeye-supervisor/issues/143)
+
 ### [4.15.2](https://github.com/theeye/theeye-supervisor/compare/4.15.1...4.15.2) (2025-01-04)
 
 
