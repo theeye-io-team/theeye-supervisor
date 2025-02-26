@@ -4,7 +4,9 @@ const App = require('../../app')
 const ResourceService = require('../../service/resource')
 const MonitorConstants = require('../../constants/monitors')
 const Resource = require('../../entity/resource').Entity
+const ResourceMonitor = require('../../entity/monitor').Entity
 const logger = require('../../lib/logger')(':monitoring:monitors')
+const { ObjectId } = require('mongodb')
 
 module.exports = () => {
   const check_interval = App.config.monitor.check_interval
@@ -17,96 +19,61 @@ module.exports = () => {
     { lockLifetime: (5 * 60 * 1000) }, // max lock
     checkResourcesState
   )
-  App.scheduler.agenda.every(`${interval} seconds`, 'monitoring')
 
+  App.scheduler.agenda.every(`${interval} seconds`, 'monitoring')
 }
 
 const checkResourcesState = async (job) => {
   logger.debug('***** CHECKING MONITORS STATE *****')
 
-  // to avoid checking resources that has been recently updated
-  const threshold = App.config.monitor.check_threshold || 5000 // milliseconds
-
-  const resources = await Resource.aggregate([
-    {
-      $match: {
-        enable: true,
-        state: { $ne: MonitorConstants.RESOURCE_STOPPED },
-        type: { $ne: MonitorConstants.RESOURCE_TYPE_NESTED },
-        $expr: {
-          $or: [
-            { $eq: ["$last_update", null] },  // Never updated
-            {
-              $lt: [
-                "$last_update",
-                { $subtract: [ new Date(), threshold ] }
-              ]
-            }
-          ]
+  // First find resources that might need checking
+  const resources = await Resource.find({
+    enable: true,
+    state: { $ne: MonitorConstants.RESOURCE_STOPPED },
+    type: { $ne: MonitorConstants.RESOURCE_TYPE_NESTED },
+    $or: [
+      { last_update: null },
+      {
+        last_update: {
+          // Skip resources updated in the last minute
+          $lt: new Date(Date.now() - (60 * 1000))  // 1 minute
         }
       }
-    }, {
-      $lookup: {
-        from: "resourcemonitors",
-        localField: "_id",
-        foreignField: "resource",
-        pipeline: [
-          {
-            $match: {
-              enable: true
-            }
-          },
-          {
-            $project: {
-              _id: 1,
-              looptime: 1
-            }
-          }
-        ],
-        as: "monitor",
-      }
-    }, {
-      $unwind: "$monitor"
-    },
-    {
-      $match: {
-        "monitor.looptime": { $exists: true },  // This implicitly checks for monitor too
-        $expr: {
-          $or: [
-            { $eq: ["$last_check", null] },  // Never checked
-            { $lt: [
-              "$last_check",
-              {
-                $dateSubtract: {
-                  startDate: "$$NOW",
-                  unit: "millisecond",
-                  amount: { $toLong: "$monitor.looptime" }
-                }
-              }
-            ] }
-          ]
-        }
-      }
-    },
-    {
-      $project: {
-        _id: 1,
-        type: 1,
-        name: 1,
-        monitor: 1,
-        last_check: 1,
-        last_update: 1,
-        fails_count: 1
-      }
-    }
-  ])
+    ]
+  }).select('_id type name last_update fails_count').lean()
 
-  logger.debug('%s active monitors to checks', resources.length)
   if (resources.length === 0) { return }
+
+  // Then get monitors only for these resources using Mongoose model
+  const enabledMonitors = await ResourceMonitor.find({
+    enable: true,
+    resource: { $in: resources.map(r => r._id) }
+  }).select('resource looptime').lean()
+
+  // Create a map for quick lookup
+  const monitorMap = new Map(
+    enabledMonitors.map(m => [m.resource.toString(), m.looptime])
+  )
+
+  // Process resources with a simple for loop
+  const resourcesToCheck = []
+  for (let resource of resources) {
+    const looptime = monitorMap.get(resource._id.toString())
+    if (!looptime) continue
+
+    if (!resource.last_update || 
+        resource.last_update < new Date(Date.now() - looptime)) {
+      resource.monitor = { looptime }
+      resourcesToCheck.push(resource)
+    }
+  }
+
+  logger.debug('%s active monitors to checks', resourcesToCheck.length)
+  if (resourcesToCheck.length === 0) { return }
 
   const t0 = performance.now()
   let checksCount = 0
-  for (let resource of resources) {
+  for (let resource of resourcesToCheck) {
     checksCount++
     await checkRunningMonitors(resource)
   }
@@ -114,7 +81,7 @@ const checkResourcesState = async (job) => {
   const t1 = performance.now()
   const tt = (t1 - t0) / 1000
 
-  logger.log(`${checksCount} monitores checked after ${tt} ms`)
+  logger.log(`${checksCount} monitors checked after ${tt} ms`)
 }
 
 const checkRunningMonitors = async (resource) => {
@@ -143,11 +110,6 @@ const checkResourceMonitorStatus = async (resource) => {
     const model = await Resource.findById(resource._id)
     const manager = new ResourceService(model)
     await manager.handleState({ state: MonitorConstants.RESOURCE_STOPPED })
-  } else {
-    await Resource.updateOne(
-      { _id: resource._id },
-      { $set: { last_check: new Date() } }
-    )
   }
   return
 }
@@ -165,11 +127,6 @@ const checkHostResourceStatus = async (resource) => {
     const model = await Resource.findById(resource._id)
     const manager = new ResourceService(model)
     await manager.handleState({ state: MonitorConstants.RESOURCE_STOPPED })
-  } else {
-    await Resource.updateOne(
-      { _id: resource._id },
-      { $set: { last_check: new Date() } }
-    )
   }
   return
 }
