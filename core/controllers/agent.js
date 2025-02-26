@@ -35,34 +35,38 @@ module.exports = function (server) {
 
 const controller = {
   /**
-   *
-   * @path /:customer/agent/:hostname/config
-   *
+   * @method put
+   * @path /:customer/agent/:hostname
    */
-  async update (req, res) {
+  async update(req, res) {
     try {
       const { customer, host } = req
+
       if (!host) {
         throw new ClientError('Not Found', { statusCode: 404 })
       }
 
-      if (customer.disabled === true || host.disabled === true) {
-        res.send(204)
-      } else {
-        const resource = await findHostResource(host)
-        const manager = new App.resource(resource)
-        manager
-          .handleState({ state: MonitorsConstants.RESOURCE_NORMAL })
-          .catch(err => {
-            logger.error(err)
-          })
-
-        res.send(204)
+      // If customer or host is disabled, return 204 immediately
+      if (customer.disabled || host.disabled) {
+        return res.send(204)
       }
+
+      const resource = await findHostResource(host)
+      const manager = new App.resource(resource)
+
+      // Send response immediately to avoid blocking
+      res.send(204)
+
+      // Run handleState asynchronously and log any errors
+      manager.handleState({ state: MonitorsConstants.RESOURCE_NORMAL })
+        .catch(err => logger.error('Error handling state:', err))
+
     } catch (err) {
+      logger.error('Update error:', err)
       res.sendError(err)
     }
-  },
+  }
+
   /**
    *
    * @author Facundo
