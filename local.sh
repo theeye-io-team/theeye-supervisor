@@ -7,7 +7,13 @@ if [ -z "${NODE_ENV}" ]; then
   export NODE_ENV="localdev"
 fi
 
-export MONITORING_DISABLED=""
-export SCHEDULER_JOBS_DISABLED=""
-#npx nodemon --inspect ${1} $PWD/core/main.js
-node ${1} $PWD/core/main.js
+if [ -z "${MONITORING_DISABLED}" ]; then
+  export MONITORING_DISABLED=""
+fi
+
+if [ -z "${SCHEDULER_JOBS_DISABLED}" ]; then
+  export SCHEDULER_JOBS_DISABLED=""
+fi
+
+#npx nodemon $PWD/core/main.js
+npx nodemon ${1} $PWD/core/main.js

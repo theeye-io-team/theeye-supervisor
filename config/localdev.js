@@ -18,7 +18,7 @@ module.exports = {
     }
   },
   monitor: {
-    fails_count_alert: 1
+    fails_count_alert: 3
   },
   mailer: {
     from: '%customer% TheEye.io Dev <support@theeye.io>',

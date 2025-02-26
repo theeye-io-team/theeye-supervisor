@@ -3,6 +3,7 @@ const mongoose = require('mongoose')
 const ResourceService = require('../../service/resource')
 const MonitorConstants = require('../../constants/monitors')
 const Resource = require('../../entity/resource').Entity
+const ResourceMonitor = require('../../entity/monitor').Entity
 const logger = require('../../lib/logger')(':monitoring:nested')
 
 module.exports = () => {
@@ -12,40 +13,50 @@ module.exports = () => {
   App.scheduler.agenda.define(
     'nested-monitoring',
     { lockLifetime: (5 * 60 * 1000) }, // max lock
-    (job) => {
-      return checkNestedMonitorsState()
-    }
+    checkNestedMonitorsState
   )
 
   App.scheduler.agenda.every(`${interval} seconds`, 'nested-monitoring')
 }
 
-const checkNestedMonitorsState = async () => {
+const checkNestedMonitorsState = async (job) => {
   logger.debug('***** CHECKING NESTED MONITORS STATE *****')
-  const resources = await Resource.aggregate([
-    {
-      $match: {
-        enable: true,
-        type: MonitorConstants.RESOURCE_TYPE_NESTED
-      }
-    }, {
-      $lookup: {
-        from: "resourcemonitors",
-        localField: "_id",
-        foreignField: "resource",
-        as: "monitor"
-      }
-    }, {
-      $unwind: "$monitor"
-    }
-  ])
+  
+  // First find eligible resources
+  const resources = await Resource.find({
+    enable: true,
+    type: MonitorConstants.RESOURCE_TYPE_NESTED
+  }).lean()
 
+  logger.debug(`%s active nested monitors to checks`, resources.length)
   if (resources.length === 0) { return }
 
-  logger.debug(`running ${resources.length} checks`)
-  for (let resource of resources) {
+  // Then get monitors for these resources
+  const monitors = await ResourceMonitor.find({
+    resource: { $in: resources.map(r => r._id) }
+  }).lean()
+
+  // Create a map for quick lookup
+  const monitorMap = new Map(
+    monitors.map(m => [m.resource.toString(), m])
+  )
+
+  // Combine resources with their monitors
+  const resourcesToCheck = resources.map(resource => ({
+    ...resource,
+    monitor: monitorMap.get(resource._id.toString())
+  })).filter(r => r.monitor) // only process resources that have monitors
+
+  const t0 = performance.now()
+
+  for (let resource of resourcesToCheck) {
     await checkNestedMonitor(resource)
   }
+
+  const t1 = performance.now()
+  const tt = (t1 - t0) / 1000
+
+  logger.log(`${resourcesToCheck.length} nested monitors checked after ${tt} ms`)
 }
 
 /**
