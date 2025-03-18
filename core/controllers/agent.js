@@ -65,8 +65,7 @@ const controller = {
       logger.error('Update error:', err)
       res.sendError(err)
     }
-  }
-
+  },
   /**
    *
    * @author Facundo
