@@ -1,17 +1,11 @@
 
-const mongoose = require('mongoose')
 const App = require('../app')
-const systemConfig = require('config').system
 const MonitorsConstants = require('../constants/monitors')
 const { ClientError, ServerError } = require('../lib/error-handler')
 
 const logger = require('../lib/logger')('controller:agent')
 const router = require('../router')
-//var ResourceManager = require('../service/resource')
-//var ResourceMonitorService = require('../service/resource/monitor')
-
 const File = require('../entity/file').File;
-//const User = require('../entity/user').Entity
 
 module.exports = function (server) {
   server.put('/:customer/agent/:hostname',

@@ -197,6 +197,11 @@ module.exports = {
   redis: {
     //url: 'redis[s]://[[username][:password]@][host][:port][/db-number]'
     url: 'redis://127.0.0.1:6379/3'
+  },
+  websocket: {
+    ping_interval: 30000,
+    ping_timeout: 60000,
+    enabled: true,
+    port: 60081
   }
-
 }

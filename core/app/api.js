@@ -74,6 +74,12 @@ module.exports = function () {
           message: err.message,
           errors: err.errors
         })
+      } else if (err instanceof ErrorHandler.ServerError && err.statusCode >= 500) {
+        res.send(err.statusCode || 500, {
+          statusCode: err.statusCode,
+          message: err.message,
+          errors: err.errors
+        })
       } else {
         logger.error('Message Error: %s', err.message)
         logger.error('Stack %s', err.stack)
