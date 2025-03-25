@@ -59,6 +59,7 @@
     "stream-buffers": "~2.2.0",
     "uuid": "~8.3.0",
     "valid-data-url": "~4.0.0",
-    "validator": "~8.2.0"
+    "validator": "~8.2.0",
+    "ws": "~8.18.1"
   }
 }

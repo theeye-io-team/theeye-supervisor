@@ -1,7 +1,6 @@
 const MongoDB = require('../lib/mongodb')
 const logger = require('../lib/logger')('app')
 const redis = require('redis')
-//const User = require('../entity/user').Entity
 const App = {}
 const AWS = require('aws-sdk')
 const { v5: uuidv5 } = require('uuid')
@@ -31,6 +30,7 @@ App.boot = async (config) => {
       Api()
       Commander()
       Monitoring()
+      WebSocketServer()
 
       logger.log('App is ready')
 
@@ -66,6 +66,7 @@ App.boot = async (config) => {
   //const Api = require('./api-sentry')
   const Commander = require('./commander')
   const Monitoring = require('./monitoring')
+  const WebSocketServer = require('./websocket')
 
   const configureAws = (aws) => {
     if (aws.enabled === true) { // then configure AWS SDK
